@@ -5,6 +5,7 @@ import { getDictionary } from "@/src/i18n/messages";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 const copy = getDictionary("es");
+export const dynamic = "force-dynamic";
 
 type DashboardProfile = {
   full_name: string | null;

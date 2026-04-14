@@ -3,6 +3,7 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { getAdminDictionary } from "@/src/features/admin/dictionary";
 
 const copy = getAdminDictionary("es");
+export const dynamic = "force-dynamic";
 
 const links = [
   { href: "/admin", label: copy.nav.overview },
