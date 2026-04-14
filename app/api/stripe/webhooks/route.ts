@@ -1,9 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { env } from "@/src/lib/env";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+import { getEnv } from "@/src/lib/env";
 
 type SubscriptionCatalogSetting = {
   tier: "corps_de_ballet" | "solista" | "principal";
@@ -12,6 +10,7 @@ type SubscriptionCatalogSetting = {
 };
 
 function createServiceRoleClient() {
+  const env = getEnv();
   return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
@@ -101,6 +100,8 @@ async function syncSubscription(event: Stripe.Event) {
  * Receives Stripe webhooks, stores an audit trail and keeps subscriptions synchronized.
  */
 export async function POST(request: Request) {
+  const env = getEnv();
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY);
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
