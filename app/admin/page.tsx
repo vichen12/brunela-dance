@@ -17,31 +17,40 @@ export default async function AdminOverviewPage() {
   ]);
 
   const cards = [
-    { href: "/admin/videos", label: copy.overview.cards.videos, value: videos.count ?? 0 },
-    { href: "/admin/programs", label: copy.overview.cards.programs, value: programs.count ?? 0 },
-    { href: "/admin/settings", label: copy.overview.cards.settings, value: settings.count ?? 0 },
-    { href: "/admin/users", label: copy.overview.cards.users, value: users.count ?? 0 }
+    { href: "/admin/videos", label: copy.overview.cards.videos, value: videos.count ?? 0, note: "Catalogo editable" },
+    { href: "/admin/programs", label: copy.overview.cards.programs, value: programs.count ?? 0, note: "Secuencia de dias" },
+    { href: "/admin/settings", label: copy.overview.cards.settings, value: settings.count ?? 0, note: "Sin hardcoding" },
+    { href: "/admin/users", label: copy.overview.cards.users, value: users.count ?? 0, note: "Roles y niveles" }
   ] as const;
 
   return (
     <main className="space-y-6">
-      <header className="panel rounded-[36px] p-8 md:p-10">
-        <p className="eyebrow mb-3">{copy.overview.title}</p>
-        <h1 className="display text-4xl md:text-5xl">{copy.overview.title}</h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-ink/70">{copy.overview.description}</p>
+      <header className="hero-stage">
+        <div className="max-w-3xl">
+          <p className="eyebrow">Admin atelier</p>
+          <h1 className="display mt-5 text-5xl leading-none md:text-7xl">{copy.overview.title}</h1>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
+            Un centro de mando suave en lo visual, pero firme en arquitectura. Todo lo importante se gobierna desde
+            aca.
+          </p>
+        </div>
       </header>
 
-      <section className="panel rounded-[32px] p-8">
-        <p className="eyebrow mb-3">{copy.overview.sectionTitle}</p>
-        <div className="grid-cards">
+      <section className="panel rounded-[2.4rem] p-7 md:p-9">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="eyebrow">{copy.overview.sectionTitle}</p>
+            <h2 className="display mt-4 text-4xl">Modulos activos</h2>
+          </div>
+          <span className="studio-chip">Architecture first</span>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <Link
-              key={card.href}
-              className="rounded-[26px] border border-black/6 bg-white/76 p-6 transition hover:-translate-y-[1px]"
-              href={card.href}
-            >
-              <p className="text-sm font-semibold text-ink/65">{card.label}</p>
-              <p className="display mt-3 text-4xl">{card.value}</p>
+            <Link key={card.href} className="admin-metric transition hover:-translate-y-[2px]" href={card.href}>
+              <p className="eyebrow">{card.note}</p>
+              <p className="display mt-5 text-5xl leading-none">{card.value}</p>
+              <p className="mt-4 text-sm font-semibold leading-6 text-[color:var(--ink)]">{card.label}</p>
             </Link>
           ))}
         </div>

@@ -7,11 +7,11 @@ const messages = {
     },
     meta: {
       title: "Brunela Dance Trainer",
-      description: "Pilates para bailarines con una arquitectura pensada para escalar."
+      description: "Pilates para bailarines con una experiencia editorial, elegante y pensada para escalar."
     },
     nav: {
       signIn: "Ingresar",
-      dashboard: "Dashboard",
+      dashboard: "Studio",
       admin: "Admin"
     },
     common: {
@@ -22,27 +22,27 @@ const messages = {
       kicker: "Pilates para bailarines",
       title: "Una plataforma premium para entrenar, reservar y crecer con control total.",
       description:
-        "Brunela Dance Trainer combina biblioteca on-demand, programas estructurados, progreso auditable y administración full control desde Supabase.",
+        "Brunela Dance Trainer une biblioteca on-demand, programas estructurados y una experiencia de estudio online elegante.",
       primaryCta: "Entrar al estudio",
       secondaryCta: "Ver panel admin",
-      tiersEyebrow: "Membresías",
+      tiersEyebrow: "Membresias",
       metrics: [
-        { value: "14 días", label: "Programas secuenciados y medibles" },
-        { value: "15 clases", label: "Sistema de retención y recompensa" },
-        { value: "3 niveles", label: "Acceso jerárquico sin hardcoding" }
+        { value: "14 dias", label: "Programas secuenciados y medibles" },
+        { value: "15 clases", label: "Sistema de retencion y recompensa" },
+        { value: "3 niveles", label: "Acceso jerarquico sin hardcoding" }
       ],
       tiers: [
         {
           id: "corps_de_ballet",
           name: "Corps de Ballet",
           badge: "On-demand",
-          description: "Acceso a biblioteca base, reanudación de clases y progreso diario."
+          description: "Acceso a biblioteca base, reanudacion de clases y progreso diario."
         },
         {
           id: "solista",
           name: "Solista",
           badge: "Programas",
-          description: "Suma programas de 14 días y una experiencia más estructurada."
+          description: "Suma programas de 14 dias y una experiencia mas estructurada."
         },
         {
           id: "principal",
@@ -54,54 +54,54 @@ const messages = {
     },
     auth: {
       kicker: "Acceso seguro",
-      title: "Ingresá a tu estudio.",
+      title: "Ingresa a tu estudio.",
       description:
-        "Este scaffold ya está preparado para trabajar con Supabase Auth, rutas protegidas y paneles diferenciados por rol.",
-      adminHintTitle: "Tip de bootstrap",
+        "Accede a tu espacio privado para continuar clases, revisar progreso y moverte dentro del estudio de Brunela.",
+      adminHintTitle: "Nota de acceso",
       adminHintBody:
-        "Tu cuenta tiene que existir en Supabase Auth antes de ejecutar bootstrap_admin_by_email en la base.",
+        "Si tu cuenta todavia no esta habilitada, primero debe existir en Auth para activar permisos especiales en la base.",
       email: "Email",
-      password: "Contraseña",
-      submit: "Iniciar sesión",
-      footer: "Si todavía no tenés usuario, crealo primero desde Supabase Auth o desde el signup de la app."
+      password: "Contrasena",
+      submit: "Iniciar sesion",
+      footer: "Si todavia no tienes usuario, crea tu acceso primero y luego vuelve para entrar al estudio."
     },
     dashboard: {
       kicker: "Zona privada",
       greeting: (name: string) => `Hola, ${name}.`,
       description:
-        "Este dashboard ya consulta Supabase en server components y queda listo para evolucionar hacia player, onboarding y biblioteca filtrada.",
-      defaultName: "bailarín",
-      signOut: "Cerrar sesión",
-      membershipLabel: "Membresía actual",
-      membershipHint: "La membresía se sincroniza desde la tabla subscriptions vía webhook.",
-      subscriptionLabel: "Estado de suscripción",
-      subscriptionHint: "Todavía no hay checkout conectado a Stripe.",
-      noSubscription: "sin suscripción",
+        "Tu zona privada combina continuidad, estetica de estudio y una base lista para clases, programas y crecimiento.",
+      defaultName: "bailarin",
+      signOut: "Cerrar sesion",
+      membershipLabel: "Membresia actual",
+      membershipHint: "Tu acceso define que contenido ves dentro del estudio.",
+      subscriptionLabel: "Estado de suscripcion",
+      subscriptionHint: "Cuando el checkout este activo, aqui veras tu estado en tiempo real.",
+      noSubscription: "sin suscripcion",
       renewsAt: (date: string) => `Renueva o vence el ${new Date(date).toLocaleDateString("es-AR")}`,
       onboardingLabel: "Onboarding",
-      onboardingHint: "Luego sumamos el flujo con edad, lesiones, nivel técnico y objetivos.",
+      onboardingHint: "Aqui se mostrara si tu perfil tecnico ya esta completo con nivel, objetivos y contexto fisico.",
       resumeEyebrow: "Continuidad",
       resumeTitle: "Reanudar clase",
       resumeFallback: "Clase en progreso",
       resumeMeta: (seconds: number, percent: number) => `${seconds}s guardados · ${percent}% completado`,
       resumeButton: "Reanudar entrenamiento",
       resumeEmpty:
-        "Todavía no hay una clase en progreso. Cuando agreguemos el player, este módulo mostrará la última sesión pausada.",
-      quickAccessEyebrow: "Accesos rápidos",
+        "Todavia no hay una clase en progreso. Cuando empieces a practicar, aqui aparecera tu ultima sesion pausada.",
+      quickAccessEyebrow: "Accesos rapidos",
       quickAccessTitle: "Siguiente capa",
-      quickAccessAdmin: "Panel de administración",
-      quickAccessAdminBody: "Revisá métricas iniciales, settings globales y próximos módulos CRUD.",
+      quickAccessAdmin: "Panel de administracion",
+      quickAccessAdminBody: "Gestiona contenido, settings globales y accesos desde una experiencia backstage ordenada.",
       quickAccessLibrary: "Biblioteca y player",
-      quickAccessLibraryBody: "El siguiente paso funcional será construir el catálogo filtrable y el reproductor con progreso."
+      quickAccessLibraryBody: "La siguiente fase natural es convertir esto en una experiencia completa de catalogo, filtros y reproduccion."
     },
     admin: {
       kicker: "Centro de mando",
-      title: "Panel de administración base",
-      subtitle: (email: string) => `Sesión administrativa activa para ${email}.`,
-      settingsEyebrow: "Configuración global",
+      title: "Panel de administracion base",
+      subtitle: (email: string) => `Sesion administrativa activa para ${email}.`,
+      settingsEyebrow: "Configuracion global",
       settingsTitle: "Settings iniciales cargados",
       nextStepsEyebrow: "Roadmap inmediato",
-      nextStepsTitle: "Qué conviene construir ahora",
+      nextStepsTitle: "Que conviene construir ahora",
       cards: {
         videos: "Videos",
         programs: "Programas",
@@ -109,8 +109,8 @@ const messages = {
         liveSessions: "Clases en vivo"
       },
       nextSteps: [
-        "Crear CRUD admin para videos con slug, metadata, tier y publicación.",
-        "Crear CRUD admin para programas y program_days con validación de secuencia.",
+        "Crear CRUD admin para videos con slug, metadata, tier y publicacion.",
+        "Crear CRUD admin para programas y program_days con validacion de secuencia.",
         "Exponer un editor seguro para site_settings sin hardcoding en frontend.",
         "Conectar checkout de Stripe y alimentar subscriptions con metadata.user_id."
       ]
@@ -122,11 +122,11 @@ const messages = {
     },
     meta: {
       title: "Brunela Dance Trainer",
-      description: "Pilates for dancers with an architecture built to scale."
+      description: "Pilates for dancers with an editorial, elegant experience built to scale."
     },
     nav: {
       signIn: "Sign in",
-      dashboard: "Dashboard",
+      dashboard: "Studio",
       admin: "Admin"
     },
     common: {
@@ -137,7 +137,7 @@ const messages = {
       kicker: "Pilates for dancers",
       title: "A premium platform to train, book and grow with total control.",
       description:
-        "Brunela Dance Trainer blends on-demand video, structured programs, auditable progress and an admin-first architecture.",
+        "Brunela Dance Trainer blends on-demand training, structured programs and an elegant online studio experience.",
       primaryCta: "Enter studio",
       secondaryCta: "Open admin",
       tiersEyebrow: "Memberships",
@@ -171,43 +171,43 @@ const messages = {
       kicker: "Secure access",
       title: "Enter your studio.",
       description:
-        "This scaffold is already wired for Supabase Auth, protected routes and role-aware dashboards.",
-      adminHintTitle: "Bootstrap tip",
+        "Access your private space to continue classes, review progress and move through Brunela's full studio experience.",
+      adminHintTitle: "Access note",
       adminHintBody:
-        "Your account must exist in Supabase Auth before running bootstrap_admin_by_email in the database.",
+        "If your account is not enabled yet, it must exist in Auth before special permissions can be activated in the database.",
       email: "Email",
       password: "Password",
       submit: "Sign in",
-      footer: "If you do not have a user yet, create it first in Supabase Auth or through the app signup flow."
+      footer: "If you do not have a user yet, create your access first and then come back to enter the studio."
     },
     dashboard: {
       kicker: "Private zone",
       greeting: (name: string) => `Hi, ${name}.`,
       description:
-        "This dashboard already reads Supabase in server components and is ready for player, onboarding and filtered library work.",
+        "Your private area blends continuity, studio-like aesthetics and a foundation ready for classes, programs and growth.",
       defaultName: "dancer",
       signOut: "Sign out",
       membershipLabel: "Current membership",
-      membershipHint: "Membership syncs from the subscriptions table through Stripe webhooks.",
+      membershipHint: "Your membership determines which parts of the studio you can access.",
       subscriptionLabel: "Subscription status",
-      subscriptionHint: "Stripe checkout is not connected yet.",
+      subscriptionHint: "Once checkout is live, your billing status will appear here in real time.",
       noSubscription: "no subscription",
       renewsAt: (date: string) => `Renews or ends on ${new Date(date).toLocaleDateString("en-US")}`,
       onboardingLabel: "Onboarding",
-      onboardingHint: "We will add age, injuries, technical level and goals next.",
+      onboardingHint: "This area will show whether your technical profile is fully completed.",
       resumeEyebrow: "Continuity",
       resumeTitle: "Resume class",
       resumeFallback: "In-progress class",
       resumeMeta: (seconds: number, percent: number) => `${seconds}s saved · ${percent}% completed`,
       resumeButton: "Resume training",
       resumeEmpty:
-        "There is no class in progress yet. Once the player is added, this module will surface the last paused session.",
+        "There is no class in progress yet. As soon as practice begins, this module will surface the latest paused session.",
       quickAccessEyebrow: "Quick access",
       quickAccessTitle: "Next layer",
       quickAccessAdmin: "Admin dashboard",
-      quickAccessAdminBody: "Review seed metrics, global settings and the next CRUD modules.",
+      quickAccessAdminBody: "Manage content, global settings and access from a cleaner backstage experience.",
       quickAccessLibrary: "Library and player",
-      quickAccessLibraryBody: "The next functional milestone is the filterable catalog and the progress-aware player."
+      quickAccessLibraryBody: "The next natural phase is a complete catalog, filtering and playback experience."
     },
     admin: {
       kicker: "Control center",
