@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { hasRequiredEnv } from "@/src/lib/env";
 
 const signInSchema = z.object({
   email: z.string().email(),
@@ -13,6 +14,10 @@ const signInSchema = z.object({
  * Signs a user in with Supabase Auth and redirects to the dashboard.
  */
 export async function signInAction(formData: FormData) {
+  if (!hasRequiredEnv()) {
+    redirect("/sign-in?error=Faltan%20variables%20de%20entorno%20en%20Vercel");
+  }
+
   const parsed = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password")
@@ -36,6 +41,10 @@ export async function signInAction(formData: FormData) {
  * Ends the current session and returns the user to the sign-in screen.
  */
 export async function signOutAction() {
+  if (!hasRequiredEnv()) {
+    redirect("/sign-in");
+  }
+
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/sign-in");

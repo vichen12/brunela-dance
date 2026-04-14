@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { hasRequiredEnv } from "@/src/lib/env";
 
 type ProfileGuard = {
   id: string;
@@ -10,6 +11,10 @@ type ProfileGuard = {
 };
 
 const getSessionSnapshot = cache(async () => {
+  if (!hasRequiredEnv()) {
+    return null;
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
 
@@ -24,6 +29,10 @@ const getSessionSnapshot = cache(async () => {
  * Ensures the current request has an authenticated Supabase user.
  */
 export async function requireUser() {
+  if (!hasRequiredEnv()) {
+    redirect("/sign-in?error=Configuracion%20pendiente%20en%20Vercel");
+  }
+
   const user = await getSessionSnapshot();
 
   if (!user) {
