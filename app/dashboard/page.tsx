@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { StudioNav } from "@/components/studio-nav";
 import { signOutAction } from "@/src/features/auth/actions";
 import { requireUser } from "@/src/features/auth/guards";
+import { membershipTierLabel } from "@/src/features/studio/helpers";
 import { getDictionary } from "@/src/i18n/messages";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -30,13 +32,6 @@ type ResumeSnapshot = {
   } | null;
 };
 
-const tierLabels: Record<DashboardProfile["membership_tier"], string> = {
-  none: "Sin plan activo",
-  corps_de_ballet: "Corps de Ballet",
-  solista: "Solista",
-  principal: "Principal"
-};
-
 const dashboardMoments = [
   {
     label: "Continuidad",
@@ -54,7 +49,14 @@ export default async function DashboardPage() {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: profile }, { data: subscription }, { data: resume }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: subscription },
+    { data: resume },
+    accessibleVideos,
+    accessiblePrograms,
+    upcomingSessions
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, membership_tier, onboarding_completed, is_admin")
@@ -74,7 +76,13 @@ export default async function DashboardPage() {
       .gt("max_position_seconds", 0)
       .order("updated_at", { ascending: false })
       .limit(1)
-      .maybeSingle<ResumeSnapshot>()
+      .maybeSingle<ResumeSnapshot>(),
+    supabase.from("videos").select("*", { count: "exact", head: true }),
+    supabase.from("programs").select("*", { count: "exact", head: true }),
+    supabase
+      .from("live_sessions")
+      .select("*", { count: "exact", head: true })
+      .gte("starts_at", new Date().toISOString())
   ]);
 
   const membershipTier = profile?.membership_tier ?? "none";
@@ -82,10 +90,35 @@ export default async function DashboardPage() {
   const resumeTitle =
     resume?.videos?.title_i18n?.es ?? resume?.videos?.title_i18n?.en ?? copy.dashboard.resumeFallback;
   const resumeProgress = Math.max(8, Math.min(100, Number(resume?.completion_percent ?? 0)));
+  const studioLinks = [
+    {
+      href: "/dashboard/library",
+      eyebrow: "Library",
+      title: "Biblioteca privada",
+      body: "Explora las clases publicadas para tu plan, con filtros, cards reales y progreso visible.",
+      value: accessibleVideos.count ?? 0
+    },
+    {
+      href: "/dashboard/programs",
+      eyebrow: "Programs",
+      title: "Programas guiados",
+      body: "Segui secuencias dia por dia y marca avance dentro del contexto correcto.",
+      value: accessiblePrograms.count ?? 0
+    },
+    {
+      href: "/dashboard/live",
+      eyebrow: "Live",
+      title: "Clases en vivo",
+      body: "Reserva, cancela y accede a los links permitidos por membresia y booking.",
+      value: upcomingSessions.count ?? 0
+    }
+  ] as const;
 
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
+        <StudioNav current="overview" />
+
         <header className="hero-stage">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -107,7 +140,7 @@ export default async function DashboardPage() {
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             <article className="soft-stat p-5">
               <p className="eyebrow">{copy.dashboard.membershipLabel}</p>
-              <p className="display mt-4 text-4xl leading-none">{tierLabels[membershipTier]}</p>
+              <p className="display mt-4 text-4xl leading-none">{membershipTierLabel(membershipTier)}</p>
               <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{copy.dashboard.membershipHint}</p>
             </article>
 
@@ -156,9 +189,9 @@ export default async function DashboardPage() {
                       )}
                     </p>
                   </div>
-                  <button className="button-primary" type="button">
+                  <Link className="button-primary" href={`/dashboard/library/${resume.videos?.slug ?? ""}`}>
                     {copy.dashboard.resumeButton}
-                  </button>
+                  </Link>
                 </div>
 
                 <div className="mt-6 h-3 overflow-hidden rounded-full bg-[rgba(89,101,123,0.08)]">
@@ -190,6 +223,19 @@ export default async function DashboardPage() {
               <p className="eyebrow">{copy.dashboard.quickAccessEyebrow}</p>
               <h2 className="display mt-4 text-4xl">{copy.dashboard.quickAccessTitle}</h2>
               <div className="mt-8 space-y-4">
+                {studioLinks.map((item) => (
+                  <Link key={item.href} className="feature-tile block" href={item.href}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="eyebrow">{item.eyebrow}</p>
+                        <p className="display mt-4 text-3xl">{item.title}</p>
+                      </div>
+                      <span className="studio-chip">{item.value}</span>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{item.body}</p>
+                  </Link>
+                ))}
+
                 {profile?.is_admin ? (
                   <Link className="feature-tile block" href="/admin">
                     <p className="eyebrow">Admin</p>
@@ -200,13 +246,6 @@ export default async function DashboardPage() {
                   </Link>
                 ) : null}
 
-                <div className="feature-tile">
-                  <p className="eyebrow">Next</p>
-                  <p className="display mt-4 text-3xl">{copy.dashboard.quickAccessLibrary}</p>
-                  <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                    {copy.dashboard.quickAccessLibraryBody}
-                  </p>
-                </div>
               </div>
             </article>
 
@@ -214,8 +253,8 @@ export default async function DashboardPage() {
               <p className="eyebrow">Studio mood</p>
               <h2 className="display mt-4 text-4xl">Tu practica merece una interfaz que acompanie.</h2>
               <p className="mt-5 text-sm leading-7 text-[color:var(--ink-soft)]">
-                El dashboard ahora ya se siente como un estudio privado. Desde aca la siguiente capa natural es la
-                biblioteca filtrable, el player y el onboarding completo.
+                El sistema privado ahora no termina en un saludo: ya abre biblioteca, programas y reservas en vivo
+                desde el mismo studio.
               </p>
             </article>
           </aside>

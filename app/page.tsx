@@ -1,462 +1,370 @@
-import Link from "next/link";
+import Image from 'next/image';
+import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
+import { ArcGalleryHero } from '@/components/ui/arc-gallery-hero-component';
+import { BrunelaFooter } from '@/components/ui/hover-footer';
+import { InteractiveSelector } from '@/components/ui/interactive-selector';
 
-const disciplineTags = [
-  "Progressing Ballet Technique",
-  "Progressing Contemporary Technique",
-  "Ballet",
-  "Stretching",
-  "Pilates Reformer",
-  "Pilates Mat"
+/* ── Subtle grain texture overlay ── */
+function GrainTexture() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
+        opacity: 0.032,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "200px 200px",
+      }}
+    />
+  );
+}
+
+/* ── Subtle dot grid ── */
+function DotGrid() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
+        backgroundImage: "radial-gradient(circle, rgba(190,24,93,0.06) 1px, transparent 1px)",
+        backgroundSize: "32px 32px",
+        opacity: 1,
+      }}
+    />
+  );
+}
+
+/* ── Pink glow spread across the whole page ── */
+function PinkGlow() {
+  return (
+    <>
+      {/* Top glow — hero area */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '70vh',
+          zIndex: 0, pointerEvents: 'none',
+          backgroundImage: `
+            radial-gradient(ellipse 80% 70% at 50% 0%, #f9a8d4 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 5% 40%, #fbcfe8 0%, transparent 55%)
+          `,
+          opacity: 0.75,
+        }}
+      />
+      {/* Middle glow — classes / about */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', top: '30vh', left: 0, right: 0, height: '70vh',
+          zIndex: 0, pointerEvents: 'none',
+          backgroundImage: `
+            radial-gradient(ellipse 50% 50% at 95% 30%, #fce7f3 0%, transparent 55%),
+            radial-gradient(ellipse 35% 45% at 10% 70%, #fbcfe8 0%, transparent 50%)
+          `,
+          opacity: 0.65,
+        }}
+      />
+      {/* Bottom glow — pricing / footer transition */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, height: '60vh',
+          zIndex: 0, pointerEvents: 'none',
+          backgroundImage: `
+            radial-gradient(ellipse 60% 60% at 50% 100%, #fdf2f8 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 90% 80%, #fce7f3 0%, transparent 50%)
+          `,
+          opacity: 0.7,
+        }}
+      />
+    </>
+  );
+}
+
+const heroImages = [
+  '/fotos-landing/Ballet.jpg',
+  '/fotos-landing/about-1.jpg',
+  '/fotos-landing/Stretching.jpg',
+  '/fotos-landing/Pilates Reformer.jpg',
+  '/fotos-landing/Progressing Ballet Technique.jpg',
+  '/fotos-landing/pbt.jpg',
+  '/fotos-landing/about-2.jpg',
+  '/fotos-landing/pct.jpg',
+  '/fotos-landing/stretching1.jpg',
+  '/fotos-landing/pilates.jpg',
+  '/fotos-landing/Pilates Mat.png',
+  '/fotos-landing/about-hero.jpg.jpg',
 ];
 
-const studioCollections = [
+const plans = [
   {
-    type: "Class",
-    level: "All levels",
-    meta: "Pilates mat - 32 min",
-    title: "Core placement for dancers",
-    body: "A softer but precise mat session to build stability, breath and control before technique work."
+    name: 'Corps de Ballet', price: '19', featured: false,
+    desc: 'Acceso a toda la biblioteca on demand.',
+    features: ['Biblioteca completa', 'Filtros por nivel y foco', 'Progreso guardado'],
   },
   {
-    type: "Class",
-    level: "Beginner friendly",
-    meta: "Stretching - 24 min",
-    title: "Recovery for hips, hamstrings and feet",
-    body: "A guided reset designed for dancers who need mobility without losing structure or line quality."
+    name: 'Solista', price: '39', featured: true,
+    desc: 'Progreso guiado con programas estructurados.',
+    features: ['Todo Corps de Ballet', 'Programas de 14 dias', 'Mayor profundidad tecnica'],
   },
   {
-    type: "Program",
-    level: "14 day method",
-    meta: "Sequenced path",
-    title: "Strength and alignment reset",
-    body: "A two-week progression that blends mobility, center work and conditioning into a clean weekly rhythm."
+    name: 'Principal', price: '69', featured: false,
+    desc: 'La experiencia completa con clases en vivo.',
+    features: ['Todo Solista', 'Clases en vivo con reserva', 'Acompanamiento personalizado'],
   },
-  {
-    type: "Live",
-    level: "Member session",
-    meta: "Weekly booking",
-    title: "Corrections in real time",
-    body: "Live sessions with a more personal atmosphere, space for questions and a stronger sense of studio."
-  },
-  {
-    type: "Course",
-    level: "Technique focus",
-    meta: "Detailed breakdown",
-    title: "Turnout, rotation and clean lines",
-    body: "A deeper format for dancers who want context, not just random videos stacked together."
-  },
-  {
-    type: "Private",
-    level: "1:1 support",
-    meta: "Tailored coaching",
-    title: "Personal feedback and direction",
-    body: "A more bespoke layer for dancers who need accountability, structure and individual attention."
-  }
-] as const;
-
-const membershipPlans = [
-  {
-    name: "Corps de Ballet",
-    note: "For steady weekly practice",
-    price: "EUR 19",
-    accent: "Foundation",
-    description: "The essential library for dancers who want elegant, repeatable training at home.",
-    features: [
-      "On-demand class library",
-      "Resume where you left off",
-      "Tags by level, focus and equipment",
-      "A soft entry point for daily consistency"
-    ]
-  },
-  {
-    name: "Solista",
-    note: "Most balanced path",
-    price: "EUR 39",
-    accent: "Signature",
-    description: "Adds structure for dancers who want more direction, better pacing and measurable progress.",
-    features: [
-      "Everything in Corps de Ballet",
-      "14 day guided programs",
-      "Progress checkpoints and retention milestones",
-      "Deeper technique and conditioning pathways"
-    ]
-  },
-  {
-    name: "Principal",
-    note: "Closest to private studio support",
-    price: "EUR 69",
-    accent: "High touch",
-    description: "For dancers who want the full ecosystem: live access, premium guidance and a tighter rhythm.",
-    features: [
-      "Everything in Solista",
-      "Member live sessions with booking",
-      "Priority access to special formats",
-      "A more direct coaching experience"
-    ]
-  }
-] as const;
-
-const specialFormats = [
-  {
-    label: "Intensives",
-    title: "Focused weeks around one clear goal",
-    body: "Ideal for dancers who want a short but immersive block around lines, core strength, pointe prep or recovery."
-  },
-  {
-    label: "Member live sessions",
-    title: "Weekly touch points with real presence",
-    body: "A better answer for dancers who miss accountability, corrections and the feeling of training with someone live."
-  },
-  {
-    label: "1:1 coaching",
-    title: "A tailor-made layer for your current stage",
-    body: "Useful when you need an outside eye on placement, routine design or the next step in your training."
-  },
-  {
-    label: "Sunday reset",
-    title: "A softer ritual for body care and continuity",
-    body: "Mobility, breath and restoration sessions to close the week without disconnecting from your practice."
-  }
-] as const;
-
-const journalEntries = [
-  {
-    category: "Technique notes",
-    title: "How Pilates changes your adage quality",
-    body: "A journal format exploring why control, breath and timing matter just as much as flexibility."
-  },
-  {
-    category: "Behind the studio",
-    title: "What to train when rehearsal weeks get heavy",
-    body: "A calmer editorial approach to recovery, maintenance and staying connected to your body under pressure."
-  },
-  {
-    category: "Dancer education",
-    title: "From class-taking to intelligent training",
-    body: "A more mature conversation about choosing the right workload, sequence and support for your current level."
-  }
-] as const;
-
-const pathways = [
-  {
-    title: "Adult dancers",
-    body: "For dancers returning to class, rebuilding confidence or finally wanting a routine that feels clear and elegant."
-  },
-  {
-    title: "Pre-professional students",
-    body: "For students who need extra conditioning outside the academy without turning every session into overload."
-  },
-  {
-    title: "Teachers and movers",
-    body: "For professionals who want a refined cross-training space they can trust and revisit consistently."
-  }
-] as const;
-
-const footerColumns = [
-  {
-    title: "Studio",
-    links: [
-      { href: "/#studio", label: "Classes" },
-      { href: "/#studio", label: "Programs" },
-      { href: "/#live", label: "Live sessions" }
-    ]
-  },
-  {
-    title: "Explore",
-    links: [
-      { href: "/#about", label: "About Brunela" },
-      { href: "/#plans", label: "Memberships" },
-      { href: "/#media", label: "Media and journal" }
-    ]
-  },
-  {
-    title: "Access",
-    links: [
-      { href: "/sign-in", label: "Member sign in" },
-      { href: "/dashboard", label: "Studio dashboard" },
-      { href: "/admin", label: "Admin access" }
-    ]
-  }
 ] as const;
 
 export default function HomePage() {
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell">
-        <div className="hero-layout">
-          <div className="hero-stage">
-            <p className="eyebrow">Online ballet conditioning</p>
-            <h1 className="hero-wordmark mt-8">BRUNELA</h1>
-            <span className="hero-submark">dance trainer</span>
-            <p className="hero-copy">
-              A premium online studio for dancers who want more than random classes: better structure, better
-              continuity and a training rhythm that feels elegant from the first session.
+    <>
+      <GrainTexture />
+      <DotGrid />
+      <PinkGlow />
+
+      {/* ── HERO ── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <ArcGalleryHero
+          images={heroImages}
+          startAngle={18}
+          endAngle={162}
+          radiusLg={500}
+          radiusMd={370}
+          radiusSm={270}
+          cardSizeLg={128}
+          cardSizeMd={104}
+          cardSizeSm={82}
+        />
+      </div>
+
+      {/* ── CLASES ── */}
+      <section id="clases" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '3.5rem' }}>
+            <div>
+              <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
+                Studio
+              </p>
+              <h2 style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: 'clamp(2.4rem,5vw,4rem)', lineHeight: 0.95, color: '#1c1917' }}>
+                Lo que encontras<br />adentro
+              </h2>
+            </div>
+            <p style={{ fontSize: '1rem', color: '#78716c', lineHeight: 1.8, maxWidth: '36ch' }}>
+              Clases on demand, programas con estructura real y sesiones en vivo para todos los niveles.
             </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="button-primary" href="/#plans">
-                Start your free trial
-              </Link>
-              <Link className="button-secondary" href="/sign-in">
-                Member sign in
-              </Link>
-            </div>
-
-            <div className="hero-tag-cloud mt-10">
-              {disciplineTags.map((tag) => (
-                <span key={tag} className="detail-tag">
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <div className="hero-metrics mt-10">
-              <div className="soft-stat p-5">
-                <p className="eyebrow">Method</p>
-                <p className="display mt-4 text-4xl leading-none">100+</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                  Lessons, class ideas and training combinations ready to grow with the studio.
-                </p>
-              </div>
-              <div className="soft-stat p-5">
-                <p className="eyebrow">Formats</p>
-                <p className="display mt-4 text-4xl leading-none">6</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                  Ballet, stretching, mat work, reformer language and progressive dancer conditioning.
-                </p>
-              </div>
-              <div className="soft-stat p-5">
-                <p className="eyebrow">Entry</p>
-                <p className="display mt-4 text-4xl leading-none">7 days</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                  Trial access with a gentler path into the studio and room to understand your level.
-                </p>
-              </div>
-            </div>
           </div>
 
-          <aside className="panel hero-aside">
-            <div className="story-chip">From Argentina to Barcelona</div>
-            <h2 className="display mt-6 text-4xl leading-none md:text-5xl">Brunela brings a dancer&apos;s eye to training.</h2>
-            <p className="mt-5 text-sm leading-7 text-[color:var(--ink-soft)]">
-              Ballet teacher, choreographer and dancer, Brunela has built her work around helping dancers perform with
-              more control, more clarity and less noise.
-            </p>
-
-            <div className="mt-8 space-y-4">
-              <div className="editorial-card p-5">
-                <p className="eyebrow">Get to know the studio</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                  The approach is cross-disciplinary: technique support, mobility, conditioning and intelligent
-                  programming for different moments in a dancer&apos;s season.
-                </p>
-              </div>
-
-              <div className="editorial-card p-5">
-                <p className="eyebrow">Online classes</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                  If schedule is the problem, the studio becomes the solution: structured lessons, flexible access and
-                  a softer bridge into regular training.
-                </p>
-              </div>
-            </div>
-          </aside>
+          <InteractiveSelector />
         </div>
       </section>
 
-      <section className="page-shell mt-10 md:mt-14" id="studio">
-        <div className="section-shell">
-          <div className="section-copy">
-            <p className="eyebrow">Inside the online studio</p>
-            <h2 className="section-title">Classes, programs and live support built around real dancer needs.</h2>
-            <p className="section-lead">
-              Instead of a thin landing page, Brunela now reads like a full studio: multiple formats, richer context
-              and a stronger sense of what actually happens once someone joins.
-            </p>
-          </div>
+      {/* ── SOBRE MI ── */}
+      <section id="sobre" style={{ position: 'relative', zIndex: 1, scrollMarginTop: '5rem', overflow: 'hidden' }}>
+        {/* Soft monocolor background */}
+        <div style={{ position: 'absolute', inset: 0, background: '#fdf2f8', zIndex: 0 }} />
 
-          <div className="studio-grid mt-8">
-            {studioCollections.map((item) => (
-              <article key={item.title} className="studio-card">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="card-kicker">{item.type}</span>
-                  <span className="card-meta">{item.level}</span>
-                </div>
-                <h3 className="display mt-5 text-3xl">{item.title}</h3>
-                <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
-                  {item.meta}
+        {/* Ballet line art background decoration */}
+        <svg
+          viewBox="0 0 400 600"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+          style={{
+            position: 'absolute', right: '3%', top: '50%',
+            transform: 'translateY(-50%)',
+            height: '80%', width: 'auto',
+            opacity: 0.06, pointerEvents: 'none', zIndex: 0,
+          }}
+        >
+          {/* Arabesque figure */}
+          <circle cx="190" cy="148" r="22" stroke="#be185d" strokeWidth="2.5" />
+          <circle cx="190" cy="126" r="11" stroke="#be185d" strokeWidth="2" />
+          <ellipse cx="190" cy="198" rx="16" ry="34" stroke="#be185d" strokeWidth="2.5" />
+          <path d="M 177 183 Q 138 158 100 128" stroke="#be185d" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 100 128 Q 88 116 82 103" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 203 183 Q 248 168 292 150" stroke="#be185d" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 182 232 Q 177 290 174 360 Q 172 385 170 408" stroke="#be185d" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 198 232 Q 235 258 276 250 Q 312 243 342 218" stroke="#be185d" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 164 226 Q 144 246 130 254 Q 162 249 190 242 Q 218 249 250 254 Q 236 246 216 226" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 170 408 Q 168 426 170 433" stroke="#be185d" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 342 218 Q 353 212 357 208" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          {/* Barre */}
+          <line x1="30" y1="480" x2="170" y2="480" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          <line x1="30" y1="474" x2="30" y2="560" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          <line x1="170" y1="474" x2="170" y2="560" stroke="#be185d" strokeWidth="2" strokeLinecap="round" />
+          {/* Stars */}
+          <circle cx="60" cy="70" r="3" fill="#be185d" opacity="0.6" />
+          <circle cx="340" cy="500" r="2.5" fill="#be185d" opacity="0.5" />
+          <circle cx="25" cy="350" r="2" fill="#be185d" opacity="0.4" />
+          <circle cx="370" cy="110" r="2" fill="#be185d" opacity="0.35" />
+          <circle cx="320" cy="320" r="1.5" fill="#be185d" opacity="0.3" />
+        </svg>
+
+        <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+
+            {/* Section label */}
+            <div style={{ marginBottom: '3.5rem' }}>
+              <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
+                Sobre mi
+              </p>
+              <h2 style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: 'clamp(2.4rem,5vw,4rem)', lineHeight: 0.95, color: '#1c1917' }}>
+                Bailarina, docente<br />y coreografa.
+              </h2>
+            </div>
+
+            {/* Content: photo left + portrait right */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '4rem', alignItems: 'start' }}>
+
+              {/* Left: single portrait */}
+              <div style={{
+                position: 'relative', borderRadius: '1.5rem', overflow: 'hidden',
+                aspectRatio: '3/4',
+                boxShadow: '0 32px 80px rgba(236,72,153,0.15), 0 0 0 1px rgba(236,72,153,0.08)',
+              }}>
+                <Image src="/fotos-landing/about-hero.jpg.jpg" alt="Brunela" fill sizes="45vw"
+                  style={{ objectFit: 'cover', objectPosition: 'top center' }} />
+                {/* subtle pink tint at top */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(236,72,153,0.08) 0%, transparent 40%)' }} />
+              </div>
+
+              {/* Right: text */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', paddingTop: '1rem' }}>
+                <p style={{ fontSize: '1rem', color: '#78716c', lineHeight: 1.9 }}>
+                  Mas de 15 anos transformando cuerpos y carreras a traves del movimiento. Certificada en PBT, PCT, Pilates y RAF. Trabajo desde Argentina y Barcelona.
                 </p>
-                <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+                <p style={{ fontSize: '1rem', color: '#78716c', lineHeight: 1.9 }}>
+                  Mi propuesta no reemplaza tu tecnica — la sostiene con trabajo de centro, alineacion y movilidad especifica para bailarines.
+                </p>
 
-      <section className="page-shell mt-10 md:mt-14" id="about">
-        <div className="section-split">
-          <div className="panel story-sheet">
-            <p className="eyebrow">About Brunela</p>
-            <h2 className="section-title mt-4">A ballet teacher, choreographer and dancer shaping a more intelligent training space.</h2>
-            <p className="section-lead mt-5">
-              Brunela is from Argentina and currently based in Barcelona. The studio grows from years of dedicated
-              practice and a clear mission: help dancers reach stronger performance through cleaner support work behind
-              the scenes.
-            </p>
-            <p className="mt-5 text-sm leading-7 text-[color:var(--ink-soft)]">
-              The promise is not just beautiful branding. It is a complete training environment that supports
-              technique, recovery, consistency and a calmer relationship with progress.
-            </p>
-          </div>
-
-          <div className="panel story-sheet">
-            <p className="eyebrow">Training paths</p>
-            <div className="mt-6 space-y-4">
-              {pathways.map((path) => (
-                <div key={path.title} className="feature-tile">
-                  <h3 className="display text-3xl">{path.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{path.body}</p>
+                {/* Certifications */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {['PBT Certified', 'PCT Certified', 'Pilates', 'RAF', '+15 anos'].map((t) => (
+                    <span key={t} style={{
+                      fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.14em',
+                      textTransform: 'uppercase', padding: '0.4rem 1rem', borderRadius: '999px',
+                      background: 'rgba(255,255,255,0.8)', color: '#ec4899',
+                      border: '1px solid rgba(236,72,153,0.2)',
+                    }}>
+                      {t}
+                    </span>
+                  ))}
                 </div>
-              ))}
+
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid rgba(236,72,153,0.12)', borderBottom: '1px solid rgba(236,72,153,0.12)' }}>
+                  {[
+                    { num: '+15', label: 'anos de experiencia' },
+                    { num: '4', label: 'certificaciones' },
+                    { num: '2', label: 'ciudades' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ textAlign: 'center' }}>
+                      <p style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '2.2rem', color: '#ec4899', lineHeight: 1, marginBottom: '0.2rem' }}>{s.num}</p>
+                      <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(28,25,23,0.4)', lineHeight: 1.4 }}>{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTAs */}
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <Link href="/#planes" style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '0.85rem 1.8rem', borderRadius: '999px',
+                    background: '#ec4899', color: '#fff', textDecoration: 'none',
+                    fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase',
+                    boxShadow: '0 10px 28px rgba(236,72,153,0.28)',
+                  }}>
+                    Ver membresias
+                  </Link>
+                  <a
+                    href="https://instagram.com/brunela.dance"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      padding: '0.85rem 1.8rem', borderRadius: '999px',
+                      background: 'transparent', color: '#1c1917', textDecoration: 'none',
+                      fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase',
+                      border: '1.5px solid rgba(28,25,23,0.15)',
+                    }}
+                  >
+                    Ver portfolio
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="page-shell mt-10 md:mt-14" id="plans">
-        <div className="section-shell">
-          <div className="section-copy">
-            <p className="eyebrow">Memberships</p>
-            <h2 className="section-title">Three levels, each one clearer and more desirable than the last.</h2>
-            <p className="section-lead">
-              The names match the architecture already built underneath the product: Corps de Ballet, Solista and
-              Principal. Prices are placeholders for now, but the offer is intentionally positioned.
+      {/* ── PLANES ── */}
+      <section id="planes" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '0' }}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
+              Membresias
             </p>
+            <h2 style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: 'clamp(2.4rem,5vw,4rem)', lineHeight: 0.95, color: '#1c1917', marginBottom: '0.9rem' }}>
+              Tres niveles.<br />Un studio completo.
+            </h2>
+            <p style={{ fontSize: '0.95rem', color: '#78716c', lineHeight: 1.8 }}>Sin contrato. Cambia de plan cuando quieras.</p>
           </div>
 
-          <div className="plan-grid mt-8">
-            {membershipPlans.map((plan, index) => (
-              <article key={plan.name} className={`plan-card${index === 1 ? " plan-card-featured" : ""}`}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="eyebrow">{plan.accent}</p>
-                    <h3 className="display mt-4 text-4xl">{plan.name}</h3>
-                  </div>
-                  <span className="plan-note">{plan.note}</span>
-                </div>
-
-                <div className="plan-price">{plan.price}</div>
-                <p className="text-sm leading-7 text-[color:var(--ink-soft)]">{plan.description}</p>
-
-                <ul className="feature-list mt-6">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.25rem', marginTop: '3rem' }}>
+            {plans.map((p) => (
+              <div key={p.name} style={{
+                borderRadius: '1.5rem', padding: '2.25rem 2rem',
+                border: p.featured ? '1.5px solid #ec4899' : '1.5px solid #fce7f3',
+                background: p.featured ? 'linear-gradient(160deg,#fff 0%,#fdf2f8 100%)' : 'rgba(255,255,255,0.7)',
+                backdropFilter: 'blur(8px)', position: 'relative',
+                boxShadow: p.featured ? '0 20px 50px rgba(236,72,153,0.15)' : 'none',
+              }}>
+                {p.featured && (
+                  <span style={{ position: 'absolute', top: '-0.8rem', left: '50%', transform: 'translateX(-50%)', background: '#ec4899', color: '#fff', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', padding: '0.3rem 1rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                    Mas elegida
+                  </span>
+                )}
+                <p style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '1.5rem', color: '#1c1917', marginBottom: '0.35rem' }}>{p.name}</p>
+                <p style={{ fontSize: '0.85rem', color: '#78716c', lineHeight: 1.7, marginBottom: '1.5rem' }}>{p.desc}</p>
+                <p style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '3.5rem', color: '#ec4899', lineHeight: 1, marginBottom: '0.2rem' }}>${p.price}</p>
+                <p style={{ fontSize: '0.68rem', color: '#78716c', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '1.75rem' }}>USD / mes</p>
+                <ul style={{ listStyle: 'none', display: 'grid', gap: '0.6rem', marginBottom: '1.75rem', padding: 0 }}>
+                  {p.features.map((f) => (
+                    <li key={f} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', fontSize: '0.88rem', color: '#78716c', lineHeight: 1.6 }}>
+                      <CheckCircle2 size={14} style={{ color: '#ec4899', flexShrink: 0, marginTop: '0.12rem' }} />{f}
+                    </li>
                   ))}
                 </ul>
-
-                <Link className="button-secondary mt-8" href="/sign-in">
-                  Choose {plan.name}
+                <Link href="/sign-in" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
+                  padding: '0.85rem', borderRadius: '999px',
+                  fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  background: p.featured ? '#ec4899' : 'transparent',
+                  color: p.featured ? '#fff' : '#1c1917',
+                  border: p.featured ? 'none' : '1.5px solid rgba(28,25,23,0.18)',
+                  boxShadow: p.featured ? '0 8px 24px rgba(236,72,153,0.3)' : 'none',
+                }}>
+                  Empezar
                 </Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="page-shell mt-10 md:mt-14" id="live">
-        <div className="section-shell">
-          <div className="section-copy">
-            <p className="eyebrow">Live and special formats</p>
-            <h2 className="section-title">More than a library: intensives, coaching and sessions with real rhythm.</h2>
-            <p className="section-lead">
-              The reference site works because it feels alive. Brunela needs that same feeling of movement, but with
-              its own voice and a more dancer-conditioning point of view.
-            </p>
-          </div>
-
-          <div className="studio-grid mt-8">
-            {specialFormats.map((item) => (
-              <article key={item.title} className="studio-card">
-                <p className="card-kicker">{item.label}</p>
-                <h3 className="display mt-5 text-3xl">{item.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="page-shell mt-10 md:mt-14" id="media">
-        <div className="section-shell">
-          <div className="section-copy">
-            <p className="eyebrow">Media and journal</p>
-            <h2 className="section-title">Editorial content gives the brand a longer voice.</h2>
-            <p className="section-lead">
-              Interviews, notes, video essays and dancer education pieces help the site feel layered, premium and alive
-              even when a visitor is not yet ready to buy.
-            </p>
-          </div>
-
-          <div className="journal-grid mt-8">
-            {journalEntries.map((entry) => (
-              <article key={entry.title} className="journal-card">
-                <p className="card-kicker">{entry.category}</p>
-                <h3 className="display mt-5 text-3xl">{entry.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{entry.body}</p>
-                <span className="journal-link">Coming soon</span>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="page-shell mt-10 md:mt-14" id="contact">
-        <div className="footer-shell">
-          <div className="newsletter-panel">
-            <p className="eyebrow">Start today</p>
-            <h2 className="section-title mt-4">A more complete studio, a calmer palette and a stronger sense of value.</h2>
-            <p className="section-lead mt-5">
-              This version already gives Brunela much more of the feeling your reference has: depth, aspiration and a
-              fuller studio ecosystem instead of one soft hero and not much else.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="button-primary" href="/#plans">
-                Explore memberships
-              </Link>
-              <Link className="button-secondary" href="/sign-in">
-                Enter the studio
-              </Link>
-            </div>
-          </div>
-
-          <footer className="footer-grid">
-            <div>
-              <Link className="site-logo" href="/">
-                <span className="site-logo-mark">Brunela</span>
-                <span className="site-logo-subtitle">Dance Trainer</span>
-              </Link>
-              <p className="mt-5 max-w-sm text-sm leading-7 text-[color:var(--ink-soft)]">
-                Ballet conditioning, pilates and structured support for dancers training from beginner to professional
-                level.
-              </p>
-            </div>
-
-            {footerColumns.map((column) => (
-              <div key={column.title}>
-                <p className="footer-label">{column.title}</p>
-                <div className="footer-link-stack">
-                  {column.links.map((link) => (
-                    <Link key={link.label} className="footer-link" href={link.href}>
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
               </div>
             ))}
-          </footer>
+          </div>
         </div>
       </section>
-    </main>
+
+      {/* ── FOOTER ── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <BrunelaFooter />
+      </div>
+    </>
   );
 }

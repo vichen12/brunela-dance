@@ -1,0 +1,70 @@
+"use client";
+
+import { createBrowserClient } from "@supabase/ssr";
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+type Props = { callbackUrl?: string | null };
+
+export function OAuthButtons({ callbackUrl }: Props) {
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!
+  );
+
+  async function signInWithGoogle() {
+    const redirectTo = new URL("/auth/callback", window.location.origin);
+    if (callbackUrl) redirectTo.searchParams.set("next", callbackUrl);
+
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: redirectTo.toString() }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={signInWithGoogle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.7rem",
+        width: "100%",
+        padding: "0.82rem 1.5rem",
+        borderRadius: "12px",
+        border: "1.5px solid #ede1ea",
+        background: "#fff",
+        color: "#1c1917",
+        fontSize: "0.85rem",
+        fontWeight: 600,
+        fontFamily: "var(--font-body)",
+        cursor: "pointer",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        transition: "all 180ms",
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = "#be185d";
+        e.currentTarget.style.boxShadow = "0 2px 14px rgba(190,24,93,0.12)";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = "#ede1ea";
+        e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+      }}
+    >
+      <GoogleIcon />
+      Continuar con Google
+    </button>
+  );
+}
