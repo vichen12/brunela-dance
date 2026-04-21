@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("next") ?? "/dashboard";
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
+  console.log("[auth/callback] full URL:", request.url);
+  console.log("[auth/callback] all params:", Object.fromEntries(searchParams));
+  console.log("[auth/callback] code:", code ? `present (${code.slice(0, 8)}...)` : "MISSING");
+
   if (!hasSupabaseAuthEnv()) {
     return NextResponse.redirect(
       `${origin}/sign-in?error=${encodeURIComponent("Configuracion pendiente")}`

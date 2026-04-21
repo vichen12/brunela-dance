@@ -8,21 +8,25 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createSupabaseServerClient();
 
+  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+  console.log("[api/auth/google] redirectTo:", redirectTo);
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
+      redirectTo,
       skipBrowserRedirect: true,
     },
   });
 
+  console.log("[api/auth/google] oauth url:", data?.url ?? "NONE");
+  console.log("[api/auth/google] error:", error ?? "none");
+
   if (error || !data.url) {
-    console.error("[api/auth/google] error:", error);
     return NextResponse.redirect(
       `${origin}/sign-in?error=${encodeURIComponent("Error iniciando Google")}`
     );
   }
 
-  const response = NextResponse.redirect(data.url);
-  return response;
+  return NextResponse.redirect(data.url);
 }
