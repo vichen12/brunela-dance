@@ -505,6 +505,36 @@ section[id] { scroll-margin-top: 5rem; }
   .admin-sidebar { margin-bottom: 0; }
 }
 
+/* ── Landing page mobile ── */
+@media (max-width: 767px) {
+  .landing-nav-links { display: none !important; }
+  .landing-nav-cta-ghost { display: none !important; }
+  .landing-about-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+  .landing-about-photo { aspect-ratio: 4/3 !important; }
+  .landing-plans-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .landing-stats-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .arc-text-section {
+    margin-top: -2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .arc-photo-container { height: 260px !important; }
+  .landing-section {
+    padding: 3rem 1.25rem !important;
+  }
+  .landing-section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
 .panel, .section-shell, .story-sheet, .soft-stat, .editorial-card,
 .studio-card, .plan-card, .newsletter-panel, .admin-metric {
   position: relative; overflow: hidden;

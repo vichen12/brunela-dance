@@ -74,8 +74,8 @@ export function Navbar() {
         </div>
       </Link>
 
-      {/* Nav links */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
+      {/* Nav links — hidden on mobile via .landing-nav-links CSS class */}
+      <nav className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
         {links.map((l) => (
           <Link
             key={l.href} href={l.href}
@@ -114,6 +114,7 @@ export function Navbar() {
         </Link>
         <Link
           href="/sign-in"
+          className="landing-nav-cta-ghost"
           style={{
             display: 'inline-flex', alignItems: 'center',
             padding: '0.5rem 1.1rem', borderRadius: '999px',

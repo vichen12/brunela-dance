@@ -42,7 +42,10 @@
       "Bash(tar -xf /tmp/design.gz -C /tmp/design_files)",
       "Bash(curl -s http://localhost:3001/dashboard)",
       "Bash(echo \"has_service_role=$?\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const s = fs.statSync\\('public/icon.jpg'\\); console.log\\('size:', s.size, 'bytes'\\)\")"
     ]
   }
 }

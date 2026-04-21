@@ -145,10 +145,10 @@ export default function HomePage() {
       </div>
 
       {/* ── CLASES ── */}
-      <section id="clases" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
+      <section id="clases" className="landing-section" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '3.5rem' }}>
+          <div className="landing-section-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '3.5rem' }}>
             <div>
               <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
                 Studio
@@ -167,7 +167,7 @@ export default function HomePage() {
       </section>
 
       {/* ── SOBRE MI ── */}
-      <section id="sobre" style={{ position: 'relative', zIndex: 1, scrollMarginTop: '5rem', overflow: 'hidden' }}>
+      <section id="sobre" className="landing-section" style={{ position: 'relative', zIndex: 1, scrollMarginTop: '5rem', overflow: 'hidden', padding: 0 }}>
         {/* Soft monocolor background */}
         <div style={{ position: 'absolute', inset: 0, background: '#fdf2f8', zIndex: 0 }} />
 
@@ -222,10 +222,10 @@ export default function HomePage() {
             </div>
 
             {/* Content: photo left + portrait right */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '4rem', alignItems: 'start' }}>
+            <div className="landing-about-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '4rem', alignItems: 'start' }}>
 
               {/* Left: single portrait */}
-              <div style={{
+              <div className="landing-about-photo" style={{
                 position: 'relative', borderRadius: '1.5rem', overflow: 'hidden',
                 aspectRatio: '3/4',
                 boxShadow: '0 32px 80px rgba(236,72,153,0.15), 0 0 0 1px rgba(236,72,153,0.08)',
@@ -260,7 +260,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid rgba(236,72,153,0.12)', borderBottom: '1px solid rgba(236,72,153,0.12)' }}>
+                <div className="landing-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid rgba(236,72,153,0.12)', borderBottom: '1px solid rgba(236,72,153,0.12)' }}>
                   {[
                     { num: '+15', label: 'anos de experiencia' },
                     { num: '4', label: 'certificaciones' },
@@ -306,7 +306,7 @@ export default function HomePage() {
       </section>
 
       {/* ── PLANES ── */}
-      <section id="planes" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
+      <section id="planes" className="landing-section" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '0' }}>
             <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
@@ -318,7 +318,7 @@ export default function HomePage() {
             <p style={{ fontSize: '0.95rem', color: '#78716c', lineHeight: 1.8 }}>Sin contrato. Cambia de plan cuando quieras.</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.25rem', marginTop: '3rem' }}>
+          <div className="landing-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.25rem', marginTop: '3rem' }}>
             {plans.map((p) => (
               <div key={p.name} style={{
                 borderRadius: '1.5rem', padding: '2.25rem 2rem',

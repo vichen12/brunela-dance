@@ -49,10 +49,10 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
 
       {/* Arc gallery — top, photos slightly below navbar */}
       <div
+        className="arc-photo-container"
         style={{
           position: 'relative',
           width: '100%',
-          /* taller container = more room above photos = photos sit lower, away from navbar */
           height: dimensions.radius * 1.4,
           zIndex: 1,
         }}
@@ -110,7 +110,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
 
       {/* Text — sits tight under the photo arc */}
       <div
-        className="relative flex items-center justify-center px-6 opacity-0 animate-fade-in"
+        className="arc-text-section relative flex items-center justify-center px-6 opacity-0 animate-fade-in"
         style={{
           zIndex: 2,
           marginTop: '-14rem',

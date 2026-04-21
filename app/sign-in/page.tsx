@@ -23,124 +23,138 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: "radial-gradient(ellipse 90% 80% at 10% 0%, #fbcfe8 0%, transparent 55%), radial-gradient(ellipse 70% 70% at 90% 10%, #fce7f3 0%, transparent 55%)", opacity: 0.75 }} />
       <div aria-hidden style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: "55vh", zIndex: 0, pointerEvents: "none", background: "radial-gradient(ellipse 80% 80% at 50% 100%, #fdf2f8 0%, transparent 65%)", opacity: 0.85 }} />
 
-      {/* ── Left: editorial panel ── */}
-      <div
-        className="relative hidden lg:flex items-center justify-center overflow-hidden"
-        style={{
-          background: "linear-gradient(155deg, rgba(252,231,243,0.88) 0%, rgba(253,242,248,0.72) 55%, rgba(255,255,255,0.55) 100%)",
-          backdropFilter: "blur(4px)",
-          borderRight: "1px solid rgba(252,231,243,0.7)",
-          zIndex: 1,
-          padding: "clamp(5rem, 8vh, 7rem) clamp(3rem, 5vw, 5rem)",
-        }}
-      >
-        {/* ── Improved ballet arabesque SVG ── */}
-        <svg
-          viewBox="0 0 480 700"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-          style={{
-            position: "absolute",
-            right: "-4%",
-            top: "50%",
-            transform: "translateY(-50%)",
-            height: "82%",
-            width: "auto",
-            opacity: 0.13,
-            pointerEvents: "none",
-          }}
-        >
-          {/* Hair bun */}
-          <circle cx="222" cy="76" r="10" stroke="#be185d" strokeWidth="2"/>
-          <path d="M 213 84 Q 216 88 222 90 Q 228 88 231 84" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round"/>
+      {/* ── Ballet dancer SVG — shared between mobile banner and desktop panel ── */}
+      {(() => {
+        const DancerSvg = ({ opacity = 0.13 }: { opacity?: number }) => (
+          <svg
+            viewBox="0 0 480 700"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden
+            style={{ width: "100%", height: "100%", pointerEvents: "none" }}
+          >
+            {/* Hair bun */}
+            <circle cx="222" cy="72" r="11" stroke="#be185d" strokeWidth="2.2" opacity={opacity}/>
+            {/* Connecting bun to head */}
+            <path d="M 212 78 Q 216 86 222 88 Q 228 86 232 78" stroke="#be185d" strokeWidth="2" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Head */}
-          <circle cx="220" cy="100" r="24" stroke="#be185d" strokeWidth="2.6"/>
+            {/* Head — moved down slightly to close bun gap */}
+            <circle cx="220" cy="106" r="26" stroke="#be185d" strokeWidth="2.6" opacity={opacity}/>
 
-          {/* Neck */}
-          <path d="M 215 124 Q 213 136 212 148" stroke="#be185d" strokeWidth="2.6" strokeLinecap="round"/>
+            {/* Neck — starts at exact bottom of head (cy+r = 132), meets torso at same x */}
+            <path d="M 220 132 Q 218 144 216 156" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Shoulder line */}
-          <path d="M 184 164 Q 212 156 240 164" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round"/>
+            {/* Shoulder line — crosses through the neck end point */}
+            <path d="M 182 168 Q 216 158 244 168" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Torso spine — elegant curve for arabesque */}
-          <path d="M 218 148 Q 214 182 212 216 Q 210 238 208 258" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round"/>
+            {/* Torso spine — continuous from neck bottom */}
+            <path d="M 216 156 Q 214 188 212 220 Q 210 240 208 260" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Front arm — extended forward and gently up */}
-          <path d="M 240 164 Q 286 152 330 136 Q 366 122 400 106" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round"/>
-          {/* Front wrist / hand */}
-          <path d="M 400 106 Q 414 98 420 88" stroke="#be185d" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M 418 90 Q 416 82 410 78" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round"/>
+            {/* Front arm */}
+            <path d="M 244 168 Q 290 154 334 138 Q 368 124 402 108" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 402 108 Q 416 100 422 90" stroke="#be185d" strokeWidth="2" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 420 92 Q 418 84 412 80" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Back arm — going back and slightly low */}
-          <path d="M 184 164 Q 148 158 110 148 Q 82 140 60 130" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round"/>
-          {/* Back wrist / hand */}
-          <path d="M 60 130 Q 50 124 46 114" stroke="#be185d" strokeWidth="1.8" strokeLinecap="round"/>
+            {/* Back arm */}
+            <path d="M 182 168 Q 146 160 108 150 Q 80 142 58 132" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 58 132 Q 48 126 44 116" stroke="#be185d" strokeWidth="1.8" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Tutu — outer layer */}
-          <path d="M 180 252 Q 166 272 158 288 Q 184 274 208 266 Q 232 274 258 288 Q 250 272 236 252" stroke="#be185d" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
-          {/* Tutu — inner layer (slightly smaller, more opaque) */}
-          <path d="M 186 248 Q 174 264 168 278 Q 190 267 208 262 Q 226 267 248 278 Q 242 264 230 248" stroke="#be185d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          {/* Tutu — subtle third layer */}
-          <path d="M 192 244 Q 184 258 180 270 Q 196 263 208 260 Q 220 263 236 270 Q 232 258 224 244" stroke="#be185d" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
+            {/* Tutu layers */}
+            <path d="M 178 254 Q 164 274 156 290 Q 182 276 208 268 Q 234 276 260 290 Q 252 274 238 254" stroke="#be185d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={opacity}/>
+            <path d="M 185 250 Q 173 266 167 280 Q 190 269 208 264 Q 226 269 249 280 Q 243 266 231 250" stroke="#be185d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity={opacity * 0.85}/>
+            <path d="M 192 246 Q 183 260 179 272 Q 196 265 208 262 Q 220 265 237 272 Q 233 260 224 246" stroke="#be185d" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" opacity={opacity * 0.7}/>
 
-          {/* Standing leg — straight, slight angle */}
-          <path d="M 208 258 Q 204 320 200 390 Q 198 430 196 468" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round"/>
+            {/* Standing leg */}
+            <path d="M 208 260 Q 204 322 200 392 Q 198 432 196 470" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 196 470 Q 194 484 191 492" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 191 492 Q 182 498 170 496" stroke="#be185d" strokeWidth="2" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 170 496 Q 162 494 158 488" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Standing foot — demi-pointe */}
-          <path d="M 196 468 Q 194 482 191 490" stroke="#be185d" strokeWidth="2.4" strokeLinecap="round"/>
-          <path d="M 191 490 Q 182 496 170 494" stroke="#be185d" strokeWidth="2" strokeLinecap="round"/>
-          {/* Toe box */}
-          <path d="M 170 494 Q 162 492 158 486" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round"/>
+            {/* Arabesque leg */}
+            <path d="M 214 264 Q 252 300 300 328 Q 348 356 394 374 Q 426 386 454 382" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 454 382 Q 468 376 474 366" stroke="#be185d" strokeWidth="2.2" strokeLinecap="round" opacity={opacity}/>
+            <path d="M 472 368 Q 470 360 464 356" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round" opacity={opacity}/>
 
-          {/* Arabesque leg — extended back and high */}
-          <path d="M 214 262 Q 252 298 298 326 Q 346 354 392 372 Q 424 384 452 380" stroke="#be185d" strokeWidth="2.8" strokeLinecap="round"/>
-          {/* Arabesque pointed foot */}
-          <path d="M 452 380 Q 466 374 472 364" stroke="#be185d" strokeWidth="2.2" strokeLinecap="round"/>
-          <path d="M 470 366 Q 468 358 462 354" stroke="#be185d" strokeWidth="1.6" strokeLinecap="round"/>
+            {/* Floor & barre */}
+            <line x1="106" y1="544" x2="292" y2="544" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity={opacity * 0.65}/>
+            <line x1="106" y1="536" x2="106" y2="610" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity={opacity * 0.45}/>
+            <line x1="292" y1="536" x2="292" y2="610" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity={opacity * 0.45}/>
 
-          {/* Floor line */}
-          <line x1="106" y1="542" x2="292" y2="542" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity="0.65"/>
+            {/* Decorative dots */}
+            <circle cx="44" cy="56" r="2.8" fill="#be185d" opacity={opacity * 0.35}/>
+            <circle cx="454" cy="460" r="2.2" fill="#be185d" opacity={opacity * 0.3}/>
+            <circle cx="28" cy="340" r="1.8" fill="#be185d" opacity={opacity * 0.25}/>
+            <circle cx="440" cy="200" r="1.6" fill="#be185d" opacity={opacity * 0.22}/>
+          </svg>
+        );
 
-          {/* Barre posts */}
-          <line x1="106" y1="534" x2="106" y2="608" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity="0.45"/>
-          <line x1="292" y1="534" x2="292" y2="608" stroke="#be185d" strokeWidth="1.4" strokeLinecap="round" opacity="0.45"/>
-
-          {/* Decorative dots */}
-          <circle cx="44" cy="56" r="2.8" fill="#be185d" opacity="0.35"/>
-          <circle cx="454" cy="460" r="2.2" fill="#be185d" opacity="0.3"/>
-          <circle cx="28" cy="340" r="1.8" fill="#be185d" opacity="0.25"/>
-          <circle cx="440" cy="200" r="1.6" fill="#be185d" opacity="0.22"/>
-          <circle cx="472" cy="580" r="2" fill="#be185d" opacity="0.2"/>
-          <circle cx="140" cy="580" r="1.5" fill="#be185d" opacity="0.18"/>
-        </svg>
-
-        {/* ── Centered editorial content (no logo, no chip) ── */}
-        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: "26rem" }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "clamp(3rem, 4.5vw, 4.8rem)", lineHeight: 0.9, color: "#1c1917", marginBottom: "1.6rem" }}>
-            Entrá a tu<br />estudio.
-          </h1>
-
-          <p style={{ fontSize: "0.88rem", color: "#78716c", lineHeight: 1.95, marginBottom: "2.5rem" }}>
-            Un espacio privado con biblioteca, programas y clases en vivo para bailarinas que practican con foco.
-          </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", textAlign: "left", maxWidth: "22rem", margin: "0 auto" }}>
-            {[
-              { label: "Biblioteca", desc: "Clases on demand para tu plan" },
-              { label: "Progreso", desc: "Retoma exactamente donde lo dejaste" },
-              { label: "En vivo", desc: "Reserva y accede en tiempo real" },
-            ].map((f) => (
-              <div key={f.label} style={{ display: "flex", gap: "0.9rem", alignItems: "center" }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ec4899", flexShrink: 0 }} />
-                <span style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1c1917" }}>{f.label}</span>
-                <span style={{ fontSize: "0.78rem", color: "#9d8a98" }}>— {f.desc}</span>
+        return (
+          <>
+            {/* Mobile: compact banner at top with dancer behind text */}
+            <div
+              className="relative flex lg:hidden items-center justify-center overflow-hidden"
+              style={{
+                background: "linear-gradient(155deg, rgba(252,231,243,0.9) 0%, rgba(253,242,248,0.75) 100%)",
+                padding: "2.5rem 1.5rem 2rem",
+                minHeight: 180,
+                zIndex: 1,
+              }}
+            >
+              <div style={{ position: "absolute", inset: 0, opacity: 1 }}>
+                <DancerSvg opacity={0.18} />
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
+                <h1 style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "2.4rem", lineHeight: 0.92, color: "#1c1917", marginBottom: "0.6rem" }}>
+                  Entrá a tu estudio.
+                </h1>
+                <p style={{ fontSize: "0.8rem", color: "#78716c", lineHeight: 1.6 }}>
+                  Biblioteca, programas y clases en vivo.
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop: full editorial left panel */}
+            <div
+              className="relative hidden lg:flex items-center justify-center overflow-hidden"
+              style={{
+                background: "linear-gradient(155deg, rgba(252,231,243,0.88) 0%, rgba(253,242,248,0.72) 55%, rgba(255,255,255,0.55) 100%)",
+                backdropFilter: "blur(4px)",
+                borderRight: "1px solid rgba(252,231,243,0.7)",
+                zIndex: 1,
+                padding: "clamp(5rem, 8vh, 7rem) clamp(3rem, 5vw, 5rem)",
+              }}
+            >
+              <div style={{ position: "absolute", right: "-4%", top: "50%", transform: "translateY(-50%)", height: "82%", width: "auto", aspectRatio: "480/700" }}>
+                <DancerSvg opacity={0.13} />
+              </div>
+
+              <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: "26rem" }}>
+                <h1 style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "clamp(3rem, 4.5vw, 4.8rem)", lineHeight: 0.9, color: "#1c1917", marginBottom: "1.6rem" }}>
+                  Entrá a tu<br />estudio.
+                </h1>
+
+                <p style={{ fontSize: "0.88rem", color: "#78716c", lineHeight: 1.95, marginBottom: "2.5rem" }}>
+                  Un espacio privado con biblioteca, programas y clases en vivo para bailarinas que practican con foco.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", textAlign: "left", maxWidth: "22rem", margin: "0 auto" }}>
+                  {[
+                    { label: "Biblioteca", desc: "Clases on demand para tu plan" },
+                    { label: "Progreso", desc: "Retoma exactamente donde lo dejaste" },
+                    { label: "En vivo", desc: "Reserva y accede en tiempo real" },
+                  ].map((f) => (
+                    <div key={f.label} style={{ display: "flex", gap: "0.9rem", alignItems: "center" }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ec4899", flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1c1917" }}>{f.label}</span>
+                      <span style={{ fontSize: "0.78rem", color: "#9d8a98" }}>— {f.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Right: form panel ── */}
       <div
@@ -156,14 +170,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         }}
       >
         <div style={{ width: "100%", maxWidth: "400px" }}>
-
-          {/* Mobile brand — visible only on small screens */}
-          <div className="mb-8 flex flex-col items-center lg:hidden">
-            <Link href="/" style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", textDecoration: "none", lineHeight: 1 }}>
-              <span style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: "2rem", color: "#1c1917" }}>Brunela</span>
-              <span style={{ fontSize: "0.46rem", fontWeight: 800, letterSpacing: "0.3em", textTransform: "uppercase", color: "#be185d", marginTop: "3px" }}>Studio</span>
-            </Link>
-          </div>
 
           <p style={{ fontSize: "0.6rem", fontWeight: 800, letterSpacing: "0.3em", textTransform: "uppercase", color: "#be185d", marginBottom: "0.65rem" }}>
             Member sign in
