@@ -1,6 +1,6 @@
 "use client";
 
-// ─── Sparkline (pure SVG, no interactivity needed, but kept here for co-location) ───
+// ─── Sparkline (pure SVG, no interactivity needed, but kept here for co-location)212121 ───
 function Sparkline({ points, color = "#be185d" }: { points: string; color?: string }) {
   const pts = points.split(" ").map((p) => { const [x, y] = p.split(","); return { x: +x, y: +y }; });
   const last = pts[pts.length - 1];
