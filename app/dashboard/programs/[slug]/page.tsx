@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StudioNav } from "@/components/studio-nav";
 import {
   formatDurationLabel,
   membershipTierLabel,
@@ -89,7 +88,6 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
-        <StudioNav current="programs" />
 
         <Link className="button-secondary" href="/dashboard/programs">
           Volver a programas

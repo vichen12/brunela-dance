@@ -1,49 +1,57 @@
 import Link from "next/link";
-import { StudioNav } from "@/components/studio-nav";
-import { signOutAction } from "@/src/features/auth/actions";
 import { requireUser } from "@/src/features/auth/guards";
-import { membershipTierLabel } from "@/src/features/studio/helpers";
-import { getDictionary } from "@/src/i18n/messages";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { resolveI18nText } from "@/src/features/studio/helpers";
 
-const copy = getDictionary("es");
 export const dynamic = "force-dynamic";
 
-type DashboardProfile = {
-  full_name: string | null;
-  membership_tier: "none" | "corps_de_ballet" | "solista" | "principal";
-  onboarding_completed: boolean;
-  is_admin: boolean;
-};
+type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 
-type SubscriptionSnapshot = {
-  status: string;
-  current_period_ends_at: string | null;
-};
-
-type ResumeSnapshot = {
+type ResumeVideo = {
   max_position_seconds: number;
   completion_percent: number;
   updated_at: string;
-  videos: {
-    title_i18n: Record<string, string>;
-    duration_seconds: number;
-    slug: string;
-  } | null;
+  videos: { title_i18n: Record<string, string>; duration_seconds: number; slug: string } | null;
 };
 
-const dashboardMoments = [
-  {
-    label: "Continuidad",
-    title: "Resume tu practica",
-    body: "La alumna siempre vuelve al punto exacto donde dejo la clase."
-  },
-  {
-    label: "Biblioteca",
-    title: "Curaduria elegante",
-    body: "Videos, programas y sesiones en vivo viven en una experiencia de estudio, no de plataforma fria."
-  }
+type LiveSession = {
+  id: string;
+  title_i18n: Record<string, string>;
+  starts_at: string;
+  membership_tier_required: MembershipTier;
+};
+
+const TIER_ORDER: Record<MembershipTier, number> = {
+  none: 0, corps_de_ballet: 1, solista: 2, principal: 3,
+};
+
+const CAT_GRADIENTS: Record<string, string> = {
+  ballet:     "linear-gradient(145deg, #fce7f3 0%, #f9a8d4 100%)",
+  reformer:   "linear-gradient(145deg, #fdf2f8 0%, #f472b6 100%)",
+  mat:        "linear-gradient(145deg, #fce7f3 0%, #ec4899 100%)",
+  stretching: "linear-gradient(145deg, #fdf4ff 0%, #e879f9 100%)",
+  pbt:        "linear-gradient(145deg, #fdf2f8 0%, #db2777 100%)",
+  pct:        "linear-gradient(145deg, #fff1f2 0%, #be185d 100%)",
+};
+
+const CLASS_CATS = [
+  { key: "ballet",     label: "Ballet",           sub: "Técnica clásica"   },
+  { key: "reformer",   label: "Pilates Reformer",  sub: "Fuerza funcional"  },
+  { key: "mat",        label: "Pilates Mat",       sub: "Control de centro" },
+  { key: "stretching", label: "Stretching",        sub: "Movilidad activa"  },
+  { key: "pbt",        label: "PBT",               sub: "PBT Certificado"   },
+  { key: "pct",        label: "PCT",               sub: "PCT Certificado"   },
 ];
+
+function formatDate() {
+  return new Date().toLocaleDateString("es-ES", {
+    weekday: "long", day: "numeric", month: "long",
+  });
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + "h";
+}
 
 export default async function DashboardPage() {
   const { user } = await requireUser();
@@ -51,214 +59,195 @@ export default async function DashboardPage() {
 
   const [
     { data: profile },
-    { data: subscription },
     { data: resume },
-    accessibleVideos,
-    accessiblePrograms,
-    upcomingSessions
+    { data: liveData },
+    { data: progressList },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, membership_tier, onboarding_completed, is_admin")
-      .eq("id", user.id)
-      .single<DashboardProfile>(),
-    supabase
-      .from("subscriptions")
-      .select("status, current_period_ends_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<SubscriptionSnapshot>(),
-    supabase
-      .from("user_progress")
+    supabase.from("profiles").select("full_name, membership_tier, is_admin").eq("id", user.id)
+      .single<{ full_name: string | null; membership_tier: MembershipTier; is_admin: boolean }>(),
+    supabase.from("user_progress")
       .select("max_position_seconds, completion_percent, updated_at, videos(title_i18n, duration_seconds, slug)")
-      .eq("user_id", user.id)
-      .gt("max_position_seconds", 0)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<ResumeSnapshot>(),
-    supabase.from("videos").select("*", { count: "exact", head: true }),
-    supabase.from("programs").select("*", { count: "exact", head: true }),
-    supabase
-      .from("live_sessions")
-      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id).gt("max_position_seconds", 0)
+      .order("updated_at", { ascending: false }).limit(1).maybeSingle<ResumeVideo>(),
+    supabase.from("live_sessions")
+      .select("id, title_i18n, starts_at, membership_tier_required")
       .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true }).limit(1).maybeSingle<LiveSession>(),
+    supabase.from("user_progress").select("video_id, max_position_seconds")
+      .eq("user_id", user.id).gt("max_position_seconds", 0),
   ]);
 
-  const membershipTier = profile?.membership_tier ?? "none";
-  const profileName = profile?.full_name ?? user.email ?? copy.dashboard.defaultName;
-  const resumeTitle =
-    resume?.videos?.title_i18n?.es ?? resume?.videos?.title_i18n?.en ?? copy.dashboard.resumeFallback;
+  const tier = profile?.membership_tier ?? "none";
+  const isAdmin = profile?.is_admin ?? false;
+  const firstName = isAdmin
+    ? "Brunela"
+    : (profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "alumna");
+
+  const classesWatched = progressList?.length ?? 0;
+  const minutesPracticed = Math.floor(
+    (progressList ?? []).reduce((acc, p) => acc + p.max_position_seconds, 0) / 60
+  );
+
+  const resumeTitle = resume?.videos ? resolveI18nText(resume.videos.title_i18n) : null;
   const resumeProgress = Math.max(8, Math.min(100, Number(resume?.completion_percent ?? 0)));
-  const studioLinks = [
-    {
-      href: "/dashboard/library",
-      eyebrow: "Library",
-      title: "Biblioteca privada",
-      body: "Explora las clases publicadas para tu plan, con filtros, cards reales y progreso visible.",
-      value: accessibleVideos.count ?? 0
-    },
-    {
-      href: "/dashboard/programs",
-      eyebrow: "Programs",
-      title: "Programas guiados",
-      body: "Segui secuencias dia por dia y marca avance dentro del contexto correcto.",
-      value: accessiblePrograms.count ?? 0
-    },
-    {
-      href: "/dashboard/live",
-      eyebrow: "Live",
-      title: "Clases en vivo",
-      body: "Reserva, cancela y accede a los links permitidos por membresia y booking.",
-      value: upcomingSessions.count ?? 0
-    }
-  ] as const;
+  const resumeElapsed = Math.floor((Number(resume?.completion_percent ?? 0) / 100) * (resume?.videos?.duration_seconds ?? 0));
+  const resumeMin = Math.floor(resumeElapsed / 60);
+  const resumeSec = resumeElapsed % 60;
+
+  const canAccessLive = liveData
+    ? TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required]
+    : false;
 
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
-        <StudioNav current="overview" />
 
+        {/* Hero */}
         <header className="hero-stage">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <span className="studio-chip">{copy.dashboard.kicker}</span>
-              <h1 className="display mt-8 text-5xl leading-none md:text-7xl">{copy.dashboard.greeting(profileName)}</h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
-                Un espacio privado para sostener la practica, volver a la ultima clase y crecer dentro de una
-                experiencia de estudio online premium.
-              </p>
-            </div>
-
-            <form action={signOutAction}>
-              <button className="button-secondary" type="submit">
-                {copy.dashboard.signOut}
-              </button>
-            </form>
-          </div>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
-            <article className="soft-stat p-5">
-              <p className="eyebrow">{copy.dashboard.membershipLabel}</p>
-              <p className="display mt-4 text-4xl leading-none">{membershipTierLabel(membershipTier)}</p>
-              <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{copy.dashboard.membershipHint}</p>
-            </article>
-
-            <article className="soft-stat p-5">
-              <p className="eyebrow">{copy.dashboard.subscriptionLabel}</p>
-              <p className="display mt-4 text-4xl leading-none capitalize">
-                {subscription?.status ?? copy.dashboard.noSubscription}
-              </p>
-              <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                {subscription?.current_period_ends_at
-                  ? copy.dashboard.renewsAt(subscription.current_period_ends_at)
-                  : copy.dashboard.subscriptionHint}
-              </p>
-            </article>
-
-            <article className="soft-stat p-5">
-              <p className="eyebrow">{copy.dashboard.onboardingLabel}</p>
-              <p className="display mt-4 text-4xl leading-none">
-                {profile?.onboarding_completed ? copy.common.ready : copy.common.pending}
-              </p>
-              <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{copy.dashboard.onboardingHint}</p>
-            </article>
-          </div>
+          <p className="eyebrow">{formatDate()}</p>
+          <h1 className="display mt-5 text-5xl leading-none md:text-6xl">
+            Bienvenida de vuelta,<br />
+            <em>{firstName}.</em>
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+            Tu cuerpo te espera. Seguí donde lo dejaste.
+          </p>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]">
-          <article className="panel rounded-[2.4rem] p-7 md:p-9">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="eyebrow">{copy.dashboard.resumeEyebrow}</p>
-                <h2 className="display mt-4 text-4xl md:text-5xl">{copy.dashboard.resumeTitle}</h2>
-              </div>
-              <span className="studio-chip">Member studio</span>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { value: classesWatched, label: "Clases vistas" },
+            { value: minutesPracticed, label: "Minutos practicados" },
+            { value: "—", label: "Racha semanal" },
+          ].map((s, i) => (
+            <div key={i} className="panel rounded-[2rem] p-6">
+              <p className="display text-5xl leading-none">{s.value}</p>
+              <p className="eyebrow mt-4">{s.label}</p>
             </div>
+          ))}
+        </div>
 
-            {resume ? (
-              <div className="mt-8 rounded-[2rem] border border-[rgba(118,92,113,0.08)] bg-gradient-to-br from-[#fffdfd] via-[#fff4f6] to-[#ffe8ee] p-6 md:p-7">
-                <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <p className="eyebrow">Now playing</p>
-                    <h3 className="display mt-3 text-3xl">{resumeTitle}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[color:var(--ink-soft)]">
-                      {copy.dashboard.resumeMeta(
-                        Math.floor(resume.max_position_seconds),
-                        Math.floor(Number(resume.completion_percent))
-                      )}
-                    </p>
-                  </div>
-                  <Link className="button-primary" href={`/dashboard/library/${resume.videos?.slug ?? ""}`}>
-                    {copy.dashboard.resumeButton}
-                  </Link>
-                </div>
-
-                <div className="mt-6 h-3 overflow-hidden rounded-full bg-[rgba(89,101,123,0.08)]">
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,#eb8d95,#d96977)]"
-                    style={{ width: `${resumeProgress}%` }}
+        {/* Continue watching */}
+        <div className="panel rounded-[2rem] p-7">
+          <p className="eyebrow mb-5">Continuar viendo</p>
+          {resume && resumeTitle ? (
+            <Link
+              href={`/dashboard/library/${resume.videos!.slug}`}
+              className="feature-tile flex gap-0 overflow-hidden rounded-[1.5rem] p-0"
+              style={{ textDecoration: "none" }}
+            >
+              <div
+                className="flex-shrink-0"
+                style={{
+                  width: 180, height: 120,
+                  background: "linear-gradient(145deg, #fce7f3, #f9a8d4)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: "rgba(190,24,93,0.15)",
+                  border: "2px solid rgba(190,24,93,0.6)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <div style={{ width: 0, height: 0, marginLeft: 3,
+                    borderTop: "8px solid transparent", borderBottom: "8px solid transparent",
+                    borderLeft: "14px solid #be185d" }}
                   />
                 </div>
               </div>
-            ) : (
-              <div className="mt-8 rounded-[2rem] border border-dashed border-[rgba(118,92,113,0.14)] bg-[rgba(255,255,255,0.52)] p-6 text-sm leading-7 text-[color:var(--ink-soft)]">
-                {copy.dashboard.resumeEmpty}
-              </div>
-            )}
-
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {dashboardMoments.map((item) => (
-                <div key={item.title} className="feature-tile">
-                  <p className="eyebrow">{item.label}</p>
-                  <h3 className="display mt-5 text-3xl">{item.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{item.body}</p>
+              <div style={{ padding: "20px 24px", flex: 1 }}>
+                <p className="eyebrow mb-2">
+                  {resumeMin}:{String(resumeSec).padStart(2, "0")} visto
+                </p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
+                  {resumeTitle}
+                </p>
+                <div style={{ background: "#fce7f3", borderRadius: 99, height: 4 }}>
+                  <div style={{
+                    background: "linear-gradient(90deg, var(--pink-mid), var(--pink))",
+                    height: "100%", width: `${resumeProgress}%`, borderRadius: 99,
+                  }}/>
                 </div>
-              ))}
-            </div>
-          </article>
-
-          <aside className="space-y-6">
-            <article className="panel rounded-[2.4rem] p-7 md:p-9">
-              <p className="eyebrow">{copy.dashboard.quickAccessEyebrow}</p>
-              <h2 className="display mt-4 text-4xl">{copy.dashboard.quickAccessTitle}</h2>
-              <div className="mt-8 space-y-4">
-                {studioLinks.map((item) => (
-                  <Link key={item.href} className="feature-tile block" href={item.href}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="eyebrow">{item.eyebrow}</p>
-                        <p className="display mt-4 text-3xl">{item.title}</p>
-                      </div>
-                      <span className="studio-chip">{item.value}</span>
-                    </div>
-                    <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">{item.body}</p>
-                  </Link>
-                ))}
-
-                {profile?.is_admin ? (
-                  <Link className="feature-tile block" href="/admin">
-                    <p className="eyebrow">Admin</p>
-                    <p className="display mt-4 text-3xl">{copy.dashboard.quickAccessAdmin}</p>
-                    <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                      {copy.dashboard.quickAccessAdminBody}
-                    </p>
-                  </Link>
-                ) : null}
-
+                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
+                  {resumeProgress}% completado
+                </p>
               </div>
-            </article>
+            </Link>
+          ) : (
+            <div style={{
+              border: "1.5px dashed #fbcfe8", borderRadius: 20,
+              padding: "28px 24px", fontSize: 13, color: "var(--muted)", textAlign: "center",
+            }}>
+              Todavía no hay progreso guardado. Comenzá con una clase de la biblioteca.
+            </div>
+          )}
+        </div>
 
-            <article className="panel rounded-[2.4rem] p-7 md:p-9">
-              <p className="eyebrow">Studio mood</p>
-              <h2 className="display mt-4 text-4xl">Tu practica merece una interfaz que acompanie.</h2>
-              <p className="mt-5 text-sm leading-7 text-[color:var(--ink-soft)]">
-                El sistema privado ahora no termina en un saludo: ya abre biblioteca, programas y reservas en vivo
-                desde el mismo studio.
-              </p>
-            </article>
-          </aside>
-        </section>
+        {/* Live session */}
+        {liveData && (
+          <div className="panel rounded-[2rem] p-7">
+            <p className="eyebrow mb-5">Próxima clase en vivo</p>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: canAccessLive ? "#1c1917" : "#fdf2f8",
+              borderRadius: 20, padding: "20px 24px",
+              border: canAccessLive ? "none" : "1.5px dashed #fbcfe8",
+            }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: canAccessLive ? "#fdf2f8" : "var(--ink)" }}>
+                  {resolveI18nText(liveData.title_i18n)}
+                </p>
+                <p style={{ fontSize: 12, marginTop: 4, color: canAccessLive ? "#f9a8d4" : "var(--muted)" }}>
+                  {formatTime(liveData.starts_at)}
+                </p>
+              </div>
+              {canAccessLive ? (
+                <Link href="/dashboard/live" className="btn btn-pink" style={{ textDecoration: "none", fontSize: "0.7rem" }}>
+                  Reservar
+                </Link>
+              ) : (
+                <Link href="/dashboard/plan" className="btn btn-outline" style={{ textDecoration: "none", fontSize: "0.7rem" }}>
+                  Actualizar plan
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Class grid */}
+        <div>
+          <p className="eyebrow mb-5">Tus clases</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+            {CLASS_CATS.map((cat) => (
+              <Link
+                key={cat.key}
+                href={`/dashboard/library?category=${cat.key}`}
+                style={{
+                  position: "relative", borderRadius: 20, overflow: "hidden",
+                  aspectRatio: "4/3", textDecoration: "none", display: "block",
+                  boxShadow: "0 4px 20px rgba(190,24,93,0.1)",
+                }}
+              >
+                <div style={{ width: "100%", height: "100%", background: CAT_GRADIENTS[cat.key] }}/>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(28,25,23,0.7) 30%, transparent)",
+                  display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 18,
+                }}>
+                  <p style={{ fontSize: 9, letterSpacing: "0.16em", color: "rgba(255,255,255,0.6)", marginBottom: 4, fontWeight: 700 }}>
+                    {cat.sub.toUpperCase()}
+                  </p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: "0.02em" }}>
+                    {cat.label}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
       </section>
     </main>
   );

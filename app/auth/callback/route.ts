@@ -19,6 +19,26 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Ensure profile exists for OAuth users (Google, etc.)
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            email: user.email ?? "",
+            full_name:
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              null,
+            membership_tier: "none",
+            is_admin: false,
+            onboarding_completed: false,
+          },
+          { onConflict: "id", ignoreDuplicates: true }
+        );
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

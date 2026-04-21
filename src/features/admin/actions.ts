@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 
 const videoSchema = z.object({
   id: z.string().uuid().optional().or(z.literal("")),
@@ -21,6 +21,9 @@ const videoSchema = z.object({
   thumbnailUrl: z.string().optional(),
   streamPlaybackId: z.string().optional(),
   streamAssetId: z.string().optional(),
+  audioTrackEs: z.string().optional(),
+  audioTrackEn: z.string().optional(),
+  audioTrackPt: z.string().optional(),
   isFeatured: z.boolean().default(false)
 });
 
@@ -92,7 +95,7 @@ function refreshAdminRoutes() {
 
 export async function upsertVideoAction(formData: FormData) {
   const { user } = await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
 
   const parsed = videoSchema.safeParse({
     id: formData.get("id"),
@@ -109,12 +112,21 @@ export async function upsertVideoAction(formData: FormData) {
     thumbnailUrl: formData.get("thumbnailUrl"),
     streamPlaybackId: formData.get("streamPlaybackId"),
     streamAssetId: formData.get("streamAssetId"),
+    audioTrackEs: formData.get("audioTrackEs"),
+    audioTrackEn: formData.get("audioTrackEn"),
+    audioTrackPt: formData.get("audioTrackPt"),
     isFeatured: checkboxValue(formData, "isFeatured")
   });
 
   if (!parsed.success) {
     redirectWithMessage("/admin/videos", "error", "Datos de video invalidos.");
   }
+
+  const audioTracks = [
+    { locale: "es", track_id: parsed.data.audioTrackEs?.trim() ?? "", label: "Espanol" },
+    { locale: "en", track_id: parsed.data.audioTrackEn?.trim() ?? "", label: "English" },
+    { locale: "pt", track_id: parsed.data.audioTrackPt?.trim() ?? "", label: "Portugues" },
+  ].filter((t) => t.track_id.length > 0);
 
   const payload = {
     slug: parsed.data.slug.trim(),
@@ -128,6 +140,7 @@ export async function upsertVideoAction(formData: FormData) {
     thumbnail_url: parsed.data.thumbnailUrl?.trim() || null,
     stream_playback_id: parsed.data.streamPlaybackId?.trim() || null,
     stream_asset_id: parsed.data.streamAssetId?.trim() || null,
+    audio_tracks: audioTracks,
     is_featured: parsed.data.isFeatured,
     published_at: parsed.data.status === "published" ? new Date().toISOString() : null,
     updated_by: user.id
@@ -147,7 +160,7 @@ export async function upsertVideoAction(formData: FormData) {
 
 export async function deleteVideoAction(formData: FormData) {
   await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
 
   const { error } = await supabase.from("videos").delete().eq("id", id);
@@ -162,7 +175,7 @@ export async function deleteVideoAction(formData: FormData) {
 
 export async function upsertProgramAction(formData: FormData) {
   const { user } = await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
 
   const parsed = programSchema.safeParse({
     id: formData.get("id"),
@@ -209,7 +222,7 @@ export async function upsertProgramAction(formData: FormData) {
 
 export async function deleteProgramAction(formData: FormData) {
   await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
 
   const { error } = await supabase.from("programs").delete().eq("id", id);
@@ -224,7 +237,7 @@ export async function deleteProgramAction(formData: FormData) {
 
 export async function upsertProgramDayAction(formData: FormData) {
   await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const parsed = programDaySchema.safeParse({
     programId: formData.get("programId"),
     dayNumber: formData.get("dayNumber"),
@@ -266,7 +279,7 @@ export async function upsertProgramDayAction(formData: FormData) {
 
 export async function deleteProgramDayAction(formData: FormData) {
   await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
 
   const { error } = await supabase.from("program_days").delete().eq("id", id);
@@ -281,7 +294,7 @@ export async function deleteProgramDayAction(formData: FormData) {
 
 export async function upsertSiteSettingAction(formData: FormData) {
   const { user } = await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const parsed = siteSettingSchema.safeParse({
     settingKey: formData.get("settingKey"),
     category: formData.get("category"),
@@ -326,7 +339,7 @@ export async function upsertSiteSettingAction(formData: FormData) {
 
 export async function updateProfileAdminAction(formData: FormData) {
   const { user } = await requireAdmin();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
   const parsed = profileSchema.safeParse({
     profileId: formData.get("profileId"),
     membershipTier: formData.get("membershipTier"),

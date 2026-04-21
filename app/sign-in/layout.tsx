@@ -1,3 +1,8 @@
 export default function SignInLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <style>{`.site-navbar { display: none !important; }`}</style>
+      {children}
+    </>
+  );
 }

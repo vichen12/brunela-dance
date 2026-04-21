@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { StudioNav } from "@/components/studio-nav";
 import {
   membershipTierLabel,
   resolveI18nText,
@@ -86,7 +85,6 @@ export default async function DashboardProgramsPage() {
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
-        <StudioNav current="programs" />
 
         <header className="hero-stage">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

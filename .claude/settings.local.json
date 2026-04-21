@@ -34,7 +34,14 @@
       "Read(//tmp/**)",
       "Bash(curl -s -w \"\\\\n--- STATUS: %{http_code} ---\\\\n\" http://localhost:3010/)",
       "Bash(curl -s -w \"\\\\n--- STATUS: %{http_code} ---\\\\n\" http://localhost:3010/sign-in)",
-      "Bash(rm -rf .next)"
+      "Bash(rm -rf .next)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(cp \"C:\\\\Users\\\\viche\\\\.claude\\\\projects\\\\C--Users-viche-Desktop-sistemas-webs-brunela\\\\fa298e5b-3102-49db-a621-cca10974b6cd\\\\tool-results\\\\webfetch-1776730465006-r3er1l.bin\" /tmp/design.gz)",
+      "Bash(gunzip -c /tmp/design.gz)",
+      "Bash(mkdir -p /tmp/design_files)",
+      "Bash(tar -xf /tmp/design.gz -C /tmp/design_files)",
+      "Bash(curl -s http://localhost:3001/dashboard)",
+      "Bash(echo \"has_service_role=$?\")"
     ]
   }
 }

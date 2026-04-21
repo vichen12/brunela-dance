@@ -1,4 +1,3 @@
-import { StudioNav } from "@/components/studio-nav";
 import {
   bookingStatusLabel,
   formatDateTimeLabel,
@@ -93,7 +92,6 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
-        <StudioNav current="live" />
 
         <header className="hero-stage">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

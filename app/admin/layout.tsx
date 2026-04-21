@@ -6,11 +6,14 @@ const copy = getAdminDictionary("es");
 export const dynamic = "force-dynamic";
 
 const links = [
-  { href: "/admin", label: copy.nav.overview },
-  { href: "/admin/videos", label: copy.nav.videos },
-  { href: "/admin/programs", label: copy.nav.programs },
-  { href: "/admin/settings", label: copy.nav.settings },
-  { href: "/admin/users", label: copy.nav.users }
+  { href: "/admin",             label: copy.nav.overview  },
+  { href: "/admin/videos",      label: copy.nav.videos    },
+  { href: "/admin/categories",  label: "Categorías"       },
+  { href: "/admin/programs",    label: copy.nav.programs  },
+  { href: "/admin/settings",    label: copy.nav.settings  },
+  { href: "/admin/users",       label: copy.nav.users     },
+  { href: "/admin/documents",   label: "Documentos"       },
+  { href: "/admin/chat",        label: "Chat"             },
 ] as const;
 
 export default async function AdminLayout({
