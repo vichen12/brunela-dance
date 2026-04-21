@@ -41,7 +41,8 @@
       "Bash(mkdir -p /tmp/design_files)",
       "Bash(tar -xf /tmp/design.gz -C /tmp/design_files)",
       "Bash(curl -s http://localhost:3001/dashboard)",
-      "Bash(echo \"has_service_role=$?\")"
+      "Bash(echo \"has_service_role=$?\")",
+      "Bash(git add *)"
     ]
   }
 }

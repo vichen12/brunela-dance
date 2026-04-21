@@ -136,7 +136,7 @@ export default async function CommunityPage({ searchParams }: {
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body), sans-serif" }}>
 
       {/* Sidebar */}
-      <div style={{
+      <div className="chat-col-sidebar" style={{
         width: 230, flexShrink: 0, borderRight: "1px solid #fce7f3",
         background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
         display: "flex", flexDirection: "column",

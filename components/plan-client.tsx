@@ -58,8 +58,9 @@ export function PlanClient({
       minHeight: '100vh', overflowY: 'auto',
     }}>
 
+      <style>{`@media(max-width:767px){.plan-header{padding:24px 20px 20px!important}.plan-body{padding:24px 20px!important}.plan-progress-bar{flex-direction:column!important;gap:16px!important}}`}</style>
       {/* Header */}
-      <div style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #EDE0DB', padding: '36px 48px 32px' }}>
+      <div className="plan-header" style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #EDE0DB', padding: '36px 48px 32px' }}>
         <div style={{ fontSize: 9, letterSpacing: '0.22em', color: '#B8857F', marginBottom: 12 }}>SUSCRIPCIÓN</div>
         <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '0.06em', color: '#1C1618', marginBottom: 8 }}>MI PLAN</div>
         <div style={{ fontSize: 11, color: '#8A7470' }}>
@@ -68,7 +69,7 @@ export function PlanClient({
         </div>
       </div>
 
-      <div style={{ padding: '40px 48px' }}>
+      <div className="plan-body" style={{ padding: '40px 48px' }}>
 
         {/* Active subscription banner */}
         {subscriptionStatus === 'active' && (
@@ -106,7 +107,8 @@ export function PlanClient({
         </div>
 
         {/* Plan cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, maxWidth: 960 }}>
+        <style>{`@media(max-width:767px){.plan-cards-grid{grid-template-columns:1fr!important;max-width:100%!important;padding-bottom:8px}}`}</style>
+        <div className="plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, maxWidth: 960 }}>
           {PLANS.map((plan) => {
             const isCurrent = plan.id === currentTier;
             const isHov = hovered === plan.id;

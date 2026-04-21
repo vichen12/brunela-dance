@@ -93,7 +93,7 @@ export default async function ChatPage({ searchParams }: {
     return (
       <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body), sans-serif" }}>
         {/* Members sidebar */}
-        <div style={{
+        <div className="chat-col-sidebar" style={{
           width: 240, flexShrink: 0, borderRight: "1px solid #fce7f3",
           background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
           display: "flex", flexDirection: "column",

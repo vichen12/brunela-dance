@@ -192,16 +192,14 @@ export function ChatRoom({
 
   const confirmMute = useCallback(async () => {
     if (!muteTarget) return;
-    await supabase.from('chat_bans').insert({
+    await supabase.from('chat_mutes').insert({
       user_id: muteTarget.id,
-      room_id: roomId,
-      action: 'mute',
+      muted_by: userId,
       reason: muteReason || null,
-      created_by: userId,
     });
     setMuteTarget(null);
     setMuteReason('');
-  }, [muteTarget, muteReason, roomId, userId]);
+  }, [muteTarget, muteReason, userId]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -215,7 +213,7 @@ export function ChatRoom({
       )}
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px,3vw,20px) clamp(12px,3vw,20px) 8px' }}>
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)', fontSize: 13 }}>
             Todavía no hay mensajes. Sé la primera en escribir 🩰

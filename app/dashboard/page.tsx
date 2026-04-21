@@ -115,7 +115,7 @@ export default async function DashboardPage() {
         </header>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {[
             { value: classesWatched, label: "Clases vistas" },
             { value: minutesPracticed, label: "Minutos practicados" },
@@ -219,7 +219,8 @@ export default async function DashboardPage() {
         {/* Class grid */}
         <div>
           <p className="eyebrow mb-5">Tus clases</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          <style>{`@media(max-width:767px){.class-cat-grid{grid-template-columns:repeat(2,1fr)!important}}`}</style>
+          <div className="class-cat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
             {CLASS_CATS.map((cat) => (
               <Link
                 key={cat.key}
