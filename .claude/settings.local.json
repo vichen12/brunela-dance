@@ -45,7 +45,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(node -e \"const fs = require\\('fs'\\); const s = fs.statSync\\('public/icon.jpg'\\); console.log\\('size:', s.size, 'bytes'\\)\")"
+      "Bash(node -e \"const fs = require\\('fs'\\); const s = fs.statSync\\('public/icon.jpg'\\); console.log\\('size:', s.size, 'bytes'\\)\")",
+      "Bash(cat src/lib/supabase/server.ts)",
+      "Bash(cat src/lib/supabase/server.tsx)"
     ]
   }
 }
