@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Ensure profile exists for OAuth users (Google, etc.)
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
@@ -41,9 +40,15 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.redirect(`${origin}${next}`);
     }
+
+    console.error("[auth/callback] exchangeCodeForSession error:", error);
+    return NextResponse.redirect(
+      `${origin}/sign-in?error=${encodeURIComponent(error.message ?? "Error de autenticacion con Google")}`
+    );
   }
 
+  console.error("[auth/callback] no code param, searchParams:", Object.fromEntries(searchParams));
   return NextResponse.redirect(
-    `${origin}/sign-in?error=${encodeURIComponent("Error de autenticacion con Google")}`
+    `${origin}/sign-in?error=${encodeURIComponent("No se recibio codigo de Google")}`
   );
 }
