@@ -38,20 +38,35 @@ export function BrunelaFooter() {
       background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f8 100%)',
       borderTop: '1px solid rgba(236,72,153,0.1)',
       color: LINK_COLOR,
-      padding: '5rem 3rem 0',
+      padding: 'clamp(3rem,6vw,5rem) clamp(1.25rem,5vw,3rem) 0',
     }}>
-      <div style={{
-        maxWidth: 1100,
-        margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr 1fr 1.4fr',
-        gap: '3rem',
-        paddingBottom: '3.5rem',
-        borderBottom: '1px solid rgba(236,72,153,0.1)',
-      }}>
+      <style>{`
+        .footer-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1.4fr;
+          gap: 3rem;
+        }
+        @media (max-width: 767px) {
+          .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem 1.5rem; }
+          .footer-brand { grid-column: 1 / -1; }
+        }
+        @media (max-width: 480px) {
+          .footer-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+          .footer-brand { grid-column: auto; }
+        }
+      `}</style>
+      <div
+        className="footer-grid"
+        style={{
+          maxWidth: 1100,
+          margin: '0 auto',
+          paddingBottom: '3.5rem',
+          borderBottom: '1px solid rgba(236,72,153,0.1)',
+        }}
+      >
 
         {/* Brand */}
-        <div>
+        <div className="footer-brand">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', textDecoration: 'none', marginBottom: '1.25rem' }}>
             <div style={{ width: 40, height: 40, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image
