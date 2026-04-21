@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Supabase auth iframes must NEVER capture pointer events ── */
+iframe[src*="supabase.co"],
+iframe[src*="supabase.in"],
+iframe[id^="supabase"] {
+  pointer-events: none !important;
+  position: fixed !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  border: none !important;
+}
+
 :root {
   --pink:      #be185d;
   --pink-mid:  #db2777;
