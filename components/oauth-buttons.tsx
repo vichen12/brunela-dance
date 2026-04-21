@@ -1,7 +1,5 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
-
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -16,21 +14,10 @@ function GoogleIcon() {
 type Props = { callbackUrl?: string | null };
 
 export function OAuthButtons({ callbackUrl }: Props) {
-  async function signInWithGoogle() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) return;
-
-    const supabase = createBrowserClient(url, key, {
-      auth: { flowType: "pkce" },
-    });
-    const redirectTo = new URL("/auth/callback", window.location.origin);
-    if (callbackUrl) redirectTo.searchParams.set("next", callbackUrl);
-
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: redirectTo.toString() }
-    });
+  function signInWithGoogle() {
+    const url = new URL("/api/auth/google", window.location.origin);
+    if (callbackUrl) url.searchParams.set("next", callbackUrl);
+    window.location.href = url.toString();
   }
 
   return (
