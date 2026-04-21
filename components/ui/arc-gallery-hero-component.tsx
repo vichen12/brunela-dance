@@ -55,6 +55,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           width: '100%',
           height: dimensions.radius * 1.4,
           zIndex: 1,
+          overflow: 'hidden',
         }}
       >
         {/* push the pivot point down so arc top clears the navbar */}

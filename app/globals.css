@@ -15,7 +15,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   font-family: var(--font-body), sans-serif;
@@ -521,11 +521,14 @@ section[id] { scroll-margin-top: 5rem; }
   .landing-stats-grid {
     grid-template-columns: repeat(3, 1fr) !important;
   }
+  /* Hide arc photos on mobile — they overlap the text at small sizes */
+  .arc-photo-container { display: none !important; }
+  /* Remove the negative margin that pulled text up into the (now hidden) photos */
   .arc-text-section {
-    margin-top: -2rem !important;
-    padding-bottom: 2rem !important;
+    margin-top: 0 !important;
+    padding-top: 5.5rem !important; /* clear the fixed navbar */
+    padding-bottom: 2.5rem !important;
   }
-  .arc-photo-container { height: 260px !important; }
   .landing-section {
     padding: 3rem 1.25rem !important;
   }

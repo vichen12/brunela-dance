@@ -16,13 +16,12 @@ function GoogleIcon() {
 type Props = { callbackUrl?: string | null };
 
 export function OAuthButtons({ callbackUrl }: Props) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!
-  );
-
   async function signInWithGoogle() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+
+    const supabase = createBrowserClient(url, key);
     const redirectTo = new URL("/auth/callback", window.location.origin);
     if (callbackUrl) redirectTo.searchParams.set("next", callbackUrl);
 
