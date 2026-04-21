@@ -16,7 +16,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <main
-      style={{ minHeight: "100vh", display: "grid", position: "relative", overflow: "hidden" }}
+      style={{ minHeight: "100vh", display: "grid", position: "relative" }}
       className="lg:grid-cols-[1fr_1.15fr] flex flex-col"
     >
       {/* ── Global background glows ── */}
@@ -164,7 +164,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "clamp(5.5rem, 9vh, 6.5rem) clamp(1.5rem, 6vw, 4rem)",
+          /* 64px navbar + extra breathing room */
+          padding: "clamp(7rem, 11vh, 8rem) clamp(1.5rem, 6vw, 4rem) clamp(3rem, 6vh, 5rem)",
           position: "relative",
           zIndex: 1,
         }}
