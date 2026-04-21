@@ -21,7 +21,9 @@ export function OAuthButtons({ callbackUrl }: Props) {
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) return;
 
-    const supabase = createBrowserClient(url, key);
+    const supabase = createBrowserClient(url, key, {
+      auth: { flowType: "pkce" },
+    });
     const redirectTo = new URL("/auth/callback", window.location.origin);
     if (callbackUrl) redirectTo.searchParams.set("next", callbackUrl);
 
