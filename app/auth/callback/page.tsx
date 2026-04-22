@@ -21,7 +21,16 @@ function CallbackHandler() {
     const code = searchParams.get("code");
     const hash = window.location.hash;
 
+    // Show debug info on screen for 8 seconds before redirecting
+    const debugEl = document.getElementById("debug-info");
+    const show = (msg: string) => { if (debugEl) debugEl.textContent = msg; };
+
     async function handleCallback() {
+      const info = `error=${errorParam ?? "ninguno"}\nerror_desc=${errorDesc ?? "ninguno"}\ncode=${code ? code.slice(0,12)+"..." : "ninguno"}\nhash=${hash ? hash.slice(0,50)+"..." : "ninguno"}`;
+      show(info);
+
+      await new Promise((r) => setTimeout(r, 8000));
+
       if (errorParam) {
         window.location.replace(
           "/sign-in?error=" + encodeURIComponent(errorDesc ?? "Error de autenticacion con Google")
@@ -33,6 +42,8 @@ function CallbackHandler() {
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+        show(info + `\n\nexchangeCode error=${error?.message ?? "ninguno"}`);
+        await new Promise((r) => setTimeout(r, 5000));
         if (error) {
           window.location.replace("/sign-in?error=" + encodeURIComponent("Error de autenticacion con Google"));
           return;
@@ -81,6 +92,7 @@ function CallbackHandler() {
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <p style={{ fontSize: "0.85rem", color: "#9d8a98" }}>Iniciando sesion...</p>
+      <pre id="debug-info" style={{ background: "#1c1917", color: "#f0e4ee", padding: "1rem", borderRadius: 8, fontSize: "0.7rem", maxWidth: 560, width: "100%", whiteSpace: "pre-wrap", wordBreak: "break-all" }} />
     </div>
   );
 }
