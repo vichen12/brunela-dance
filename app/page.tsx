@@ -131,17 +131,7 @@ export default function HomePage() {
 
       {/* ── HERO ── */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <ArcGalleryHero
-          images={heroImages}
-          startAngle={18}
-          endAngle={162}
-          radiusLg={500}
-          radiusMd={370}
-          radiusSm={270}
-          cardSizeLg={128}
-          cardSizeMd={104}
-          cardSizeSm={82}
-        />
+        <ArcGalleryHero images={heroImages} />
       </div>
 
       {/* ── CLASES ── */}
