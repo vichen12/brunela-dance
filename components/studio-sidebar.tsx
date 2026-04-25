@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOutAction } from '@/src/features/auth/actions';
 
@@ -59,19 +60,13 @@ export function StudioSidebar({
       {/* Logo */}
       <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid #fce7f3' }}>
         <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-            background: 'linear-gradient(135deg, #f9a8d4, #be185d)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 800, color: '#fff',
-            boxShadow: '0 4px 12px rgba(190,24,93,0.3)',
-          }}>B</div>
+          <Image src="/brand/isologo-icon.png" alt="Brunela Dance Trainer" width={38} height={38} style={{ objectFit: 'contain', flexShrink: 0 }} />
           <div>
             <div style={{
-              fontFamily: 'var(--font-display), "Cormorant Garamond", serif',
-              fontStyle: 'italic', fontSize: 20, color: '#1c1917', lineHeight: 1,
-            }}>Brunela</div>
-            <div style={{ fontSize: 8.5, letterSpacing: '0.12em', color: '#be185d', marginTop: 1, fontWeight: 700 }}>
+              fontFamily: 'var(--font-display), Montserrat, sans-serif',
+              fontSize: 13, fontWeight: 900, color: '#D93438', lineHeight: 1.1,
+            }}>Brunela Dance Trainer</div>
+            <div style={{ fontSize: 8.5, letterSpacing: '0.12em', color: '#E64F55', marginTop: 1, fontWeight: 700 }}>
               DANCE TRAINER · BCN
             </div>
           </div>

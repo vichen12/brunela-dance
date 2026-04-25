@@ -54,24 +54,15 @@ export function Navbar() {
         }}
       >
         {/* ── Logo ── */}
-        <Link href="/" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none', flexShrink: 0 }}>
-          {/* Portrait logo: tall container matches the image ratio */}
-          <div style={{ width: 28, height: 46, position: 'relative', flexShrink: 0 }}>
+        <Link href="/" onClick={close} aria-label="Brunela Dance Trainer" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+          <div style={{ width: 38, height: 52, position: 'relative', flexShrink: 0 }}>
             <Image
-              src="/fotos-landing/logo.jpeg"
-              alt="Brunela"
+              src="/brand/isologo-color.png"
+              alt="Brunela Dance Trainer"
               fill
               priority
-              style={{ objectFit: 'contain', objectPosition: 'center', mixBlendMode: 'multiply' }}
+              style={{ objectFit: 'contain', objectPosition: 'center' }}
             />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '1.5rem', color: '#1c1917', lineHeight: 1, letterSpacing: '0.01em' }}>
-              Brunela
-            </span>
-            <span style={{ fontSize: '0.44rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#ec4899', lineHeight: 1, marginTop: '2px' }}>
-              Dance
-            </span>
           </div>
         </Link>
 

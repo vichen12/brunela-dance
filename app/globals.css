@@ -15,15 +15,15 @@ iframe[id^="supabase"] {
 }
 
 :root {
-  --pink:      #be185d;
-  --pink-mid:  #db2777;
-  --pink-soft: #fbcfe8;
-  --rose:      #d4726a;
-  --ink:       #1c1917;
-  --muted:     #78716c;
+  --pink:      #E64F55;
+  --pink-mid:  #D93438;
+  --pink-soft: #FFDADA;
+  --rose:      #EB7478;
+  --ink:       #D93438;
+  --muted:     #EB7478;
   --white:     #ffffff;
-  --font-display: "Cormorant Garamond", serif;
-  --font-body:    "Plus Jakarta Sans", sans-serif;
+  --font-display: "Montserrat", sans-serif;
+  --font-body:    "Roboto", sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -531,7 +531,7 @@ section[id] { scroll-margin-top: 5rem; }
     gap: 1rem !important;
   }
   .landing-stats-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
   /* Hide arc photos on mobile — they overlap the text at small sizes */
   .arc-photo-container { display: none !important; }

@@ -1,229 +1,168 @@
 'use client';
 
-const classes = [
+import { Lock, PlayCircle } from 'lucide-react';
+
+const previews = [
   {
-    num: '01',
-    name: 'Ballet',
-    tag: 'Tecnica clasica',
-    description: 'Trabajo de tecnica clasica para fortalecer tu base y elevar tu precision en escena.',
+    title: 'Clase de ballet',
+    detail: 'Nivel inicial/intermedio',
     img: '/fotos-landing/Ballet.jpg',
     pos: 'center top',
   },
   {
-    num: '02',
-    name: 'Pilates Reformer',
-    tag: 'Fuerza funcional',
-    description: 'Maquina reformer para construir fuerza real, estabilidad de columna y conciencia corporal.',
-    img: '/fotos-landing/Pilates Reformer.jpg',
-    pos: 'center',
-  },
-  {
-    num: '03',
-    name: 'Pilates Mat',
-    tag: 'Control de centro',
-    description: 'Control profundo desde el suelo. Accesible en cualquier lugar, siempre efectivo.',
-    img: '/fotos-landing/Pilates Mat.png',
-    pos: 'center',
-  },
-  {
-    num: '04',
-    name: 'Stretching',
-    tag: 'Movilidad activa',
-    description: 'Flexibilidad activa y liberacion del tejido para bailar sin limites ni bloqueos.',
-    img: '/fotos-landing/Stretching.jpg',
-    pos: 'center top',
-  },
-  {
-    num: '05',
-    name: 'Prog. Ballet Technique',
-    tag: 'PBT Certificado',
-    description: 'Metodo PBT para reprogramar patrones neuromusculares y mejorar tu tecnica desde la raiz.',
+    title: 'Trabajo de rotacion externa',
+    detail: 'Control, alineacion y activacion',
     img: '/fotos-landing/Progressing Ballet Technique.jpg',
     pos: 'center',
   },
   {
-    num: '06',
-    name: 'Prog. Contemporary',
-    tag: 'PCT Certificado',
-    description: 'Metodologia PCT para integrar el contemporaneo con un trabajo de cuerpo consciente.',
-    img: '/fotos-landing/Progressing Contemporary Technique.jpg',
+    title: 'Flexibilidad: conseguir el split',
+    detail: 'Progresion consciente y segura',
+    img: '/fotos-landing/Stretching.jpg',
     pos: 'center top',
   },
 ];
 
 export function InteractiveSelector() {
   return (
-    <div className="class-grid-root">
-      {classes.map((c) => (
-        <a key={c.num} href="/sign-in" className="class-card-item" style={{ textDecoration: 'none' }}>
-          <img src={c.img} alt={c.name} className="class-card-img" style={{ objectPosition: c.pos }} draggable={false} />
+    <div className="preview-grid-root">
+      {previews.map((item) => (
+        <a key={item.title} href="/#planes" className="preview-card" aria-label={`${item.title}. Acceso restringido`}>
+          <img src={item.img} alt="" className="preview-card-img" style={{ objectPosition: item.pos }} draggable={false} />
+          <div className="preview-card-overlay" />
 
-          {/* permanent dark gradient at bottom */}
-          <div className="class-card-base-overlay" />
-          {/* hover overlay — brighter pink tint */}
-          <div className="class-card-hover-overlay" />
-
-          {/* always-visible bottom info */}
-          <div className="class-card-bottom">
-            <span className="class-card-num">{c.num}</span>
-            <p className="class-card-name">{c.name}</p>
-            <p className="class-card-tag">{c.tag}</p>
+          <div className="preview-play">
+            <PlayCircle size={34} strokeWidth={1.6} />
           </div>
 
-          {/* slides up on hover */}
-          <div className="class-card-reveal">
-            <p className="class-card-desc">{c.description}</p>
-            <span className="class-card-cta">
-              Explorar
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ marginLeft: '0.4rem' }}>
-                <path d="M2 6.5h9M8 3l3.5 3.5L8 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
+          <div className="preview-lock">
+            <Lock size={14} />
+            Acceso con suscripcion
+          </div>
+
+          <div className="preview-copy">
+            <p className="preview-title">{item.title}</p>
+            <p className="preview-detail">{item.detail}</p>
+            <span className="preview-cta">Ver preview bloqueada</span>
           </div>
         </a>
       ))}
 
       <style>{`
-        .class-grid-root {
+        .preview-grid-root {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0.875rem;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1rem;
         }
 
-        .class-card-item {
+        .preview-card {
           position: relative;
-          aspect-ratio: 3 / 4;
-          border-radius: 1.25rem;
-          overflow: hidden;
-          cursor: pointer;
           display: block;
+          min-height: 360px;
+          border-radius: 999px;
+          overflow: hidden;
+          text-decoration: none;
+          color: #fff;
+          border: 3px solid #FFDADA;
+          box-shadow: 0 24px 60px rgba(217, 52, 56, 0.14);
+          isolation: isolate;
         }
 
-        .class-card-img {
+        .preview-card-img {
           position: absolute;
           inset: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: saturate(0.95);
+          transition: transform 0.6s ease, filter 0.6s ease;
+          z-index: -2;
         }
 
-        .class-card-item:hover .class-card-img {
-          transform: scale(1.07);
+        .preview-card:hover .preview-card-img {
+          transform: scale(1.06);
+          filter: saturate(1.05);
         }
 
-        .class-card-base-overlay {
+        .preview-card-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(
-            to top,
-            rgba(0,0,0,0.72) 0%,
-            rgba(0,0,0,0.15) 45%,
-            transparent 70%
-          );
-          transition: opacity 0.4s;
+          background: linear-gradient(to top, rgba(217,52,56,0.78), rgba(230,79,85,0.2) 50%, rgba(255,218,218,0.08));
+          z-index: -1;
         }
 
-        .class-card-hover-overlay {
+        .preview-play {
           position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            135deg,
-            rgba(236,72,153,0.22) 0%,
-            transparent 60%
-          );
-          opacity: 0;
-          transition: opacity 0.4s;
+          top: 42%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 72px;
+          height: 72px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.88);
+          color: #D93438;
+          box-shadow: 0 16px 42px rgba(217,52,56,0.24);
         }
 
-        .class-card-item:hover .class-card-hover-overlay {
-          opacity: 1;
-        }
-
-        .class-card-bottom {
+        .preview-lock {
           position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 1.5rem 1.4rem 1.2rem;
-          transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .class-card-item:hover .class-card-bottom {
-          transform: translateY(-4.5rem);
-        }
-
-        .class-card-num {
-          display: block;
-          font-family: var(--font-display, serif);
-          font-style: italic;
-          font-size: 0.75rem;
-          color: rgba(249,168,212,0.7);
-          margin-bottom: 0.25rem;
-          letter-spacing: 0.06em;
-        }
-
-        .class-card-name {
-          font-family: var(--font-display, serif);
-          font-style: italic;
-          font-size: clamp(1.25rem, 2.2vw, 1.6rem);
-          color: #fff;
-          line-height: 1.05;
-          margin: 0 0 0.3rem;
-        }
-
-        .class-card-tag {
-          font-size: 0.58rem;
-          font-weight: 800;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(249,168,212,0.75);
-          margin: 0;
-        }
-
-        .class-card-reveal {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 0 1.4rem 1.4rem;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.35s 0.1s, transform 0.4s 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .class-card-item:hover .class-card-reveal {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .class-card-desc {
-          font-size: 0.82rem;
-          color: rgba(255,255,255,0.72);
-          line-height: 1.65;
-          margin: 0 0 0.75rem;
-        }
-
-        .class-card-cta {
+          top: 1.2rem;
+          left: 50%;
+          transform: translateX(-50%);
           display: inline-flex;
           align-items: center;
-          font-size: 0.62rem;
-          font-weight: 800;
-          letter-spacing: 0.2em;
+          gap: 0.35rem;
+          padding: 0.42rem 0.85rem;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.9);
+          color: #D93438;
+          font-size: 0.58rem;
+          font-weight: 900;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #f9a8d4;
+          white-space: nowrap;
+        }
+
+        .preview-copy {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          padding: 2.2rem 1.6rem 2.4rem;
+          text-align: center;
+        }
+
+        .preview-title {
+          font-family: var(--font-display), sans-serif;
+          font-size: clamp(1.25rem, 2vw, 1.65rem);
+          font-weight: 900;
+          line-height: 1.05;
+          margin: 0 0 0.5rem;
+        }
+
+        .preview-detail {
+          margin: 0 auto 0.9rem;
+          max-width: 24ch;
+          font-size: 0.86rem;
+          line-height: 1.55;
+          color: rgba(255,255,255,0.84);
+        }
+
+        .preview-cta {
+          display: inline-flex;
+          font-size: 0.62rem;
+          font-weight: 900;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: #FFDADA;
         }
 
         @media (max-width: 900px) {
-          .class-grid-root {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 560px) {
-          .class-grid-root {
-            grid-template-columns: 1fr;
-          }
+          .preview-grid-root { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+          .preview-card { min-height: 330px; }
         }
       `}</style>
     </div>

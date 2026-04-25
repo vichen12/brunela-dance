@@ -40,8 +40,8 @@ function MobileHero({ images }: { images: string[] }) {
               }}
             >
               <div
-                className="rounded-2xl shadow-xl overflow-hidden w-full h-full"
-                style={{ border: '2px solid rgba(249,168,212,0.5)' }}
+                className="rounded-full shadow-xl overflow-hidden w-full h-full"
+                style={{ border: '2px solid #FFDADA' }}
               >
                 <img
                   src={src}
@@ -61,21 +61,22 @@ function MobileHero({ images }: { images: string[] }) {
         style={{ zIndex: 2, paddingBottom: '3.5rem', animationDelay: '550ms', animationFillMode: 'forwards' }}
       >
         <div className="text-center">
-          <p style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.55rem' }}>
-            Studio online
+          <p style={{ fontSize: '0.78rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#E64F55', marginBottom: '0.7rem' }}>
+            Estudio Online
           </p>
-          <h1 style={{ fontFamily: 'var(--font-display, serif)', fontStyle: 'italic', fontSize: 'clamp(3.4rem, 16vw, 4.8rem)', lineHeight: 0.92, color: '#1c1917', marginBottom: '0.9rem' }}>
-            Brunela
+          <img src="/brand/isologo-icon.png" alt="" style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto 0.8rem' }} draggable={false} />
+          <h1 style={{ fontFamily: 'var(--font-display, sans-serif)', fontSize: 'clamp(2.5rem, 10vw, 3.8rem)', fontWeight: 900, lineHeight: 0.96, color: '#D93438', marginBottom: '0.9rem' }}>
+            Brunela Dance Trainer
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#78716c', lineHeight: 1.75, maxWidth: '30ch', margin: '0 auto 1.6rem' }}>
+          <p style={{ fontSize: '0.875rem', color: '#D93438', lineHeight: 1.75, maxWidth: '30ch', margin: '0 auto 1.6rem' }}>
             Pilates y conditioning para bailarinas que quieren moverse mejor, con mas fuerza y continuidad.
           </p>
-          <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center' }}>
-            <a href="/#planes" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.72rem 1.45rem', background: '#ec4899', color: '#fff', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 8px 22px rgba(236,72,153,0.28)' }}>
-              Ver planes
+          <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/#planes" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.72rem 1.45rem', background: '#E64F55', color: '#fff', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 8px 22px rgba(230,79,85,0.28)' }}>
+              Comienza tu prueba de 7 dias gratis
             </a>
-            <a href="/sign-in" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.72rem 1.45rem', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#1c1917', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', border: '1.5px solid rgba(28,25,23,0.15)' }}>
-              Ingresar
+            <a href="/#clases" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.72rem 1.45rem', background: '#fff', color: '#D93438', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', border: '1.5px solid #FFDADA' }}>
+              Explora estudio online
             </a>
           </div>
         </div>
@@ -112,7 +113,7 @@ function ArcHero({ images, radius, cardSize, startAngle, endAngle, arcHeightRati
             const y = Math.round(Math.sin(angleRad) * radius * 1000) / 1000;
             return (
               <div key={i} className="absolute opacity-0 animate-arc-in" style={{ width: `${cardSize}px`, height: `${cardSize}px`, left: `calc(50% + ${x}px)`, bottom: `${y}px`, transform: 'translate(-50%, 50%)', animationDelay: `${i * 70}ms`, animationFillMode: 'forwards', zIndex: count - i }}>
-                <div className="rounded-2xl shadow-xl overflow-hidden w-full h-full" style={{ transform: `rotate(${angle / 4}deg)`, border: '2px solid rgba(249,168,212,0.45)' }}>
+                <div className="rounded-full shadow-xl overflow-hidden w-full h-full" style={{ transform: `rotate(${angle / 4}deg)`, border: '2px solid #FFDADA' }}>
                   <img src={src} alt={`Brunela ${i + 1}`} className="block w-full h-full object-cover" draggable={false} />
                 </div>
               </div>
@@ -123,14 +124,15 @@ function ArcHero({ images, radius, cardSize, startAngle, endAngle, arcHeightRati
 
       <div className="relative flex items-center justify-center px-6 opacity-0 animate-text-in" style={{ zIndex: 2, marginTop: textPull, paddingBottom: '5rem', animationDelay: '700ms', animationFillMode: 'forwards' }}>
         <div className="text-center" style={{ maxWidth: '38ch' }}>
-          <p style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>Studio online</p>
-          <h1 style={{ fontFamily: 'var(--font-display, serif)', fontStyle: 'italic', fontSize: titleSize, lineHeight: 0.92, color: '#1c1917', marginBottom: '1rem' }}>Brunela</h1>
-          <p style={{ fontSize: bodySize, color: '#78716c', lineHeight: 1.75, maxWidth: '32ch', margin: '0 auto 1.75rem' }}>
+          <p style={{ fontSize: '0.82rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#E64F55', marginBottom: '0.7rem' }}>Estudio Online</p>
+          <img src="/brand/isologo-icon.png" alt="" style={{ width: 96, height: 96, objectFit: 'contain', margin: '0 auto 0.9rem' }} draggable={false} />
+          <h1 style={{ fontFamily: 'var(--font-display, sans-serif)', fontSize: titleSize, fontWeight: 900, lineHeight: 0.94, color: '#D93438', marginBottom: '1rem' }}>Brunela Dance Trainer</h1>
+          <p style={{ fontSize: bodySize, color: '#D93438', lineHeight: 1.75, maxWidth: '34ch', margin: '0 auto 1.75rem' }}>
             Pilates y conditioning para bailarinas que quieren moverse mejor, con mas fuerza y continuidad.
           </p>
           <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/#planes" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.85rem 1.8rem', background: '#ec4899', color: '#fff', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 8px 24px rgba(236,72,153,0.28)' }}>Ver planes</a>
-            <a href="/sign-in" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.85rem 1.8rem', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(8px)', color: '#1c1917', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', border: '1.5px solid rgba(28,25,23,0.15)' }}>Ingresar</a>
+            <a href="/#planes" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.85rem 1.8rem', background: '#E64F55', color: '#fff', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 8px 24px rgba(230,79,85,0.28)' }}>Comienza tu prueba de 7 dias gratis</a>
+            <a href="/#clases" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '0.85rem 1.8rem', background: '#fff', color: '#D93438', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', border: '1.5px solid #FFDADA' }}>Explora estudio online</a>
           </div>
         </div>
       </div>
@@ -172,7 +174,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({ images, classNam
       arcHeightRatio={1.35}
       pivotOffsetRatio={0.18}
       textPull={isMd ? '-10rem' : '-14rem'}
-      titleSize={isMd ? 'clamp(4rem, 8vw, 6rem)' : 'clamp(4rem, 10vw, 7rem)'}
+      titleSize={isMd ? 'clamp(2.6rem, 7vw, 4.6rem)' : 'clamp(3rem, 7vw, 5.4rem)'}
       bodySize={isMd ? '1rem' : 'clamp(0.9rem,1.5vw,1.05rem)'}
     />
   );

@@ -13,9 +13,9 @@ const col2 = [
   { label: 'Mi dashboard',       href: '/dashboard' },
 ] as const;
 
-const LINK_COLOR     = '#78716c';
-const LINK_HOVER     = '#ec4899';
-const MUTED          = 'rgba(28,25,23,0.35)';
+const LINK_COLOR     = '#D93438';
+const LINK_HOVER     = '#E64F55';
+const MUTED          = '#EB7478';
 
 function FLink({ href, children, external }: { href: string; children: React.ReactNode; external?: boolean }) {
   return (
@@ -35,8 +35,8 @@ function FLink({ href, children, external }: { href: string; children: React.Rea
 export function BrunelaFooter() {
   return (
     <footer style={{
-      background: 'linear-gradient(180deg, #fff9fb 0%, #fdf2f8 100%)',
-      borderTop: '1px solid rgba(236,72,153,0.1)',
+      background: 'linear-gradient(180deg, #fff 0%, #FFDADA 100%)',
+      borderTop: '1px solid #FFDADA',
       color: LINK_COLOR,
       padding: 'clamp(3rem,6vw,5rem) clamp(1.25rem,5vw,3rem) 0',
     }}>
@@ -68,34 +68,31 @@ export function BrunelaFooter() {
         {/* Brand */}
         <div className="footer-brand">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', textDecoration: 'none', marginBottom: '1.25rem' }}>
-            <div style={{ width: 40, height: 40, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 46, height: 46, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image
-                src="/fotos-landing/logo.jpeg"
-                alt="Brunela"
-                width={40}
-                height={40}
-                style={{ objectFit: 'contain', mixBlendMode: 'multiply' }}
+                src="/brand/isologo-icon.png"
+                alt="Brunela Dance Trainer"
+                width={46}
+                height={46}
+                style={{ objectFit: 'contain' }}
               />
             </div>
             <div>
-              <p style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '1.7rem', lineHeight: 1, color: '#1c1917', margin: 0 }}>
-                Brunela
-              </p>
-              <p style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#ec4899', marginTop: '2px', marginBottom: 0 }}>
-                Dance Trainer
+              <p style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.1, color: '#D93438', margin: 0, textTransform: 'uppercase' }}>
+                Brunela Dance Trainer
               </p>
             </div>
           </Link>
           <p style={{ fontSize: '0.88rem', lineHeight: 1.9, maxWidth: '30ch', color: '#78716c' }}>
-            Pilates y conditioning para bailarines. Studio online desde Argentina y Barcelona.
+            Pilates y conditioning para bailarines. Estudio Online desde Argentina y Barcelona.
           </p>
           <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {['PBT', 'PCT', 'Pilates', 'RAF'].map((tag) => (
               <span key={tag} style={{
                 fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.18em',
                 textTransform: 'uppercase', padding: '0.28rem 0.75rem',
-                borderRadius: '999px', background: 'rgba(236,72,153,0.07)',
-                color: '#ec4899', border: '1px solid rgba(236,72,153,0.18)',
+                borderRadius: '999px', background: '#FFDADA',
+                color: '#D93438', border: '1px solid #EB7478',
               }}>
                 {tag}
               </span>
@@ -106,7 +103,7 @@ export function BrunelaFooter() {
         {/* Studio */}
         <div>
           <p style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.26em', textTransform: 'uppercase', color: MUTED, marginBottom: '1.4rem' }}>
-            Studio
+            Estudio Online
           </p>
           <ul style={{ display: 'grid', gap: '0.9rem', listStyle: 'none', padding: 0, margin: 0 }}>
             {col1.map((l) => (
@@ -155,7 +152,7 @@ export function BrunelaFooter() {
           target="_blank"
           rel="noreferrer"
           style={{ fontSize: '0.72rem', color: MUTED, textDecoration: 'none', letterSpacing: '0.04em', transition: 'color 150ms' }}
-          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = '#ec4899'; }}
+          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = '#E64F55'; }}
           onMouseOut={(e)  => { (e.currentTarget as HTMLElement).style.color = MUTED; }}
         >
           Hecho por DallapeSystems
