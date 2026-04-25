@@ -1,11 +1,10 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
-import { ArcGalleryHero } from '@/components/ui/arc-gallery-hero-component';
-import { BrunelaFooter } from '@/components/ui/hover-footer';
-import { InteractiveSelector } from '@/components/ui/interactive-selector';
+import Image from "next/image";
+import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
+import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
+import { BrunelaFooter } from "@/components/ui/hover-footer";
+import { InteractiveSelector } from "@/components/ui/interactive-selector";
 
-/* ── Subtle grain texture overlay ── */
 function GrainTexture() {
   return (
     <div
@@ -15,7 +14,7 @@ function GrainTexture() {
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        opacity: 0.032,
+        opacity: 0.028,
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         backgroundRepeat: "repeat",
         backgroundSize: "200px 200px",
@@ -24,7 +23,6 @@ function GrainTexture() {
   );
 }
 
-/* ── Subtle dot grid ── */
 function DotGrid() {
   return (
     <div
@@ -34,55 +32,40 @@ function DotGrid() {
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        backgroundImage: "radial-gradient(circle, rgba(190,24,93,0.06) 1px, transparent 1px)",
+        backgroundImage: "radial-gradient(circle, rgba(217,52,56,0.08) 1px, transparent 1px)",
         backgroundSize: "32px 32px",
-        opacity: 1,
       }}
     />
   );
 }
 
-/* ── Pink glow spread across the whole page ── */
-function PinkGlow() {
+function BrandGlow() {
   return (
     <>
-      {/* Top glow — hero area */}
       <div
         aria-hidden
         style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '70vh',
-          zIndex: 0, pointerEvents: 'none',
-          backgroundImage: `
-            radial-gradient(ellipse 80% 70% at 50% 0%, #f9a8d4 0%, transparent 60%),
-            radial-gradient(ellipse 40% 40% at 5% 40%, #fbcfe8 0%, transparent 55%)
-          `,
-          opacity: 0.75,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "64vh",
+          zIndex: 0,
+          pointerEvents: "none",
+          background: "radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,218,218,0.95) 0%, transparent 62%)",
         }}
       />
-      {/* Middle glow — classes / about */}
       <div
         aria-hidden
         style={{
-          position: 'fixed', top: '30vh', left: 0, right: 0, height: '70vh',
-          zIndex: 0, pointerEvents: 'none',
-          backgroundImage: `
-            radial-gradient(ellipse 50% 50% at 95% 30%, #fce7f3 0%, transparent 55%),
-            radial-gradient(ellipse 35% 45% at 10% 70%, #fbcfe8 0%, transparent 50%)
-          `,
-          opacity: 0.65,
-        }}
-      />
-      {/* Bottom glow — pricing / footer transition */}
-      <div
-        aria-hidden
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, height: '60vh',
-          zIndex: 0, pointerEvents: 'none',
-          backgroundImage: `
-            radial-gradient(ellipse 60% 60% at 50% 100%, #fdf2f8 0%, transparent 60%),
-            radial-gradient(ellipse 40% 40% at 90% 80%, #fce7f3 0%, transparent 50%)
-          `,
-          opacity: 0.7,
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "48vh",
+          zIndex: 0,
+          pointerEvents: "none",
+          background: "radial-gradient(ellipse 70% 60% at 50% 100%, rgba(235,116,120,0.24) 0%, transparent 64%)",
         }}
       />
     </>
@@ -90,47 +73,68 @@ function PinkGlow() {
 }
 
 const heroImages = [
-  '/fotos-landing/Ballet.jpg',
-  '/fotos-landing/about-1.jpg',
-  '/fotos-landing/Stretching.jpg',
-  '/fotos-landing/Pilates Reformer.jpg',
-  '/fotos-landing/Progressing Ballet Technique.jpg',
-  '/fotos-landing/pbt.jpg',
-  '/fotos-landing/about-2.jpg',
-  '/fotos-landing/pct.jpg',
-  '/fotos-landing/stretching1.jpg',
-  '/fotos-landing/pilates.jpg',
-  '/fotos-landing/Pilates Mat.png',
-  '/fotos-landing/about-hero.jpg.jpg',
+  "/fotos-landing/Ballet.jpg",
+  "/fotos-landing/about-1.jpg",
+  "/fotos-landing/Stretching.jpg",
+  "/fotos-landing/Pilates Reformer.jpg",
+  "/fotos-landing/Progressing Ballet Technique.jpg",
+  "/fotos-landing/pbt.jpg",
+  "/fotos-landing/about-2.jpg",
+  "/fotos-landing/pct.jpg",
+  "/fotos-landing/stretching1.jpg",
+  "/fotos-landing/pilates.jpg",
+  "/fotos-landing/Pilates Mat.png",
+  "/fotos-landing/about-hero.jpg.jpg",
 ];
+
+const methodCards = [
+  {
+    title: "Tecnica",
+    text: "Alineacion, control y limpieza del movimiento.",
+  },
+  {
+    title: "Progresion",
+    text: "Planes con objetivos concretos para entrenar con direccion.",
+  },
+  {
+    title: "Cuerpo consciente",
+    text: "Activacion correcta para mejorar sin forzar.",
+  },
+  {
+    title: "Acompanamiento",
+    text: "Contenido en crecimiento y sesiones en vivo.",
+  },
+];
+
+const aboutHighlights = ["Ballet", "Pilates", "PBT", "Contemporary Technique", "RAD CPD Credits"];
 
 const plans = [
   {
-    name: 'Corps de Ballet',
-    price: '20',
-    annual: '192',
-    featured: false,
+    name: "Corps de Ballet",
+    price: "20",
+    annual: "192",
     badge: null,
-    desc: 'Accede a una biblioteca completa de clases disenadas para mejorar tu tecnica como bailarin. Incluye muchas horas de contenido enfocado en ballet, flexibilidad y trabajo tecnico aplicado a la danza.',
-    features: ['Acceso ilimitado a toda la biblioteca', 'Clases disponibles en cualquier momento y desde cualquier lugar', 'Contenido estructurado para mejorar tu tecnica de forma progresiva', 'Enfoque orientado a desarrollar un trabajo tecnico solido y consciente'],
-  },
-  {
-    name: 'Solista',
-    price: '39',
-    annual: '374,40',
-    featured: true,
-    badge: 'El mas elegido',
-    desc: 'Incluye todo el contenido del plan Corps de Ballet mas acceso a planes de trabajo estructurados con objetivos especificos como pies, rotacion o flexibilidad. Estos planes te guian paso a paso para trabajar con mayor profundidad, organizacion y precision.',
-    features: ['Acceso a planes estructurados', 'Trabajo mas profundo y enfocado en objetivos concretos', 'Mayor claridad en el entrenamiento', 'Progresion mas guiada y detallada'],
-  },
-  {
-    name: 'Principal',
-    price: '69',
-    annual: '662,40',
     featured: false,
-    badge: 'Experiencia completa con clases en vivo',
-    desc: 'Incluye todo el contenido del plan Solista y acceso a una experiencia mas completa y personalizada, con 2 clases en vivo al mes en formato privado y reserva previa a traves de calendario.',
-    features: ['Acceso completo a todos los contenidos y planes', '2 clases en vivo al mes con reserva', 'Acompanamiento mas personalizado', 'Mayor orientacion durante tu proceso'],
+    oneLine: "Biblioteca completa para entrenar cuando quieras.",
+    includes: ["Biblioteca ilimitada", "Clases on demand", "Ballet, flexibilidad y tecnica", "Progresion clara"],
+  },
+  {
+    name: "Solista",
+    price: "39",
+    annual: "374,40",
+    badge: "El mas elegido",
+    featured: true,
+    oneLine: "Courses estructurados para objetivos concretos.",
+    includes: ["Todo Corps de Ballet", "Planes para pies, rotacion y flexibilidad", "Entrenamiento guiado", "Mayor precision tecnica"],
+  },
+  {
+    name: "Principal",
+    price: "69",
+    annual: "662,40",
+    badge: "Con clases en vivo",
+    featured: false,
+    oneLine: "La experiencia completa con acompanamiento privado.",
+    includes: ["Todo Solista", "2 clases privadas en vivo al mes", "Reserva por calendario", "Orientacion mas cercana"],
   },
 ] as const;
 
@@ -139,221 +143,145 @@ export default function HomePage() {
     <>
       <GrainTexture />
       <DotGrid />
-      <PinkGlow />
+      <BrandGlow />
 
-      {/* ── HERO ── */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ position: "relative", zIndex: 1 }}>
         <ArcGalleryHero images={heroImages} />
       </div>
 
-      <section className="landing-section" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,7vw,6rem) clamp(1.5rem,5vw,4.5rem)' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#E64F55', marginBottom: '0.8rem' }}>
-            Estudio Online
-          </p>
-          <h2 style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: 'clamp(2.25rem,5vw,4rem)', fontWeight: 900, lineHeight: 1, color: '#D93438', marginBottom: '1.3rem' }}>
-            Un metodo estructurado para mejorar tu tecnica
-          </h2>
-          <div style={{ display: 'grid', gap: '1rem', fontSize: '1.02rem', color: '#D93438', lineHeight: 1.85, maxWidth: '78ch', margin: '0 auto' }}>
-            <p>Una plataforma disenada para acompanarte en cada etapa de tu proceso como bailarin.</p>
-            <p>No se trata solo de clases, sino de un enfoque estructurado donde encontraras trabajo tecnico, perfeccionamiento y limpieza de la tecnica, junto con clases y planes de trabajo con progresion real.</p>
-            <p>Ademas, tendras acceso a sesiones en vivo y contenido en constante crecimiento para seguir desarrollando tu cuerpo y tu rendimiento de forma consciente.</p>
-            <p style={{ fontWeight: 900 }}>Si estas aqui, es porque quieres mejorar y tomar tu proceso en serio. Me alegra acompanarte en ese camino.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CLASES ── */}
-      <section id="clases" className="landing-section" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-
-          <div className="landing-section-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '3.5rem' }}>
-            <div>
-              <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
-                Estudio Online
-              </p>
-              <h2 style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: 'clamp(2.4rem,5vw,4rem)', fontWeight: 900, lineHeight: 0.98, color: '#D93438' }}>
-                Explora el<br />estudio online
-              </h2>
-            </div>
-            <p style={{ fontSize: '1rem', color: '#D93438', lineHeight: 1.8, maxWidth: '40ch' }}>
-              Tres previews para entender el tipo de entrenamiento que encontraras dentro de la plataforma.
+      <section className="landing-section method-section">
+        <div className="method-shell">
+          <div className="method-copy">
+            <p className="section-kicker">Estudio Online</p>
+            <h2 className="section-title">Un m&eacute;todo estructurado para mejorar tu t&eacute;cnica</h2>
+            <p className="section-lead">
+              Una plataforma dise&ntilde;ada para acompa&ntilde;arte en cada etapa: clases, planes de trabajo y sesiones en vivo.
             </p>
           </div>
 
-          <InteractiveSelector />
-        </div>
-      </section>
-
-      {/* ── SOBRE MI ── */}
-      <section id="sobre" className="landing-section" style={{ position: 'relative', zIndex: 1, scrollMarginTop: '5rem', overflow: 'hidden', padding: 0 }}>
-        {/* Soft monocolor background */}
-        <div style={{ position: 'absolute', inset: 0, background: '#FFDADA', zIndex: 0 }} />
-        <Image
-          src="/brand/isologo-icon.png"
-          alt=""
-          width={520}
-          height={520}
-          aria-hidden
-          style={{
-            position: 'absolute',
-            right: '-4rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            opacity: 0.1,
-            filter: 'blur(8px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-
-        <div style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-
-            {/* Section label */}
-            <div style={{ marginBottom: '3.5rem' }}>
-              <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
-                Sobre mi
-              </p>
-              <h2 style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: 'clamp(2rem,4.6vw,3.6rem)', fontWeight: 900, lineHeight: 1.02, color: '#D93438' }}>
-                Bailarina profesional en tecnica y entrenamiento para danza
-              </h2>
-            </div>
-
-            {/* Content: photo left + portrait right */}
-            <div className="landing-about-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '4rem', alignItems: 'start' }}>
-
-              {/* Left: single portrait */}
-              <div className="landing-about-photo" style={{
-                position: 'relative', borderRadius: '999px', overflow: 'hidden',
-                aspectRatio: '1/1',
-                boxShadow: '0 32px 80px rgba(236,72,153,0.15), 0 0 0 1px rgba(236,72,153,0.08)',
-              }}>
-                <Image src="/fotos-landing/about-hero.jpg.jpg" alt="Brunela" fill sizes="45vw"
-                  style={{ objectFit: 'cover', objectPosition: 'top center' }} />
-                {/* subtle pink tint at top */}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(236,72,153,0.08) 0%, transparent 40%)' }} />
-              </div>
-
-              {/* Right: text */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', paddingTop: '1rem' }}>
-                <p style={{ fontSize: '1rem', color: '#D93438', lineHeight: 1.9 }}>
-                  Soy bailarina y trabajo en el desarrollo tecnico del bailarin desde un enfoque consciente del cuerpo.
-                </p>
-                <p style={{ fontSize: '1rem', color: '#D93438', lineHeight: 1.9 }}>
-                  Soy profesora de ballet e instructora de Pilates, Progressive Ballet Technique (PBT) y Contemporary Technique, con formacion reconocida mediante CPD credits de la Royal Academy of Dance (RAD) a traves de PBT.
-                </p>
-                <p style={{ fontSize: '1rem', color: '#D93438', lineHeight: 1.9 }}>
-                  Mi trabajo se centra en la alineacion, el control y la activacion correcta del cuerpo para mejorar la tecnica sin generar lesiones.
-                </p>
-                <p style={{ fontSize: '1rem', color: '#D93438', lineHeight: 1.9 }}>
-                  Creo en un entrenamiento que no solo busca resultados, sino que ensena a entender el movimiento.
-                </p>
-
-                {/* Certifications */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {['PBT Certified', 'PCT Certified', 'Pilates', 'RAD CPD Credits', '+15 anos'].map((t) => (
-                    <span key={t} style={{
-                      fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.14em',
-                      textTransform: 'uppercase', padding: '0.4rem 1rem', borderRadius: '999px',
-                      background: 'rgba(255,255,255,0.8)', color: '#ec4899',
-                      border: '1px solid rgba(236,72,153,0.2)',
-                    }}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Stats */}
-                <div className="landing-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid rgba(217,52,56,0.16)', borderBottom: '1px solid rgba(217,52,56,0.16)' }}>
-                  {[
-                    { num: '+15', label: 'anos de experiencia' },
-                    { num: '4', label: 'certificaciones' },
-                  ].map((s) => (
-                    <div key={s.label} style={{ textAlign: 'center' }}>
-                      <p style={{ fontFamily: 'var(--font-display,serif)', fontStyle: 'italic', fontSize: '2.2rem', color: '#ec4899', lineHeight: 1, marginBottom: '0.2rem' }}>{s.num}</p>
-                      <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(28,25,23,0.4)', lineHeight: 1.4 }}>{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* CTAs */}
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <Link href="/#planes" style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    padding: '0.85rem 1.8rem', borderRadius: '999px',
-                    background: '#ec4899', color: '#fff', textDecoration: 'none',
-                    fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase',
-                    boxShadow: '0 10px 28px rgba(236,72,153,0.28)',
-                  }}>
-                    Ver membresias
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PLANES ── */}
-      <section id="planes" className="landing-section" style={{ position: 'relative', zIndex: 1, padding: 'clamp(4rem,8vw,7rem) clamp(1.5rem,5vw,4.5rem)', scrollMarginTop: '5rem' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '0' }}>
-            <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#ec4899', marginBottom: '0.6rem' }}>
-              Membresias
-            </p>
-            <h2 style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: 'clamp(2.4rem,5vw,4rem)', fontWeight: 900, lineHeight: 0.98, color: '#D93438', marginBottom: '0.9rem' }}>
-              Elige tu plan.<br />Un Estudio Online completo.
-            </h2>
-            <p style={{ fontSize: '0.95rem', color: '#D93438', lineHeight: 1.8 }}>Cancela cuando quieras y cambia de plan en cualquier momento.</p>
-          </div>
-
-          <div className="landing-plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.25rem', marginTop: '3rem' }}>
-            {plans.map((p) => (
-              <div key={p.name} style={{
-                borderRadius: '1.5rem', padding: '2.25rem 2rem',
-                border: p.featured ? '1.5px solid #ec4899' : '1.5px solid #fce7f3',
-                background: p.featured ? 'linear-gradient(160deg,#fff 0%,#fdf2f8 100%)' : 'rgba(255,255,255,0.7)',
-                backdropFilter: 'blur(8px)', position: 'relative',
-                boxShadow: p.featured ? '0 20px 50px rgba(236,72,153,0.15)' : 'none',
-              }}>
-                {p.badge && (
-                  <span style={{ position: 'absolute', top: '-0.8rem', left: '50%', transform: 'translateX(-50%)', background: '#E64F55', color: '#fff', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0.3rem 1rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                    {p.badge}
-                  </span>
-                )}
-                <p style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: '1.5rem', fontWeight: 900, color: '#D93438', marginBottom: '0.35rem' }}>{p.name}</p>
-                <p style={{ fontSize: '0.85rem', color: '#D93438', lineHeight: 1.7, marginBottom: '1.5rem' }}>{p.desc}</p>
-                <p style={{ fontFamily: 'var(--font-display,sans-serif)', fontSize: '3.5rem', fontWeight: 900, color: '#E64F55', lineHeight: 1, marginBottom: '0.2rem' }}>{p.price} {String.fromCharCode(8364)}</p>
-                <p style={{ fontSize: '0.68rem', color: '#D93438', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.55rem' }}>al mes</p>
-                <p style={{ fontSize: '0.76rem', color: '#E64F55', fontWeight: 800, lineHeight: 1.5, marginBottom: '1.75rem' }}>Opcion anual: {p.annual} {String.fromCharCode(8364)} / ano con 20% de descuento</p>
-                <ul style={{ listStyle: 'none', display: 'grid', gap: '0.6rem', marginBottom: '1.75rem', padding: 0 }}>
-                  {p.features.map((f) => (
-                    <li key={f} style={{ display: 'flex', gap: '0.55rem', alignItems: 'flex-start', fontSize: '0.88rem', color: '#D93438', lineHeight: 1.6 }}>
-                      <CheckCircle2 size={14} style={{ color: '#E64F55', flexShrink: 0, marginTop: '0.12rem' }} />{f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/sign-in" style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
-                  padding: '0.85rem', borderRadius: '999px',
-                  fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase',
-                  textDecoration: 'none',
-                  background: p.featured ? '#ec4899' : 'transparent',
-                  color: p.featured ? '#fff' : '#1c1917',
-                  border: p.featured ? 'none' : '1.5px solid rgba(28,25,23,0.18)',
-                  boxShadow: p.featured ? '0 8px 24px rgba(236,72,153,0.3)' : 'none',
-                }}>
-                  Empezar
-                </Link>
+          <div className="method-grid">
+            {methodCards.map((item) => (
+              <div className="method-card" key={item.title}>
+                <span>{item.title}</span>
+                <p>{item.text}</p>
               </div>
             ))}
           </div>
+
+          <p className="method-callout">
+            Si est&aacute;s aqu&iacute;, es porque quieres mejorar y tomar tu proceso en serio. Me alegra acompa&ntilde;arte en ese camino.
+          </p>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <section id="clases" className="landing-section previews-section">
+        <div className="section-head">
+          <div>
+            <p className="section-kicker">Preview del contenido</p>
+            <h2 className="section-title">Explora el estudio online</h2>
+          </div>
+          <p className="section-lead compact">Tres ejemplos para entender r&aacute;pido el tipo de trabajo que vas a encontrar.</p>
+        </div>
+
+        <InteractiveSelector />
+      </section>
+
+      <section id="sobre" className="about-section">
+        <div className="about-mark" aria-hidden>
+          <Image src="/brand/isologo-icon.png" alt="" fill sizes="420px" style={{ objectFit: "contain" }} />
+        </div>
+
+        <div className="about-shell">
+          <div className="about-photo">
+            <Image
+              src="/fotos-landing/about-hero.jpg.jpg"
+              alt="Brunela"
+              fill
+              sizes="(max-width: 900px) 82vw, 360px"
+              style={{ objectFit: "cover", objectPosition: "top center" }}
+            />
+          </div>
+
+          <div className="about-copy">
+            <p className="section-kicker">Sobre m&iacute;</p>
+            <h2 className="section-title">Bailarina profesional en t&eacute;cnica y entrenamiento para danza</h2>
+            <p className="section-lead">
+              Trabajo en el desarrollo t&eacute;cnico del bailar&iacute;n desde un enfoque consciente del cuerpo. Mi foco est&aacute; en
+              la alineaci&oacute;n, el control y la activaci&oacute;n correcta para mejorar sin generar lesiones.
+            </p>
+
+            <div className="about-tags">
+              {aboutHighlights.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+
+            <div className="about-stats">
+              <div>
+                <strong>+15</strong>
+                <span>a&ntilde;os de experiencia</span>
+              </div>
+              <div>
+                <strong>4</strong>
+                <span>&aacute;reas de formaci&oacute;n</span>
+              </div>
+            </div>
+
+            <Link className="brand-button" href="/#planes">
+              Ver membres&iacute;as
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section id="planes" className="landing-section plans-section">
+        <div className="plans-head">
+          <p className="section-kicker">Membres&iacute;as</p>
+          <h2 className="section-title">Elige tu plan. Un Estudio Online completo.</h2>
+          <p className="section-lead compact">Cancela cuando quieras y cambia de plan en cualquier momento.</p>
+        </div>
+
+        <div className="plans-grid">
+          {plans.map((plan) => (
+            <article className={`plan-card-new ${plan.featured ? "is-featured" : ""}`} key={plan.name}>
+              {plan.badge && <span className="plan-badge">{plan.badge}</span>}
+
+              <div className="plan-top">
+                <h3>{plan.name}</h3>
+                <p>{plan.oneLine}</p>
+              </div>
+
+              <div className="plan-price">
+                <strong>
+                  {plan.price}
+                  <span>&euro;</span>
+                </strong>
+                <p>al mes</p>
+              </div>
+
+              <p className="annual-note">
+                Anual: {plan.annual}&euro; / a&ntilde;o
+                <span>20% menos</span>
+              </p>
+
+              <ul>
+                {plan.includes.map((item) => (
+                  <li key={item}>
+                    <CheckCircle2 size={16} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/sign-in" className="plan-action">
+                Comenzar prueba gratis
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <div style={{ position: "relative", zIndex: 1 }}>
         <BrunelaFooter />
       </div>
     </>
