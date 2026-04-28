@@ -5,7 +5,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
-import { LanguageSwitcher, usePublicI18n } from "@/components/language-provider";
+import {
+  LanguageSwitcher,
+  usePublicI18n,
+} from "@/components/language-provider";
 import type { PublicMessageKey } from "@/src/i18n/public";
 
 const links = [
@@ -56,16 +59,32 @@ export function Navbar() {
           display: "flex",
           alignItems: "center",
           padding: "0 clamp(0.75rem, 4vw, 2.5rem)",
-          background: menuOpen ? "rgba(255,255,255,0.98)" : scrolled ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.78)",
+          background: menuOpen
+            ? "rgba(255,255,255,0.98)"
+            : scrolled
+              ? "rgba(255,255,255,0.94)"
+              : "rgba(255,255,255,0.78)",
           backdropFilter: "blur(22px)",
-          borderBottom: scrolled ? "1px solid #FFDADA" : "1px solid rgba(255,218,218,0.7)",
+          borderBottom: scrolled
+            ? "1px solid #FFDADA"
+            : "1px solid rgba(255,218,218,0.7)",
           boxShadow: scrolled ? "0 2px 24px rgba(217,52,56,0.08)" : "none",
           transition: "background 350ms, box-shadow 350ms, border-color 350ms",
         }}
       >
         <BrandLockup href="/" compact markOnly className="navbar-brand" />
 
-        <nav className="landing-nav-links" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "0.15rem" }}>
+        <nav
+          className="landing-nav-links"
+          style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.15rem",
+          }}
+        >
           {links.map((link) => (
             <Link
               key={link.href}
@@ -86,7 +105,15 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
+        <div
+          className="landing-nav-links"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            marginLeft: "auto",
+          }}
+        >
           <LanguageSwitcher compact />
           <Link href="/sign-in" className="nav-button nav-button-ghost">
             {t("nav.signIn")}
@@ -96,8 +123,21 @@ export function Navbar() {
           </Link>
         </div>
 
-        <div className="landing-mobile-nav" style={{ display: "none", alignItems: "center", gap: "0.4rem", marginLeft: "auto", minWidth: 0 }}>
-          <Link href="/sign-in" className="nav-button nav-button-solid mobile-signin-button">
+        <div
+          className="landing-mobile-nav"
+          style={{
+            display: "none",
+            alignItems: "center",
+            gap: "0.4rem",
+            marginLeft: "auto",
+            minWidth: 0,
+          }}
+        >
+          <LanguageSwitcher compact />
+          <Link
+            href="/sign-in"
+            className="nav-button nav-button-solid mobile-signin-button"
+          >
             {t("nav.signIn")}
           </Link>
           <button
@@ -171,15 +211,35 @@ export function Navbar() {
             {t(link.label as PublicMessageKey)}
           </Link>
         ))}
-        <Link href="/sign-in" onClick={close} className="nav-button nav-button-ghost mobile-drawer-signin" style={{ marginTop: "1.25rem" }}>
+        <Link
+          href="/sign-in"
+          onClick={close}
+          className="nav-button nav-button-ghost mobile-drawer-signin"
+          style={{ marginTop: "1.25rem" }}
+        >
           {t("nav.signIn")}
         </Link>
-        <Link href="/#planes" onClick={close} className="nav-button nav-button-solid" style={{ marginTop: "1.25rem" }}>
+        <Link
+          href="/#planes"
+          onClick={close}
+          className="nav-button nav-button-solid"
+          style={{ marginTop: "1.25rem" }}
+        >
           {t("nav.viewPlans")}
         </Link>
       </div>
 
-      {menuOpen && <div onClick={close} style={{ position: "fixed", inset: 0, zIndex: 9997, background: "rgba(217,52,56,0.12)" }} />}
+      {menuOpen && (
+        <div
+          onClick={close}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9997,
+            background: "rgba(217,52,56,0.12)",
+          }}
+        />
+      )}
 
       <style>{`
         .site-header {

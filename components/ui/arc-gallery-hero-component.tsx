@@ -10,15 +10,123 @@ type ArcGalleryHeroProps = {
 };
 
 const positions = [
-  { x: "-510px", y: "96px", tx: "-340px", ty: "76px", mx: "-190px", my: "42px", s: "158px", ts: "116px", ms: "98px", z: 1, r: "-20deg" },
-  { x: "-405px", y: "14px", tx: "-270px", ty: "18px", mx: "-140px", my: "16px", s: "168px", ts: "126px", ms: "108px", z: 2, r: "-15deg" },
-  { x: "-286px", y: "-48px", tx: "-190px", ty: "-30px", mx: "-88px", my: "-8px", s: "180px", ts: "136px", ms: "118px", z: 3, r: "-10deg" },
-  { x: "-150px", y: "-86px", tx: "-96px", ty: "-62px", mx: "-30px", my: "-24px", s: "200px", ts: "150px", ms: "128px", z: 4, r: "-5deg" },
-  { x: "0px", y: "-98px", tx: "0px", ty: "-74px", mx: "36px", my: "-30px", s: "224px", ts: "168px", ms: "142px", z: 5, r: "2deg" },
-  { x: "154px", y: "-82px", tx: "102px", ty: "-58px", mx: "96px", my: "-18px", s: "200px", ts: "150px", ms: "128px", z: 4, r: "7deg" },
-  { x: "294px", y: "-38px", tx: "198px", ty: "-22px", mx: "150px", my: "8px", s: "180px", ts: "136px", ms: "114px", z: 3, r: "13deg" },
-  { x: "414px", y: "36px", tx: "278px", ty: "34px", mx: "194px", my: "38px", s: "168px", ts: "126px", ms: "100px", z: 2, r: "18deg" },
-  { x: "515px", y: "126px", tx: "340px", ty: "94px", mx: "0px", my: "0px", s: "156px", ts: "116px", ms: "0px", z: 1, r: "23deg" }
+  {
+    x: "-510px",
+    y: "96px",
+    tx: "-340px",
+    ty: "76px",
+    mx: "-190px",
+    my: "42px",
+    s: "158px",
+    ts: "116px",
+    ms: "98px",
+    z: 1,
+    r: "-20deg",
+  },
+  {
+    x: "-405px",
+    y: "14px",
+    tx: "-270px",
+    ty: "18px",
+    mx: "-140px",
+    my: "16px",
+    s: "168px",
+    ts: "126px",
+    ms: "108px",
+    z: 2,
+    r: "-15deg",
+  },
+  {
+    x: "-286px",
+    y: "-48px",
+    tx: "-190px",
+    ty: "-30px",
+    mx: "-88px",
+    my: "-8px",
+    s: "180px",
+    ts: "136px",
+    ms: "118px",
+    z: 3,
+    r: "-10deg",
+  },
+  {
+    x: "-150px",
+    y: "-86px",
+    tx: "-96px",
+    ty: "-62px",
+    mx: "-30px",
+    my: "-24px",
+    s: "200px",
+    ts: "150px",
+    ms: "128px",
+    z: 4,
+    r: "-5deg",
+  },
+  {
+    x: "0px",
+    y: "-98px",
+    tx: "0px",
+    ty: "-74px",
+    mx: "36px",
+    my: "-30px",
+    s: "224px",
+    ts: "168px",
+    ms: "142px",
+    z: 5,
+    r: "2deg",
+  },
+  {
+    x: "154px",
+    y: "-82px",
+    tx: "102px",
+    ty: "-58px",
+    mx: "96px",
+    my: "-18px",
+    s: "200px",
+    ts: "150px",
+    ms: "128px",
+    z: 4,
+    r: "7deg",
+  },
+  {
+    x: "294px",
+    y: "-38px",
+    tx: "198px",
+    ty: "-22px",
+    mx: "150px",
+    my: "8px",
+    s: "180px",
+    ts: "136px",
+    ms: "114px",
+    z: 3,
+    r: "13deg",
+  },
+  {
+    x: "414px",
+    y: "36px",
+    tx: "278px",
+    ty: "34px",
+    mx: "194px",
+    my: "38px",
+    s: "168px",
+    ts: "126px",
+    ms: "100px",
+    z: 2,
+    r: "18deg",
+  },
+  {
+    x: "515px",
+    y: "126px",
+    tx: "340px",
+    ty: "94px",
+    mx: "0px",
+    my: "0px",
+    s: "156px",
+    ts: "116px",
+    ms: "0px",
+    z: 1,
+    r: "23deg",
+  },
 ] as const;
 
 type PhotoStyle = React.CSSProperties & {
@@ -33,7 +141,10 @@ type PhotoStyle = React.CSSProperties & {
   "--z": number;
 };
 
-export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({ images, className = "" }) => {
+export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
+  images,
+  className = "",
+}) => {
   const { t } = usePublicI18n();
   const photos = images.slice(0, positions.length);
 
@@ -89,7 +200,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({ images, classNam
           display: grid;
           justify-items: center;
           align-content: center;
-          min-height: min(820px, 100svh);
+          height: 100vh;
           overflow: hidden;
           padding: 76px clamp(1rem, 4vw, 3rem) 4.25rem;
           background: transparent;
