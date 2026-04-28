@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
 import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
 import { BrunelaFooter } from "@/components/ui/hover-footer";
 import { InteractiveSelector } from "@/components/ui/interactive-selector";
+import { PricingPlans } from "@/components/pricing-plans";
+import { T } from "@/components/language-provider";
+import type { PublicMessageKey } from "@/src/i18n/public";
 
 function GrainTexture() {
   return (
@@ -32,8 +34,8 @@ function DotGrid() {
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        backgroundImage: "radial-gradient(circle, rgba(217,52,56,0.08) 1px, transparent 1px)",
-        backgroundSize: "32px 32px",
+        backgroundImage: "radial-gradient(circle, rgba(217,52,56,0.045) 1px, transparent 1px)",
+        backgroundSize: "26px 26px",
       }}
     />
   );
@@ -42,19 +44,49 @@ function DotGrid() {
 function BrandGlow() {
   return (
     <>
+      {/* top bloom — wide, warm, rich */}
       <div
         aria-hidden
         style={{
           position: "fixed",
-          top: 0,
+          top: "-8vh",
           left: 0,
           right: 0,
-          height: "64vh",
+          height: "72vh",
           zIndex: 0,
           pointerEvents: "none",
-          background: "radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,218,218,0.95) 0%, transparent 62%)",
+          background: "radial-gradient(ellipse 95% 85% at 50% 0%, rgba(255,210,212,1) 0%, rgba(255,238,238,0.75) 44%, transparent 72%)",
         }}
       />
+      {/* left accent */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: "10vh",
+          left: 0,
+          width: "40vw",
+          height: "60vh",
+          zIndex: 0,
+          pointerEvents: "none",
+          background: "radial-gradient(ellipse 80% 60% at 0% 50%, rgba(255,218,218,0.32) 0%, transparent 65%)",
+        }}
+      />
+      {/* right accent */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: "20vh",
+          right: 0,
+          width: "35vw",
+          height: "55vh",
+          zIndex: 0,
+          pointerEvents: "none",
+          background: "radial-gradient(ellipse 70% 55% at 100% 50%, rgba(235,116,120,0.18) 0%, transparent 65%)",
+        }}
+      />
+      {/* bottom glow */}
       <div
         aria-hidden
         style={{
@@ -62,10 +94,10 @@ function BrandGlow() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: "48vh",
+          height: "55vh",
           zIndex: 0,
           pointerEvents: "none",
-          background: "radial-gradient(ellipse 70% 60% at 50% 100%, rgba(235,116,120,0.24) 0%, transparent 64%)",
+          background: "radial-gradient(ellipse 80% 65% at 50% 110%, rgba(230,79,85,0.22) 0%, transparent 65%)",
         }}
       />
     </>
@@ -89,24 +121,28 @@ const heroImages = [
 
 const methodCards = [
   {
-    title: "Tecnica",
-    text: "Alineacion, control y limpieza del movimiento.",
+    title: "method.card1.title",
+    label: "01",
+    text: "method.card1.text",
   },
   {
-    title: "Progresion",
-    text: "Planes con objetivos concretos para entrenar con direccion.",
+    title: "method.card2.title",
+    label: "02",
+    text: "method.card2.text",
   },
   {
-    title: "Cuerpo consciente",
-    text: "Activacion correcta para mejorar sin forzar.",
+    title: "method.card3.title",
+    label: "03",
+    text: "method.card3.text",
   },
   {
-    title: "Acompanamiento",
-    text: "Contenido en crecimiento y sesiones en vivo.",
+    title: "method.card4.title",
+    label: "04",
+    text: "method.card4.text",
   },
-];
+] as const;
 
-const aboutHighlights = ["Ballet", "Pilates", "PBT", "Contemporary Technique", "RAD CPD Credits"];
+const aboutHighlights = ["Ballet", "Pilates", "PBT", "PCT", "RAD CPD Credits"];
 
 const plans = [
   {
@@ -116,7 +152,7 @@ const plans = [
     badge: null,
     featured: false,
     oneLine: "Biblioteca completa para entrenar cuando quieras.",
-    includes: ["Biblioteca ilimitada", "Clases on demand", "Ballet, flexibilidad y tecnica", "Progresion clara"],
+    includes: ["Biblioteca ilimitada", "Clases a demanda", "Ballet, flexibilidad y tecnica", "Progresion clara"],
   },
   {
     name: "Solista",
@@ -124,7 +160,7 @@ const plans = [
     annual: "374,40",
     badge: "El mas elegido",
     featured: true,
-    oneLine: "Courses estructurados para objetivos concretos.",
+    oneLine: "Programas estructurados para objetivos concretos.",
     includes: ["Todo Corps de Ballet", "Planes para pies, rotacion y flexibilidad", "Entrenamiento guiado", "Mayor precision tecnica"],
   },
   {
@@ -152,24 +188,33 @@ export default function HomePage() {
       <section className="landing-section method-section">
         <div className="method-shell">
           <div className="method-copy">
-            <p className="section-kicker">Estudio Online</p>
-            <h2 className="section-title">Un m&eacute;todo estructurado para mejorar tu t&eacute;cnica</h2>
-            <p className="section-lead">
-              Una plataforma dise&ntilde;ada para acompa&ntilde;arte en cada etapa: clases, planes de trabajo y sesiones en vivo.
+            <p className="section-kicker">
+              <T id="method.kicker" />
+            </p>
+            <h2 className="method-title">
+              <T id="method.title" />
+            </h2>
+            <p className="method-lead">
+              <T id="method.lead" />
             </p>
           </div>
 
           <div className="method-grid">
             {methodCards.map((item) => (
               <div className="method-card" key={item.title}>
-                <span>{item.title}</span>
-                <p>{item.text}</p>
+                <small>{item.label}</small>
+                <span>
+                  <T id={item.title as PublicMessageKey} />
+                </span>
+                <p>
+                  <T id={item.text as PublicMessageKey} />
+                </p>
               </div>
             ))}
           </div>
 
           <p className="method-callout">
-            Si est&aacute;s aqu&iacute;, es porque quieres mejorar y tomar tu proceso en serio. Me alegra acompa&ntilde;arte en ese camino.
+            <T id="method.callout" />
           </p>
         </div>
       </section>
@@ -177,37 +222,44 @@ export default function HomePage() {
       <section id="clases" className="landing-section previews-section">
         <div className="section-head">
           <div>
-            <p className="section-kicker">Preview del contenido</p>
-            <h2 className="section-title">Explora el estudio online</h2>
+            <p className="section-kicker">
+              <T id="previews.kicker" />
+            </p>
+            <h2 className="section-title">
+              <T id="previews.title" />
+            </h2>
           </div>
-          <p className="section-lead compact">Tres ejemplos para entender r&aacute;pido el tipo de trabajo que vas a encontrar.</p>
+          <p className="section-lead compact">
+            <T id="previews.lead" />
+          </p>
         </div>
 
         <InteractiveSelector />
       </section>
 
       <section id="sobre" className="about-section">
-        <div className="about-mark" aria-hidden>
-          <Image src="/brand/isologo-icon.png" alt="" fill sizes="420px" style={{ objectFit: "contain" }} />
-        </div>
-
         <div className="about-shell">
-          <div className="about-photo">
-            <Image
-              src="/fotos-landing/about-hero.jpg.jpg"
-              alt="Brunela"
-              fill
-              sizes="(max-width: 900px) 82vw, 360px"
-              style={{ objectFit: "cover", objectPosition: "top center" }}
-            />
+          <div className="about-media">
+            <div className="about-photo">
+              <Image
+                src="/fotos-landing/about-hero.jpg.jpg"
+                alt="Brunela"
+                fill
+                sizes="(max-width: 900px) 88vw, 470px"
+                style={{ objectFit: "cover", objectPosition: "top center" }}
+              />
+            </div>
           </div>
 
           <div className="about-copy">
-            <p className="section-kicker">Sobre m&iacute;</p>
-            <h2 className="section-title">Bailarina profesional en t&eacute;cnica y entrenamiento para danza</h2>
-            <p className="section-lead">
-              Trabajo en el desarrollo t&eacute;cnico del bailar&iacute;n desde un enfoque consciente del cuerpo. Mi foco est&aacute; en
-              la alineaci&oacute;n, el control y la activaci&oacute;n correcta para mejorar sin generar lesiones.
+            <p className="section-kicker">
+              <T id="about.kicker" />
+            </p>
+            <h2 className="about-title">
+              <T id="about.title" />
+            </h2>
+            <p className="about-lead">
+              <T id="about.lead" />
             </p>
 
             <div className="about-tags">
@@ -216,69 +268,41 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div className="about-stats">
-              <div>
+            <div className="about-bottom-row">
+              <div className="about-stat-line">
                 <strong>+15</strong>
-                <span>a&ntilde;os de experiencia</span>
+                <span>
+                  <T id="about.statYears" />
+                </span>
               </div>
-              <div>
+              <div className="about-stat-line">
                 <strong>4</strong>
-                <span>&aacute;reas de formaci&oacute;n</span>
+                <span>
+                  <T id="about.statAreas" />
+                </span>
               </div>
+              <Link className="brand-button" href="/#planes">
+                <T id="about.button" />
+              </Link>
             </div>
-
-            <Link className="brand-button" href="/#planes">
-              Ver membres&iacute;as
-            </Link>
           </div>
         </div>
       </section>
 
       <section id="planes" className="landing-section plans-section">
         <div className="plans-head">
-          <p className="section-kicker">Membres&iacute;as</p>
-          <h2 className="section-title">Elige tu plan. Un Estudio Online completo.</h2>
-          <p className="section-lead compact">Cancela cuando quieras y cambia de plan en cualquier momento.</p>
+          <p className="section-kicker">
+            <T id="plans.kicker" />
+          </p>
+          <h2 className="section-title">
+            <T id="plans.title" />
+          </h2>
+          <p className="section-lead compact">
+            <T id="plans.lead" />
+          </p>
         </div>
 
-        <div className="plans-grid">
-          {plans.map((plan) => (
-            <article className={`plan-card-new ${plan.featured ? "is-featured" : ""}`} key={plan.name}>
-              {plan.badge && <span className="plan-badge">{plan.badge}</span>}
-
-              <div className="plan-top">
-                <h3>{plan.name}</h3>
-                <p>{plan.oneLine}</p>
-              </div>
-
-              <div className="plan-price">
-                <strong>
-                  {plan.price}
-                  <span>&euro;</span>
-                </strong>
-                <p>al mes</p>
-              </div>
-
-              <p className="annual-note">
-                Anual: {plan.annual}&euro; / a&ntilde;o
-                <span>20% menos</span>
-              </p>
-
-              <ul>
-                {plan.includes.map((item) => (
-                  <li key={item}>
-                    <CheckCircle2 size={16} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
-              <Link href="/sign-in" className="plan-action">
-                Comenzar prueba gratis
-              </Link>
-            </article>
-          ))}
-        </div>
+        <PricingPlans plans={plans} />
       </section>
 
       <div style={{ position: "relative", zIndex: 1 }}>

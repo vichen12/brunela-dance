@@ -11,7 +11,7 @@ const messages = {
     },
     nav: {
       signIn: "Ingresar",
-      dashboard: "Studio",
+      dashboard: "Estudio",
       admin: "Admin"
     },
     common: {
@@ -22,7 +22,7 @@ const messages = {
       kicker: "Pilates para bailarines",
       title: "Una plataforma premium para entrenar, reservar y crecer con control total.",
       description:
-        "Brunela Dance Trainer une biblioteca on-demand, programas estructurados y una experiencia de estudio online elegante.",
+        "Brunela Dance Trainer une biblioteca a demanda, programas estructurados y una experiencia de estudio online elegante.",
       primaryCta: "Entrar al estudio",
       secondaryCta: "Ver panel admin",
       tiersEyebrow: "Membresias",

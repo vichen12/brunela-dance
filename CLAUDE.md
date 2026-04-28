@@ -8,7 +8,7 @@ The app has two major surfaces:
 - Public marketing landing at `/`
 - Private member + admin system behind Supabase auth
 
-Spanish is the primary language. English exists in data structures and copy scaffolding, but the main UX should feel Spanish-first.
+Spanish is the primary language. The public landing and sign-in surfaces have a lightweight ES/EN/FR/IT language switcher powered by `src/i18n/public.ts`.
 
 ## Stack
 
@@ -125,5 +125,5 @@ Required for Stripe webhook work:
 - Build the real video player UI instead of progress shortcut buttons
 - Add full onboarding/profile editing for members
 - Connect Stripe checkout end-to-end
-- Add proper locale switching instead of visual language placeholders
+- Keep expanding the ES/EN/FR/IT public dictionary as new landing sections are added
 - Polish dashboard visual system to match the final brand palette and assets

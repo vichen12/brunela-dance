@@ -1,19 +1,26 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import { BrandLockup } from "@/components/brand-lockup";
+import { LanguageSwitcher, usePublicI18n } from "@/components/language-provider";
+import type { PublicMessageKey } from "@/src/i18n/public";
 
 const links = [
-  { href: "/#clases", label: "Clases" },
-  { href: "/#sobre", label: "Sobre mi" },
-  { href: "/#planes", label: "Planes" },
+  { href: "/#clases", label: "nav.classes" },
+  { href: "/#sobre", label: "nav.about" },
+  { href: "/#planes", label: "nav.plans" },
 ] as const;
 
 export function Navbar() {
+  const pathname = usePathname();
+  const { t } = usePublicI18n();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isAuthPage = pathname?.startsWith("/sign-in");
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 40);
@@ -31,9 +38,14 @@ export function Navbar() {
 
   const close = () => setMenuOpen(false);
 
+  if (isAuthPage) {
+    return null;
+  }
+
   return (
     <>
       <header
+        className="site-header"
         style={{
           position: "fixed",
           top: 0,
@@ -51,11 +63,7 @@ export function Navbar() {
           transition: "background 350ms, box-shadow 350ms, border-color 350ms",
         }}
       >
-        <Link href="/" onClick={close} aria-label="Brunela Dance Trainer" style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
-          <div style={{ width: 34, height: 48, position: "relative", flexShrink: 0 }}>
-            <Image src="/brand/isologo-color.png" alt="Brunela Dance Trainer" fill priority style={{ objectFit: "contain", objectPosition: "center" }} />
-          </div>
-        </Link>
+        <BrandLockup href="/" compact markOnly className="navbar-brand" />
 
         <nav className="landing-nav-links" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "0.15rem" }}>
           {links.map((link) => (
@@ -73,27 +81,28 @@ export function Navbar() {
                 textDecoration: "none",
               }}
             >
-              {link.label}
+              {t(link.label as PublicMessageKey)}
             </Link>
           ))}
         </nav>
 
         <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
+          <LanguageSwitcher compact />
           <Link href="/sign-in" className="nav-button nav-button-ghost">
-            Ingresar
+            {t("nav.signIn")}
           </Link>
           <Link href="/#planes" className="nav-button nav-button-solid">
-            Ver planes
+            {t("nav.viewPlans")}
           </Link>
         </div>
 
         <div className="landing-mobile-nav" style={{ display: "none", alignItems: "center", gap: "0.4rem", marginLeft: "auto", minWidth: 0 }}>
-          <Link href="/sign-in" className="nav-button nav-button-solid">
-            Ingresar
+          <Link href="/sign-in" className="nav-button nav-button-solid mobile-signin-button">
+            {t("nav.signIn")}
           </Link>
           <button
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
+            aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
             style={{
               width: 36,
               height: 36,
@@ -113,6 +122,14 @@ export function Navbar() {
         </div>
       </header>
 
+      <button
+        className="mobile-floating-menu"
+        onClick={() => setMenuOpen((open) => !open)}
+        aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+      >
+        {menuOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
       <div
         style={{
           position: "fixed",
@@ -131,6 +148,9 @@ export function Navbar() {
           transition: "transform 300ms cubic-bezier(0.22,1,0.36,1)",
         }}
       >
+        <div className="mobile-drawer-language">
+          <LanguageSwitcher compact />
+        </div>
         {links.map((link) => (
           <Link
             key={link.href}
@@ -148,17 +168,25 @@ export function Navbar() {
               textDecoration: "none",
             }}
           >
-            {link.label}
+            {t(link.label as PublicMessageKey)}
           </Link>
         ))}
+        <Link href="/sign-in" onClick={close} className="nav-button nav-button-ghost mobile-drawer-signin" style={{ marginTop: "1.25rem" }}>
+          {t("nav.signIn")}
+        </Link>
         <Link href="/#planes" onClick={close} className="nav-button nav-button-solid" style={{ marginTop: "1.25rem" }}>
-          Ver planes
+          {t("nav.viewPlans")}
         </Link>
       </div>
 
       {menuOpen && <div onClick={close} style={{ position: "fixed", inset: 0, zIndex: 9997, background: "rgba(217,52,56,0.12)" }} />}
 
       <style>{`
+        .site-header {
+          max-width: 100vw;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
         .nav-button {
           display: inline-flex;
           align-items: center;
@@ -183,9 +211,59 @@ export function Navbar() {
           color: #D93438;
           background: transparent;
         }
+        .mobile-floating-menu {
+          display: none;
+        }
         @media (max-width: 639px) {
           .landing-nav-links { display: none !important; }
           .landing-mobile-nav { display: flex !important; }
+          .landing-mobile-nav {
+            position: absolute;
+            top: 50%;
+            right: 0.58rem;
+            margin-left: 0 !important;
+            transform: translateY(-50%);
+          }
+          .site-header {
+            padding-inline: 0.58rem !important;
+          }
+          .navbar-brand {
+            max-width: 34px;
+            overflow: hidden;
+            transform: none;
+            transform-origin: left center;
+          }
+          .navbar-brand > div:first-child {
+            width: 34px !important;
+            height: 34px !important;
+          }
+          .navbar-brand > div:nth-child(2) {
+            display: none !important;
+          }
+          .landing-mobile-nav {
+            flex-shrink: 0;
+            min-width: max-content !important;
+          }
+          .landing-mobile-nav > button {
+            display: none !important;
+          }
+          .mobile-floating-menu {
+            position: fixed;
+            top: 15px;
+            right: 0.58rem;
+            z-index: 10001;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #EB7478;
+            border-radius: 8px;
+            background: #FFDADA;
+            color: #D93438;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+          }
           .nav-button {
             min-height: 36px;
             padding: 0.46rem 0.82rem;
@@ -193,9 +271,32 @@ export function Navbar() {
             letter-spacing: 0.07em;
           }
         }
-        @media (max-width: 360px) {
-          .landing-mobile-nav .nav-button {
+        @media (max-width: 520px) {
+          .landing-mobile-nav .mobile-signin-button {
             display: none;
+          }
+        }
+        @media (max-width: 390px) {
+          .navbar-brand {
+            max-width: 30px;
+          }
+          .navbar-brand > div:first-child {
+            width: 30px !important;
+            height: 30px !important;
+          }
+          .navbar-brand > div:nth-child(2) {
+            display: none !important;
+          }
+        }
+        .mobile-drawer-language {
+          display: none;
+        }
+        @media (max-width: 639px) {
+          .mobile-drawer-language {
+            display: flex;
+            justify-content: center;
+            padding: 0.35rem 0 0.9rem;
+            border-bottom: 1px solid #FFDADA;
           }
         }
       `}</style>

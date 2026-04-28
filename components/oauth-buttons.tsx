@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
+import { usePublicI18n } from "@/components/language-provider";
 
 function GoogleIcon() {
   return (
@@ -16,6 +17,8 @@ function GoogleIcon() {
 type Props = { callbackUrl?: string | null };
 
 export function OAuthButtons({ callbackUrl }: Props) {
+  const { t } = usePublicI18n();
+
   async function signInWithGoogle() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -63,7 +66,7 @@ export function OAuthButtons({ callbackUrl }: Props) {
       }}
     >
       <GoogleIcon />
-      Continuar con Google
+      {t("auth.google")}
     </button>
   );
 }
