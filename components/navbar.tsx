@@ -124,6 +124,16 @@ export function Navbar() {
         </div>
 
         <div
+          className="mobile-language-selector"
+          style={{
+            display: "none",
+            alignItems: "center",
+          }}
+        >
+          <LanguageSwitcher compact />
+        </div>
+
+        <div
           className="landing-mobile-nav"
           style={{
             display: "none",
@@ -133,7 +143,6 @@ export function Navbar() {
             minWidth: 0,
           }}
         >
-          <LanguageSwitcher compact />
           <Link
             href="/sign-in"
             className="nav-button nav-button-solid mobile-signin-button"
@@ -274,7 +283,14 @@ export function Navbar() {
         .mobile-floating-menu {
           display: none;
         }
+        .mobile-language-selector {
+          display: none;
+        }
         @media (max-width: 639px) {
+          .mobile-language-selector {
+            display: flex !important;
+            margin-left: 0.4rem;
+          }
           .landing-nav-links { display: none !important; }
           .landing-mobile-nav { display: flex !important; }
           .landing-mobile-nav {
