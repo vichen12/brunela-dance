@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ArrowUp } from "lucide-react";
 import {
   FaFacebookF,
@@ -63,8 +64,15 @@ export function BrunelaFooter() {
       </div>
 
       <div className="footer-main">
-        <p className="footer-wordmark">Brunela</p>
-        <p className="footer-subtitle">{t("footer.subtitle")}</p>
+        <div className="footer-logo">
+          <Image
+            src="/brand/brunela-dance-trainer-wordmark.png"
+            alt="Brunela Dance Trainer"
+            fill
+            sizes="(max-width: 720px) 78vw, 720px"
+            style={{ objectFit: "contain" }}
+          />
+        </div>
         <p className="footer-services">{t("footer.services")}</p>
         <p className="footer-place">{t("footer.place")}</p>
 
@@ -169,23 +177,11 @@ export function BrunelaFooter() {
           text-align: center;
         }
 
-        .footer-wordmark {
-          margin: 0;
-          color: #C93050;
-          font-family: var(--font-display), serif;
-          font-size: clamp(4.6rem, 8vw, 7.25rem);
-          font-weight: 400;
-          font-style: italic;
-          line-height: 0.72;
-        }
-
-        .footer-subtitle {
-          margin: 1.1rem 0 1rem;
-          color: #B07850;
-          font-size: 0.62rem;
-          font-weight: 900;
-          letter-spacing: 0.55em;
-          text-transform: uppercase;
+        .footer-logo {
+          position: relative;
+          width: min(720px, 82vw);
+          aspect-ratio: 1060 / 306;
+          margin: 0 0 1.2rem;
         }
 
         .footer-services {
@@ -323,13 +319,9 @@ export function BrunelaFooter() {
             height: 110px;
           }
 
-          .footer-wordmark {
-            font-size: clamp(4rem, 22vw, 5.6rem);
-          }
-
-          .footer-subtitle {
-            margin: 0.9rem 0 0.7rem;
-            letter-spacing: 0.32em;
+          .footer-logo {
+            width: min(86vw, 520px);
+            margin-bottom: 0.9rem;
           }
 
           .footer-nav {
@@ -356,8 +348,8 @@ export function BrunelaFooter() {
         }
 
         @media (max-width: 480px) {
-          .footer-wordmark {
-            font-size: 4.1rem;
+          .footer-logo {
+            width: min(88vw, 390px);
           }
 
           .footer-services {

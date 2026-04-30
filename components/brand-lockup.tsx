@@ -7,6 +7,7 @@ type BrandLockupProps = {
   compact?: boolean;
   light?: boolean;
   markOnly?: boolean;
+  showWordmark?: boolean;
   className?: string;
 };
 
@@ -16,14 +17,15 @@ export function BrandLockup({
   compact = false,
   light = false,
   markOnly = false,
+  showWordmark = false,
   className = ""
 }: BrandLockupProps) {
   const textColor = light ? "#ffffff" : "#D93438";
   const subtitleColor = light ? "rgba(255,255,255,0.78)" : "#E64F55";
   const markWidth = markOnly ? (compact ? 42 : 78) : compact ? 36 : 50;
   const markHeight = markOnly ? (compact ? 42 : 78) : compact ? 50 : 70;
-  const wordmarkWidth = compact ? 136 : 270;
-  const wordmarkHeight = compact ? 39 : 78;
+  const wordmarkWidth = compact ? 132 : 260;
+  const wordmarkHeight = compact ? 38 : 76;
 
   return (
     <Link
@@ -57,7 +59,7 @@ export function BrandLockup({
         />
       </div>
 
-      {markOnly ? (
+      {showWordmark ? (
         <div
           style={{
             position: "relative",
@@ -74,7 +76,7 @@ export function BrandLockup({
             style={{ objectFit: "contain", objectPosition: "left center" }}
           />
         </div>
-      ) : (
+      ) : !markOnly && (
       <div style={{ display: "grid", gap: compact ? "0.12rem" : "0.18rem", textAlign: centered ? "center" : "left" }}>
         <span
           style={{

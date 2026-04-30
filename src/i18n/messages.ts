@@ -25,11 +25,11 @@ const messages = {
         "Brunela Dance Trainer une biblioteca a demanda, programas estructurados y una experiencia de estudio online elegante.",
       primaryCta: "Entrar al estudio",
       secondaryCta: "Ver panel admin",
-      tiersEyebrow: "Membresias",
+      tiersEyebrow: "Membresías",
       metrics: [
-        { value: "14 dias", label: "Programas secuenciados y medibles" },
-        { value: "15 clases", label: "Sistema de retencion y recompensa" },
-        { value: "3 niveles", label: "Acceso jerarquico sin hardcoding" }
+        { value: "14 días", label: "Programas secuenciados y medibles" },
+        { value: "15 clases", label: "Sistema de retención y recompensa" },
+        { value: "3 niveles", label: "Acceso jerárquico sin hardcoding" }
       ],
       tiers: [
         {
@@ -42,7 +42,7 @@ const messages = {
           id: "solista",
           name: "Solista",
           badge: "Programas",
-          description: "Suma programas de 14 dias y una experiencia mas estructurada."
+          description: "Suma programas de 14 días y una experiencia más estructurada."
         },
         {
           id: "principal",
@@ -59,49 +59,49 @@ const messages = {
         "Accede a tu espacio privado para continuar clases, revisar progreso y moverte dentro del estudio de Brunela.",
       adminHintTitle: "Nota de acceso",
       adminHintBody:
-        "Si tu cuenta todavia no esta habilitada, primero debe existir en Auth para activar permisos especiales en la base.",
+        "Si tu cuenta todavía no está habilitada, primero debe existir en Auth para activar permisos especiales en la base.",
       email: "Email",
-      password: "Contrasena",
-      submit: "Iniciar sesion",
-      footer: "Si todavia no tienes usuario, crea tu acceso primero y luego vuelve para entrar al estudio."
+      password: "Contraseña",
+      submit: "Iniciar sesión",
+      footer: "Si todavía no tenés usuario, creá tu acceso primero y después volvé para entrar al estudio."
     },
     dashboard: {
       kicker: "Zona privada",
       greeting: (name: string) => `Hola, ${name}.`,
       description:
-        "Tu zona privada combina continuidad, estetica de estudio y una base lista para clases, programas y crecimiento.",
+        "Tu zona privada combina continuidad, estética de estudio y una base lista para clases, programas y crecimiento.",
       defaultName: "bailarin",
-      signOut: "Cerrar sesion",
-      membershipLabel: "Membresia actual",
-      membershipHint: "Tu acceso define que contenido ves dentro del estudio.",
-      subscriptionLabel: "Estado de suscripcion",
-      subscriptionHint: "Cuando el checkout este activo, aqui veras tu estado en tiempo real.",
-      noSubscription: "sin suscripcion",
+      signOut: "Cerrar sesión",
+      membershipLabel: "Membresía actual",
+      membershipHint: "Tu acceso define qué contenido ves dentro del estudio.",
+      subscriptionLabel: "Estado de suscripción",
+      subscriptionHint: "Cuando el checkout esté activo, acá vas a ver tu estado en tiempo real.",
+      noSubscription: "sin suscripción",
       renewsAt: (date: string) => `Renueva o vence el ${new Date(date).toLocaleDateString("es-AR")}`,
       onboardingLabel: "Onboarding",
-      onboardingHint: "Aqui se mostrara si tu perfil tecnico ya esta completo con nivel, objetivos y contexto fisico.",
+      onboardingHint: "Acá se va a mostrar si tu perfil técnico ya está completo con nivel, objetivos y contexto físico.",
       resumeEyebrow: "Continuidad",
       resumeTitle: "Reanudar clase",
       resumeFallback: "Clase en progreso",
       resumeMeta: (seconds: number, percent: number) => `${seconds}s guardados · ${percent}% completado`,
       resumeButton: "Reanudar entrenamiento",
       resumeEmpty:
-        "Todavia no hay una clase en progreso. Cuando empieces a practicar, aqui aparecera tu ultima sesion pausada.",
-      quickAccessEyebrow: "Accesos rapidos",
+        "Todavía no hay una clase en progreso. Cuando empieces a practicar, acá va a aparecer tu última sesión pausada.",
+      quickAccessEyebrow: "Accesos rápidos",
       quickAccessTitle: "Siguiente capa",
-      quickAccessAdmin: "Panel de administracion",
+      quickAccessAdmin: "Panel de administración",
       quickAccessAdminBody: "Gestiona contenido, settings globales y accesos desde una experiencia backstage ordenada.",
       quickAccessLibrary: "Biblioteca y player",
-      quickAccessLibraryBody: "La siguiente fase natural es convertir esto en una experiencia completa de catalogo, filtros y reproduccion."
+      quickAccessLibraryBody: "La siguiente fase natural es convertir esto en una experiencia completa de catálogo, filtros y reproducción."
     },
     admin: {
       kicker: "Centro de mando",
-      title: "Panel de administracion base",
-      subtitle: (email: string) => `Sesion administrativa activa para ${email}.`,
-      settingsEyebrow: "Configuracion global",
+      title: "Panel de administración base",
+      subtitle: (email: string) => `Sesión administrativa activa para ${email}.`,
+      settingsEyebrow: "Configuración global",
       settingsTitle: "Settings iniciales cargados",
       nextStepsEyebrow: "Roadmap inmediato",
-      nextStepsTitle: "Que conviene construir ahora",
+      nextStepsTitle: "Qué conviene construir ahora",
       cards: {
         videos: "Videos",
         programs: "Programas",
@@ -110,7 +110,7 @@ const messages = {
       },
       nextSteps: [
         "Crear CRUD admin para videos con slug, metadata, tier y publicacion.",
-        "Crear CRUD admin para programas y program_days con validacion de secuencia.",
+        "Crear CRUD admin para programas y program_days con validación de secuencia.",
         "Exponer un editor seguro para site_settings sin hardcoding en frontend.",
         "Conectar checkout de Stripe y alimentar subscriptions con metadata.user_id."
       ]

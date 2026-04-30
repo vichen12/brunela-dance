@@ -72,7 +72,7 @@ export function Navbar() {
           transition: "background 350ms, box-shadow 350ms, border-color 350ms",
         }}
       >
-        <BrandLockup href="/" compact markOnly className="navbar-brand" />
+        <BrandLockup href="/" compact markOnly showWordmark className="navbar-brand" />
 
         <nav
           className="landing-nav-links"
@@ -304,17 +304,20 @@ export function Navbar() {
             padding-inline: 0.58rem !important;
           }
           .navbar-brand {
-            max-width: 34px;
+            max-width: 168px;
             overflow: hidden;
             transform: none;
             transform-origin: left center;
+            gap: 0.42rem !important;
           }
           .navbar-brand > div:first-child {
-            width: 34px !important;
-            height: 34px !important;
+            width: 30px !important;
+            height: 30px !important;
           }
           .navbar-brand > div:nth-child(2) {
-            display: none !important;
+            display: block !important;
+            width: 106px !important;
+            height: 31px !important;
           }
           .landing-mobile-nav {
             flex-shrink: 0;
@@ -354,14 +357,16 @@ export function Navbar() {
         }
         @media (max-width: 390px) {
           .navbar-brand {
-            max-width: 30px;
+            max-width: 142px;
+            gap: 0.34rem !important;
           }
           .navbar-brand > div:first-child {
-            width: 30px !important;
-            height: 30px !important;
+            width: 27px !important;
+            height: 27px !important;
           }
           .navbar-brand > div:nth-child(2) {
-            display: none !important;
+            width: 92px !important;
+            height: 27px !important;
           }
         }
         .mobile-drawer-language {

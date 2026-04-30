@@ -64,7 +64,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
       <div className="pricing-toggle" role="group" aria-label={t("pricing.aria")}>
         <button
           type="button"
-          className={billing === "monthly" ? "is-active" : ""}
+          className={`pricing-toggle-option ${billing === "monthly" ? "is-active" : ""}`}
           aria-pressed={billing === "monthly"}
           onClick={() => setBilling("monthly")}
         >
@@ -72,13 +72,37 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         </button>
         <button
           type="button"
-          className={billing === "annual" ? "is-active" : ""}
+          className="pricing-toggle-switch"
+          aria-label={billing === "monthly" ? t("pricing.annual") : t("pricing.monthly")}
+          aria-pressed={billing === "annual"}
+          onClick={() => setBilling((current) => (current === "monthly" ? "annual" : "monthly"))}
+        />
+        <button
+          type="button"
+          className={`pricing-toggle-option ${billing === "annual" ? "is-active" : ""}`}
           aria-pressed={billing === "annual"}
           onClick={() => setBilling("annual")}
         >
           {t("pricing.annual")}
-          <span>{t("pricing.save")}</span>
         </button>
+        <div className="pricing-save-note" aria-hidden="true">
+          <svg viewBox="0 0 92 34" fill="none">
+            <path
+              d="M4 17c15 0 20 11 35 9 17-2 20-21 11-22-8-1-10 15 6 18 11 2 20-2 31-10"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="3"
+            />
+            <path
+              d="M7 13 3 17l5 3"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+            />
+          </svg>
+          <span>{t("pricing.save")}!</span>
+        </div>
       </div>
 
       <div className="classic-plan-grid">
@@ -133,48 +157,159 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         .pricing-toggle {
-          width: fit-content;
+          width: min(560px, 100%);
           margin: 0 auto 2.5rem;
           display: grid;
           grid-template-columns: repeat(2, minmax(128px, 1fr));
-          gap: 0.35rem;
-          border: 1px solid rgba(255,218,218,0.8);
-          border-radius: 999px;
-          background: linear-gradient(135deg, #FEFAF7 0%, #fff 100%);
-          padding: 0.34rem;
-          box-shadow: 0 1px 0 rgba(255,218,218,0.5) inset, 0 16px 44px rgba(217, 52, 56, 0.1);
+          gap: 0.8rem;
         }
 
         .pricing-toggle button {
-          min-height: 46px;
-          border: 0;
-          border-radius: 999px;
-          background: transparent;
+          min-height: 74px;
+          border: 1px solid rgba(255,218,218,0.92);
+          border-radius: 22px;
+          background: linear-gradient(135deg, #FEFAF7 0%, #fff 100%);
           color: #D93438;
-          padding: 0.65rem 1.05rem;
-          font-size: 0.72rem;
-          font-weight: 900;
-          letter-spacing: 0.09em;
-          text-transform: uppercase;
+          padding: 0.82rem 1rem;
           transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+          box-shadow: 0 1px 0 rgba(255,218,218,0.5) inset, 0 14px 36px rgba(217, 52, 56, 0.07);
         }
 
         .pricing-toggle button:hover {
           transform: translateY(-1px);
+          border-color: rgba(230, 79, 85, 0.34);
+          box-shadow: 0 1px 0 rgba(255,218,218,0.5) inset, 0 20px 46px rgba(217, 52, 56, 0.11);
         }
 
         .pricing-toggle button.is-active {
+          border-color: transparent;
           background: #E64F55;
           color: #fff;
           box-shadow: 0 12px 28px rgba(230, 79, 85, 0.24);
         }
 
+        .pricing-toggle strong {
+          display: block;
+          font-size: 0.74rem;
+          font-weight: 900;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
         .pricing-toggle span {
           display: block;
-          margin-top: 0.12rem;
-          font-size: 0.56rem;
-          letter-spacing: 0.04em;
+          max-width: 18ch;
+          margin: 0.28rem auto 0;
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+          line-height: 1.25;
           opacity: 0.78;
+        }
+
+        .pricing-toggle {
+          position: relative;
+          width: min(460px, 100%);
+          display: inline-grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 0.55rem;
+          border: 1px solid rgba(217, 52, 56, 0.14);
+          border-radius: 999px;
+          background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(255,240,244,0.82) 100%);
+          padding: 0.68rem 1rem;
+          box-shadow: 0 20px 54px rgba(217, 52, 56, 0.12), inset 0 1px 0 rgba(255,255,255,0.82);
+        }
+
+        .pricing-toggle .pricing-toggle-option {
+          min-height: 34px;
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          color: #9A6B77;
+          padding: 0.3rem;
+          box-shadow: none;
+          font-size: 0.95rem;
+          font-weight: 800;
+          line-height: 1;
+          transition: color 180ms ease, transform 180ms ease;
+        }
+
+        .pricing-toggle .pricing-toggle-option:hover {
+          border-color: transparent;
+          box-shadow: none;
+          transform: translateY(-1px);
+        }
+
+        .pricing-toggle .pricing-toggle-option.is-active {
+          border-color: transparent;
+          background: transparent;
+          color: #2A171B;
+          box-shadow: none;
+        }
+
+        .pricing-toggle .pricing-toggle-switch {
+          position: relative;
+          width: 58px;
+          height: 34px;
+          min-height: 34px;
+          max-width: none;
+          margin: 0;
+          border: 1px solid rgba(217, 52, 56, 0.22);
+          border-radius: 999px;
+          background: rgba(217, 52, 56, 0.08);
+          padding: 0;
+          box-shadow: inset 0 1px 2px rgba(124,46,58,0.08);
+          cursor: pointer;
+          opacity: 1;
+        }
+
+        .pricing-toggle .pricing-toggle-switch:hover {
+          transform: translateY(-1px);
+          border-color: rgba(230, 79, 85, 0.34);
+          box-shadow: inset 0 1px 2px rgba(124,46,58,0.08), 0 10px 24px rgba(217, 52, 56, 0.12);
+        }
+
+        .pricing-toggle .pricing-toggle-switch::after {
+          content: "";
+          position: absolute;
+          top: 4px;
+          left: ${billing === "monthly" ? "4px" : "28px"};
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          background: #E64F55;
+          box-shadow: 0 8px 18px rgba(217, 52, 56, 0.26), inset 0 1px 0 rgba(255,255,255,0.68);
+          transition: left 200ms ease;
+        }
+
+        .pricing-save-note {
+          position: absolute;
+          left: calc(100% + 1rem);
+          top: 50%;
+          display: flex;
+          align-items: center;
+          gap: 0.55rem;
+          color: #D93438;
+          transform: translateY(-50%);
+          white-space: nowrap;
+        }
+
+        .pricing-save-note svg {
+          width: 70px;
+          height: 28px;
+          color: #E64F55;
+          opacity: 0.82;
+        }
+
+        .pricing-save-note span {
+          max-width: none;
+          margin: 0;
+          color: #8B5966;
+          font-size: 0.9rem;
+          font-weight: 900;
+          line-height: 1;
+          opacity: 1;
         }
 
         .classic-plan-grid {
@@ -342,16 +477,62 @@ export function PricingPlans({ plans }: PricingPlansProps) {
             width: 100%;
             grid-template-columns: 1fr 1fr;
             margin-bottom: 1.2rem;
+            gap: 0.55rem;
           }
 
           .pricing-toggle button {
+            min-height: 68px;
             min-width: 0;
-            padding-inline: 0.75rem;
+            padding: 0.68rem 0.55rem;
+          }
+
+          .pricing-toggle strong {
             font-size: 0.64rem;
           }
 
           .pricing-toggle span {
-            font-size: 0.5rem;
+            font-size: 0.52rem;
+          }
+
+          .pricing-toggle {
+            grid-template-columns: 1fr auto 1fr;
+            gap: 0.45rem;
+            padding: 0.58rem 0.75rem;
+          }
+
+          .pricing-toggle .pricing-toggle-option {
+            min-height: 30px;
+            min-width: 0;
+            padding: 0.28rem;
+            font-size: 0.82rem;
+          }
+
+          .pricing-toggle .pricing-toggle-switch {
+            width: 50px;
+            height: 30px;
+          }
+
+          .pricing-toggle .pricing-toggle-switch::after {
+            top: 4px;
+            left: ${billing === "monthly" ? "4px" : "24px"};
+            width: 20px;
+            height: 20px;
+          }
+
+          .pricing-save-note {
+            position: static;
+            grid-column: 1 / -1;
+            justify-content: center;
+            transform: none;
+            margin-top: 0.25rem;
+          }
+
+          .pricing-save-note svg {
+            width: 46px;
+          }
+
+          .pricing-save-note span {
+            font-size: 0.72rem;
           }
 
           .classic-plan-grid {
