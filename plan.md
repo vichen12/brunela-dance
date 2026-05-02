@@ -57,7 +57,7 @@
 - Formulario de "nueva clase" en la parte superior como bloque limpio y separado del resto
 - Acciones rápidas desde la tarjeta: publicar / archivar / destacar sin abrir el formulario
 
-### 2.2 — Sidebar del admin
+### 2.2 — Sidebar del admin12
 - Íconos + labels
 - Indicador visual de sección activa (borde izquierdo o pill)
 - Responsive: colapsable en mobile
