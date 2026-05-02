@@ -5,7 +5,6 @@ import {
   FaFacebookF,
   FaInstagram,
   FaTiktok,
-  FaWhatsapp,
   FaYoutube,
 } from "react-icons/fa";
 import { usePublicI18n } from "@/components/language-provider";
@@ -107,18 +106,6 @@ export function BrunelaFooter() {
         </a>
       </div>
 
-      <div className="footer-floating">
-        <a
-          className="footer-float-whatsapp"
-          href="https://wa.me/"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="WhatsApp"
-          suppressHydrationWarning
-        >
-          <FaWhatsapp />
-        </a>
-      </div>
 
       <style>{`
         /* ── Footer shell ── */
@@ -324,7 +311,8 @@ export function BrunelaFooter() {
           }
 
           .footer-floating {
-            display: none;
+            right: 0.75rem;
+            bottom: 0.75rem;
           }
         }
 

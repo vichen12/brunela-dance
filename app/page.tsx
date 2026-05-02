@@ -383,6 +383,23 @@ export default function HomePage() {
                 <T id="about.button" />
               </Link>
             </div>
+
+            <a
+              className="about-portfolio-card"
+              href="https://brune-dance.vercel.app"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div className="about-portfolio-card-text">
+                <p className="about-portfolio-card-label">MI PORTFOLIO</p>
+                <p className="about-portfolio-card-desc">Conocé más sobre mi trayectoria, formación y trabajo artístico.</p>
+              </div>
+              <span className="about-portfolio-card-arrow">
+                <svg width="16" height="16" viewBox="0 0 13 13" fill="none" aria-hidden>
+                  <path d="M2 11L11 2M11 2H5M11 2V8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+            </a>
           </div>
         </div>
       </section>
