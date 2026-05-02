@@ -391,8 +391,8 @@ export default function HomePage() {
               rel="noreferrer"
             >
               <div className="about-portfolio-card-text">
-                <p className="about-portfolio-card-label">MI PORTFOLIO</p>
-                <p className="about-portfolio-card-desc">Conocé más sobre mi trayectoria, formación y trabajo artístico.</p>
+                <p className="about-portfolio-card-label"><T id="about.portfolio.label" /></p>
+                <p className="about-portfolio-card-desc"><T id="about.portfolio.desc" /></p>
               </div>
               <span className="about-portfolio-card-arrow">
                 <svg width="16" height="16" viewBox="0 0 13 13" fill="none" aria-hidden>
