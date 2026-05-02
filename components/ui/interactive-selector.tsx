@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowRight, Clock, Layers, Target, X } from "lucide-react";
 
 type StudioTab = "classes" | "courses" | "focus";
@@ -20,7 +21,7 @@ type StudioItem = {
 const tabs: Array<{ id: StudioTab; label: string }> = [
   { id: "classes", label: "Clases" },
   { id: "courses", label: "Cursos" },
-  { id: "focus", label: "Objetivos" },
+  { id: "focus", label: "Planes" },
 ];
 
 const studioItems: StudioItem[] = [
@@ -173,7 +174,35 @@ const studioItems: StudioItem[] = [
 export function InteractiveSelector() {
   const [activeTab, setActiveTab] = useState<StudioTab>("classes");
   const [selectedItem, setSelectedItem] = useState<StudioItem | null>(null);
+  const [mounted, setMounted] = useState(false);
   const visibleItems = studioItems.filter((item) => item.type === activeTab);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedItem) {
+      return;
+    }
+
+    const bodyOverflow = document.body.style.overflow;
+    const htmlOverflow = document.documentElement.style.overflow;
+    const bodyPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.documentElement.style.overflow = htmlOverflow;
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.paddingRight = bodyPaddingRight;
+    };
+  }, [selectedItem]);
 
   return (
     <>
@@ -216,7 +245,8 @@ export function InteractiveSelector() {
         </div>
       </div>
 
-      {selectedItem ? (
+      {mounted && selectedItem
+        ? createPortal(
         <div className="studio-modal-backdrop" role="presentation" onClick={() => setSelectedItem(null)}>
           <article
             className="studio-modal"
@@ -264,13 +294,16 @@ export function InteractiveSelector() {
               </a>
             </div>
           </article>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+        )
+        : null}
 
       <style>{`
         .studio-browser {
-          width: min(1160px, calc(100vw - 2rem));
+          width: min(1160px, 100%);
           margin: 0 auto;
+          box-sizing: border-box;
           border: 1px solid rgba(230, 79, 85, 0.16);
           border-radius: 30px;
           background:
@@ -283,10 +316,10 @@ export function InteractiveSelector() {
 
         .studio-browser-top {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          align-items: center;
-          gap: clamp(1rem, 2.2vw, 1.8rem);
+          justify-items: center;
+          gap: clamp(0.9rem, 1.8vw, 1.25rem);
           margin-bottom: clamp(1rem, 2.2vw, 1.45rem);
+          text-align: center;
         }
 
         .studio-browser h3 {
@@ -308,7 +341,7 @@ export function InteractiveSelector() {
         .studio-tabs {
           display: inline-flex;
           gap: 0.24rem;
-          justify-self: end;
+          justify-self: center;
           margin-top: 0;
           border: 1px solid rgba(230, 79, 85, 0.18);
           border-radius: 999px;
@@ -440,23 +473,25 @@ export function InteractiveSelector() {
         .studio-modal-backdrop {
           position: fixed;
           inset: 0;
-          z-index: 100;
+          z-index: 100000;
           display: grid;
           place-items: center;
           background: rgba(8, 10, 18, 0.72);
-          padding: 1rem;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding: clamp(0.7rem, 2vw, 1.25rem);
           backdrop-filter: blur(12px);
         }
 
         .studio-modal {
           position: relative;
           display: grid;
-          grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1fr);
-          width: min(980px, 100%);
-          max-height: min(720px, 92vh);
+          grid-template-columns: minmax(240px, 0.78fr) minmax(0, 1fr);
+          width: min(980px, calc(100vw - 2rem));
+          max-height: min(680px, calc(100dvh - 2rem));
           overflow: hidden;
           border: 1px solid rgba(255, 218, 224, 0.42);
-          border-radius: 30px;
+          border-radius: 28px;
           background: linear-gradient(135deg, #FFF8F8 0%, #FFF0F2 100%);
           box-shadow: 0 36px 120px rgba(0,0,0,0.42);
         }
@@ -478,7 +513,7 @@ export function InteractiveSelector() {
 
         .studio-modal-image {
           position: relative;
-          min-height: 100%;
+          min-height: 0;
           background: #1A1018;
         }
 
@@ -492,6 +527,7 @@ export function InteractiveSelector() {
         .studio-modal-copy {
           overflow: auto;
           padding: clamp(1.4rem, 4vw, 3rem);
+          overscroll-behavior: contain;
         }
 
         .studio-modal-copy > span {
@@ -581,38 +617,106 @@ export function InteractiveSelector() {
           text-transform: uppercase;
         }
 
+        @media (min-width: 901px) and (max-width: 1180px), (min-width: 901px) and (max-height: 820px) {
+          .studio-modal {
+            grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1fr);
+            width: min(860px, calc(100vw - 2rem));
+            max-height: calc(100dvh - 1.4rem);
+            border-radius: 24px;
+          }
+
+          .studio-modal-copy {
+            padding: clamp(1.35rem, 3vw, 2.25rem);
+          }
+
+          .studio-modal-copy h3 {
+            max-width: 12ch;
+            font-size: clamp(2.1rem, 4.6vw, 3.25rem);
+          }
+
+          .studio-modal-copy p {
+            margin-top: 0.85rem;
+            font-size: 0.94rem;
+            line-height: 1.55;
+          }
+
+          .studio-modal-meta {
+            gap: 0.42rem;
+            margin: 1rem 0;
+          }
+
+          .studio-modal-meta div {
+            padding: 0.4rem 0.58rem;
+            font-size: 0.68rem;
+          }
+
+          .studio-modal-copy ul {
+            gap: 0.58rem;
+          }
+
+          .studio-modal-copy li {
+            font-size: 0.92rem;
+          }
+
+          .studio-modal-cta {
+            margin-top: 1.25rem;
+            padding: 0.78rem 1rem;
+          }
+        }
+
         @media (max-width: 900px) {
           .studio-browser-top {
             grid-template-columns: 1fr;
           }
 
           .studio-tabs {
-            justify-self: start;
+            justify-self: center;
           }
 
           .studio-card-grid {
             grid-template-columns: 1fr;
+            width: min(100%, 620px);
+            margin-inline: auto;
           }
 
           .studio-modal {
             grid-template-columns: 1fr;
+            width: min(620px, calc(100vw - 1.4rem));
+            max-height: calc(100dvh - 1.4rem);
             overflow: auto;
+            border-radius: 24px;
           }
 
           .studio-modal-image {
-            min-height: 260px;
+            height: clamp(180px, 32dvh, 260px);
+            min-height: 0;
+          }
+
+          .studio-modal-copy {
+            overflow: visible;
+            padding: 1.45rem;
+          }
+
+          .studio-modal-copy h3 {
+            max-width: 12ch;
+            font-size: clamp(2.2rem, 8vw, 3.15rem);
           }
         }
 
         @media (max-width: 560px) {
           .studio-browser {
+            width: min(100%, 520px);
             border-radius: 24px;
             padding: 0.75rem;
           }
 
+          .studio-card-grid {
+            width: min(100%, 460px);
+          }
+
           .studio-tabs {
-            width: 100%;
-            justify-content: space-between;
+            width: min(100%, 340px);
+            justify-content: center;
           }
 
           .studio-tabs button {
@@ -626,7 +730,72 @@ export function InteractiveSelector() {
           }
 
           .studio-modal-copy {
-            padding: 1.2rem;
+            padding: 1.05rem;
+          }
+
+          .studio-modal-backdrop {
+            place-items: center;
+            padding: 0.55rem;
+          }
+
+          .studio-modal {
+            width: 100%;
+            max-height: calc(100dvh - 1.1rem);
+            border-radius: 20px;
+          }
+
+          .studio-modal-close {
+            top: 0.7rem;
+            right: 0.7rem;
+            width: 34px;
+            height: 34px;
+          }
+
+          .studio-modal-image {
+            height: 168px;
+          }
+
+          .studio-modal-copy > span {
+            font-size: 0.66rem;
+          }
+
+          .studio-modal-copy h3 {
+            max-width: 11ch;
+            font-size: clamp(1.9rem, 10.4vw, 2.45rem);
+            letter-spacing: -0.05em;
+          }
+
+          .studio-modal-copy p {
+            margin-top: 0.72rem;
+            font-size: 0.9rem;
+            line-height: 1.48;
+          }
+
+          .studio-modal-meta {
+            gap: 0.38rem;
+            margin: 0.9rem 0;
+          }
+
+          .studio-modal-meta div {
+            padding: 0.36rem 0.52rem;
+            font-size: 0.66rem;
+          }
+
+          .studio-modal-copy ul {
+            gap: 0.52rem;
+          }
+
+          .studio-modal-copy li {
+            font-size: 0.88rem;
+            line-height: 1.38;
+          }
+
+          .studio-modal-cta {
+            width: 100%;
+            justify-content: center;
+            margin-top: 1rem;
+            padding: 0.76rem 0.9rem;
+            font-size: 0.64rem;
           }
         }
       `}</style>

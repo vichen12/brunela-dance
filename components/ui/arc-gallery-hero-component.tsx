@@ -9,18 +9,17 @@ type ArcGalleryHeroProps = {
 };
 
 const positions = [
-  { x: "-594px", y: "172px", tx: "-330px", ty: "92px", mx: "-144px", my: "34px", s: "128px", ts: "92px", ms: "62px", z: 1, r: "-22deg" },
-  { x: "-486px", y: "118px", tx: "-270px", ty: "58px", mx: "-108px", my: "12px", s: "128px", ts: "92px", ms: "62px", z: 2, r: "-18deg" },
-  { x: "-378px", y: "70px", tx: "-210px", ty: "28px", mx: "-72px", my: "-6px", s: "128px", ts: "92px", ms: "62px", z: 3, r: "-14deg" },
-  { x: "-270px", y: "34px", tx: "-150px", ty: "6px", mx: "-36px", my: "-20px", s: "128px", ts: "92px", ms: "62px", z: 4, r: "-10deg" },
-  { x: "-162px", y: "10px", tx: "-90px", ty: "-10px", mx: "0px", my: "-28px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "-5deg" },
-  { x: "-54px", y: "-2px", tx: "-30px", ty: "-18px", mx: "36px", my: "-22px", s: "128px", ts: "92px", ms: "62px", z: 6, r: "-1deg" },
-  { x: "54px", y: "-2px", tx: "30px", ty: "-18px", mx: "72px", my: "0px", s: "128px", ts: "92px", ms: "62px", z: 6, r: "3deg" },
-  { x: "162px", y: "10px", tx: "90px", ty: "-10px", mx: "108px", my: "28px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "8deg" },
-  { x: "270px", y: "34px", tx: "150px", ty: "6px", mx: "0px", my: "0px", s: "128px", ts: "92px", ms: "0px", z: 4, r: "13deg" },
-  { x: "378px", y: "70px", tx: "210px", ty: "28px", mx: "0px", my: "0px", s: "128px", ts: "92px", ms: "0px", z: 3, r: "18deg" },
-  { x: "486px", y: "118px", tx: "270px", ty: "58px", mx: "0px", my: "0px", s: "128px", ts: "92px", ms: "0px", z: 2, r: "22deg" },
-  { x: "594px", y: "172px", tx: "330px", ty: "92px", mx: "0px", my: "0px", s: "128px", ts: "92px", ms: "0px", z: 1, r: "26deg" },
+  { x: "-540px", y: "141px", tx: "-300px", ty: "82px", mx: "-144px", my: "34px",  s: "128px", ts: "92px", ms: "62px", z: 1, r: "-20deg" },
+  { x: "-432px", y: "89px",  tx: "-240px", ty: "48px", mx: "-128px", my: "19px",  s: "128px", ts: "92px", ms: "62px", z: 2, r: "-16deg" },
+  { x: "-324px", y: "48px",  tx: "-180px", ty: "20px", mx: "-96px",  my: "6px",   s: "128px", ts: "92px", ms: "62px", z: 3, r: "-12deg" },
+  { x: "-216px", y: "19px",  tx: "-120px", ty: "0px",  mx: "-64px",  my: "-5px",  s: "128px", ts: "92px", ms: "62px", z: 4, r: "-8deg"  },
+  { x: "-108px", y: "2px",   tx: "-60px",  ty: "-14px", mx: "-32px", my: "-13px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "-4deg"  },
+  { x: "0px",    y: "-4px",  tx: "0px",    ty: "-20px", mx: "0px",   my: "-17px", s: "128px", ts: "92px", ms: "62px", z: 6, r: "0deg"   },
+  { x: "108px",  y: "2px",   tx: "60px",   ty: "-14px", mx: "32px",  my: "-13px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "4deg"   },
+  { x: "216px",  y: "19px",  tx: "120px",  ty: "0px",   mx: "64px",  my: "-5px",  s: "128px", ts: "92px", ms: "62px", z: 4, r: "8deg"   },
+  { x: "324px",  y: "48px",  tx: "180px",  ty: "20px",  mx: "96px",  my: "6px",   s: "128px", ts: "92px", ms: "62px", z: 3, r: "12deg"  },
+  { x: "432px",  y: "89px",  tx: "240px",  ty: "48px",  mx: "128px", my: "19px",  s: "128px", ts: "92px", ms: "62px", z: 2, r: "16deg"  },
+  { x: "540px",  y: "141px", tx: "300px",  ty: "82px",  mx: "158px", my: "34px",  s: "128px", ts: "92px", ms: "62px", z: 1, r: "20deg"  },
 ] as const;
 
 type PhotoStyle = React.CSSProperties & {
@@ -170,9 +169,9 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           transition: transform 260ms ease;
         }
 
-        .brand-hero-photo:nth-child(6) img,
-        .brand-hero-photo:nth-child(8) img,
-        .brand-hero-photo:nth-child(11) img {
+        .brand-hero-photo:nth-child(5) img,
+        .brand-hero-photo:nth-child(7) img,
+        .brand-hero-photo:nth-child(10) img {
           filter: grayscale(1) contrast(1.08);
         }
 
@@ -301,6 +300,65 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           }
         }
 
+        @media (min-width: 901px) and (max-height: 820px) {
+          .brand-hero {
+            min-height: 640px;
+            padding-top: 74px;
+            padding-bottom: 2.4rem;
+          }
+
+          .brand-hero-photos {
+            top: 50px;
+            height: 270px;
+            transform: translateX(-50%) scale(0.86);
+            transform-origin: top center;
+          }
+
+          .brand-hero-copy {
+            width: min(500px, 100%);
+            margin-top: 8.4rem;
+            gap: 0.58rem;
+          }
+
+          .brand-hero-kicker {
+            font-size: 0.68rem;
+          }
+
+          .brand-hero-logo {
+            grid-template-columns: 50px minmax(210px, 315px);
+            width: min(470px, 100%);
+          }
+
+          .brand-hero-wordmark {
+            width: min(315px, 62vw);
+          }
+
+          .brand-hero-subtitle {
+            font-size: 1rem;
+            line-height: 1.48;
+          }
+
+          .hero-actions {
+            margin-top: 0.35rem;
+          }
+
+          .hero-action {
+            min-height: 44px;
+            padding-block: 0.72rem;
+          }
+        }
+
+        @media (min-width: 901px) and (max-width: 1180px) {
+          .brand-hero-photos {
+            transform: translateX(-50%) scale(0.82);
+            transform-origin: top center;
+          }
+
+          .brand-hero-copy {
+            margin-top: 8.8rem;
+          }
+        }
+
         @media (max-width: 900px) {
           .brand-hero {
             height: auto;
@@ -322,6 +380,11 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           .brand-hero-photo {
             width: var(--tablet-size);
             transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rotate));
+          }
+
+          .brand-hero-photo:nth-child(1),
+          .brand-hero-photo:nth-child(11) {
+            display: none;
           }
 
           .brand-hero-copy {
@@ -346,8 +409,8 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           }
 
           .brand-hero-photos {
-            height: 128px;
-            width: min(330px, 100%);
+            height: 148px;
+            width: min(380px, calc(100vw - 0.5rem));
             margin-bottom: 0.9rem;
           }
 
@@ -357,50 +420,85 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
             transform: translate(-50%, -50%) translate(var(--mx), var(--my)) rotate(var(--rotate));
           }
 
-          .brand-hero-photo:nth-child(n + 7) {
+          .brand-hero-photo:nth-child(n + 12) {
             display: none;
           }
 
           .brand-hero-photo:nth-child(1) {
-            --mx: -124px;
-            --my: 12px;
-            --mobile-size: 54px;
-            --rotate: -18deg;
+            --mx: -158px;
+            --my: 34px;
+            --mobile-size: 38px;
+            --rotate: -17deg;
           }
 
           .brand-hero-photo:nth-child(2) {
-            --mx: -78px;
-            --my: -3px;
-            --mobile-size: 58px;
+            --mx: -128px;
+            --my: 19px;
+            --mobile-size: 42px;
             --rotate: -13deg;
           }
 
           .brand-hero-photo:nth-child(3) {
-            --mx: -32px;
-            --my: -14px;
-            --mobile-size: 62px;
-            --rotate: -8deg;
+            --mx: -96px;
+            --my: 6px;
+            --mobile-size: 46px;
+            --rotate: -10deg;
           }
 
           .brand-hero-photo:nth-child(4) {
-            --mx: 14px;
-            --my: -18px;
-            --mobile-size: 66px;
-            --rotate: -2deg;
+            --mx: -64px;
+            --my: -5px;
+            --mobile-size: 50px;
+            --rotate: -6deg;
           }
 
           .brand-hero-photo:nth-child(5) {
-            --mx: 62px;
-            --my: -10px;
-            --mobile-size: 62px;
-            --rotate: 8deg;
+            --mx: -32px;
+            --my: -13px;
+            --mobile-size: 54px;
+            --rotate: -3deg;
           }
 
           .brand-hero-photo:nth-child(6) {
-            --mx: 108px;
-            --my: 10px;
+            --mx: 0px;
+            --my: -17px;
             --mobile-size: 58px;
-            --rotate: 15deg;
+            --rotate: 0deg;
+          }
+
+          .brand-hero-photo:nth-child(7) {
+            --mx: 32px;
+            --my: -13px;
+            --mobile-size: 54px;
+            --rotate: 3deg;
+          }
+
+          .brand-hero-photo:nth-child(8) {
+            --mx: 64px;
+            --my: -5px;
+            --mobile-size: 50px;
+            --rotate: 6deg;
+          }
+
+          .brand-hero-photo:nth-child(9) {
+            --mx: 96px;
+            --my: 6px;
+            --mobile-size: 46px;
+            --rotate: 10deg;
+          }
+
+          .brand-hero-photo:nth-child(10) {
+            --mx: 128px;
+            --my: 19px;
+            --mobile-size: 42px;
+            --rotate: 13deg;
+          }
+
+          .brand-hero-photo:nth-child(11) {
+            --mx: 158px;
+            --my: 34px;
+            --mobile-size: 38px;
+            --rotate: 17deg;
           }
 
           .brand-hero-copy {
@@ -451,38 +549,79 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
 
         @media (max-width: 390px) {
           .brand-hero-photos {
-            height: 116px;
-            width: min(300px, 100%);
+            height: 136px;
+            width: min(344px, calc(100vw - 0.5rem));
+          }
+
+          .brand-hero-photo:nth-child(2),
+          .brand-hero-photo:nth-child(10) {
+            display: none;
           }
 
           .brand-hero-photo:nth-child(1) {
-            --mx: -108px;
-            --mobile-size: 50px;
+            --mx: -148px;
+            --my: 30px;
+            --mobile-size: 34px;
           }
 
           .brand-hero-photo:nth-child(2) {
-            --mx: -68px;
-            --mobile-size: 54px;
+            --mx: -120px;
+            --my: 17px;
+            --mobile-size: 38px;
           }
 
           .brand-hero-photo:nth-child(3) {
-            --mx: -28px;
-            --mobile-size: 58px;
+            --mx: -91px;
+            --my: 6px;
+            --mobile-size: 42px;
           }
 
           .brand-hero-photo:nth-child(4) {
-            --mx: 12px;
-            --mobile-size: 62px;
+            --mx: -61px;
+            --my: -4px;
+            --mobile-size: 46px;
           }
 
           .brand-hero-photo:nth-child(5) {
-            --mx: 54px;
-            --mobile-size: 58px;
+            --mx: -31px;
+            --my: -11px;
+            --mobile-size: 50px;
           }
 
           .brand-hero-photo:nth-child(6) {
-            --mx: 94px;
+            --mx: 0px;
+            --my: -14px;
             --mobile-size: 54px;
+          }
+
+          .brand-hero-photo:nth-child(7) {
+            --mx: 31px;
+            --my: -11px;
+            --mobile-size: 50px;
+          }
+
+          .brand-hero-photo:nth-child(8) {
+            --mx: 61px;
+            --my: -4px;
+            --mobile-size: 46px;
+          }
+
+          .brand-hero-photo:nth-child(9) {
+            --mx: 91px;
+            --my: 6px;
+            --mobile-size: 42px;
+          }
+
+          .brand-hero-photo:nth-child(10) {
+            --mx: 120px;
+            --my: 17px;
+            --mobile-size: 38px;
+          }
+
+          .brand-hero-photo:nth-child(11) {
+            --mx: 148px;
+            --my: 30px;
+            --mobile-size: 34px;
           }
 
           .brand-hero-logo {

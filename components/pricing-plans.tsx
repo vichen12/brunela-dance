@@ -61,30 +61,33 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
   return (
     <div className="classic-pricing">
-      <div className="pricing-toggle" role="group" aria-label={t("pricing.aria")}>
-        <button
-          type="button"
-          className={`pricing-toggle-option ${billing === "monthly" ? "is-active" : ""}`}
-          aria-pressed={billing === "monthly"}
-          onClick={() => setBilling("monthly")}
-        >
-          {t("pricing.monthly")}
-        </button>
-        <button
-          type="button"
-          className="pricing-toggle-switch"
-          aria-label={billing === "monthly" ? t("pricing.annual") : t("pricing.monthly")}
-          aria-pressed={billing === "annual"}
-          onClick={() => setBilling((current) => (current === "monthly" ? "annual" : "monthly"))}
-        />
-        <button
-          type="button"
-          className={`pricing-toggle-option ${billing === "annual" ? "is-active" : ""}`}
-          aria-pressed={billing === "annual"}
-          onClick={() => setBilling("annual")}
-        >
-          {t("pricing.annual")}
-        </button>
+      <div className="pricing-toggle-row">
+        <div className="pricing-toggle" role="group" aria-label={t("pricing.aria")}>
+          <button
+            type="button"
+            className={`pricing-toggle-option ${billing === "monthly" ? "is-active" : ""}`}
+            aria-pressed={billing === "monthly"}
+            onClick={() => setBilling("monthly")}
+          >
+            {t("pricing.monthly")}
+          </button>
+          <button
+            type="button"
+            className="pricing-toggle-switch"
+            aria-label={billing === "monthly" ? t("pricing.annual") : t("pricing.monthly")}
+            aria-pressed={billing === "annual"}
+            onClick={() => setBilling((current) => (current === "monthly" ? "annual" : "monthly"))}
+          />
+          <button
+            type="button"
+            className={`pricing-toggle-option ${billing === "annual" ? "is-active" : ""}`}
+            aria-pressed={billing === "annual"}
+            onClick={() => setBilling("annual")}
+          >
+            {t("pricing.annual")}
+          </button>
+        </div>
+
         <div className="pricing-save-note" aria-hidden="true">
           <svg viewBox="0 0 92 34" fill="none">
             <path
@@ -114,38 +117,42 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           const includes = [1, 2, 3, 4].map((item) => t(`plan${planNumber}.include${item}` as PublicMessageKey));
 
           return (
-            <article className={`classic-plan-card ${plan.featured ? "is-featured" : ""}`} key={plan.name}>
-              {badge ? <span className="classic-plan-badge">{badge}</span> : null}
-
-              <div className="classic-plan-head">
-                <h3>{plan.name}</h3>
-                <p>{oneLine}</p>
+            <div className="classic-plan-stack" key={plan.name}>
+              <div className="classic-plan-badge-slot">
+                {badge ? <span className="classic-plan-badge">{badge}</span> : null}
               </div>
 
-              <div className="classic-plan-price">
-                <strong>{price}</strong>
-                <span>{t("pricing.perMonth")}</span>
-              </div>
+              <article className={`classic-plan-card ${plan.featured ? "is-featured" : ""}`}>
+                <div className="classic-plan-head">
+                  <h3>{plan.name}</h3>
+                  <p>{oneLine}</p>
+                </div>
 
-              <p className="classic-plan-note">
-                {billing === "monthly"
-                  ? t("pricing.monthlyNote")
-                  : t("pricing.annualNote", { yearly: plan.yearlyLabel, savings: plan.savingsPercent })}
-              </p>
+                <div className="classic-plan-price">
+                  <strong>{price}</strong>
+                  <span>{t("pricing.perMonth")}</span>
+                </div>
 
-              <ul className="classic-plan-list">
-                {includes.map((item) => (
-                  <li key={item}>
-                    <CheckCircle2 size={17} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+                {billing === "annual" ? (
+                  <p className="classic-plan-note">
+                    {t("pricing.annualNote", { yearly: plan.yearlyLabel, savings: plan.savingsPercent })}
+                  </p>
+                ) : null}
 
-              <Link href="/sign-in" className="classic-plan-action" suppressHydrationWarning>
-                {t("pricing.action")}
-              </Link>
-            </article>
+                <ul className="classic-plan-list">
+                  {includes.map((item) => (
+                    <li key={item}>
+                      <CheckCircle2 size={17} />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href="/sign-in" className="classic-plan-action" suppressHydrationWarning>
+                  {t("pricing.action")}
+                </Link>
+              </article>
+            </div>
           );
         })}
       </div>
@@ -154,6 +161,15 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         .classic-pricing {
           width: min(1120px, 100%);
           margin: 0 auto;
+        }
+
+        .pricing-toggle-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem;
+          width: 100%;
+          margin: 0 auto 2.5rem;
         }
 
         .pricing-toggle {
@@ -214,6 +230,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           grid-template-columns: 1fr auto 1fr;
           align-items: center;
           gap: 0.55rem;
+          margin: 0;
           border: 1px solid rgba(217, 52, 56, 0.14);
           border-radius: 999px;
           background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(255,240,244,0.82) 100%);
@@ -284,14 +301,10 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         .pricing-save-note {
-          position: absolute;
-          left: calc(100% + 1rem);
-          top: 50%;
           display: flex;
           align-items: center;
           gap: 0.55rem;
           color: #D93438;
-          transform: translateY(-50%);
           white-space: nowrap;
         }
 
@@ -317,6 +330,24 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 1.1rem;
           align-items: stretch;
+        }
+
+        .classic-plan-stack {
+          display: grid;
+          grid-template-rows: 22px 1fr;
+          gap: 0;
+          min-width: 0;
+        }
+
+        .classic-plan-badge-slot {
+          display: flex;
+          align-items: end;
+          justify-content: center;
+          min-height: 22px;
+          padding-inline: 0.35rem;
+          position: relative;
+          z-index: 2;
+          transform: translateY(50%);
         }
 
         .classic-plan-card {
@@ -352,20 +383,26 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         .classic-plan-badge {
-          align-self: flex-start;
-          border-radius: 999px;
-          background: #FFDADA;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          max-width: min(100%, 315px);
+          border: 1px solid rgba(230, 79, 85, 0.16);
+          border-radius: 14px;
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,235,238,0.98) 56%, rgba(255,218,224,0.94) 100%);
           color: #D93438;
-          padding: 0.36rem 0.75rem;
-          font-size: 0.62rem;
+          padding: 0.48rem 0.92rem;
+          font-size: 0.6rem;
           font-weight: 900;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.085em;
+          line-height: 1;
+          text-align: center;
           text-transform: uppercase;
-        }
-
-        .classic-plan-card.is-featured .classic-plan-badge {
-          background: #fff;
-          color: #E64F55;
+          box-shadow:
+            0 14px 30px rgba(217, 52, 56, 0.13),
+            inset 0 1px 0 rgba(255,255,255,0.92);
+          white-space: nowrap;
         }
 
         .classic-plan-head h3 {
@@ -473,10 +510,15 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         @media (max-width: 560px) {
+          .pricing-toggle-row {
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 1.2rem;
+          }
+
           .pricing-toggle {
             width: 100%;
             grid-template-columns: 1fr 1fr;
-            margin-bottom: 1.2rem;
             gap: 0.55rem;
           }
 

@@ -338,7 +338,6 @@ export default function HomePage() {
                 style={{ objectFit: "cover", objectPosition: "top center" }}
               />
             </div>
-            <span className="about-photo-corner" aria-hidden="true" />
           </div>
 
           <div className="about-copy">

@@ -1497,32 +1497,6 @@ textarea { resize: vertical; }
   pointer-events: none;
 }
 
-.about-photo-corner {
-  position: absolute;
-  left: clamp(-1.15rem, -1.5vw, -0.45rem);
-  bottom: clamp(1rem, 2vw, 1.45rem);
-  z-index: 3;
-  width: clamp(7.4rem, 11vw, 9.6rem);
-  aspect-ratio: 0.92;
-  border: 8px solid rgba(255, 244, 246, 0.94);
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(42,23,27,0), rgba(42,23,27,0.06)),
-    url("/fotos-landing/about-1.jpg") center / cover no-repeat,
-    linear-gradient(145deg, rgba(255, 244, 246, 0.9), rgba(255, 218, 224, 0.72));
-  box-shadow: 0 24px 54px rgba(80, 30, 42, 0.24), inset 0 1px 0 rgba(255,255,255,0.82);
-  overflow: hidden;
-}
-
-.about-photo-corner::after {
-  content: "";
-  position: absolute;
-  inset: -7px;
-  z-index: -1;
-  border-radius: 34px;
-  background: rgba(230, 79, 85, 0.13);
-}
-
 .about-copy {
   display: grid;
   gap: 0.8rem;

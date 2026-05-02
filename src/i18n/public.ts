@@ -28,7 +28,7 @@ export const publicMessages = {
     "hero.secondary": "Estudio online",
 
     "video.kicker": "MIRÁ EL TRÁILER",
-    "video.title": "Entrená con intención, técnica y presencia.",
+    "video.title": "Así se construye una técnica real.",
     "video.lead": "Un vistazo al universo Brunela Dance Trainer: movimiento consciente, fuerza y trabajo técnico para bailarines.",
     "video.soundOn": "Activar sonido",
     "video.soundOff": "Silenciar",

@@ -188,7 +188,8 @@ export function Navbar() {
           zIndex: 9998,
           display: "flex",
           flexDirection: "column",
-          padding: "0.75rem 1.5rem 2rem",
+          alignItems: "center",
+          padding: "1.05rem 1.5rem 2rem",
           background: "rgba(255,255,255,0.98)",
           backdropFilter: "blur(24px)",
           borderBottom: "1px solid #FFDADA",
@@ -197,9 +198,6 @@ export function Navbar() {
           transition: "transform 300ms cubic-bezier(0.22,1,0.36,1)",
         }}
       >
-        <div className="mobile-drawer-language">
-          <LanguageSwitcher compact />
-        </div>
         {links.map((link) => (
           <Link
             key={link.href}
@@ -207,6 +205,7 @@ export function Navbar() {
             onClick={close}
             style={{
               display: "block",
+              width: "min(100%, 340px)",
               padding: "1rem 0.25rem",
               borderBottom: "1px solid #FFDADA",
               color: "#D93438",
@@ -215,6 +214,7 @@ export function Navbar() {
               letterSpacing: "0.12em",
               textTransform: "uppercase",
               textDecoration: "none",
+              textAlign: "center",
             }}
           >
             {t(link.label as PublicMessageKey)}
@@ -224,7 +224,7 @@ export function Navbar() {
           href="/sign-in"
           onClick={close}
           className="nav-button nav-button-ghost mobile-drawer-signin"
-          style={{ marginTop: "1.25rem" }}
+          style={{ width: "min(100%, 340px)", marginTop: "1.25rem" }}
         >
           {t("nav.signIn")}
         </Link>
@@ -232,7 +232,7 @@ export function Navbar() {
           href="/#planes"
           onClick={close}
           className="nav-button nav-button-solid"
-          style={{ marginTop: "1.25rem" }}
+          style={{ width: "min(100%, 340px)", marginTop: "1.25rem" }}
         >
           {t("nav.viewPlans")}
         </Link>
@@ -367,17 +367,6 @@ export function Navbar() {
           .navbar-brand > div:nth-child(2) {
             width: 92px !important;
             height: 27px !important;
-          }
-        }
-        .mobile-drawer-language {
-          display: none;
-        }
-        @media (max-width: 639px) {
-          .mobile-drawer-language {
-            display: flex;
-            justify-content: center;
-            padding: 0.35rem 0 0.9rem;
-            border-bottom: 1px solid #FFDADA;
           }
         }
       `}</style>

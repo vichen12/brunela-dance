@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowUp } from "lucide-react";
 import {
   FaFacebookF,
   FaInstagram,
@@ -20,14 +19,10 @@ const navLinks = [
 ] as const;
 
 const socialLinks = [
-  {
-    label: "Instagram",
-    href: "https://instagram.com/brunela.dance",
-    icon: FaInstagram,
-  },
-  { label: "TikTok", href: "https://tiktok.com", icon: FaTiktok },
-  { label: "YouTube", href: "https://youtube.com", icon: FaYoutube },
-  { label: "Facebook", href: "https://facebook.com", icon: FaFacebookF },
+  { label: "Instagram", href: "https://www.instagram.com/brunela.dance/", icon: FaInstagram },
+  { label: "TikTok",    href: "https://www.tiktok.com/@brunela.dance",     icon: FaTiktok   },
+  { label: "YouTube",   href: "https://www.youtube.com/@brunela.dancetrainer", icon: FaYoutube },
+  { label: "Facebook",  href: "https://www.facebook.com/brunela.dance",    icon: FaFacebookF },
 ] as const;
 
 export function BrunelaFooter() {
@@ -113,14 +108,6 @@ export function BrunelaFooter() {
       </div>
 
       <div className="footer-floating">
-        <a
-          className="footer-float-up"
-          href="#"
-          aria-label={t("footer.backTop")}
-          suppressHydrationWarning
-        >
-          <ArrowUp size={19} />
-        </a>
         <a
           className="footer-float-whatsapp"
           href="https://wa.me/"
@@ -297,12 +284,6 @@ export function BrunelaFooter() {
         .footer-floating a:hover {
           transform: translateY(-2px);
           box-shadow: 0 18px 40px rgba(200, 48, 80, 0.36);
-        }
-
-        .footer-float-up {
-          width: 44px;
-          height: 44px;
-          background: linear-gradient(135deg, #E64F55, #C0343A);
         }
 
         .footer-float-whatsapp {
