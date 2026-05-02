@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasSupabaseAuthEnv } from "@/src/lib/env";
 
@@ -10,26 +10,58 @@ export async function GET(request: NextRequest) {
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   if (!hasSupabaseAuthEnv()) {
-    return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent("Configuracion pendiente")}`);
+    return NextResponse.redirect(
+      `${origin}/sign-in?error=${encodeURIComponent("Configuracion pendiente")}`
+    );
   }
 
   if (errorParam) {
-    const desc = searchParams.get("error_description") ?? "Error de autenticacion con Google";
-    return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(desc)}`);
+    const desc =
+      searchParams.get("error_description") ?? "Error de autenticacion con Google";
+    return NextResponse.redirect(
+      `${origin}/sign-in?error=${encodeURIComponent(desc)}`
+    );
   }
 
   if (code) {
-    const supabase = await createSupabaseServerClient();
+    // Build the success redirect first so we can attach session cookies to it
+    const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey =
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+    // Write cookies directly onto the redirect response, not onto next()
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            redirectResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (user) {
         await supabase.from("profiles").upsert(
           {
             id: user.id,
             email: user.email ?? "",
-            full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+            full_name:
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              null,
             membership_tier: "none",
             is_admin: false,
             onboarding_completed: false,
@@ -37,12 +69,14 @@ export async function GET(request: NextRequest) {
           { onConflict: "id", ignoreDuplicates: true }
         );
       }
-      return NextResponse.redirect(`${origin}${next}`);
+
+      return redirectResponse;
     }
 
     console.error("[auth/callback] exchangeCodeForSession error:", error.message);
-    return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent("Error de autenticacion con Google")}`);
   }
 
-  return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent("Error de autenticacion con Google")}`);
+  return NextResponse.redirect(
+    `${origin}/sign-in?error=${encodeURIComponent("Error de autenticacion con Google")}`
+  );
 }

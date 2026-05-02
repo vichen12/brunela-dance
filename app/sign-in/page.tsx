@@ -159,8 +159,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         .auth-logo-figure {
           position: absolute;
           inset: 4% -9% -2% 18%;
-          opacity: 0.2;
-          filter: blur(1.2px);
+          opacity: 0.18;
           pointer-events: none;
         }
 
