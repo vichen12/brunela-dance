@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Navbar } from "@/components/navbar";
 import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
 import { BrunelaFooter } from "@/components/ui/hover-footer";
 import { InteractiveSelector } from "@/components/ui/interactive-selector";
@@ -270,6 +271,7 @@ function InfinitePhotoCarousel() {
 export default function HomePage() {
   return (
     <>
+      <Navbar />
       <GrainTexture />
       <DotGrid />
       <MovementTexture />

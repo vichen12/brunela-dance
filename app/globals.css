@@ -19,8 +19,8 @@ iframe[id^="supabase"] {
   --pink-mid:  #D93438;
   --pink-soft: #FFDADA;
   --rose:      #EB7478;
-  --ink:       #D93438;
-  --muted:     #EB7478;
+  --ink:       #1c1917;
+  --muted:     #78716c;
   --white:     #ffffff;
   --font-display: "Montserrat", sans-serif;
   --font-body:    "Roboto", sans-serif;
@@ -566,11 +566,9 @@ section[id] { scroll-margin-top: 5rem; }
 .panel, .section-shell, .story-sheet, .soft-stat, .editorial-card,
 .studio-card, .plan-card, .newsletter-panel, .admin-metric {
   position: relative; overflow: hidden;
-  border: 1px solid rgba(252,231,243,0.8);
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 24px rgba(190,24,93,0.06);
-  border-radius: 28px; padding: clamp(1.2rem,3vw,2rem);
+  border: 1.5px solid #f0eeec;
+  background: #fff;
+  border-radius: 16px; padding: clamp(1.2rem,3vw,2rem);
 }
 
 .admin-shell  { display: grid; gap: 1.5rem; }
@@ -638,7 +636,7 @@ textarea { resize: vertical; }
   --ink-soft:   #78716c;
   --rose-deep:  #b83251;
   --border-rgb: 118, 92, 113;
-  --studio-bg:  linear-gradient(160deg, #FDF8F6 0%, #FAF3F0 60%, #FDF6F4 100%);
+  --studio-bg:  #fafaf9;
   --glass-bg:   rgba(255,255,255,0.85);
   --glass-blur: blur(14px);
   --glass-border: rgba(220,192,187,0.35);
@@ -672,20 +670,17 @@ textarea { resize: vertical; }
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
-  color: var(--pink);
-  border: 1px solid rgba(252,231,243,0.9);
-  box-shadow: 0 2px 8px rgba(190,24,93,0.07);
+  background: #fdf2f8;
+  color: #be185d;
+  border: 1px solid #fbcfe8;
 }
 
 /* ── Layout blocks ── */
 .hero-stage {
   padding: clamp(1.75rem, 4vw, 3rem);
-  border-radius: 2.4rem;
-  background: linear-gradient(135deg, #fff 0%, #fdf2f8 60%, #fce7f3 100%);
-  border: 1px solid rgba(252,231,243,0.8);
-  box-shadow: 0 8px 32px rgba(190, 24, 93, 0.08);
-  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  background: #fff;
+  border: 1.5px solid #f0eeec;
 }
 
 .form-shell {
@@ -696,18 +691,15 @@ textarea { resize: vertical; }
 
 /* ── Card tiles ── */
 .feature-tile {
-  border-radius: 2rem;
+  border-radius: 16px;
   padding: clamp(1.25rem, 3vw, 1.75rem);
-  border: 1px solid rgba(252,231,243,0.7);
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 24px rgba(190, 24, 93, 0.05);
-  transition: transform 220ms, box-shadow 220ms;
+  border: 1.5px solid #f0eeec;
+  background: #fff;
+  transition: box-shadow 220ms;
 }
 
 .feature-tile:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 44px rgba(190, 24, 93, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 /* Landing refresh */

@@ -1,6 +1,9 @@
 import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -23,71 +26,91 @@ type VideoRecord = {
   is_featured: boolean;
 };
 
+// ── Quick actions ──────────────────────────────────────────────────────────────
+
+async function quickStatusAction(fd: FormData) {
+  "use server";
+  await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+  const id = fd.get("id") as string;
+  const status = fd.get("status") as string;
+  await supabase.from("videos").update({ status }).eq("id", id);
+  revalidatePath("/admin/videos");
+  redirect("/admin/videos" as never);
+}
+
+async function quickFeaturedAction(fd: FormData) {
+  "use server";
+  await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+  const id = fd.get("id") as string;
+  const current = fd.get("current") === "true";
+  await supabase.from("videos").update({ is_featured: !current }).eq("id", id);
+  revalidatePath("/admin/videos");
+  redirect("/admin/videos" as never);
+}
+
+// ── Style maps ─────────────────────────────────────────────────────────────────
+
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  published: { bg: "rgba(209,250,229,0.8)", color: "#065f46", label: "Publicado" },
-  draft:     { bg: "rgba(254,249,195,0.8)", color: "#854d0e", label: "Borrador" },
-  archived:  { bg: "rgba(241,245,249,0.8)", color: "#475569", label: "Archivado" },
+  published: { bg: "#dcfce7", color: "#166534", label: "Publicado" },
+  draft:     { bg: "#fef9c3", color: "#854d0e", label: "Borrador" },
+  archived:  { bg: "#f1f5f9", color: "#475569", label: "Archivado" },
 };
 
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: "#F5E4E0", color: "#8C5A55", label: "Corps de Ballet" },
-  solista:         { bg: "#DFC0BB", color: "#5C2E29", label: "Solista" },
-  principal:       { bg: "#1C1618", color: "#FDF8F6", label: "Principal" },
+  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d", label: "Corps" },
+  solista:         { bg: "#fce7f3", color: "#be185d", label: "Solista" },
+  principal:       { bg: "#1c1917", color: "#fdf2f8", label: "Principal" },
 };
 
 const LOCALE_FLAGS: Record<string, string> = { es: "ES", en: "EN", pt: "PT" };
 
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
+// ── Shared styles ──────────────────────────────────────────────────────────────
+
+const inp: React.CSSProperties = {
+  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
+  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  fontSize: 13, outline: "none", fontFamily: "inherit",
+};
+
+const sel: React.CSSProperties = {
+  ...inp, appearance: "none",
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
+};
+
+function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      borderRadius: 16, padding: "14px 20px", fontSize: 13, fontWeight: 600,
-      background: tone === "success" ? "rgba(209,250,229,0.9)" : "rgba(254,226,226,0.9)",
-      color: tone === "success" ? "#065f46" : "#991b1b",
-      border: `1px solid ${tone === "success" ? "rgba(52,211,153,0.4)" : "rgba(252,165,165,0.5)"}`,
-      backdropFilter: "blur(8px)",
-    }}>{message}</div>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+      {children}
+    </span>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{
-      fontSize: 8.5, letterSpacing: "0.22em", fontWeight: 700, color: "#B8857F",
-      marginBottom: 18, textTransform: "uppercase",
-    }}>{children}</div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", color: "#6B5C58", textTransform: "uppercase" }}>
-        {label}
-      </span>
+    <label style={{ display: "flex", flexDirection: "column" }}>
+      <Lbl>{label}</Lbl>
       {children}
     </label>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%", borderRadius: 12,
-  border: "1.5px solid rgba(220,192,187,0.5)",
-  background: "rgba(255,255,255,0.8)",
-  color: "#1C1618", padding: "10px 14px",
-  fontSize: 13, outline: "none",
-  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-  backdropFilter: "blur(4px)",
-};
+function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600,
+      background: tone === "success" ? "#f0fdf4" : "#fef2f2",
+      color: tone === "success" ? "#166534" : "#991b1b",
+      border: `1px solid ${tone === "success" ? "#bbf7d0" : "#fecaca"}`,
+      marginBottom: 20,
+    }}>{message}</div>
+  );
+}
 
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23B8857F' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "right 14px center",
-  paddingRight: 36,
-};
+// ── Video form ─────────────────────────────────────────────────────────────────
 
 function VideoForm({ video }: { video?: VideoRecord }) {
   const isNew = !video;
@@ -99,164 +122,111 @@ function VideoForm({ video }: { video?: VideoRecord }) {
     <form action={upsertVideoAction}>
       <input name="id" type="hidden" value={video?.id ?? ""} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <F label="Slug">
+          <input style={inp} defaultValue={video?.slug ?? ""} name="slug" required placeholder="ballet-centro-basico" />
+        </F>
+        <F label="Estado">
+          <select style={sel} defaultValue={video?.status ?? "draft"} name="status">
+            <option value="draft">Borrador</option>
+            <option value="published">Publicado</option>
+            <option value="archived">Archivado</option>
+          </select>
+        </F>
 
-        {/* Col 1 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label="Slug">
-            <input style={inputStyle} defaultValue={video?.slug ?? ""} name="slug" required placeholder="ballet-centro-basico" />
-          </Field>
+        <F label="Titulo en Espanol">
+          <input style={inp} defaultValue={video?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
+        </F>
+        <F label="Titulo en Ingles">
+          <input style={inp} defaultValue={video?.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
+        </F>
 
-          <Field label="Titulo en Espanol">
-            <input style={inputStyle} defaultValue={video?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
-          </Field>
+        <F label="Duracion (segundos)">
+          <input style={inp} defaultValue={video?.duration_seconds ?? 900} min={1} name="durationSeconds" required type="number" />
+        </F>
+        <F label="Tier requerido">
+          <select style={sel} defaultValue={video?.membership_tier_required ?? "corps_de_ballet"} name="membershipTierRequired">
+            <option value="corps_de_ballet">Corps de Ballet</option>
+            <option value="solista">Solista</option>
+            <option value="principal">Principal</option>
+          </select>
+        </F>
 
-          <Field label="Titulo en Ingles">
-            <input style={inputStyle} defaultValue={video?.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
-          </Field>
+        <F label="Categorias (coma separada)">
+          <input style={inp} defaultValue={video?.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
+        </F>
+        <F label="Materiales (coma separada)">
+          <input style={inp} defaultValue={video?.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
+        </F>
 
-          <Field label="Duracion (segundos)">
-            <input style={inputStyle} defaultValue={video?.duration_seconds ?? 900} min={1} name="durationSeconds" required type="number" />
-          </Field>
+        <F label="Thumbnail URL">
+          <input style={inp} defaultValue={video?.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
+        </F>
+        <F label="Mux Playback ID">
+          <input style={inp} defaultValue={video?.stream_playback_id ?? ""} name="streamPlaybackId" placeholder="xxxxxxxxxxxxxxxx" />
+        </F>
 
-          <Field label="Categorias (coma separada)">
-            <input style={inputStyle} defaultValue={video?.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
-          </Field>
-
-          <Field label="Materiales (coma separada)">
-            <input style={inputStyle} defaultValue={video?.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
-          </Field>
-        </div>
-
-        {/* Col 2 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label="Tier requerido">
-            <select style={selectStyle} defaultValue={video?.membership_tier_required ?? "corps_de_ballet"} name="membershipTierRequired">
-              <option value="corps_de_ballet">Corps de Ballet</option>
-              <option value="solista">Solista</option>
-              <option value="principal">Principal</option>
-            </select>
-          </Field>
-
-          <Field label="Estado">
-            <select style={selectStyle} defaultValue={video?.status ?? "draft"} name="status">
-              <option value="draft">Borrador</option>
-              <option value="published">Publicado</option>
-              <option value="archived">Archivado</option>
-            </select>
-          </Field>
-
-          <Field label="Thumbnail URL">
-            <input style={inputStyle} defaultValue={video?.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
-          </Field>
-
-          <Field label="Mux Playback ID">
-            <input style={inputStyle} defaultValue={video?.stream_playback_id ?? ""} name="streamPlaybackId" placeholder="xxxxxxxxxxxxxxxx" />
-          </Field>
-
-          <Field label="Mux Asset ID">
-            <input style={inputStyle} defaultValue={video?.stream_asset_id ?? ""} name="streamAssetId" placeholder="xxxxxxxxxxxxxxxx" />
-          </Field>
-
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: 4 }}>
-            <input
-              defaultChecked={video?.is_featured ?? false}
-              name="isFeatured"
-              type="checkbox"
-              style={{ width: 16, height: 16, accentColor: "#B8857F" }}
-            />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#4A3C3A" }}>Destacar este video</span>
+        <F label="Mux Asset ID">
+          <input style={inp} defaultValue={video?.stream_asset_id ?? ""} name="streamAssetId" placeholder="xxxxxxxxxxxxxxxx" />
+        </F>
+        <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <input defaultChecked={video?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "#be185d" }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
           </label>
         </div>
       </div>
 
-      {/* Descripciones */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
-        <Field label="Descripcion en Espanol">
-          <textarea
-            style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-            defaultValue={video?.description_i18n?.es ?? ""}
-            name="descriptionEs"
-            required
-            placeholder="Descripcion de la clase..."
-          />
-        </Field>
-        <Field label="Descripcion en Ingles">
-          <textarea
-            style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-            defaultValue={video?.description_i18n?.en ?? ""}
-            name="descriptionEn"
-            placeholder="Class description..."
-          />
-        </Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <F label="Descripcion en Espanol">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripcion de la clase..." />
+        </F>
+        <F label="Descripcion en Ingles">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.en ?? ""} name="descriptionEn" placeholder="Class description..." />
+        </F>
       </div>
 
-      {/* Pistas de audio */}
-      <div style={{
-        marginTop: 20, borderRadius: 16, padding: "18px 20px",
-        background: "rgba(245,228,224,0.25)",
-        border: "1.5px solid rgba(220,192,187,0.4)",
-      }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.2em", fontWeight: 700, color: "#B8857F", marginBottom: 14 }}>
-          PISTAS DE AUDIO POR IDIOMA
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>
+        <Lbl>Pistas de audio por idioma</Lbl>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginTop: 8 }}>
           {[
-            { locale: "es", label: "Espanol (ES)", value: trackEs, name: "audioTrackEs", flag: "🇪🇸" },
-            { locale: "en", label: "Ingles (EN)", value: trackEn, name: "audioTrackEn", flag: "🇬🇧" },
-            { locale: "pt", label: "Portugues (PT)", value: trackPt, name: "audioTrackPt", flag: "🇧🇷" },
-          ].map((track) => (
-            <label key={track.locale} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.08em", color: "#6B5C58" }}>
-                {track.flag} {track.label}
-              </span>
-              <input
-                style={{ ...inputStyle, fontSize: 12 }}
-                defaultValue={track.value}
-                name={track.name}
-                placeholder="Mux Audio Track ID"
-              />
+            { flag: "ES", label: "Espanol", value: trackEs, name: "audioTrackEs" },
+            { flag: "EN", label: "Ingles",  value: trackEn, name: "audioTrackEn" },
+            { flag: "PT", label: "Portugues", value: trackPt, name: "audioTrackPt" },
+          ].map((t) => (
+            <label key={t.flag} style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", marginBottom: 5 }}>{t.flag} {t.label}</span>
+              <input style={{ ...inp, fontSize: 12 }} defaultValue={t.value} name={t.name} placeholder="Mux Audio Track ID" />
             </label>
           ))}
         </div>
-        <p style={{ fontSize: 10.5, color: "#B0A09C", marginTop: 10 }}>
-          ID de pista de audio de Mux. Deja en blanco si el idioma no esta disponible.
-        </p>
       </div>
 
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        <button
-          type="submit"
-          style={{
-            background: isNew ? "linear-gradient(135deg, #C49490, #B8857F)" : "linear-gradient(135deg, #2A1E22, #1C1618)",
-            color: "#FDF8F6", border: "none", borderRadius: 99,
-            padding: "11px 28px", fontSize: 9, letterSpacing: "0.16em", fontWeight: 700,
-            cursor: "pointer", boxShadow: isNew ? "0 4px 14px rgba(184,133,127,0.4)" : "0 4px 14px rgba(28,22,24,0.3)",
-          }}
-        >
+      <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
+        <button type="submit" style={{
+          background: isNew ? "linear-gradient(135deg, #db2777, #be185d)" : "#1c1917",
+          color: "#fff", border: "none", borderRadius: 99,
+          padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+          cursor: "pointer",
+        }}>
           {isNew ? "CREAR VIDEO" : "GUARDAR CAMBIOS"}
         </button>
-
         {!isNew && (
           <form action={deleteVideoAction} style={{ display: "inline" }}>
             <input name="id" type="hidden" value={video.id} />
-            <button
-              type="submit"
-              style={{
-                background: "transparent", color: "#C49490",
-                border: "1.5px solid rgba(220,192,187,0.6)",
-                borderRadius: 99, padding: "11px 22px",
-                fontSize: 9, letterSpacing: "0.14em", fontWeight: 700, cursor: "pointer",
-              }}
-            >
-              ELIMINAR
-            </button>
+            <button type="submit" style={{
+              background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
+              borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
+              letterSpacing: "0.1em", cursor: "pointer",
+            }}>ELIMINAR</button>
           </form>
         )}
       </div>
     </form>
   );
 }
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export default async function AdminVideosPage({ searchParams }: { searchParams?: SearchParams }) {
   await requireAdmin();
@@ -275,164 +245,171 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const drafts = videos.filter((v) => v.status === "draft").length;
 
   return (
-    <main style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <main style={{ fontFamily: "inherit" }}>
+      <Flash message={success} tone="success" />
+      <Flash message={error} tone="error" />
 
-      {/* Header hero */}
-      <div style={{
-        borderRadius: 24, marginBottom: 24,
-        background: "linear-gradient(135deg, #F7E2DC 0%, #E8C4BC 60%, #D4A8A0 100%)",
-        padding: "36px 40px", position: "relative", overflow: "hidden",
-        boxShadow: "0 8px 32px rgba(180,120,110,0.18)",
-      }}>
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+        {[
+          { value: videos.length, label: "Total",        sub: "en el catalogo" },
+          { value: published,     label: "Publicados",   sub: "visibles a alumnas" },
+          { value: drafts,        label: "Borradores",   sub: "sin publicar" },
+        ].map((s) => (
+          <div key={s.label} style={{
+            background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "20px 22px",
+          }}>
+            <p style={{ fontSize: 30, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#44403c", marginTop: 6 }}>{s.label}</p>
+            <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* New video form — collapsed by default */}
+      <details style={{ marginBottom: 16 }}>
+        <summary style={{
+          listStyle: "none", cursor: "pointer",
+          background: "#fff", border: "1px solid #f0eeec", borderRadius: 14,
+          padding: "14px 20px", display: "flex", alignItems: "center", gap: 10,
+          fontSize: 13, fontWeight: 700, color: "#1c1917", userSelect: "none",
+        }}>
+          <span style={{
+            width: 24, height: 24, borderRadius: 8,
+            background: "linear-gradient(135deg, #db2777, #be185d)",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontSize: 16, fontWeight: 800, flexShrink: 0,
+          }}>+</span>
+          Nuevo video
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "#a8a29e", fontWeight: 500 }}>Clic para desplegar formulario</span>
+        </summary>
         <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(to right, rgba(253,248,246,0.9) 50%, transparent)",
-        }}/>
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: 8.5, letterSpacing: "0.22em", color: "#B8857F", fontWeight: 700, marginBottom: 10 }}>
-            PANEL DE ADMINISTRACION
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "0.04em", color: "#1C1618", marginBottom: 8 }}>
-            Gestion de Videos
-          </div>
-          <div style={{ fontSize: 12.5, color: "#8A7470", lineHeight: 1.6 }}>
-            Crea, edita y publica videos con titulos multi-idioma, pistas de audio y control de acceso por tier.
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
-            {[
-              { value: String(videos.length), label: "Total" },
-              { value: String(published), label: "Publicados" },
-              { value: String(drafts), label: "Borradores" },
-            ].map((s) => (
-              <div key={s.label} style={{
-                background: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)",
-                borderRadius: 14, padding: "10px 18px",
-                border: "1px solid rgba(220,192,187,0.4)",
-              }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#1C1618", letterSpacing: "-0.02em" }}>{s.value}</div>
-                <div style={{ fontSize: 8, letterSpacing: "0.14em", color: "#B8857F", fontWeight: 700 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
+          background: "#fff", border: "1px solid #f0eeec", borderTop: "none",
+          borderRadius: "0 0 14px 14px", padding: "24px 22px",
+        }}>
+          <VideoForm />
         </div>
-      </div>
-
-      {/* Flash messages */}
-      {(success || error) && (
-        <div style={{ marginBottom: 20 }}>
-          <Flash message={success} tone="success" />
-          <Flash message={error} tone="error" />
-        </div>
-      )}
-
-      {/* Create new video */}
-      <div style={{
-        background: "rgba(255,255,255,0.88)", backdropFilter: "blur(14px)",
-        borderRadius: 24, padding: "28px 32px", marginBottom: 20,
-        border: "1px solid rgba(220,192,187,0.35)",
-        boxShadow: "0 4px 24px rgba(28,22,24,0.06)",
-      }}>
-        <SectionLabel>Nuevo video</SectionLabel>
-        <VideoForm />
-      </div>
+      </details>
 
       {/* Video list */}
-      <div style={{
-        background: "rgba(255,255,255,0.88)", backdropFilter: "blur(14px)",
-        borderRadius: 24, padding: "28px 32px",
-        border: "1px solid rgba(220,192,187,0.35)",
-        boxShadow: "0 4px 24px rgba(28,22,24,0.06)",
-      }}>
-        <SectionLabel>Videos existentes — {videos.length}</SectionLabel>
-
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
+          Videos — {videos.length}
+        </p>
         {videos.length === 0 ? (
           <div style={{
-            border: "1.5px dashed rgba(220,192,187,0.6)", borderRadius: 18,
-            padding: "28px 24px", fontSize: 13, color: "#A89490", textAlign: "center",
+            background: "#fff", border: "1.5px dashed #f0eeec", borderRadius: 16,
+            padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13,
           }}>
             No hay videos todavia. Crea el primero arriba.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {videos.map((video) => {
-              const status = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
+              const st = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
               const tier = TIER_STYLE[video.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
               const hasMux = !!(video.stream_playback_id || video.stream_asset_id);
               const audioLocales = (video.audio_tracks ?? []).map((t) => t.locale);
+              const durMin = Math.floor(video.duration_seconds / 60);
 
               return (
-                <div key={video.id} style={{
-                  borderRadius: 20, border: "1px solid rgba(220,192,187,0.3)",
-                  background: "rgba(253,248,246,0.6)", overflow: "hidden",
-                }}>
-                  {/* Video header */}
+                <div key={video.id} style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, overflow: "hidden" }}>
+
+                  {/* Card header — always visible */}
                   <div style={{
-                    display: "flex", alignItems: "flex-start", gap: 16,
-                    padding: "18px 22px", borderBottom: "1px solid rgba(220,192,187,0.2)",
-                    background: "rgba(255,255,255,0.5)",
+                    display: "flex", alignItems: "center", gap: 14,
+                    padding: "14px 18px",
                   }}>
-                    {/* Thumb placeholder */}
+                    {/* Thumbnail */}
                     <div style={{
-                      width: 80, height: 52, borderRadius: 10, flexShrink: 0, overflow: "hidden",
-                      background: "linear-gradient(145deg, #F0DDD9, #C9938E)",
+                      width: 64, height: 42, borderRadius: 10, flexShrink: 0, overflow: "hidden",
+                      background: "linear-gradient(145deg, #fce7f3, #f9a8d4)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       {video.thumbnail_url ? (
                         <img src={video.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <polygon points="7,4 16,10 7,16" fill="rgba(253,248,246,0.8)" />
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                          <polygon points="7,4 16,10 7,16" fill="rgba(190,24,93,0.5)" />
                         </svg>
                       )}
                     </div>
 
+                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#1C1618" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>
                           {video.title_i18n.es ?? video.slug}
                         </span>
-                        <span style={{
-                          fontSize: 7.5, letterSpacing: "0.14em", fontWeight: 700,
-                          background: status.bg, color: status.color,
-                          padding: "3px 9px", borderRadius: 99,
-                        }}>{status.label}</span>
-                        <span style={{
-                          fontSize: 7.5, letterSpacing: "0.14em", fontWeight: 700,
-                          background: tier.bg, color: tier.color,
-                          padding: "3px 9px", borderRadius: 99,
-                        }}>{tier.label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>{st.label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: tier.bg, color: tier.color }}>{tier.label}</span>
                         {video.is_featured && (
-                          <span style={{
-                            fontSize: 7.5, letterSpacing: "0.14em", fontWeight: 700,
-                            background: "rgba(254,243,199,0.9)", color: "#92400e",
-                            padding: "3px 9px", borderRadius: 99,
-                          }}>Destacado</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#fef9c3", color: "#854d0e" }}>Destacado</span>
                         )}
                       </div>
-                      <div style={{ fontSize: 11, color: "#A89490", display: "flex", gap: 14, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#a8a29e", flexWrap: "wrap" }}>
                         <span>/{video.slug}</span>
-                        <span>{Math.floor(video.duration_seconds / 60)} min</span>
-                        {video.category_slugs?.length > 0 && (
-                          <span>{video.category_slugs.join(", ")}</span>
-                        )}
-                        {hasMux && (
-                          <span style={{ color: "#059669", fontWeight: 600 }}>Mux OK</span>
-                        )}
+                        <span>{durMin} min</span>
+                        {video.category_slugs?.length > 0 && <span>{video.category_slugs.join(", ")}</span>}
+                        {hasMux && <span style={{ color: "#059669", fontWeight: 600 }}>Mux OK</span>}
                         {audioLocales.length > 0 && (
-                          <span style={{ color: "#7C3AED", fontWeight: 600 }}>
-                            Audio: {audioLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}
-                          </span>
+                          <span style={{ color: "#7c3aed", fontWeight: 600 }}>Audio: {audioLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
                         )}
                       </div>
                     </div>
+
+                    {/* Quick actions */}
+                    <div style={{ display: "flex", gap: 5, flexShrink: 0, alignItems: "center" }}>
+                      {video.status !== "published" && (
+                        <form action={quickStatusAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value="published" />
+                          <button type="submit" style={{
+                            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
+                            background: "#dcfce7", color: "#166534", border: "none", cursor: "pointer",
+                          }}>Publicar</button>
+                        </form>
+                      )}
+                      {video.status !== "archived" && (
+                        <form action={quickStatusAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value="archived" />
+                          <button type="submit" style={{
+                            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
+                            background: "#f1f5f9", color: "#64748b", border: "none", cursor: "pointer",
+                          }}>Archivar</button>
+                        </form>
+                      )}
+                      <form action={quickFeaturedAction}>
+                        <input type="hidden" name="id" value={video.id} />
+                        <input type="hidden" name="current" value={String(video.is_featured)} />
+                        <button type="submit" style={{
+                          fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
+                          background: video.is_featured ? "#fef9c3" : "#f9fafb",
+                          color: video.is_featured ? "#854d0e" : "#6b7280",
+                          border: "none", cursor: "pointer",
+                        }}>{video.is_featured ? "Quitar destaque" : "Destacar"}</button>
+                      </form>
+                    </div>
                   </div>
 
-                  {/* Form */}
-                  <div style={{ padding: "20px 22px" }}>
-                    <VideoForm video={video} />
-                  </div>
+                  {/* Collapsible edit form */}
+                  <details>
+                    <summary style={{
+                      listStyle: "none", cursor: "pointer",
+                      padding: "9px 18px", fontSize: 11, fontWeight: 600, color: "#a8a29e",
+                      borderTop: "1px solid #f9f7f6",
+                      userSelect: "none", display: "flex", alignItems: "center", gap: 6,
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4.5h8M2 7.5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      Editar video
+                    </summary>
+                    <div style={{ padding: "22px 22px", borderTop: "1px solid #f9f7f6" }}>
+                      <VideoForm video={video} />
+                    </div>
+                  </details>
                 </div>
               );
             })}

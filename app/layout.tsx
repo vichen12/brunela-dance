@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Great_Vibes, Montserrat, Roboto } from "next/font/google";
-import { Navbar } from "@/components/navbar";
 import { PublicLanguageProvider } from "@/components/language-provider";
 import "./globals.css";
 
@@ -22,7 +21,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable}`} suppressHydrationWarning>
         <PublicLanguageProvider>
-          <Navbar />
           {children}
         </PublicLanguageProvider>
       </body>

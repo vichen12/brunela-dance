@@ -1,25 +1,41 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOutAction } from '@/src/features/auth/actions';
+import type { Route } from 'next';
 
 type MembershipTier = 'none' | 'corps_de_ballet' | 'solista' | 'principal';
 
 const PLAN_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: '#fdf2f8', color: '#be185d', label: 'CORPS DE BALLET' },
+  corps_de_ballet: { bg: '#fdf2f8', color: '#be185d', label: 'CORPS' },
   solista:         { bg: '#fce7f3', color: '#9d174d', label: 'SOLISTA' },
   principal:       { bg: '#1c1917', color: '#fdf2f8', label: 'PRINCIPAL' },
   none:            { bg: '#f5f5f4', color: '#78716c', label: 'SIN PLAN' },
 };
 
-const NAV = [
-  { href: '/dashboard',           label: 'Inicio' },
-  { href: '/dashboard/library',   label: 'Clases' },
-  { href: '/dashboard/chat',      label: 'Mi Chat' },
-  { href: '/dashboard/community', label: 'Comunidad' },
-  { href: '/dashboard/documents', label: 'Documentos' },
+function Ico({ d, d2 }: { d: string; d2?: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <path d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
+type NavItem = { href: string; exact?: boolean; label: string; d: string; d2?: string };
+
+const NAV: NavItem[] = [
+  { href: '/dashboard', exact: true, label: 'Inicio',
+    d: 'M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z' },
+  { href: '/dashboard/library', label: 'Clases',
+    d: 'M4.5 3.5L13 8l-8.5 4.5V3.5z' },
+  { href: '/dashboard/chat', label: 'Mi Chat',
+    d: 'M2.5 3.5h11c.28 0 .5.22.5.5v6c0 .28-.22.5-.5.5H7L4 13V10.5H2.5c-.28 0-.5-.22-.5-.5V4c0-.28.22-.5.5-.5z' },
+  { href: '/dashboard/community', label: 'Comunidad',
+    d: 'M6.5 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5.5 5.5 0 0111 0' },
+  { href: '/dashboard/documents', label: 'Documentos',
+    d: 'M5 1.5h5.5L14 5V14H5V1.5z', d2: 'M10 1.5V5h4' },
 ];
 
 export function StudioSidebar({
@@ -35,131 +51,125 @@ export function StudioSidebar({
   const badge = PLAN_BADGE[membershipTier] ?? PLAN_BADGE.none;
   const initial = (userName.trim()[0] ?? 'A').toUpperCase();
 
-  function isActive(href: string) {
-    if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(href);
-  }
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) return pathname === href;
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
   return (
-    <aside
-      style={{
-        width: 232,
-        minHeight: '100vh',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        overflowY: 'auto',
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: '1px solid #fce7f3',
-        background: 'linear-gradient(180deg, #ffffff 0%, #fffbfd 100%)',
-        fontFamily: 'var(--font-body), "Plus Jakarta Sans", sans-serif',
-      }}
-    >
-      {/* Logo */}
-      <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid #fce7f3' }}>
+    <aside style={{
+      width: 220,
+      flexShrink: 0,
+      background: '#fff',
+      borderRight: '1.5px solid #f5f0ef',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
+      overflow: 'hidden',
+    }}>
+      {/* Brand */}
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1.5px solid #f5f0ef' }}>
         <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Image src="/brand/isologo-icon.png" alt="Brunela Dance Trainer" width={38} height={38} style={{ objectFit: 'contain', flexShrink: 0 }} />
+          <div style={{
+            width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, #f9a8b4, #be185d)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ color: '#fff', fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display), serif' }}>B</span>
+          </div>
           <div>
-            <div style={{
-              fontFamily: 'var(--font-display), Montserrat, sans-serif',
-              fontSize: 13, fontWeight: 900, color: '#D93438', lineHeight: 1.1,
-            }}>Brunela Dance Trainer</div>
-            <div style={{ fontSize: 8.5, letterSpacing: '0.12em', color: '#E64F55', marginTop: 1, fontWeight: 700 }}>
-              DANCE TRAINER · BCN
-            </div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', letterSpacing: '-0.01em', lineHeight: 1.2 }}>Brunela</p>
+            <p style={{ fontSize: 10, color: '#a8a29e', fontWeight: 600, letterSpacing: '0.05em', marginTop: 1 }}>Studio</p>
           </div>
         </Link>
       </div>
 
       {/* User */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid #fce7f3' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1.5px solid #f5f0ef' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 10,
+            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
             background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)',
             border: '1.5px solid #fbcfe8',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, fontWeight: 700, color: '#be185d', flexShrink: 0,
+            fontSize: 12, fontWeight: 700, color: '#be185d',
           }}>{initial}</div>
           <div style={{ minWidth: 0 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: '#1c1917',
+            <p style={{
+              fontSize: 11, fontWeight: 700, color: '#1c1917',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{userName}</div>
-            <div style={{
+              letterSpacing: '0.02em',
+            }}>{userName}</p>
+            <span style={{
               marginTop: 3, fontSize: 7.5, letterSpacing: '0.12em', fontWeight: 700,
               background: badge.bg, color: badge.color,
-              padding: '2px 8px', borderRadius: 99, display: 'inline-block',
-              border: badge.color === '#fdf2f8' ? '1px solid rgba(255,255,255,0.2)' : 'none',
-            }}>{badge.label}</div>
+              padding: '2px 7px', borderRadius: 99, display: 'inline-block',
+            }}>{badge.label}</span>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 10px' }}>
-        {NAV.map(({ href, label }) => {
-          const active = isActive(href);
+      <nav style={{ flex: 1, padding: '14px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {NAV.map((item) => {
+          const active = isActive(item.href, item.exact);
           return (
-            <Link key={href} href={href as never} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 12px', marginBottom: 2, borderRadius: 10,
-              background: active ? 'linear-gradient(135deg, #fdf2f8, #fce7f3)' : 'transparent',
-              textDecoration: 'none',
-              border: active ? '1px solid #fbcfe8' : '1px solid transparent',
-              transition: 'all 0.15s',
+            <Link key={item.href} href={item.href as Route} style={{
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: '7px 9px', borderRadius: 8, textDecoration: 'none',
+              background: active ? '#fdf2f8' : 'transparent',
+              color: active ? '#be185d' : '#78716c',
+              fontWeight: active ? 700 : 500,
+              fontSize: 13,
+              borderLeft: active ? '2px solid #be185d' : '2px solid transparent',
+              transition: 'background 0.12s, color 0.12s',
             }}>
-              <span style={{
-                fontSize: 12, fontWeight: active ? 700 : 500,
-                color: active ? '#be185d' : '#78716c',
-                letterSpacing: '0.01em',
-              }}>{label}</span>
+              <Ico d={item.d} d2={item.d2} />
+              {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom */}
-      <div style={{ borderTop: '1px solid #fce7f3', padding: '8px 10px 16px' }}>
+      {/* Footer */}
+      <div style={{ padding: '10px 10px 14px', borderTop: '1.5px solid #f5f0ef', display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Link href="/dashboard/plan" style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '9px 12px', marginBottom: 2, borderRadius: 10,
-          background: isActive('/dashboard/plan') ? 'linear-gradient(135deg, #fdf2f8, #fce7f3)' : 'transparent',
-          textDecoration: 'none',
-          border: isActive('/dashboard/plan') ? '1px solid #fbcfe8' : '1px solid transparent',
+          display: 'flex', alignItems: 'center', gap: 9,
+          padding: '7px 9px', borderRadius: 8, textDecoration: 'none',
+          background: isActive('/dashboard/plan') ? '#fdf2f8' : 'transparent',
+          color: isActive('/dashboard/plan') ? '#be185d' : '#a8a29e',
+          fontSize: 13, fontWeight: isActive('/dashboard/plan') ? 700 : 500,
+          borderLeft: isActive('/dashboard/plan') ? '2px solid #be185d' : '2px solid transparent',
         }}>
-          <span style={{
-            fontSize: 12, fontWeight: isActive('/dashboard/plan') ? 700 : 500,
-            color: isActive('/dashboard/plan') ? '#be185d' : '#78716c',
-          }}>Mi Plan</span>
+          <Ico d="M3 4h10v2H3V4zm0 4h8v2H3V8zm0 4h5v2H3v-2z" />
+          Mi Plan
         </Link>
 
         {isAdmin && (
           <Link href="/admin" style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 12px', marginBottom: 2, borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: '7px 9px', borderRadius: 8, textDecoration: 'none',
             background: pathname.startsWith('/admin') ? '#1c1917' : 'transparent',
-            textDecoration: 'none',
-            border: pathname.startsWith('/admin') ? 'none' : '1px solid transparent',
+            color: pathname.startsWith('/admin') ? '#fdf2f8' : '#a8a29e',
+            fontSize: 13, fontWeight: 700,
+            borderLeft: '2px solid transparent',
           }}>
-            <span style={{
-              fontSize: 12, fontWeight: 700,
-              color: pathname.startsWith('/admin') ? '#fdf2f8' : '#78716c',
-              letterSpacing: '0.01em',
-            }}>Admin</span>
+            <Ico d="M8 10a2 2 0 100-4 2 2 0 000 4zM8 2v1.5M8 12.5V14M2 8H3.5M12.5 8H14" />
+            Admin Panel
           </Link>
         )}
 
         <form action={signOutAction}>
           <button type="submit" style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 12px', background: 'transparent',
-            border: '1px solid transparent', cursor: 'pointer',
-            borderRadius: 10, textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: '7px 9px', borderRadius: 8, width: '100%',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#a8a29e', fontSize: 13, fontWeight: 500, textAlign: 'left',
           }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#a8a29e', letterSpacing: '0.01em' }}>Salir</span>
+            <Ico d="M11 2h3v12h-3M6.5 11L10 8l-3.5-3M10 8H2" />
+            Cerrar sesion
           </button>
         </form>
       </div>

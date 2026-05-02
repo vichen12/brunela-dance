@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value)
         );
@@ -30,16 +30,17 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Refresh the session — must happen before any conditional logic
+  // Read session from cookie — no network call, keeps middleware fast.
+  // Server components call getUser() for actual security verification.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
   const isPrivate =
     pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
 
-  if (isPrivate && !user) {
+  if (isPrivate && !session) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("callbackUrl", pathname);

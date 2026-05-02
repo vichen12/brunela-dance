@@ -122,6 +122,19 @@ async function unmuteUserAction(formData: FormData) {
   redirect("/admin/chat?tab=mutes&success=Usuario+desmuteado" as never);
 }
 
+async function sendAsAdminAction(formData: FormData) {
+  "use server";
+  const { user } = await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+  const roomId = String(formData.get("room_id") ?? "");
+  const content = String(formData.get("content") ?? "").trim();
+  if (!content || !roomId) redirect(`/admin/chat?tab=rooms&room=${roomId}` as never);
+  await supabase.from("chat_messages").insert({ room_id: roomId, user_id: user.id, content });
+  revalidatePath("/admin/chat");
+  revalidatePath("/dashboard/community");
+  redirect(`/admin/chat?tab=rooms&room=${roomId}&success=Mensaje+enviado` as never);
+}
+
 // ── UI helpers ────────────────────────────────────────────────────────────────
 
 const inp = "w-full rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm outline-none focus:border-pink-400 transition";
@@ -332,7 +345,7 @@ export default async function AdminChatPage({ searchParams }: {
                 {messages.length === 0 ? (
                   <p style={{ fontSize: 13, color: "var(--muted)" }}>No hay mensajes en esta sala.</p>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 560, overflowY: "auto" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" }}>
                     {messages.map((msg) => {
                       const name = msg.profiles?.is_admin
                         ? "Brunela"
@@ -341,8 +354,10 @@ export default async function AdminChatPage({ searchParams }: {
                         <div key={msg.id} style={{
                           display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10,
                           padding: "10px 14px", borderRadius: 14,
-                          background: msg.is_deleted ? "#fef2f2" : "rgba(253,242,248,0.4)",
-                          border: `1px solid ${msg.is_deleted ? "#fecaca" : "#fce7f3"}`,
+                          background: msg.profiles?.is_admin
+                            ? "linear-gradient(135deg, #fdf2f8, #fce7f3)"
+                            : (msg.is_deleted ? "#fef2f2" : "rgba(253,242,248,0.4)"),
+                          border: `1px solid ${msg.is_deleted ? "#fecaca" : msg.profiles?.is_admin ? "#fbcfe8" : "#fce7f3"}`,
                           opacity: msg.is_deleted ? 0.6 : 1,
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -350,6 +365,9 @@ export default async function AdminChatPage({ searchParams }: {
                               <span style={{ fontSize: 11, fontWeight: 700, color: msg.profiles?.is_admin ? "var(--pink)" : "var(--ink)" }}>
                                 {name}
                               </span>
+                              {msg.profiles?.is_admin && (
+                                <span style={{ fontSize: 9, background: "var(--pink)", color: "#fff", padding: "1px 7px", borderRadius: 99, fontWeight: 700 }}>BRUNELA</span>
+                              )}
                               <span style={{ fontSize: 10, color: "var(--muted)" }}>
                                 {new Date(msg.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
                               </span>
@@ -374,6 +392,34 @@ export default async function AdminChatPage({ searchParams }: {
                     })}
                   </div>
                 )}
+
+                {/* Send as Brunela */}
+                <div style={{
+                  borderTop: "1px solid #fce7f3", paddingTop: 16, marginTop: 8,
+                }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 10 }}>
+                    Enviar como Brunela
+                  </p>
+                  <form action={sendAsAdminAction} style={{ display: "flex", gap: 8 }}>
+                    <input type="hidden" name="room_id" value={activeRoom.id} />
+                    <input
+                      name="content"
+                      required
+                      placeholder="Escribi un mensaje como Brunela..."
+                      style={{
+                        flex: 1, borderRadius: 12, border: "1.5px solid #fbcfe8",
+                        background: "#fff", color: "var(--ink)", padding: "10px 14px",
+                        fontSize: 13, outline: "none", fontFamily: "inherit",
+                      }}
+                    />
+                    <button type="submit" style={{
+                      background: "linear-gradient(135deg, #db2777, #be185d)",
+                      color: "#fff", border: "none", borderRadius: 12,
+                      padding: "10px 20px", fontSize: 12, fontWeight: 700,
+                      cursor: "pointer", flexShrink: 0,
+                    }}>Enviar</button>
+                  </form>
+                </div>
               </div>
             ) : (
               <div className="panel rounded-[2rem] p-10" style={{ textAlign: "center", color: "var(--muted)" }}>
