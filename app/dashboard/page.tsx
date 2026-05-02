@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 
 export const dynamic = "force-dynamic";
@@ -97,26 +96,13 @@ export default async function DashboardPage() {
 
   const now = new Date().toISOString();
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-  const supabaseAdmin = createSupabaseAdminClient();
 
+  // Base queries — available to all authenticated users
   const [
     { data: resume },
     { data: liveData },
     { data: progressList },
     { data: announcementsData },
-    { count: totalUsers },
-    { count: corpsCount },
-    { count: solistaCount },
-    { count: principalCount },
-    { count: noPlanCount },
-    { count: totalVideos },
-    { count: publishedVideos },
-    { count: draftVideos },
-    { count: scheduledLive },
-    { count: totalBookings },
-    { count: newUsersMonth },
-    { count: activeAnnouncements },
-    { data: recentUsersRaw },
   ] = await Promise.all([
     supabase.from("user_progress")
       .select("max_position_seconds, completion_percent, updated_at, videos(title_i18n, duration_seconds, slug)")
@@ -132,24 +118,69 @@ export default async function DashboardPage() {
       .select("id, title, content, tier_target").eq("is_active", true)
       .or("expires_at.is.null,expires_at.gt." + now)
       .order("published_at", { ascending: false }).limit(3),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "corps_de_ballet"),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "solista"),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "principal"),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "none"),
-    supabaseAdmin.from("videos").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "published"),
-    supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "draft"),
-    supabaseAdmin.from("live_sessions").select("*", { count: "exact", head: true })
-      .eq("status", "scheduled").gte("starts_at", now),
-    supabaseAdmin.from("live_session_bookings").select("*", { count: "exact", head: true }).eq("status", "reserved"),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", startOfMonth),
-    supabaseAdmin.from("studio_announcements").select("*", { count: "exact", head: true })
-      .eq("is_active", true).or("expires_at.is.null,expires_at.gt." + now),
-    supabaseAdmin.from("profiles")
-      .select("id, full_name, membership_tier, created_at")
-      .order("created_at", { ascending: false }).limit(6),
   ]);
+
+  // Admin-only queries — only run when the user is an admin and the admin client is available
+  let totalUsers: number | null = null;
+  let corpsCount: number | null = null;
+  let solistaCount: number | null = null;
+  let principalCount: number | null = null;
+  let noPlanCount: number | null = null;
+  let totalVideos: number | null = null;
+  let publishedVideos: number | null = null;
+  let draftVideos: number | null = null;
+  let scheduledLive: number | null = null;
+  let totalBookings: number | null = null;
+  let newUsersMonth: number | null = null;
+  let activeAnnouncements: number | null = null;
+  let recentUsersRaw: RecentUser[] | null = null;
+
+  if (isAdmin) {
+    try {
+      const { createSupabaseAdminClient } = await import("@/src/lib/supabase/admin");
+      const supabaseAdmin = createSupabaseAdminClient();
+
+      const [
+        r0, r1, r2, r3, r4,
+        r5, r6, r7, r8, r9,
+        r10, r11, r12,
+      ] = await Promise.all([
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "corps_de_ballet"),
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "solista"),
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "principal"),
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "none"),
+        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }),
+        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "published"),
+        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "draft"),
+        supabaseAdmin.from("live_sessions").select("*", { count: "exact", head: true })
+          .eq("status", "scheduled").gte("starts_at", now),
+        supabaseAdmin.from("live_session_bookings").select("*", { count: "exact", head: true }).eq("status", "reserved"),
+        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", startOfMonth),
+        supabaseAdmin.from("studio_announcements").select("*", { count: "exact", head: true })
+          .eq("is_active", true).or("expires_at.is.null,expires_at.gt." + now),
+        supabaseAdmin.from("profiles")
+          .select("id, full_name, membership_tier, created_at")
+          .order("created_at", { ascending: false }).limit(6),
+      ]);
+
+      totalUsers = r0.count;
+      corpsCount = r1.count;
+      solistaCount = r2.count;
+      principalCount = r3.count;
+      noPlanCount = r4.count;
+      totalVideos = r5.count;
+      publishedVideos = r6.count;
+      draftVideos = r7.count;
+      scheduledLive = r8.count;
+      totalBookings = r9.count;
+      newUsersMonth = r10.count;
+      activeAnnouncements = r11.count;
+      recentUsersRaw = (r12.data ?? []) as RecentUser[];
+    } catch {
+      // Admin client unavailable (missing SUPABASE_SERVICE_ROLE_KEY) — degrade gracefully
+    }
+  }
 
   const classesWatched = progressList?.length ?? 0;
   const minutesPracticed = Math.floor(
