@@ -60,12 +60,29 @@ alter table public.profiles
 --    violaria el check), pero el lugar donde se declara "esto una alumna no lo
 --    toca" es este trigger. Que quede como efecto colateral de un constraint
 --    seria accidental.
+--
+--    CUIDADO CON LA CONDICION: va `auth.uid() is not null and`, no solo
+--    `not is_admin()`.
+--
+--    Esta funcion esta definida TRES veces en las migraciones. phase_a la creo
+--    sin esa guarda; phase_b (que corre despues) se la agrego. La version de
+--    phase_b es la efectiva y la correcta, porque auth.uid() es NULL en todo
+--    contexto sin JWT: el service_role, el SQL Editor, y las funciones
+--    SECURITY DEFINER que corren desde un trigger.
+--
+--    Sin `auth.uid() is not null`, is_admin() da false en esos contextos y el
+--    trigger revierte la escritura. Eso rompe, en silencio:
+--      - /admin/users, que cambia tier y rol por service_role
+--      - sync_profile_membership_from_subscriptions(), el trigger que traduce
+--        una suscripcion de Stripe en membership_tier
+--    O sea: un pago entra, el webhook escribe, el trigger lo revierte, y la
+--    alumna paga sin recibir acceso. Sin error en ningun lado.
 create or replace function public.protect_profile_admin_fields()
 returns trigger
 language plpgsql
 as $$
 begin
-  if not public.is_admin() then
+  if auth.uid() is not null and not public.is_admin() then
     new.membership_tier = old.membership_tier;
     new.is_admin        = old.is_admin;
     new.email           = old.email;
@@ -107,21 +124,19 @@ commit;
 -- =============================================================================
 --
 -- Marcar a una persona concreta es un cambio de DATOS, no de esquema, y el uuid
--- es distinto en cada proyecto. Va aparte, y OJO con el trigger:
+-- es distinto en cada proyecto. Va aparte:
 --
---   El SQL Editor corre sin JWT, asi que auth.uid() es null, is_admin() da
---   FALSE y trg_profiles_protect_admin_fields REVIERTE is_admin, is_studio_owner
---   y membership_tier. El update responde "UPDATE 1" y no cambia NADA.
+--   update public.profiles
+--      set is_admin = true, is_studio_owner = true, membership_tier = 'principal'
+--    where email = 'brunela.dance@gmail.com';
 --
---   Por eso hay que asumir la identidad de una admin existente en la misma
---   transaccion (ver scripts/, o el bloque que se uso el 2026-08-01):
+-- Corre directo desde el SQL Editor: auth.uid() es null ahi, y con la guarda
+-- `auth.uid() is not null` el trigger no interviene. NO hace falta asumir
+-- ninguna identidad.
 --
---     begin;
---     set local request.jwt.claims = '{"sub":"<UUID_DE_UNA_ADMIN_ACTUAL>"}';
---     update public.profiles
---        set is_admin = true, is_studio_owner = true, membership_tier = 'principal'
---      where email = 'brunela.dance@gmail.com';
---     commit;
+--   (El 2026-08-01 este bloque se corrio con un set_config de request.jwt.claims
+--   porque una version previa de esta migracion habia perdido esa guarda. El
+--   rodeo era innecesario y ya no aplica.)
 --
 -- =============================================================================
 -- VERIFICACION POST-RUN

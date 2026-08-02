@@ -548,15 +548,14 @@ Orden obligatorio:
 5. **Marcar a Brunela como dueña del estudio** (migración 16):
 
    ```sql
-   begin;
-   -- El SQL Editor corre sin JWT: auth.uid() es null, is_admin() da false y el
-   -- trigger trg_profiles_protect_admin_fields revierte el update EN SILENCIO.
-   set local request.jwt.claims = '{"sub":"<UUID_DE_UNA_ADMIN_ACTUAL>"}';
    update public.profiles
       set is_admin = true, is_studio_owner = true, membership_tier = 'principal'
     where email = 'brunela.dance@gmail.com';
-   commit;
    ```
+
+   Corre directo: `auth.uid()` es null en el SQL Editor y el trigger
+   `trg_profiles_protect_admin_fields` lleva la guarda `auth.uid() is not null`,
+   así que no interviene.
 
    Conviene además **crear su cuenta primero**, para que el `created_at` deje
    correcto también el camino de fallback de `get_studio_admin()`.
