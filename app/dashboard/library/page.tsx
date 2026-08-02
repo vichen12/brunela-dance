@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/src/features/auth/guards";
+import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -35,6 +35,10 @@ type ProgressRecord = { video_id: string; completion_percent: number };
 
 async function quickPublishToggleAction(formData: FormData) {
   "use server";
+  // Una server action es un endpoint POST publico: que el formulario se
+  // renderice bajo {isAdmin && ...} no impide que la llamen. Y esta corre con
+  // service_role, que saltea RLS.
+  await requireAdmin();
   const supabase = createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
   const current = formData.get("status") as string;
@@ -46,6 +50,8 @@ async function quickPublishToggleAction(formData: FormData) {
 
 async function quickDeleteVideoAction(formData: FormData) {
   "use server";
+  // Ver quickPublishToggleAction. Esta ademas es destructiva.
+  await requireAdmin();
   const supabase = createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
   await supabase.from("videos").delete().eq("id", id);

@@ -1,4 +1,4 @@
-import { requireUser } from "@/src/features/auth/guards";
+import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
@@ -26,6 +26,10 @@ type Room = {
 
 async function createRoomAction(formData: FormData) {
   "use server";
+  // Una server action es un endpoint POST publico: que el formulario se
+  // renderice bajo {isAdmin && ...} no impide que la llamen. Y esta corre con
+  // service_role, que saltea RLS.
+  await requireAdmin();
   const supabase = createSupabaseAdminClient();
   const schema = z.object({
     name: z.string().min(2),
@@ -52,6 +56,8 @@ async function createRoomAction(formData: FormData) {
 
 async function archiveRoomAction(formData: FormData) {
   "use server";
+  // Ver createRoomAction.
+  await requireAdmin();
   const supabase = createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
   const archived = formData.get("archived") === "true";
