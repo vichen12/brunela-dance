@@ -271,7 +271,7 @@ export function Navbar() {
           white-space: nowrap;
         }
         .nav-button-solid {
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           box-shadow: 0 4px 16px rgba(230,79,85,0.28);
         }

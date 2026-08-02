@@ -127,8 +127,8 @@ export default async function AdminOverviewPage() {
       {/* Greeting header */}
       <div style={{
         borderRadius: 24, padding: "28px 32px",
-        background: "linear-gradient(135deg, #fdf2f8 0%, #fff 50%, #fce7f3 100%)",
-        border: "1px solid #fce7f3",
+        background: "linear-gradient(135deg, var(--pink-wash) 0%, #fff 50%, var(--pink-soft) 100%)",
+        border: "1px solid var(--pink-soft)",
         boxShadow: "0 4px 24px rgba(190,24,93,0.06)",
       }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase" }}>
@@ -167,9 +167,9 @@ export default async function AdminOverviewPage() {
           Alumnas por suscripción
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-          <TierBlock count={tierCount["principal"] ?? 0}       label="Principal"       pct={Math.round(((tierCount["principal"] ?? 0) / total) * 100)}       bg="#1c1917" color="#fdf2f8" />
-          <TierBlock count={tierCount["solista"] ?? 0}         label="Solista"         pct={Math.round(((tierCount["solista"] ?? 0) / total) * 100)}         bg="linear-gradient(135deg,#fdf2f8,#fce7f3)" color="#9d174d" />
-          <TierBlock count={tierCount["corps_de_ballet"] ?? 0} label="Corps de Ballet" pct={Math.round(((tierCount["corps_de_ballet"] ?? 0) / total) * 100)} bg="linear-gradient(135deg,#fff0f9,#fce7f3)" color="#be185d" borderColor="#fce7f3" />
+          <TierBlock count={tierCount["principal"] ?? 0}       label="Principal"       pct={Math.round(((tierCount["principal"] ?? 0) / total) * 100)}       bg="#1c1917" color="var(--pink-wash)" />
+          <TierBlock count={tierCount["solista"] ?? 0}         label="Solista"         pct={Math.round(((tierCount["solista"] ?? 0) / total) * 100)}         bg="linear-gradient(135deg,var(--pink-wash),var(--pink-soft))" color="var(--pink-mid)" />
+          <TierBlock count={tierCount["corps_de_ballet"] ?? 0} label="Corps de Ballet" pct={Math.round(((tierCount["corps_de_ballet"] ?? 0) / total) * 100)} bg="linear-gradient(135deg,#fff0f9,var(--pink-soft))" color="var(--pink-mid)" borderColor="var(--pink-soft)" />
           <TierBlock count={tierCount["none"] ?? 0}            label="Sin plan"        pct={Math.round(((tierCount["none"] ?? 0) / total) * 100)}            bg="#f5f5f4" color="#78716c" borderColor="#e7e5e4" />
         </div>
       </div>

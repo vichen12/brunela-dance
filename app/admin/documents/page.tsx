@@ -158,12 +158,12 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
           <div className="space-y-3">
             {docs.map((doc) => (
               <div key={doc.id} style={{
-                borderRadius: 18, border: "1px solid #fce7f3",
+                borderRadius: 18, border: "1px solid var(--pink-soft)",
                 background: "rgba(255,255,255,0.7)", overflow: "hidden",
               }}>
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "14px 20px", borderBottom: "1px solid #fce7f3",
+                  padding: "14px 20px", borderBottom: "1px solid var(--pink-soft)",
                   background: "rgba(253,242,248,0.4)",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

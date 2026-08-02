@@ -181,19 +181,19 @@ export default async function CommunityPage({ searchParams }: {
 
       {/* Sidebar */}
       <div className="chat-col-sidebar" style={{
-        width: 230, flexShrink: 0, borderRight: "1px solid #fce7f3",
+        width: 230, flexShrink: 0, borderRight: "1px solid var(--pink-soft)",
         background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
         display: "flex", flexDirection: "column",
       }}>
-        <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid #fce7f3", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--pink-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>CANALES</p>
           {isAdmin && (
             <a
               href={showCreate ? "/dashboard/community" : "/dashboard/community?create=1"}
               style={{
                 width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
-                background: showCreate ? "var(--pink)" : "#fdf2f8", color: showCreate ? "#fff" : "var(--pink)",
-                fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid #fce7f3",
+                background: showCreate ? "var(--pink)" : "var(--pink-wash)", color: showCreate ? "#fff" : "var(--pink)",
+                fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid var(--pink-soft)",
               }}
             >{showCreate ? "×" : "+"}</a>
           )}
@@ -201,7 +201,7 @@ export default async function CommunityPage({ searchParams }: {
 
         {/* Admin create form */}
         {isAdmin && showCreate && (
-          <form action={createRoomAction} style={{ padding: "12px 12px 8px", borderBottom: "1px solid #fce7f3", background: "#fdf2f8" }}>
+          <form action={createRoomAction} style={{ padding: "12px 12px 8px", borderBottom: "1px solid var(--pink-soft)", background: "var(--pink-wash)" }}>
             <div style={{ marginBottom: 8 }}>
               <label className={lbl}>Nombre</label>
               <input className={inp} name="name" required placeholder="General Ballet..." autoFocus/>
@@ -240,8 +240,8 @@ export default async function CommunityPage({ searchParams }: {
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 10px", borderRadius: 10,
-                    background: active ? "linear-gradient(135deg, #fdf2f8, #fce7f3)" : "transparent",
-                    border: active ? "1px solid #fbcfe8" : "1px solid transparent",
+                    background: active ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "transparent",
+                    border: active ? "1px solid var(--pink-line)" : "1px solid transparent",
                     textDecoration: "none",
                     opacity: room.is_archived ? 0.5 : 1,
                   }}
@@ -285,13 +285,13 @@ export default async function CommunityPage({ searchParams }: {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Header */}
         <div style={{
-          padding: "16px 24px", borderBottom: "1px solid #fce7f3",
+          padding: "16px 24px", borderBottom: "1px solid var(--pink-soft)",
           background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
         }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
-            background: "linear-gradient(135deg, #fce7f3, #f9a8d4)",
+            background: "linear-gradient(135deg, var(--pink-soft), var(--rose))",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
           }}>
             {currentRoom?.type === "community" ? "🌸" : "💎"}
@@ -307,8 +307,8 @@ export default async function CommunityPage({ searchParams }: {
           {isAdmin && (
             <a href="/admin/chat" style={{
               padding: "6px 14px", borderRadius: 99, textDecoration: "none",
-              fontSize: 10, fontWeight: 700, background: "#fdf2f8", color: "var(--pink)",
-              border: "1px solid #fce7f3",
+              fontSize: 10, fontWeight: 700, background: "var(--pink-wash)", color: "var(--pink)",
+              border: "1px solid var(--pink-soft)",
             }}>Panel de moderación →</a>
           )}
         </div>

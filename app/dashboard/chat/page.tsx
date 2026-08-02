@@ -95,11 +95,11 @@ export default async function ChatPage({ searchParams }: {
       <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body), sans-serif" }}>
         {/* Members sidebar */}
         <div className="chat-col-sidebar" style={{
-          width: 240, flexShrink: 0, borderRight: "1px solid #fce7f3",
+          width: 240, flexShrink: 0, borderRight: "1px solid var(--pink-soft)",
           background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
           display: "flex", flexDirection: "column",
         }}>
-          <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid #fce7f3" }}>
+          <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid var(--pink-soft)" }}>
             <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>
               MENSAJES DIRECTOS
             </p>
@@ -116,14 +116,14 @@ export default async function ChatPage({ searchParams }: {
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "10px 12px", borderRadius: 12, marginBottom: 2,
-                    background: active ? "linear-gradient(135deg, #fdf2f8, #fce7f3)" : "transparent",
-                    border: active ? "1px solid #fbcfe8" : "1px solid transparent",
+                    background: active ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "transparent",
+                    border: active ? "1px solid var(--pink-line)" : "1px solid transparent",
                     textDecoration: "none",
                   }}
                 >
                   <div style={{
                     width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: active ? "linear-gradient(135deg, #f9a8d4, #be185d)" : "#fdf2f8",
+                    background: active ? "linear-gradient(135deg, var(--rose), var(--pink-mid))" : "var(--pink-wash)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 13, fontWeight: 700, color: active ? "#fff" : "var(--pink)",
                   }}>{name[0]?.toUpperCase()}</div>
@@ -146,14 +146,14 @@ export default async function ChatPage({ searchParams }: {
           {activeRoom && activeMember ? (
             <>
               <div style={{
-                padding: "16px 24px", borderBottom: "1px solid #fce7f3",
+                padding: "16px 24px", borderBottom: "1px solid var(--pink-soft)",
                 background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
                 display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
               }}>
                 <div style={{
                   width: 40, height: 40, borderRadius: 12,
-                  background: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
-                  border: "1.5px solid #fbcfe8",
+                  background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
+                  border: "1.5px solid var(--pink-line)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 16, fontWeight: 700, color: "var(--pink)",
                 }}>
@@ -266,13 +266,13 @@ export default async function ChatPage({ searchParams }: {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "var(--font-body), sans-serif" }}>
       {/* Header */}
       <div style={{
-        padding: "16px 32px", borderBottom: "1px solid #fce7f3",
+        padding: "16px 32px", borderBottom: "1px solid var(--pink-soft)",
         background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
         display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
       }}>
         <div style={{
           width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-          background: "linear-gradient(135deg, #f9a8d4, #be185d)",
+          background: "linear-gradient(135deg, var(--rose), var(--pink-mid))",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, fontWeight: 800, color: "#fff",
           boxShadow: "0 4px 12px rgba(190,24,93,0.3)",
@@ -303,7 +303,7 @@ export default async function ChatPage({ searchParams }: {
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{
             maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
-            border: "1px solid #fce7f3", borderRadius: 24, padding: "40px 32px",
+            border: "1px solid var(--pink-soft)", borderRadius: 24, padding: "40px 32px",
             backdropFilter: "blur(8px)",
           }}>
             <div style={{ fontSize: 36, marginBottom: 14 }}>🔒</div>
@@ -339,7 +339,7 @@ export default async function ChatPage({ searchParams }: {
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{
             maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
-            border: "1px solid #fce7f3", borderRadius: 24, padding: "40px 32px",
+            border: "1px solid var(--pink-soft)", borderRadius: 24, padding: "40px 32px",
             backdropFilter: "blur(8px)",
           }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>

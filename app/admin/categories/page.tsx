@@ -127,13 +127,13 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           <div className="space-y-4">
             {categories.map((cat) => (
               <div key={cat.id} style={{
-                borderRadius: 20, border: "1px solid #fce7f3",
+                borderRadius: 20, border: "1px solid var(--pink-soft)",
                 background: "rgba(255,255,255,0.7)", overflow: "hidden",
               }}>
                 {/* Header */}
                 <div style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "16px 22px", borderBottom: "1px solid #fce7f3",
+                  padding: "16px 22px", borderBottom: "1px solid var(--pink-soft)",
                   background: "rgba(253,242,248,0.5)",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -142,7 +142,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     </span>
                     <span style={{
                       fontSize: 8, letterSpacing: "0.12em", fontWeight: 700,
-                      background: cat.membership_tier_required === "none" ? "#f5f5f4" : "#fdf2f8",
+                      background: cat.membership_tier_required === "none" ? "#f5f5f4" : "var(--pink-wash)",
                       color: cat.membership_tier_required === "none" ? "var(--muted)" : "var(--pink)",
                       padding: "3px 9px", borderRadius: 99,
                     }}>

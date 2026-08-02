@@ -146,7 +146,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
         }
 
         .language-switcher button.is-active {
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
         }
 

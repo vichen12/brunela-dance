@@ -71,18 +71,29 @@ export function AdminSidebar() {
     }}>
       {/* Brand */}
       <div style={{ padding: "20px 16px 16px", borderBottom: "1.5px solid #f5f0ef" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-            background: "linear-gradient(135deg, #f9a8b4, #be185d)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+        {/* Mismo wordmark que el sidebar de miembro, a escala menor: el sistema
+            entero se lee como una sola marca. El cuadrado con la "B" salio
+            porque era un segundo logo compitiendo con el de la landing. */}
+        <div>
+          <p style={{
+            fontFamily: "var(--font-display), sans-serif",
+            fontSize: 22, fontWeight: 800, letterSpacing: "0.1em",
+            color: "var(--pink)", lineHeight: 1,
           }}>
-            <span style={{ color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "var(--font-display), serif" }}>B</span>
-          </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917", letterSpacing: "-0.01em", lineHeight: 1.2 }}>Brunela</p>
-            <p style={{ fontSize: 10, color: "#a8a29e", fontWeight: 600, letterSpacing: "0.05em", marginTop: 1 }}>Backstage</p>
-          </div>
+            BRUNELA
+          </p>
+          <p style={{
+            fontSize: 8, fontWeight: 500, letterSpacing: "0.34em",
+            color: "var(--ink)", marginTop: 7, opacity: 0.75,
+          }}>
+            DANCE TRAINER
+          </p>
+          <p style={{
+            fontSize: 9, color: "var(--pink-muted)", fontWeight: 700,
+            letterSpacing: "0.14em", marginTop: 10, textTransform: "uppercase",
+          }}>
+            Backstage
+          </p>
         </div>
       </div>
 
@@ -102,11 +113,11 @@ export function AdminSidebar() {
                   <Link key={item.href} href={item.href as Route} style={{
                     display: "flex", alignItems: "center", gap: 9,
                     padding: "7px 9px", borderRadius: 8, textDecoration: "none",
-                    background: active ? "#fdf2f8" : "transparent",
-                    color: active ? "#be185d" : "#78716c",
+                    background: active ? "var(--pink-wash)" : "transparent",
+                    color: active ? "var(--pink-mid)" : "#78716c",
                     fontWeight: active ? 700 : 500,
                     fontSize: 13,
-                    borderLeft: active ? "2px solid #be185d" : "2px solid transparent",
+                    borderLeft: active ? "2px solid var(--pink-mid)" : "2px solid transparent",
                     transition: "background 0.12s, color 0.12s",
                   }}>
                     <Ico d={item.d} d2={(item as { d2?: string }).d2} />

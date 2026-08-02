@@ -74,9 +74,9 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
 };
 
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d", label: "Corps" },
-  solista:         { bg: "#fce7f3", color: "#be185d", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8", label: "Principal" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
 };
 
 const LOCALE_FLAGS: Record<string, string> = { es: "ES", en: "EN", fr: "FR", it: "IT" };
@@ -290,7 +290,7 @@ function VideoForm({ video }: { video?: VideoRecord }) {
         </F>
         <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={video?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "#be185d" }} />
+            <input defaultChecked={video?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
           </label>
         </div>
@@ -327,7 +327,7 @@ function VideoForm({ video }: { video?: VideoRecord }) {
 
       <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
         <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, #db2777, #be185d)" : "#1c1917",
+          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#1c1917",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",
@@ -440,7 +440,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
         }}>
           <span style={{
             width: 24, height: 24, borderRadius: 8,
-            background: "linear-gradient(135deg, #db2777, #be185d)",
+            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 16, fontWeight: 800, flexShrink: 0,
           }}>+</span>
@@ -491,7 +491,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                     {/* Thumbnail */}
                     <div style={{
                       width: 64, height: 42, borderRadius: 10, flexShrink: 0, overflow: "hidden",
-                      background: "linear-gradient(145deg, #fce7f3, #f9a8d4)",
+                      background: "linear-gradient(145deg, var(--pink-soft), var(--rose))",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       {adminThumb(video) ? (

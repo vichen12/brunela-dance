@@ -157,9 +157,9 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
 };
 
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d", label: "Corps de Ballet" },
-  solista:         { bg: "#fce7f3", color: "#be185d", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8", label: "Principal" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps de Ballet" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
 };
 
 const inp: React.CSSProperties = {
@@ -295,7 +295,7 @@ function LiveForm({ session }: { session?: LiveSession }) {
 
       <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
         <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, #db2777, #be185d)" : "#1c1917",
+          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#1c1917",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",
@@ -400,7 +400,7 @@ export default async function AdminLivePage({
         }}>
           <span style={{
             width: 24, height: 24, borderRadius: 8,
-            background: "linear-gradient(135deg, #db2777, #be185d)",
+            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1, flexShrink: 0,
           }}>+</span>
@@ -447,7 +447,7 @@ export default async function AdminLivePage({
                     {/* Cover */}
                     <div style={{
                       width: 64, height: 42, borderRadius: 10, flexShrink: 0, overflow: "hidden",
-                      background: "linear-gradient(145deg, #fce7f3, #f9a8d4)",
+                      background: "linear-gradient(145deg, var(--pink-soft), var(--rose))",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       {session.cover_image_url ? (

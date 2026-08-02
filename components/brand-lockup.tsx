@@ -21,7 +21,7 @@ export function BrandLockup({
   className = ""
 }: BrandLockupProps) {
   const textColor = light ? "#ffffff" : "#D93438";
-  const subtitleColor = light ? "rgba(255,255,255,0.78)" : "#E64F55";
+  const subtitleColor = light ? "rgba(255,255,255,0.78)" : "var(--pink)";
   const markWidth = markOnly ? (compact ? 42 : 78) : compact ? 36 : 50;
   const markHeight = markOnly ? (compact ? 42 : 78) : compact ? 50 : 70;
   const wordmarkWidth = compact ? 132 : 260;

@@ -105,23 +105,23 @@ async function quickDeleteVideoAction(formData: FormData) {
 
 const TIER_META: Record<string, { bg: string; color: string; label: string }> = {
   none:            { bg: "#f5f5f4", color: "#78716c", label: "Básico" },
-  corps_de_ballet: { bg: "#fdf2f8", color: "#be185d", label: "Corps" },
-  solista:         { bg: "#fce7f3", color: "#9d174d", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8", label: "Principal" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
 };
 
 const CAT_GRADIENTS: Record<string, string> = {
-  ballet:     "linear-gradient(145deg, #fce7f3 0%, #f9a8d4 100%)",
-  reformer:   "linear-gradient(145deg, #fdf2f8 0%, #f472b6 100%)",
-  mat:        "linear-gradient(145deg, #fce7f3 0%, #ec4899 100%)",
-  stretching: "linear-gradient(145deg, #fdf4ff 0%, #e879f9 100%)",
-  pbt:        "linear-gradient(145deg, #fdf2f8 0%, #db2777 100%)",
-  pct:        "linear-gradient(145deg, #fff1f2 0%, #be185d 100%)",
+  ballet:     "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
+  reformer:   "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
+  mat:        "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink) 100%)",
+  stretching: "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
+  pbt:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
+  pct:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
 };
 
 function catGradient(slugs: string[]): string {
   for (const s of slugs) if (CAT_GRADIENTS[s]) return CAT_GRADIENTS[s];
-  return "linear-gradient(145deg, #fdf2f8 0%, #fbcfe8 100%)";
+  return "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-line) 100%)";
 }
 
 const FIXED_FILTERS = [
@@ -261,8 +261,8 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
                   padding: "10px 20px", borderRadius: 99,
-                  background: "#fdf2f8", color: "var(--pink)",
-                  border: "1.5px solid #fce7f3",
+                  background: "var(--pink-wash)", color: "var(--pink)",
+                  border: "1.5px solid var(--pink-soft)",
                   fontSize: 12, fontWeight: 700, textDecoration: "none",
                 }}
               >
@@ -283,7 +283,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 16 }}>🎬</span>
               <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#fdf2f8" }}>Modo administración</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "var(--pink-wash)" }}>Modo administración</p>
                 <p style={{ fontSize: 10, color: "#a8a29e", marginTop: 1 }}>Ves todas las clases incluidas borradores. Los botones de edición aparecen en cada tarjeta.</p>
               </div>
             </div>
@@ -328,7 +328,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
         {/* Grid */}
         {visible.length === 0 ? (
           <div style={{
-            border: "1.5px dashed #fbcfe8", borderRadius: 20, padding: "40px 24px",
+            border: "1.5px dashed var(--pink-line)", borderRadius: 20, padding: "40px 24px",
             fontSize: 13, color: "var(--muted)", textAlign: "center",
           }}>
             {isAdmin
@@ -475,14 +475,14 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               <a href="/admin/videos" style={{ textDecoration: "none" }}>
                 <div style={{
                   height: "100%", minHeight: 280, borderRadius: "2rem",
-                  border: "2px dashed #fbcfe8", display: "flex", flexDirection: "column",
+                  border: "2px dashed var(--pink-line)", display: "flex", flexDirection: "column",
                   alignItems: "center", justifyContent: "center", gap: 12,
                   background: "rgba(253,242,248,0.4)",
                   transition: "background 0.2s, border-color 0.2s",
                 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 14,
-                    background: "linear-gradient(135deg, var(--pink), #9d174d)",
+                    background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 22, color: "#fff", boxShadow: "0 4px 12px rgba(190,24,93,0.3)",
                   }}>+</div>

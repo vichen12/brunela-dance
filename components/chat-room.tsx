@@ -45,13 +45,13 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
   if (isAdmin) return (
     <div style={{
       width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-      background: 'linear-gradient(135deg, #f9a8d4, #be185d)',
+      background: 'linear-gradient(135deg, var(--rose), var(--pink-mid))',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 13, fontWeight: 800, color: '#fff',
     }}>B</div>
   );
-  const colors = ['#fdf2f8', '#f0fdf4', '#fefce8', '#eff6ff', '#fdf4ff'];
-  const texts = ['#be185d', '#166534', '#854d0e', '#1d4ed8', '#7e22ce'];
+  const colors = ['var(--pink-wash)', '#f0fdf4', '#fefce8', '#eff6ff', 'var(--pink-wash)'];
+  const texts = ['var(--pink-mid)', '#166534', '#854d0e', '#1d4ed8', '#7e22ce'];
   const idx = name.charCodeAt(0) % colors.length;
   return (
     <div style={{
@@ -116,7 +116,7 @@ function MessageBubble({
             {name.toUpperCase()}
           </span>
           {senderIsAdmin && (
-            <span style={{ fontSize: 7.5, background: '#fdf2f8', color: 'var(--pink)', padding: '1px 6px', borderRadius: 99, fontWeight: 700, letterSpacing: '0.1em' }}>
+            <span style={{ fontSize: 7.5, background: 'var(--pink-wash)', color: 'var(--pink)', padding: '1px 6px', borderRadius: 99, fontWeight: 700, letterSpacing: '0.1em' }}>
               INSTRUCTORA
             </span>
           )}
@@ -275,7 +275,7 @@ export function ChatRoom({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       {/* Room label */}
       {roomName && (
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid #fce7f3', flexShrink: 0 }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--pink-soft)', flexShrink: 0 }}>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--pink)' }}>
             {roomName.toUpperCase()}
           </span>
@@ -306,7 +306,7 @@ export function ChatRoom({
 
       {/* Input */}
       <div style={{
-        padding: '12px 20px', borderTop: '1px solid #fce7f3', flexShrink: 0,
+        padding: '12px 20px', borderTop: '1px solid var(--pink-soft)', flexShrink: 0,
         display: 'flex', gap: 10, background: 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(8px)',
       }}>
@@ -316,9 +316,9 @@ export function ChatRoom({
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send()}
           placeholder={placeholder}
           style={{
-            flex: 1, border: '1.5px solid #fce7f3', borderRadius: 24,
+            flex: 1, border: '1.5px solid var(--pink-soft)', borderRadius: 24,
             padding: '10px 16px', fontSize: 13, color: 'var(--ink)',
-            background: '#fdf2f8', outline: 'none',
+            background: 'var(--pink-wash)', outline: 'none',
             fontFamily: 'var(--font-body), sans-serif',
           }}
         />
@@ -327,14 +327,14 @@ export function ChatRoom({
           disabled={sending || !input.trim()}
           style={{
             width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-            background: input.trim() ? 'var(--pink)' : '#fce7f3',
+            background: input.trim() ? 'var(--pink)' : 'var(--pink-soft)',
             border: 'none', cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.15s',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M14 8L2 3l3 5-3 5 12-5z" fill={input.trim() ? '#fff' : '#fbcfe8'} />
+            <path d="M14 8L2 3l3 5-3 5 12-5z" fill={input.trim() ? '#fff' : 'var(--pink-line)'} />
           </svg>
         </button>
       </div>
@@ -376,9 +376,9 @@ export function ChatRoom({
                     style={{
                       padding: '7px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700,
                       cursor: 'pointer',
-                      background: active ? 'var(--pink)' : '#fdf2f8',
+                      background: active ? 'var(--pink)' : 'var(--pink-wash)',
                       color: active ? '#fff' : 'var(--muted)',
-                      border: active ? 'none' : '1.5px solid #fce7f3',
+                      border: active ? 'none' : '1.5px solid var(--pink-soft)',
                     }}
                   >{opt.label}</button>
                 );
@@ -390,7 +390,7 @@ export function ChatRoom({
               onChange={(e) => setMuteReason(e.target.value)}
               placeholder="Motivo (opcional)"
               style={{
-                width: '100%', borderRadius: 12, border: '1.5px solid #fce7f3',
+                width: '100%', borderRadius: 12, border: '1.5px solid var(--pink-soft)',
                 padding: '10px 14px', fontSize: 13, minHeight: 80, resize: 'vertical',
                 fontFamily: 'var(--font-body), sans-serif', outline: 'none',
               }}

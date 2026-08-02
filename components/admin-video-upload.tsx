@@ -483,7 +483,7 @@ export function AdminVideoUpload() {
       </div>
 
       <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, cursor: "pointer" }}>
-        <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 16, height: 16, accentColor: "#be185d" }} />
+        <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
       </label>
 
@@ -493,12 +493,12 @@ export function AdminVideoUpload() {
             marginTop: 18,
             borderRadius: 14,
             padding: "14px 18px",
-            background: phase === "error" ? "#fef2f2" : phase === "done" ? "#f0fdf4" : "#fdf2f8",
-            border: `1px solid ${phase === "error" ? "#fecaca" : phase === "done" ? "#bbf7d0" : "#fbcfe8"}`
+            background: phase === "error" ? "#fef2f2" : phase === "done" ? "#f0fdf4" : "var(--pink-wash)",
+            border: `1px solid ${phase === "error" ? "#fecaca" : phase === "done" ? "#bbf7d0" : "var(--pink-line)"}`
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: phase === "error" ? "#991b1b" : phase === "done" ? "#166534" : "#be185d" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: phase === "error" ? "#991b1b" : phase === "done" ? "#166534" : "var(--pink-mid)" }}>
               {message ?? phaseLabel[phase]}
             </span>
             {(phase === "video" || phase === "audio") && (
@@ -510,8 +510,8 @@ export function AdminVideoUpload() {
 
           {(phase === "video" || phase === "audio" || phase === "saving" || phase === "done") && (
             <>
-              <div style={{ height: 6, background: "#fce7f3", borderRadius: 99, marginTop: 10, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${progress}%`, borderRadius: 99, background: phase === "done" ? "#22c55e" : "linear-gradient(90deg, #db2777, #be185d)", transition: "width 0.2s" }} />
+              <div style={{ height: 6, background: "var(--pink-soft)", borderRadius: 99, marginTop: 10, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${progress}%`, borderRadius: 99, background: phase === "done" ? "#22c55e" : "linear-gradient(90deg, var(--pink), var(--pink-mid))", transition: "width 0.2s" }} />
               </div>
               <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 6 }}>{progress}%</p>
             </>
@@ -524,7 +524,7 @@ export function AdminVideoUpload() {
           type="submit"
           disabled={busy || hasSizeError}
           style={{
-            background: busy || hasSizeError ? "#d6d3d1" : "linear-gradient(135deg, #db2777, #be185d)",
+            background: busy || hasSizeError ? "#d6d3d1" : "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             color: "#fff",
             border: "none",
             borderRadius: 99,

@@ -143,7 +143,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           aspect-ratio: 1;
           border-radius: 999px;
           overflow: hidden;
-          background: linear-gradient(135deg, #E64F55 0%, #FFDADA 52%, #fff 100%);
+          background: linear-gradient(135deg, var(--pink) 0%, #FFDADA 52%, #fff 100%);
           padding: 4px;
           opacity: 0;
           box-shadow: 0 16px 32px rgba(217, 52, 56, 0.16), 0 0 0 1px rgba(230, 79, 85, 0.14);
@@ -190,7 +190,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
 
         .brand-hero-kicker {
           margin: 0;
-          color: #E64F55;
+          color: var(--pink);
           font-size: 0.76rem;
           font-weight: 900;
           letter-spacing: 0.38em;
@@ -261,7 +261,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         }
 
         .hero-action.primary {
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           box-shadow: 0 14px 28px rgba(230, 79, 85, 0.28);
         }

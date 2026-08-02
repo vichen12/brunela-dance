@@ -59,18 +59,18 @@ const TIER_LABEL: Record<MembershipTier, string> = {
 
 const TIER_COLOR: Record<MembershipTier, { bg: string; color: string }> = {
   none:            { bg: "#f1f5f9", color: "#64748b" },
-  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d" },
-  solista:         { bg: "#fce7f3", color: "#be185d" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)" },
 };
 
 const CLASS_CATS = [
-  { key: "ballet",     label: "Ballet",           sub: "Tecnica clasica",   grad: "linear-gradient(145deg, #fce7f3, #db2777)" },
-  { key: "reformer",   label: "Pilates Reformer",  sub: "Fuerza funcional",  grad: "linear-gradient(145deg, #fdf2f8, #be185d)" },
-  { key: "mat",        label: "Pilates Mat",       sub: "Control de centro", grad: "linear-gradient(145deg, #fce7f3, #ec4899)" },
-  { key: "stretching", label: "Stretching",        sub: "Movilidad activa",  grad: "linear-gradient(145deg, #fdf4ff, #a855f7)" },
-  { key: "pbt",        label: "PBT",               sub: "PBT Certificado",   grad: "linear-gradient(145deg, #fdf2f8, #9d174d)" },
-  { key: "pct",        label: "PCT",               sub: "PCT Certificado",   grad: "linear-gradient(145deg, #fff1f2, #be185d)" },
+  { key: "ballet",     label: "Ballet",           sub: "Tecnica clasica",   grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
+  { key: "reformer",   label: "Pilates Reformer",  sub: "Fuerza funcional",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
+  { key: "mat",        label: "Pilates Mat",       sub: "Control de centro", grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
+  { key: "stretching", label: "Stretching",        sub: "Movilidad activa",  grad: "linear-gradient(145deg, var(--pink-wash), #a855f7)" },
+  { key: "pbt",        label: "PBT",               sub: "PBT Certificado",   grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
+  { key: "pct",        label: "PCT",               sub: "PCT Certificado",   grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
 ];
 
 /** Etiqueta legible de cada categoria, para no mostrar el slug crudo. */
@@ -278,9 +278,9 @@ export default async function DashboardPage() {
 
   type TierRow = { label: string; count: number; bg: string; color: string; border?: string; barBg: string };
   const TIER_ROWS: TierRow[] = [
-    { label: "Principal",       count: principalCount ?? 0, bg: "#1c1917", color: "#fdf2f8", barBg: "#1c1917" },
-    { label: "Solista",         count: solistaCount ?? 0,   bg: "#9d174d", color: "#fff",    barBg: "#9d174d" },
-    { label: "Corps de Ballet", count: corpsCount ?? 0,     bg: "#fdf2f8", color: "#be185d", border: "1px solid #fbcfe8", barBg: "#f9a8d4" },
+    { label: "Principal",       count: principalCount ?? 0, bg: "#1c1917", color: "var(--pink-wash)", barBg: "#1c1917" },
+    { label: "Solista",         count: solistaCount ?? 0,   bg: "var(--pink-mid)", color: "#fff",    barBg: "var(--pink-mid)" },
+    { label: "Corps de Ballet", count: corpsCount ?? 0,     bg: "var(--pink-wash)", color: "var(--pink-deep)", border: "1px solid var(--pink-line)", barBg: "var(--rose)" },
     { label: "Sin plan",        count: noPlanCount ?? 0,    bg: "#f5f5f4", color: "#78716c", barBg: "#d4d4d4" },
   ];
 
@@ -294,7 +294,7 @@ export default async function DashboardPage() {
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#be185d", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 5 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink-deep)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 5 }}>
                   {formatDate()}
                 </p>
                 <h1 style={{ fontFamily: "var(--font-display), serif", fontSize: 32, fontWeight: 800, color: "#1c1917", lineHeight: 1.1, letterSpacing: "-0.01em" }}>
@@ -304,7 +304,7 @@ export default async function DashboardPage() {
               <Link href="/admin" style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "9px 20px", borderRadius: 99, textDecoration: "none",
-                background: "#1c1917", color: "#fdf2f8",
+                background: "#1c1917", color: "var(--pink-wash)",
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
               }}>
                 Admin completo →
@@ -315,9 +315,9 @@ export default async function DashboardPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
               {([
                 { value: totalUsers ?? 0,    label: "Alumnas totales",   accent: "#1c1917", sub: `+${newUsersMonth ?? 0} este mes`,      href: "/admin/users" },
-                { value: paidUsers,           label: "Con plan activo",   accent: "#be185d", sub: `${principalCount ?? 0} principal`,     href: "/admin/users" },
+                { value: paidUsers,           label: "Con plan activo",   accent: "var(--pink-mid)", sub: `${principalCount ?? 0} principal`,     href: "/admin/users" },
                 { value: noPlanCount ?? 0,    label: "Sin plan",          accent: "#78716c", sub: "Sin suscripcion activa",               href: "/admin/users" },
-                { value: totalBookings ?? 0,  label: "Reservas activas",  accent: "#be185d", sub: `${scheduledLive ?? 0} sesiones prog.`, href: "/admin/live" },
+                { value: totalBookings ?? 0,  label: "Reservas activas",  accent: "var(--pink-mid)", sub: `${scheduledLive ?? 0} sesiones prog.`, href: "/admin/live" },
               ] as const).map((s, i) => (
                 <Link key={i} href={s.href as never} style={{ textDecoration: "none" }}>
                   <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 16, padding: "18px 20px", height: "100%" }}>
@@ -383,7 +383,7 @@ export default async function DashboardPage() {
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase" }}>
                     Ultimas alumnas
                   </p>
-                  <Link href="/admin/users" style={{ fontSize: 11, color: "#be185d", fontWeight: 600, textDecoration: "none" }}>
+                  <Link href="/admin/users" style={{ fontSize: 11, color: "var(--pink-deep)", fontWeight: 600, textDecoration: "none" }}>
                     Ver todas →
                   </Link>
                 </div>
@@ -397,9 +397,9 @@ export default async function DashboardPage() {
                       <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
                           width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                          background: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
+                          background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 700, color: "#be185d",
+                          fontSize: 11, fontWeight: 700, color: "var(--pink-deep)",
                         }}>{initial}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -411,7 +411,7 @@ export default async function DashboardPage() {
                           fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
                           background: badge.bg, color: badge.color,
                           padding: "2px 7px", borderRadius: 99, flexShrink: 0,
-                          border: u.membership_tier === "corps_de_ballet" ? "1px solid #fbcfe8" : undefined,
+                          border: u.membership_tier === "corps_de_ballet" ? "1px solid var(--pink-line)" : undefined,
                         }}>{TIER_LABEL[u.membership_tier].toUpperCase()}</span>
                       </div>
                     );
@@ -459,13 +459,13 @@ export default async function DashboardPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {announcements.map((ann) => (
               <div key={ann.id} style={{
-                background: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
-                border: "1px solid #fbcfe8", borderRadius: 16,
+                background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
+                border: "1px solid var(--pink-line)", borderRadius: 16,
                 padding: "14px 20px", display: "flex", gap: 12, alignItems: "flex-start",
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: 8,
-                  background: "linear-gradient(135deg, #db2777, #be185d)",
+                  background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   flexShrink: 0, marginTop: 1,
                 }}>
@@ -475,7 +475,7 @@ export default async function DashboardPage() {
                   </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {ann.title && <p style={{ fontSize: 13, fontWeight: 700, color: "#9d174d", marginBottom: 3 }}>{ann.title}</p>}
+                  {ann.title && <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink-deep)", marginBottom: 3 }}>{ann.title}</p>}
                   <p style={{ fontSize: 13, color: "#44403c", lineHeight: 1.5 }}>{ann.content}</p>
                 </div>
               </div>

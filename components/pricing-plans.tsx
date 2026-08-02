@@ -199,7 +199,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
         .pricing-toggle button.is-active {
           border-color: transparent;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           box-shadow: 0 12px 28px rgba(230, 79, 85, 0.24);
         }
@@ -295,7 +295,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           width: 24px;
           height: 24px;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           box-shadow: 0 8px 18px rgba(217, 52, 56, 0.26), inset 0 1px 0 rgba(255,255,255,0.68);
           transition: left 200ms ease;
         }
@@ -311,7 +311,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         .pricing-save-note svg {
           width: 70px;
           height: 28px;
-          color: #E64F55;
+          color: var(--pink);
           opacity: 0.82;
         }
 
@@ -372,7 +372,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         .classic-plan-card.is-featured {
-          background: linear-gradient(150deg, #E64F55 0%, #C8383E 60%, #B83050 100%);
+          background: linear-gradient(150deg, var(--pink) 0%, var(--pink-mid) 60%, var(--pink-mid) 100%);
           border-color: transparent;
           color: #fff;
           box-shadow: 0 32px 90px rgba(200, 56, 62, 0.3), 0 8px 28px rgba(200, 56, 62, 0.18);
@@ -478,7 +478,7 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           min-height: 48px;
           margin-top: auto;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           padding: 0.78rem 1rem;
           font-size: 0.7rem;

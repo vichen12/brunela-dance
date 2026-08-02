@@ -1,7 +1,7 @@
 "use client";
 
 // ─── Sparkline (pure SVG, no interactivity needed, but kept here for co-location)sasa───
-function Sparkline({ points, color = "#be185d" }: { points: string; color?: string }) {
+function Sparkline({ points, color = "var(--pink-mid)" }: { points: string; color?: string }) {
   const pts = points.split(" ").map((p) => { const [x, y] = p.split(","); return { x: +x, y: +y }; });
   const last = pts[pts.length - 1];
   const fillPath = `${points} ${last.x},32 0,32 Z`;
@@ -102,7 +102,7 @@ export function QuickLinksGrid({ links }: {
           >
             <div style={{
               width: 38, height: 38, borderRadius: 12,
-              background: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
+              background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 18, marginBottom: 12,
             }}>{lnk.icon}</div>

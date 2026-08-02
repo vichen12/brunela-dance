@@ -45,7 +45,7 @@ export function AdminHeader() {
         </Link>
         <div style={{
           width: 30, height: 30, borderRadius: "50%",
-          background: "linear-gradient(135deg, #f9a8b4, #be185d)",
+          background: "linear-gradient(135deg, var(--rose), var(--pink-mid))",
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}>

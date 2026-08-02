@@ -93,9 +93,9 @@ export default async function DocumentsPage({ searchParams }: {
                 style={{
                   padding: "7px 18px", borderRadius: 99, textDecoration: "none",
                   fontSize: 12, fontWeight: 700,
-                  background: activeCategory === f.key ? "var(--pink)" : "#fdf2f8",
+                  background: activeCategory === f.key ? "var(--pink)" : "var(--pink-wash)",
                   color: activeCategory === f.key ? "#fff" : "var(--muted)",
-                  border: activeCategory === f.key ? "none" : "1.5px solid #fce7f3",
+                  border: activeCategory === f.key ? "none" : "1.5px solid var(--pink-soft)",
                   boxShadow: activeCategory === f.key ? "0 4px 12px rgba(190,24,93,0.25)" : "none",
                 }}
               >{f.label}</a>
@@ -159,7 +159,7 @@ export default async function DocumentsPage({ searchParams }: {
                   {/* Icon area */}
                   <div style={{
                     height: 80, borderRadius: 14, marginBottom: 14,
-                    background: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
+                    background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 32,
                   }}>
@@ -180,13 +180,13 @@ export default async function DocumentsPage({ searchParams }: {
                     <div style={{ display: "flex", gap: 6 }}>
                       <span style={{
                         fontSize: 8, fontWeight: 700, letterSpacing: "0.1em",
-                        background: "#fdf2f8", color: "var(--pink)",
+                        background: "var(--pink-wash)", color: "var(--pink)",
                         padding: "3px 8px", borderRadius: 99, textTransform: "uppercase",
                       }}>{doc.file_type}</span>
                       {doc.membership_tier_required !== "none" && (
                         <span style={{
                           fontSize: 8, fontWeight: 700, letterSpacing: "0.1em",
-                          background: "#1c1917", color: "#fdf2f8",
+                          background: "#1c1917", color: "var(--pink-wash)",
                           padding: "3px 8px", borderRadius: 99,
                         }}>{TIER_LABELS[doc.membership_tier_required]}</span>
                       )}

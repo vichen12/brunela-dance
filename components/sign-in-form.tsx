@@ -113,7 +113,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         }
 
         .auth-divider span {
-          color: #B39EAA;
+          color: var(--pink-muted);
           font-size: 0.64rem;
           font-weight: 900;
           letter-spacing: 0.16em;
@@ -130,7 +130,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         .auth-label {
           display: block;
           margin-bottom: 0.55rem;
-          color: #E64F55;
+          color: var(--pink);
           font-size: 0.72rem;
           font-weight: 900;
           letter-spacing: 0.1em;
@@ -155,7 +155,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         }
 
         .auth-input:focus {
-          border-color: #E64F55;
+          border-color: var(--pink);
           box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.1);
         }
 
@@ -176,7 +176,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         }
 
         .auth-forgot {
-          color: #D92E72;
+          color: var(--pink-deep);
           font-size: 0.72rem;
           font-weight: 800;
           text-decoration: none;
@@ -203,7 +203,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
           border: 0;
           border-radius: 999px;
           background: transparent;
-          color: #B39EAA;
+          color: var(--pink-muted);
           cursor: pointer;
           transform: translateY(-50%);
         }
@@ -216,7 +216,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
           min-height: 52px;
           border: 0;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           padding: 0.85rem 1.1rem;
           font-family: var(--font-body), sans-serif;
@@ -252,7 +252,7 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         .auth-alert.error {
           border: 1px solid rgba(217, 105, 119, 0.3);
           background: rgba(255, 238, 242, 0.95);
-          color: #B83251;
+          color: var(--pink-deep);
         }
 
         @media (max-height: 680px) {

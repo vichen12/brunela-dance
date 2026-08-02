@@ -25,7 +25,7 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
         background: 'rgba(255,255,255,0.97)',
         backdropFilter: 'blur(20px)',
-        borderTop: '1px solid #fce7f3',
+        borderTop: '1px solid var(--pink-soft)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         boxShadow: '0 -4px 24px rgba(190,24,93,0.07)',
       }}

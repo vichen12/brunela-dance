@@ -129,7 +129,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           border: 1px solid #F4D5DF;
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.86);
-          color: #D92E72;
+          color: var(--pink-deep);
           padding: 0.45rem 0.85rem;
           font-size: 0.68rem;
           font-weight: 900;
@@ -141,7 +141,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         }
 
         .auth-top-links a:first-child {
-          color: #9B8790;
+          color: var(--pink-muted);
         }
 
         .auth-left {
@@ -222,7 +222,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         }
 
         .auth-feature-list small {
-          color: #9B8790;
+          color: var(--pink-muted);
           font-size: 0.78rem;
           line-height: 1.35;
         }
@@ -242,7 +242,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         .auth-kicker {
           margin: 0 0 0.8rem;
-          color: #D92E72;
+          color: var(--pink-deep);
           font-size: 0.65rem;
           font-weight: 900;
           letter-spacing: 0.3em;
@@ -262,7 +262,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         .auth-description {
           margin: 0 0 1.45rem;
-          color: #9B8790;
+          color: var(--pink-muted);
           font-size: 0.88rem;
           line-height: 1.68;
         }
@@ -277,13 +277,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         .auth-links span,
         .auth-links a {
-          color: #B39EAA;
+          color: var(--pink-muted);
           font-size: 0.76rem;
           text-decoration: none;
         }
 
         .auth-links a:first-of-type {
-          color: #D92E72;
+          color: var(--pink-deep);
           font-weight: 800;
         }
 

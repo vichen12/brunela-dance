@@ -390,9 +390,9 @@ export default async function AdminChatPage({ searchParams }: {
           <a key={t.key} href={`/admin/chat?tab=${t.key}`} style={{
             padding: "7px 18px", borderRadius: 99, textDecoration: "none",
             fontSize: 12, fontWeight: 700,
-            background: tab === t.key ? "var(--pink)" : "#fdf2f8",
+            background: tab === t.key ? "var(--pink)" : "var(--pink-wash)",
             color: tab === t.key ? "#fff" : "var(--muted)",
-            border: tab === t.key ? "none" : "1.5px solid #fce7f3",
+            border: tab === t.key ? "none" : "1.5px solid var(--pink-soft)",
             boxShadow: tab === t.key ? "0 4px 12px rgba(190,24,93,0.25)" : "none",
           }}>{t.label}</a>
         ))}
@@ -480,8 +480,8 @@ export default async function AdminChatPage({ searchParams }: {
                   return (
                     <div key={room.id} style={{
                       borderRadius: 14,
-                      background: active ? "linear-gradient(135deg,#fdf2f8,#fce7f3)" : "transparent",
-                      border: active ? "1.5px solid #fbcfe8" : "1.5px solid transparent",
+                      background: active ? "linear-gradient(135deg,var(--pink-wash),var(--pink-soft))" : "transparent",
+                      border: active ? "1.5px solid var(--pink-line)" : "1.5px solid transparent",
                       overflow: "hidden",
                     }}>
                       <a href={`/admin/chat?tab=rooms&room=${room.id}`} style={{
@@ -504,7 +504,7 @@ export default async function AdminChatPage({ searchParams }: {
                           </div>
                         </div>
                       </a>
-                      <form action={archiveRoomAction} style={{ borderTop: "1px solid #fce7f3", padding: "6px 12px" }}>
+                      <form action={archiveRoomAction} style={{ borderTop: "1px solid var(--pink-soft)", padding: "6px 12px" }}>
                         <input type="hidden" name="id" value={room.id} />
                         <input type="hidden" name="archived" value={String(room.is_archived)} />
                         <button type="submit" style={{
@@ -532,7 +532,7 @@ export default async function AdminChatPage({ searchParams }: {
                   <p className="eyebrow">{activeRoom.name}</p>
                   <span style={{
                     fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                    background: "#fdf2f8", color: "var(--pink)", border: "1px solid #fce7f3",
+                    background: "var(--pink-wash)", color: "var(--pink)", border: "1px solid var(--pink-soft)",
                   }}>{messages.length} mensajes</span>
                 </div>
 
@@ -549,9 +549,9 @@ export default async function AdminChatPage({ searchParams }: {
                           display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10,
                           padding: "10px 14px", borderRadius: 14,
                           background: msg.profiles?.is_admin
-                            ? "linear-gradient(135deg, #fdf2f8, #fce7f3)"
+                            ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))"
                             : (msg.is_deleted ? "#fef2f2" : "rgba(253,242,248,0.4)"),
-                          border: `1px solid ${msg.is_deleted ? "#fecaca" : msg.profiles?.is_admin ? "#fbcfe8" : "#fce7f3"}`,
+                          border: `1px solid ${msg.is_deleted ? "#fecaca" : msg.profiles?.is_admin ? "var(--pink-line)" : "var(--pink-soft)"}`,
                           opacity: msg.is_deleted ? 0.6 : 1,
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -624,7 +624,7 @@ export default async function AdminChatPage({ searchParams }: {
 
                 {/* Send as Brunela */}
                 <div style={{
-                  borderTop: "1px solid #fce7f3", paddingTop: 16, marginTop: 8,
+                  borderTop: "1px solid var(--pink-soft)", paddingTop: 16, marginTop: 8,
                 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 10 }}>
                     Enviar como Brunela
@@ -636,13 +636,13 @@ export default async function AdminChatPage({ searchParams }: {
                       required
                       placeholder="Escribi un mensaje como Brunela..."
                       style={{
-                        flex: 1, borderRadius: 12, border: "1.5px solid #fbcfe8",
+                        flex: 1, borderRadius: 12, border: "1.5px solid var(--pink-line)",
                         background: "#fff", color: "var(--ink)", padding: "10px 14px",
                         fontSize: 13, outline: "none", fontFamily: "inherit",
                       }}
                     />
                     <button type="submit" style={{
-                      background: "linear-gradient(135deg, #db2777, #be185d)",
+                      background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
                       color: "#fff", border: "none", borderRadius: 12,
                       padding: "10px 20px", fontSize: 12, fontWeight: 700,
                       cursor: "pointer", flexShrink: 0,
@@ -682,8 +682,8 @@ export default async function AdminChatPage({ searchParams }: {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "14px 18px", borderRadius: 16,
-                    background: enabled ? "linear-gradient(135deg, #fdf2f8, #fce7f3)" : "#fafafa",
-                    border: `1px solid ${enabled ? "#fbcfe8" : "#f0eeec"}`,
+                    background: enabled ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "#fafafa",
+                    border: `1px solid ${enabled ? "var(--pink-line)" : "#f0eeec"}`,
                     cursor: "pointer",
                   }}
                 >
@@ -699,7 +699,7 @@ export default async function AdminChatPage({ searchParams }: {
                     type="checkbox"
                     name={`dm_${tier}`}
                     defaultChecked={enabled}
-                    style={{ width: 20, height: 20, accentColor: "#be185d" }}
+                    style={{ width: 20, height: 20, accentColor: "var(--pink-mid)" }}
                   />
                 </label>
               );

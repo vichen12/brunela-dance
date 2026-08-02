@@ -17,9 +17,9 @@ type ProfileRow = {
 
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   none:            { bg: "#f1f5f9", color: "#64748b", label: "Sin plan" },
-  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d", label: "Corps de Ballet" },
-  solista:         { bg: "#fce7f3", color: "#be185d", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8", label: "Principal" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps de Ballet" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
 };
 
 const inp: React.CSSProperties = {
@@ -73,9 +73,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
           { value: profiles.length,                   label: "Total alumnas",   color: "#1c1917" },
-          { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "#be185d" },
-          { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "#db2777" },
-          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "#e879f9" },
+          { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)" },
+          { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)" },
+          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)" },
         ].map((s) => (
           <div key={s.label} style={{
             background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "18px 20px",
@@ -126,7 +126,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                       {profile.is_admin && (
                         <span style={{
                           marginLeft: 8, fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 99,
-                          background: "#fdf2f8", color: "#be185d",
+                          background: "var(--pink-wash)", color: "var(--pink-deep)",
                         }}>ADMIN</span>
                       )}
                     </p>
@@ -162,8 +162,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   <div>
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                      background: profile.is_admin ? "#fdf2f8" : "transparent",
-                      color: profile.is_admin ? "#be185d" : "#c4b5af",
+                      background: profile.is_admin ? "var(--pink-wash)" : "transparent",
+                      color: profile.is_admin ? "var(--pink-mid)" : "#c4b5af",
                     }}>{profile.is_admin ? "Si" : "No"}</span>
                   </div>
 
@@ -200,12 +200,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     </label>
 
                     <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 2 }}>
-                      <input defaultChecked={profile.onboarding_completed} name="onboardingCompleted" type="checkbox" style={{ width: 15, height: 15, accentColor: "#be185d" }} />
+                      <input defaultChecked={profile.onboarding_completed} name="onboardingCompleted" type="checkbox" style={{ width: 15, height: 15, accentColor: "var(--pink-mid)" }} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Onboarding completo</span>
                     </label>
 
                     <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 2 }}>
-                      <input defaultChecked={profile.is_admin} name="isAdmin" type="checkbox" style={{ width: 15, height: 15, accentColor: "#be185d" }} />
+                      <input defaultChecked={profile.is_admin} name="isAdmin" type="checkbox" style={{ width: 15, height: 15, accentColor: "var(--pink-mid)" }} />
                       <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Es admin</span>
                     </label>
 

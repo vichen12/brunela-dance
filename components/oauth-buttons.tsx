@@ -82,7 +82,7 @@ export function OAuthButtons({ callbackUrl }: Props) {
         }}
         onMouseOver={(e) => {
           if (loading) return;
-          e.currentTarget.style.borderColor = "#be185d";
+          e.currentTarget.style.borderColor = "var(--pink-mid)";
           e.currentTarget.style.boxShadow = "0 2px 14px rgba(190,24,93,0.12)";
         }}
         onMouseOut={(e) => {
@@ -101,7 +101,7 @@ export function OAuthButtons({ callbackUrl }: Props) {
             borderRadius: 12,
             border: "1px solid rgba(217, 105, 119, 0.3)",
             background: "rgba(255, 238, 242, 0.95)",
-            color: "#B83251",
+            color: "var(--pink-deep)",
             padding: "0.7rem 0.9rem",
             fontSize: "0.78rem",
             fontWeight: 600,

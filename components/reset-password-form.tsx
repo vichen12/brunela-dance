@@ -85,7 +85,7 @@ export function ResetPasswordForm({ error }: Props) {
       </div>
 
       {error ? (
-        <div style={{ borderRadius: 12, border: "1px solid rgba(217,105,119,0.3)", background: "rgba(255,238,242,0.95)", padding: "0.85rem 1rem", fontSize: "0.82rem", fontWeight: 600, color: "#b83251" }}>
+        <div style={{ borderRadius: 12, border: "1px solid rgba(217,105,119,0.3)", background: "rgba(255,238,242,0.95)", padding: "0.85rem 1rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--pink-deep)" }}>
           {error}
         </div>
       ) : null}

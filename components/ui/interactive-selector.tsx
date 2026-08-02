@@ -355,14 +355,14 @@ export function InteractiveSelector() {
           border: 0;
           border-radius: 999px;
           background: transparent;
-          color: #7D5562;
+          color: var(--pink-muted);
           padding: 0.55rem 1rem;
           font-weight: 900;
           transition: background 180ms ease, color 180ms ease, transform 180ms ease;
         }
 
         .studio-tabs button.is-active {
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           box-shadow: 0 14px 32px rgba(230, 79, 85, 0.25);
         }
@@ -430,7 +430,7 @@ export function InteractiveSelector() {
           top: 1.2rem;
           left: 1.2rem;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           padding: 0.42rem 0.75rem;
           font-size: 0.72rem;
@@ -507,7 +507,7 @@ export function InteractiveSelector() {
           height: 38px;
           border: 0;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
         }
 
@@ -531,7 +531,7 @@ export function InteractiveSelector() {
         }
 
         .studio-modal-copy > span {
-          color: #E64F55;
+          color: var(--pink);
           font-size: 0.72rem;
           font-weight: 900;
           letter-spacing: 0.16em;
@@ -551,7 +551,7 @@ export function InteractiveSelector() {
 
         .studio-modal-copy p {
           margin: 1rem 0 0;
-          color: #8E4A56;
+          color: var(--pink-muted);
           font-size: 1rem;
           line-height: 1.7;
         }
@@ -585,7 +585,7 @@ export function InteractiveSelector() {
 
         .studio-modal-copy li {
           position: relative;
-          color: #7D5562;
+          color: var(--pink-muted);
           line-height: 1.5;
           padding-left: 1.15rem;
         }
@@ -598,7 +598,7 @@ export function InteractiveSelector() {
           width: 0.42rem;
           height: 0.42rem;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
         }
 
         .studio-modal-cta {
@@ -607,7 +607,7 @@ export function InteractiveSelector() {
           gap: 0.45rem;
           margin-top: 1.6rem;
           border-radius: 999px;
-          background: #E64F55;
+          background: var(--pink);
           color: #fff;
           padding: 0.86rem 1.1rem;
           font-size: 0.72rem;

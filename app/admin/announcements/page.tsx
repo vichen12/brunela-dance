@@ -74,9 +74,9 @@ const TIER_LABELS: Record<string, string> = {
 
 const TIER_STYLE: Record<string, { bg: string; color: string }> = {
   all:             { bg: "#f1f5f9", color: "#475569" },
-  corps_de_ballet: { bg: "#fdf2f8", color: "#9d174d" },
-  solista:         { bg: "#fce7f3", color: "#be185d" },
-  principal:       { bg: "#1c1917", color: "#fdf2f8" },
+  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)" },
+  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)" },
+  principal:       { bg: "#1c1917", color: "var(--pink-wash)" },
 };
 
 const inp: React.CSSProperties = {
@@ -195,7 +195,7 @@ export default async function AdminAnnouncementsPage({
             </label>
           </div>
           <button type="submit" style={{
-            background: "linear-gradient(135deg, #db2777, #be185d)",
+            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             color: "#fff", border: "none", borderRadius: 99,
             padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
             cursor: "pointer", alignSelf: "flex-start",
