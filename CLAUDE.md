@@ -1,5 +1,110 @@
 # CLAUDE.md
 
+---
+
+# ESTADO ACTUAL — 2026-08-01
+
+**Leer esto primero.** Es lo que hace falta para retomar sin contexto previo.
+
+## Infraestructura
+
+| Pieza | Dónde | Detalle |
+|---|---|---|
+| **Supabase** | `eu-central-1` (Fráncfort) | ref `howtuhfdxgyluskrlkze`, en la organización de Brunela |
+| **Vercel** | `fra1` (Fráncfort) | proyecto `brunela-dance` (`prj_MpWybl3x3mSHcg4a9rnxzdtgKfu5`) |
+| **Bunny Stream** | CDN global | no afectado por la región |
+| Supabase **viejo** | `us-west-2` (Oregón) | 🔴 sigue vivo, **pausar después de 2 semanas** (ver pendientes) |
+
+La base se migró de Oregón a Fráncfort el 2026-08-01. El motivo fue **residencia
+de datos** (alumnas en la UE), no velocidad. Todo el plan, las trampas y las
+verificaciones están en `SETUP.md` § 4.
+
+**Regla que no se puede romper:** `vercel.json` (región de las funciones) y la
+región de Supabase se cambian **en el mismo deploy**. Separarlas deja las
+funciones a un océano de la base: ~160 ms por consulta, peor que no migrar.
+
+Verificar en qué región corre de verdad — no confiar en el panel:
+
+```bash
+curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+# gru1::fra1::xxxxx
+#       ^^^^ region donde CORRIO la funcion (el primero es solo el borde de entrada)
+```
+
+## 🔴 Qué está desplegado y qué no
+
+**Producción corre `7e66a35`**, que es el código de **mayo** más un hotfix de
+seguridad. **El rediseño NO está desplegado.**
+
+| Rama | Contenido | Estado |
+|---|---|---|
+| `main` | código de mayo + hotfix + las 18 migraciones + `fra1` | **en producción** |
+| `feat/rediseno-completo` | 3 meses de trabajo: rediseño de las 7 pantallas, reproductor Bunny, worker de mux, checkout y portal de Stripe, mejoras de rendimiento | **sin desplegar**, build verificado desde git |
+
+Para desplegar el rediseño: mergear esa rama a `main`. Conviene hacerlo primero
+como **preview** (push de la rama) y probarlo antes de mergear — son 55 archivos
+y 5.744 líneas.
+
+## Base de datos
+
+- **18 migraciones**, todas aplicadas. ⚠️ **El orden NO es alfabético** — está en
+  `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de `phase_b`, `phase_b0`
+  va sola, y las 17 y 18 van al final.
+- **20 tablas**, 43 policies en `public` + 1 en `storage`, RLS activa en todas.
+- **Permisos acotados** (migraciones 17 y 18): `anon` sin ningún privilegio de
+  tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en 14 de 20.
+  Si aparece un `42501 permission denied`, es esto: se otorga la operación
+  puntual sobre esa tabla, no se vuelve al grant global.
+- **Contenido: vacío.** 0 videos, 0 categorías, 0 programas, 0 sesiones. La data
+  demo del proyecto viejo no se migró a propósito. Para poblar y evaluar diseño:
+  `scripts/seed-demo.sql` (idempotente, todo con prefijo `demo-`).
+
+### Cuentas
+
+| Correo | admin | dueña | tier |
+|---|---|---|---|
+| `brunela.dance@gmail.com` | sí | **sí** | principal |
+| `vichendallape@gmail.com` | sí | no | principal |
+| `dallapevichen12@gmail.com` | sí | no | principal |
+| `dallapevincenzo@gmail.com` | **no** | no | none |
+
+Las tres primeras se importaron del proyecto viejo con sus UUID originales. La
+cuarta se creó sola al entrar con Google durante las pruebas — **decidir si se
+le da admin o se borra**.
+
+**Quién es la dueña del estudio se DECLARA**, no se deduce: columna
+`profiles.is_studio_owner`, con índice único parcial y check constraint. Antes
+salía de `created_at`, y eso se sostenía falsificándole la fecha a una cuenta
+demo. `get_studio_admin()` prefiere la dueña declarada y sólo cae a "la admin más
+antigua" si no hay ninguna.
+
+## Trampas que ya costaron caro
+
+Cinco cosas que fallan **en silencio**. Ninguna da error.
+
+1. **`protect_profile_admin_fields()` está definida TRES veces** en las
+   migraciones (phase_a, phase_b, y la 16). La buena es la que lleva
+   `auth.uid() is not null and ...`. Sin esa guarda, el trigger revierte las
+   escrituras de `service_role` — y eso rompe el webhook de Stripe: entra un
+   pago, se escribe la suscripción, el trigger revierte el tier, y la alumna
+   paga sin recibir acceso.
+2. **`auth.identities` hay que copiarla** en cualquier migración de proyecto. Sin
+   ella el login con Google crea un usuario NUEVO con otro UUID y deja el perfil
+   de admin huérfano. El login "funciona".
+3. **Columnas generadas en `auth`** (`users.confirmed_at`, `identities.email`):
+   un `insert ... select *` falla. Hay que excluirlas de la lista de columnas,
+   no del JSON.
+4. **Una server action es un endpoint POST público.** Renderizar el formulario
+   bajo `{isAdmin && ...}` no protege nada. Toda action que use
+   `createSupabaseAdminClient()` (que saltea RLS) **tiene que llamar
+   `requireAdmin()`**. Ya pasó: 4 actions permitían borrar el catálogo a
+   cualquiera.
+5. **Reglas de negocio que viven sólo en el panel se pierden al reconstruir.**
+   Pasó con el período de gracia de `past_due` y con la dueña del estudio. Si una
+   regla no está en una migración, no existe.
+
+---
+
 ## Project
 
 Brunela Dance Trainer is a Next.js App Router project for a dance / pilates studio.
@@ -15,8 +120,10 @@ Spanish is the primary language. The public landing and sign-in surfaces have a 
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
-- Supabase SSR auth and Postgres
-- Stripe webhook foundation
+- Supabase SSR auth and Postgres (eu-central-1)
+- Bunny Stream para video HLS con multi-audio
+- Worker de mux propio en `worker/` (ffmpeg, sin dependencias npm)
+- Stripe: checkout, portal de facturacion y webhook
 
 ## Main routes
 
@@ -33,6 +140,14 @@ Spanish is the primary language. The public landing and sign-in surfaces have a 
 - `/admin/programs` admin CRUD for programs + program days
 - `/admin/settings` admin CRUD for site settings
 - `/admin/users` admin updates for tiers, levels, onboarding and admin role
+- `/dashboard/chat` DM con la profesora
+- `/dashboard/community` salas de chat por plan
+- `/dashboard/documents` documentos del estudio
+- `/dashboard/plan` planes y checkout
+- `/api/video/[videoId]/[...path]` proxy de manifests HLS con control por RLS
+- `/api/stripe/checkout`, `/api/stripe/portal`, `/api/stripe/webhooks`
+- `/api/progress` guardado de progreso
+- `/api/admin/videos/*` subida de video y audio a Bunny
 
 ## Important folders
 
@@ -41,12 +156,20 @@ Spanish is the primary language. The public landing and sign-in surfaces have a 
 - `src/features/auth/` auth server actions and guards
 - `src/features/admin/` admin actions and dictionaries
 - `src/features/studio/` member studio helpers and server actions
-- `src/lib/supabase/` Supabase server client
-- `supabase/migrations/` schema and RLS source of truth
+- `src/lib/supabase/` Supabase server client (`server` = sesion, `admin` = service_role)
+- `src/lib/video/` Bunny: firma de URLs y reescritura de manifests HLS
+- `src/lib/stripe/` catalogo de precios y resolucion de modo test/live
+- `src/lib/audio/` bucket `class-audio` y config de bitrate
+- `worker/` worker de mux (cola -> ffmpeg -> Bunny -> swap)
+- `scripts/` utilidades sueltas y `seed-demo.sql`
+- `supabase/migrations/` schema and RLS source of truth. ORDEN NO ALFABETICO:
+  ver SETUP.md 1.1
 
 ## Auth model
 
-- Auth uses Supabase password sign-in.
+- Auth por contrasena Y por Google OAuth (`components/oauth-buttons.tsx`).
+- La URL de callback de Google contiene el ref del proyecto Supabase: si el
+  proyecto cambia, hay que agregarla en Google Cloud Console o no entra nadie.
 - There is no public sign-up route in the app right now.
 - Users are expected to exist first in Supabase Auth.
 - `profiles` is auto-created from `auth.users` via trigger.
@@ -66,6 +189,13 @@ Core tables used by the app:
 - `live_sessions`
 - `live_session_bookings`
 - `live_session_access_links`
+- `categories`, `documents`, `studio_announcements`
+- `chat_rooms`, `chat_messages`, `chat_bans`, `chat_mutes`
+- `video_mux_jobs`, `reward_claims`, `subscription_webhook_events`
+
+Son 20 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
+`live_session_bookings`, `chat_messages`, `chat_mutes`, `chat_rooms` y
+`profiles`. En el resto `authenticated` tiene solo lectura (migracion 18).
 
 Membership tiers:
 
@@ -96,8 +226,20 @@ Required in normal development:
 Required for Stripe webhook work:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `STRIPE_SECRET_KEY`
+- `STRIPE_SECRET_KEY` (su prefijo `sk_live_` o `sk_test_` es lo UNICO que decide
+  el modo, y con el modo el juego de price ids: ver `src/lib/stripe/catalog.ts`)
 - `STRIPE_WEBHOOK_SECRET`
+
+Required for video:
+
+- `BUNNY_STREAM_API_KEY`
+- `BUNNY_STREAM_LIBRARY_ID`
+- `BUNNY_STREAM_CDN_HOSTNAME`
+- `BUNNY_STREAM_TOKEN_AUTH_KEY`
+
+El worker de mux usa las mismas: `node --env-file=.env.local worker/index.mjs`.
+No tiene `.env` propio y acepta `NEXT_PUBLIC_SUPABASE_URL` como alias de
+`SUPABASE_URL`.
 
 ## Design and product notes
 
@@ -118,7 +260,19 @@ Required for Stripe webhook work:
 
 1. `npm install`
 2. `npm run dev`
-3. `npm run build` before closing substantial changes
+3. `npx tsc --noEmit` antes de cerrar cambios.
+
+NO corras `npm run build` con el dev server levantado: pisa `.next` y rompe el
+login con `__webpack_modules__ is not a function`. Ya paso dos veces. Si necesitas
+un build de verdad, hacelo en un worktree aparte:
+
+```bash
+git worktree add --detach /tmp/verify HEAD
+# enlazar node_modules y correr next build ahi
+```
+
+Y verifica SIEMPRE desde git, no desde disco: `tsc` pasa con archivos sin
+trackear que Vercel no va a tener.
 
 ## PENDIENTE: verificar el reproductor en iPhone / iPad
 
@@ -168,9 +322,51 @@ pestana Red. Buscar respuestas **403** contra `*.b-cdn.net`. Si las hay, el
 problema es el token en los segmentos. Si no hay 403 y el video igual no se ve,
 el problema es de codecs o del motor, no de acceso.
 
-## Known next steps
+## PENDIENTES — 2026-08-01
 
-- Add full onboarding/profile editing for members
-- Connect Stripe checkout end-to-end
-- Keep expanding the ES/EN/FR/IT public dictionary as new landing sections are added
-- Polish dashboard visual system to match the final brand palette and assets
+Ordenados por lo que bloquea a lo que puede esperar.
+
+### Bloqueantes para dar por cerrada la migración
+
+- [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,
+      el worker de mux y el proxy de manifests de punta a punta. Es lo único de
+      las 7 pruebas de corte que quedó sin hacer.
+- [ ] **Checkout de prueba** con `4242 4242 4242 4242` contra la base nueva:
+      confirmar que la suscripción se escribe y el tier se desbloquea.
+- [ ] **Decidir qué pasa con `dallapevincenzo@gmail.com`** (admin o borrarla).
+
+### Antes de abrir al público
+
+- [ ] **Desplegar `feat/rediseno-completo`.** Producción todavía muestra el
+      diseño de mayo.
+- [ ] **Verificar el reproductor en iPhone / iPad** — ver la sección de abajo. Es
+      la única parte entregada sin medir, y el público de un producto de danza en
+      casa usa iPhone.
+- [ ] **Pasar Stripe a producción**: cambiar `STRIPE_SECRET_KEY` a la `sk_live_`
+      y rehacer la configuración del portal de clientes (es por modo). Lista
+      completa en `SETUP.md` § 3.5. **No hay SQL que correr**: los 12 price ids
+      de los dos modos ya están cargados.
+- [ ] **Rotar la `service_role`** por higiene (`SETUP.md`; el orden importa:
+      crear la nueva, redeploy, verificar, recién ahí revocar la vieja).
+
+### Después, con dos semanas de margen
+
+- [ ] **Pausar el proyecto Supabase viejo** (pausar, NO borrar). Al hacerlo mueren
+      de paso las dos cuentas `*.demo@brunela.local`, una de las cuales todavía
+      es admin con contraseña conocida.
+- [ ] **Sacar la URI de callback vieja** de Google Cloud Console. Recién al final.
+- [ ] Borrar `_local/` (tiene hashes de contraseña de la migración; está en
+      `.gitignore`).
+
+### Deuda técnica conocida
+
+- [ ] **Migración de color**: ~304 ocurrencias de magenta hardcodeado en 24
+      archivos. Unas 166 son tintes claros que ya tienen `--pink-wash`. El
+      sidebar y el dashboard están migrados; el resto no.
+- [ ] **Plan de escalabilidad A–E**, aprobado y postergado: filtrado de la
+      biblioteca en SQL, los `count exact` de `/admin`, rate limiting,
+      degradación con gracia.
+- [ ] Onboarding y edición de perfil para miembros. La policy
+      `profiles_update_self_or_admin` y el grant de `UPDATE` ya están puestos
+      esperando esto.
+- [ ] Seguir ampliando el diccionario público ES/EN/FR/IT.
