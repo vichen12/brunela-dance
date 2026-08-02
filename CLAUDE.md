@@ -103,6 +103,35 @@ Cinco cosas que fallan **en silencio**. Ninguna da error.
    Pasó con el período de gracia de `past_due` y con la dueña del estudio. Si una
    regla no está en una migración, no existe.
 
+## Decisiones conscientes (no son descuidos)
+
+### Blanco sobre `--pink` da 3.78:1 y no cumple AA — se deja igual
+
+**Decidido el 2026-08-02, con el número sobre la mesa.**
+
+`--pink` `#E64F55` como fondo de botón con texto blanco da **3.78:1**. AA pide
+**4.5:1** para texto normal. No cumple, y **el CTA del sidebar tampoco califica
+como "texto grande"**: WCAG define texto grande como 18pt (24px) o **14pt en
+negrita**, y 14pt son ≈**18.66px**, no 14px. La unidad es puntos. Un label de
+14px peso 700 necesita 4.5:1 igual.
+
+Afecta a unos **20 lugares** con fondo coral y texto encima.
+
+**Se deja por identidad de marca**: `#E64F55` es el color de la landing, y el
+sistema se unificó *hacia* la landing. Cambiarlo desalinearía las dos mitades
+del producto, que era justamente el problema que la unificación vino a resolver.
+
+**Si algún día hace falta accesibilidad estricta**, el reemplazo es
+`--pink-mid` `#D93438`: da **4.83:1** y a simple vista es casi el mismo coral.
+
+**La excepción que ya está aplicada:** la burbuja de los mensajes propios en el
+chat usa `--pink-mid`, no `--pink`. Ahí el texto es de **lectura sostenida**
+(13.5px, peso normal, párrafos enteros), no una etiqueta que se mira de reojo, y
+es donde el contraste realmente importa.
+
+> Regla practica que salió de esto: `--pink` para superficie glanceable,
+> `--pink-mid` cuando encima va texto que alguien va a **leer**.
+
 ---
 
 ## Project
