@@ -1,0 +1,673 @@
+# Setup del sistema — Brunela Dance Trainer
+
+Esta guía cubre los 3 servicios externos que el sistema necesita para funcionar
+de punta a punta: **Supabase** (ya estaba), **Bunny Stream** (video) y
+**Stripe** (pagos). La landing pública no requiere nada de esto.
+
+---
+
+## 1. Base de datos — aplicar la migración nueva
+
+Hay una migración nueva que **arregla un bug** (faltaba la columna `audio_tracks`,
+por eso fallaba guardar videos) y agrega los campos de Bunny + el catálogo de
+precios mensual/anual.
+
+Aplicala en Supabase (SQL Editor o CLI):
+
+```
+supabase/migrations/20260616_video_bunny_audio_tracks_and_pricing.sql
+```
+
+### 1.1 Orden de ejecución — ⚠️ NO es el alfabético
+
+**Si alguna vez hay que reconstruir la base desde cero** (proyecto nuevo, cambio
+de región, entorno de staging), las migraciones se corren **en este orden**, que
+no es el que devuelve `ls`:
+
+```
+ 1. 20260413_phase_a_core_schema.sql
+ 2. 20260413_phase_b0_membership_tier_none.sql      <-- SOLA, ejecucion aparte
+ 3. 20260413_phase_b_subscriptions_rewards_live.sql
+ 4. 20260413_phase_b1_live_session_link_access.sql  <-- DESPUES de la 3
+ 5. 20260421_chat_docs_categories_rls.sql
+ 6. 20260502_studio_announcements.sql
+ 7. 20260616_chat_dm_access_and_category_rooms.sql
+ 8. 20260616_video_bunny_audio_tracks_and_pricing.sql
+ 9. 20260728_rls_initplan_and_chat_indexes.sql
+10. 20260729_audio_storage_and_mux_jobs.sql
+11. 20260730_chat_studio_admin_lookup.sql
+12. 20260730_pricing_update.sql
+13. 20260730_stripe_price_ids_per_mode.sql
+14. 20260730_stripe_webhook_event_ordering.sql
+15. 20260801_access_granting_past_due.sql
+16. 20260801_studio_owner_explicit.sql
+```
+
+> Las dos del **2026-08-01** existen porque dos reglas de negocio vivían sólo
+> como ediciones manuales en la base y se habrían perdido al reconstruir desde
+> el repo: el período de gracia de `past_due`, y quién es la dueña del estudio.
+> Ninguna de las dos daba error al faltar — ver § 4.2.
+
+**Las dos trampas del orden alfabético:**
+
+- **`phase_b1` va DESPUÉS de `phase_b`, no antes.** Ordenado por nombre,
+  `phase_b1_...` cae antes que `phase_b_...` porque `'1'` (0x31) es menor que
+  `'_'` (0x5F). Pero `b1` usa `public.live_sessions` y
+  `public.live_session_access_links`, que **se crean** en
+  `phase_b_subscriptions_rewards_live`. En orden alfabético, falla con tabla
+  inexistente.
+
+- **`phase_b0` se corre sola.** Es un `alter type ... add value 'none'` sobre el
+  enum `membership_tier`. El propio archivo lo dice en su encabezado: *"run this
+  as a standalone statement before Phase B"*. No pegarla a otra migración en la
+  misma ejecución.
+
+Los pares que comparten fecha (`20260616_chat_...` / `20260616_video_...`, y los
+cuatro `20260730_...`) sí son independientes entre sí, salvo que
+`pricing_update` (12) va antes que `stripe_price_ids_per_mode` (13): la 12
+parchea importes y la 13 reescribe los ids de precio sin tocar importes.
+
+> **Nota:** existía un `20260413_phase_b0_membership_tier_rebuild.sql` de 30
+> bytes que contenía una URL, no SQL — se guardó por accidente. Borrado el
+> 2026-08-01. Si aparece en un checkout viejo, no correrlo.
+
+---
+
+## 2. Bunny Stream (video con multi-audio)
+
+1. Crear cuenta en https://bunny.net
+2. Ir a **Stream** y crear un **Video Library**.
+3. Anotar:
+   - **Library ID** (número que aparece en la URL / settings de la library).
+   - **API Key** de la library (Stream > tu library > **API**).
+   - **CDN Hostname** del pull zone de la library (algo como `vz-xxxxxxxx.b-cdn.net`).
+4. Cargar esas 3 variables de entorno (en Vercel y en `.env.local`):
+
+```
+BUNNY_STREAM_API_KEY=...
+BUNNY_STREAM_LIBRARY_ID=...
+BUNNY_STREAM_CDN_HOSTNAME=vz-xxxxxxxx.b-cdn.net
+```
+
+Con eso, en `/admin/videos` el bloque **"Nuevo video"** te deja subir el archivo
+de video + un archivo de audio por idioma (ES / EN / PT). El sistema:
+- sube el video a Bunny,
+- adjunta cada audio como pista adicional del mismo stream,
+- y la alumna puede cambiar de idioma en el reproductor **sin recargar**.
+
+> Nota sobre el endpoint de pistas de audio: la integración usa la API de Bunny
+> para adjuntar audios extra. Si Bunny cambia la ruta exacta, está aislada en
+> `src/lib/video/bunny.ts` (función `addBunnyAudioTrack`) — es el único lugar a tocar.
+
+---
+
+## 3. Stripe (suscripciones)
+
+### 3.1 Crear los productos y precios
+
+En el dashboard de Stripe (**Test mode** primero), creá **3 productos**, y dentro
+de cada uno **2 precios recurrentes** (mensual y anual). En total: **6 precios**.
+
+| Producto | Precio mensual | Precio anual |
+|---|---|---|
+| **Corps de Ballet** | 16,00 € / month | 154,00 € / year |
+| **Solista** | 31,00 € / month | 299,00 € / year |
+| **Principal** | 59,00 € / month | 559,00 € / year |
+
+Para cada precio:
+- Moneda: **EUR**
+- Tipo: **Recurring**
+- Intervalo: **Monthly** o **Yearly** según corresponda
+- (El período de prueba de 7 días lo aplica el sistema automáticamente en el
+  checkout — **no** lo configures en el precio.)
+
+Copiá los 6 **Price IDs** (empiezan con `price_...`).
+
+### 3.2 Cargar los Price IDs en el sistema
+
+Los Price IDs viven en `site_settings` (clave `subscriptions.catalog`) para que
+puedas cambiarlos sin redeploy. Corré este SQL en Supabase reemplazando los
+`price_...` por los tuyos:
+
+El catalogo guarda **dos juegos** de Price IDs, uno por modo de Stripe:
+
+```json
+"prices": {
+  "test": { "monthly": "price_...", "yearly": "price_..." },
+  "live": { "monthly": "price_...", "yearly": "price_..." }
+}
+```
+
+El codigo elige el juego segun `STRIPE_SECRET_KEY`: si empieza con `sk_live_`
+usa `live`, en cualquier otro caso usa `test`. **Pasar a produccion es cambiar
+esa sola variable de entorno** — no hay ningun SQL que correr en el pase, y por
+lo tanto no hay mitad que quede sin hacer.
+
+Los doce ids ya cargados estan en
+`supabase/migrations/20260730_stripe_price_ids_per_mode.sql`. Para reemplazar
+alguno mas adelante, este SQL escribe **solo** los Price IDs de un modo y deja
+los importes y el otro modo como estan:
+
+```sql
+-- Cambiar 'test' por 'live' segun el modo que quieras tocar.
+update public.site_settings s
+set value = jsonb_set(
+      s.value,
+      '{tiers}',
+      (
+        select jsonb_agg(
+                 case t->>'tier'
+                   when 'corps_de_ballet' then jsonb_set(t, '{prices,test}', jsonb_build_object(
+                     'monthly', 'price_XXXX_corps_mensual',
+                     'yearly',  'price_XXXX_corps_anual'))
+                   when 'solista' then jsonb_set(t, '{prices,test}', jsonb_build_object(
+                     'monthly', 'price_XXXX_solista_mensual',
+                     'yearly',  'price_XXXX_solista_anual'))
+                   when 'principal' then jsonb_set(t, '{prices,test}', jsonb_build_object(
+                     'monthly', 'price_XXXX_principal_mensual',
+                     'yearly',  'price_XXXX_principal_anual'))
+                   else t
+                 end
+                 order by (t->>'display_order')::int
+               )
+        from jsonb_array_elements(s.value -> 'tiers') t
+      )
+    ),
+    updated_at = timezone('utc', now())
+where s.setting_key = 'subscriptions.catalog';
+```
+
+Verificacion (3 filas, importes y los dos juegos de ids):
+
+```sql
+select t->>'tier' as tier,
+       t->>'amount_monthly' as mensual,
+       t->>'amount_yearly'  as anual,
+       t #>> '{prices,test,monthly}' as test_mensual,
+       t #>> '{prices,test,yearly}'  as test_anual,
+       t #>> '{prices,live,monthly}' as live_mensual,
+       t #>> '{prices,live,yearly}'  as live_anual
+from public.site_settings s,
+     jsonb_array_elements(s.value->'tiers') t
+where s.setting_key = 'subscriptions.catalog'
+order by (t->>'display_order')::int;
+```
+
+### 3.3 Variables de entorno + webhook
+
+```
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Configurá el webhook en Stripe apuntando a:
+
+```
+https://TU-DOMINIO-DEL-SISTEMA/api/stripe/webhooks
+```
+
+Eventos a escuchar:
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+> El webhook ya estaba implementado; sincroniza la suscripción a Supabase y, por
+> trigger, actualiza el `membership_tier` del perfil → desbloquea el contenido.
+
+### 3.4 Flujo completo
+
+Landing → `/sign-in` → `/dashboard/plan` → botón de plan → Stripe Checkout
+(7 días gratis) → webhook → tier desbloqueado. Para cancelar/cambiar: botón
+**"Gestionar plan"** → Stripe Billing Portal.
+
+### 3.5 Pase a produccion — lista de control
+
+Modo test y modo produccion son **dos mundos separados** en Stripe. Cada objeto
+existe por duplicado y nada se copia solo.
+
+- [ ] **`STRIPE_SECRET_KEY`** → la de produccion (`sk_live_...`).
+      Es lo unico que decide el modo: el codigo elige el juego de price ids
+      segun esa variable (`src/lib/stripe/catalog.ts` → `stripeMode`). Los ids
+      de produccion ya estan cargados en `prices.live` desde
+      `20260730_stripe_price_ids_per_mode.sql`, asi que **no hay ningun SQL que
+      correr en el pase**.
+
+- [ ] **`STRIPE_WEBHOOK_SECRET`** → el del endpoint de produccion.
+      El `whsec_` de `stripe listen` es solo para local. En produccion se crea
+      en *Desarrolladores → Webhooks → Añadir endpoint*, apuntando a
+      `https://<dominio>/api/stripe/webhooks`, con los eventos
+      `customer.subscription.created`, `.updated` y `.deleted`.
+
+- [ ] **`NEXT_PUBLIC_APP_URL`** → el dominio real, porque de ahi salen las URLs
+      de retorno del checkout.
+
+- [ ] **Configuracion del portal de clientes en modo produccion.**
+      Es un objeto **aparte** del de test y **arranca vacio**: con la
+      configuracion por defecto que crea Stripe, el cambio de plan viene
+      DESHABILITADO. Si no se configura, las alumnas pueden cancelar y cambiar
+      la tarjeta, pero **no pueden cambiar de plan** — y no hay ningun error
+      visible, simplemente la opcion no aparece.
+      Hay que habilitar *"Los clientes pueden cambiar de plan"* y cargar los
+      **3 productos con sus 2 precios cada uno**. Verificar despues abriendo el
+      portal y confirmando que los 6 aparecen en ambos intervalos: la API
+      **no** devuelve la lista de productos, asi que revisarla por API no
+      alcanza.
+
+- [ ] **Verificar los 6 precios de produccion contra la API** antes de abrir al
+      publico: importe, moneda, intervalo, que esten activos y `livemode=true`.
+      Este control fue el que detecto, en test, un precio cargado como 599 en
+      vez de 559. Del lado live ese error son 40 EUR de mas por año a cada
+      suscriptora, cobrados de verdad.
+
+> **Que NO hay que rehacer en produccion.** La *recuperacion de ingresos*
+> (reintentos de cobro y que hacer al agotarlos) y los *correos a clientes*
+> son **compartidos entre modo test y modo produccion**: se configuran una sola
+> vez y valen para los dos. De hecho no se pueden editar desde el modo de
+> prueba. Ya quedaron configurados el 2026-07-30:
+>
+> - reintentos inteligentes, 14 dias, y al agotarlos **cancelar la suscripcion**
+> - correos de pago fallido y de tarjeta por caducar, hacia la pagina alojada
+>   por Stripe
+>
+> Esa opcion de "al agotar los reintentos" es critica y conviene revisarla
+> antes del lanzamiento aunque no haya que tocarla: el sistema da acceso
+> durante `past_due` como periodo de gracia, asi que si Stripe dejara la
+> suscripcion en `past_due` para siempre ("no hacer nada"), esa alumna
+> conservaria el acceso **gratis e indefinidamente**. El corte depende de que
+> Stripe mueva el estado a `canceled` o `unpaid`, que no otorgan acceso.
+>
+> La configuracion del **portal de clientes**, en cambio, SI es por modo (es un
+> objeto de API con `livemode`) y hay que rehacerla, como dice el punto de
+> arriba.
+
+> **Si se cambia `access_granting_statuses` con gente ya suscripta**, el trigger
+> solo recalcula el `membership_tier` cuando la suscripcion cambia. Para
+> aplicarlo a las filas existentes hay que forzar una escritura:
+> `update public.subscriptions set user_id = user_id;`
+
+---
+
+## 4. Regiones de la infraestructura
+
+### 4.1 Dónde corre cada cosa hoy
+
+| Pieza | Región | Cómo se verifica |
+|---|---|---|
+| Supabase | `us-west-2` — Oregón | Panel de Supabase → Settings → General |
+| Vercel (funciones) | `pdx1` — Portland, Oregón | ver abajo |
+| Bunny Stream | CDN global | no aplica |
+
+`pdx1` **es** `us-west-2`: se eligió para que las funciones queden en el mismo
+centro de datos que la base. Está fijado en `vercel.json`:
+
+```json
+{ "regions": ["pdx1"] }
+```
+
+Antes de eso las funciones corrían en `iad1` (Virginia) y cada consulta cruzaba
+Estados Unidos: ~65 ms de ida y vuelta, contra ~2 ms ahora. Como las pantallas
+privadas encadenan 2 o 3 consultas, eran ~200 ms por navegación que se pagaban
+sin motivo.
+
+**Cómo confirmar en qué región corre de verdad** (no confiar en el panel, mirar
+la respuesta):
+
+```bash
+curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+# x-vercel-id: gru1::pdx1::xxxxx
+#              |      `-- región donde CORRIÓ la función  <- esto es lo que importa
+#              `--------- borde por donde ENTRÓ el request (varía según desde dónde mires)
+```
+
+Hay que pedir una ruta dinámica como `/sign-in`. La landing `/` sale de caché de
+borde y no muestra región de función.
+
+> En el plan Hobby la elección de región puede estar restringida. Si el header
+> sigue diciendo `iad1` después de un deploy, el plan no la está respetando y hay
+> que mirarlo en *Settings → Functions → Function Region*.
+
+**Nota sobre el proyecto de Vercel.** El proyecto real es **`brunela-dance`**
+(`prj_MpWybl3x3mSHcg4a9rnxzdtgKfu5`). El `.vercel/project.json` local apuntaba a
+un proyecto inexistente y el deploy por CLI fallaba; quedó corregido el
+2026-08-01. Si alguna vez se clona el repo de cero, hay que correr `vercel link`
+y elegir `brunela-dance` (el `.vercel/` está en `.gitignore`, no viaja con el
+repo).
+
+### 4.2 Migración a Europa — plan de ejecución
+
+**Decidido el 2026-08-01: se hace.** Destino **`eu-central-1` (Fráncfort)** en
+Supabase, emparejado con **`fra1`** en Vercel.
+
+**Por qué se hace.** No por velocidad, por **residencia de datos**: el negocio es
+español y las alumnas son residentes de la UE. La base guarda nombres, correos,
+referencias de pago y los mensajes del chat, que son comunicaciones personales.
+La velocidad es un beneficio secundario (~210 ms → ~70 ms por navegación desde
+Barcelona).
+
+**Por qué Fráncfort y no Irlanda.** Barcelona está ~10-15 ms más cerca de
+Fráncfort, y `fra1` de Vercel está en esa misma región. Irlanda cumple igual el
+argumento legal, pero está más lejos y no aporta nada a cambio. París
+(`eu-west-3` + `cdg1`) es geográficamente lo más cercano (~8 ms mejor que
+Fráncfort) y se descartó por criterio: no se cambia infraestructura probada por
+8 ms.
+
+> Los números de latencia desde Barcelona son **estimados de topología de red,
+> no medidos** — no se pudo medir desde España. Lo que sí está medido es que
+> emparejar Vercel y Supabase en la misma región ahorra ~160 ms; la elección de
+> ciudad son ~10 ms. **El emparejamiento importa 10 veces más que la ciudad.**
+
+#### Lo que hay que entender antes de empezar
+
+**Supabase no cambia de región en el lugar.** Migrar significa crear un proyecto
+nuevo, y un proyecto nuevo tiene **ref nuevo, URL nueva y claves nuevas**. Todo
+lo que hoy apunta a `ymshzzughzayhidfpyrs` deja de servir.
+
+#### Qué viaja y qué no
+
+| Cosa | ¿Se mueve solo? |
+|---|---|
+| Esquema: tablas, RLS, funciones, triggers | **Se recrea corriendo las migraciones** (§ 1.1), no restaurando un volcado. El repo es la fuente de verdad y está versionado entero. |
+| Datos de `public.*` | Con copia de tablas, respetando el orden de las FK. |
+| `auth.users` **incluida la contraseña** | Sí, copiando la tabla con `encrypted_password`. Nadie tiene que resetear nada. |
+| `auth.identities` | Sí, y **es obligatorio**. Ver la advertencia de abajo. |
+| Sesiones abiertas | **No.** El proyecto nuevo tiene otro JWT secret: todas las sesiones se cortan y cada alumna vuelve a entrar una vez, con su misma contraseña. |
+| Archivos de Storage (bucket `class-audio`) | **NO.** Las filas de `storage.objects` son metadatos; los archivos hay que bajarlos y volver a subirlos. |
+| Configuración de Auth (proveedor Google, Site URL, Redirect URLs) | **No.** Es config de panel, se rehace a mano. |
+| Realtime del chat | Lo cubre la migración 5 (§ 1.1), pero **se verifica igual**. |
+
+#### 🔴 Las tres trampas silenciosas
+
+Ninguna de las tres da error. Las tres se ven como "funcionó".
+
+**1. `auth.identities` — el perfil de admin huérfano.**
+
+`auth.identities` es la fila que vincula la cuenta de Google con el usuario de
+Supabase. Si se copia `auth.users` pero **no** `auth.identities`, cuando Brunela
+entre con Google no hay identidad que matchear: Supabase **crea un usuario nuevo,
+con otro UUID**, y dispara el trigger que le crea un perfil nuevo con
+`is_admin = false`.
+
+Resultado: el login *funciona*. Entra sin errores. Pero es otra persona para la
+base — su perfil de admin, su progreso y sus mensajes quedan colgando de un UUID
+que ya nadie usa, y `get_studio_admin()` puede empezar a devolver la cuenta
+equivocada. **Copiar `auth.identities` junto con `auth.users`, siempre.**
+
+**2. `supabase_realtime` sin `chat_messages` — el chat que no se actualiza.**
+
+Lo agrega la migración 5, en un bloque guardado por
+`if not exists (... pg_publication_tables ...)`. Esa guarda es justamente lo que
+lo vuelve silencioso: si la publicación `supabase_realtime` no existiera en el
+proyecto nuevo, el bloque **no falla, no hace nada**.
+
+Síntoma: los mensajes se envían y se guardan bien, pero no aparecen del otro lado
+hasta recargar la página. Nadie reporta un error porque no hay ninguno.
+
+**3. `vercel.json` en `pdx1` con la base en Fráncfort — peor que no migrar.**
+
+Si se cambian las variables de entorno y se olvida la región, quedan las
+funciones en Oregón y la base en Alemania: **~160 ms por consulta**, peor que
+antes de empezar. Por eso los dos cambios van **en el mismo commit y el mismo
+deploy** (paso 8).
+
+#### Qué NO se rompe (suele asustar de más)
+
+- **Bunny.** Nada de Bunny apunta a Supabase. `bunny_video_id` y `audio_tracks`
+  son columnas de texto y viajan con los datos. La clave de firma
+  (`BUNNY_STREAM_TOKEN_AUTH_KEY`) es variable de entorno de Next. Los videos ni
+  se tocan.
+- **Stripe.** Ningún objeto de Stripe apunta a Supabase. El webhook apunta al
+  dominio de Vercel, que no cambia. `stripe_customer_id` y
+  `stripe_subscription_id` son texto y viajan con los datos. **No hay que rehacer
+  nada en Stripe.** El único riesgo es la ventana: un webhook que llegue durante
+  la migración escribe en la base vieja y se pierde en silencio. Se evita
+  haciendo que `/api/stripe/webhooks` devuelva **500** mientras dure — Stripe
+  reintenta hasta 3 días.
+- **El dominio.** La URL de Supabase vive únicamente en variables de entorno. No
+  hay DNS que tocar.
+
+---
+
+### 4.3 Los 10 pasos
+
+#### Paso 0 — Fotografía del proyecto viejo
+
+**El método: no verificar contra números recordados, verificar contra el proyecto
+viejo.** Correr esto en el SQL Editor del proyecto **actual** y guardar la salida
+en un archivo. El diff contra el proyecto nuevo es la verificación real.
+
+```sql
+-- A. policies por esquema
+select schemaname, count(*) from pg_policies
+where schemaname in ('public','storage') group by schemaname order by 1;
+
+-- B. inventario de policies (esto es el diff de verdad)
+select schemaname, tablename, policyname from pg_policies
+where schemaname in ('public','storage') order by 1,2,3;
+
+-- C. tablas
+select table_name from information_schema.tables
+where table_schema='public' and table_type='BASE TABLE' order by 1;
+
+-- D. funciones
+select routine_name, security_type from information_schema.routines
+where routine_schema='public' order by 1;
+
+-- E. los ajustes que NO estan (o no estaban) en migraciones
+select setting_key, value from public.site_settings
+where setting_key in ('subscriptions.access_defaults','subscriptions.catalog');
+
+-- F. realtime
+select schemaname, tablename from pg_publication_tables
+where pubname='supabase_realtime';
+
+-- G. cuanto dato real hay
+select 'profiles' t, count(*) from public.profiles
+union all select 'videos', count(*) from public.videos
+union all select 'subscriptions', count(*) from public.subscriptions
+union all select 'user_progress', count(*) from public.user_progress
+union all select 'chat_messages', count(*) from public.chat_messages
+union all select 'auth.users', count(*) from auth.users
+union all select 'auth.identities', count(*) from auth.identities;
+```
+
+#### Paso 1 — Crear el proyecto nuevo
+
+Supabase → New project → región **`eu-central-1` (Frankfurt)**, misma
+organización. Anotar el `ref` nuevo y guardar las 3 claves: URL, publishable key,
+service role key.
+
+#### Paso 2 — Esquema
+
+**a)** Las 16 migraciones **en el orden de § 1.1** — que no es el alfabético.
+
+**b)** Verificar que `20260801_access_granting_past_due.sql` (la 15) haya
+quedado aplicada. Esa migración existe precisamente porque el período de gracia
+era una edición manual que se habría perdido en la reconstrucción.
+
+#### Paso 3 — Auth: proveedores y URLs
+
+En el panel del proyecto **nuevo**:
+
+- *Authentication → Providers → Google*: pegar el **mismo** Client ID y Client
+  Secret que se usan hoy.
+- *Authentication → URL Configuration*: Site URL y Redirect URLs
+  (`https://brunela-dance.vercel.app/**` y `http://localhost:3000/**`).
+
+#### 🔴 Paso 4 — Google Cloud Console (esto es lo que rompe el login)
+
+**El `ref` del proyecto está dentro de la URL de callback de Google.**
+
+El flujo es: `signInWithOAuth` → Google →
+**`https://<REF>.supabase.co/auth/v1/callback`** → `/auth/callback` de la app.
+Ese `<REF>` cambia con el proyecto.
+
+Google Cloud Console → *APIs y servicios → Credenciales → cliente OAuth 2.0 →
+URIs de redireccionamiento autorizados* → **agregar**:
+
+```
+https://<REF_NUEVO>.supabase.co/auth/v1/callback
+```
+
+**Agregar, no reemplazar** — dejar también el viejo hasta confirmar la migración.
+Si falta, el botón de Google devuelve `redirect_uri_mismatch` y no entra nadie.
+
+#### Paso 5 — Abrir la ventana
+
+Poner la app en mantenimiento y hacer que `/api/stripe/webhooks` devuelva 500,
+para que Stripe reintente en vez de perder eventos.
+
+> Al 2026-08-01 hay 0 suscripciones activas, así que este paso es formalidad.
+> Queda escrito porque deja de serlo después del primer cobro.
+
+#### Paso 6 — Datos (arranque limpio)
+
+**Decisión del 2026-08-01: camino limpio.** Se copian **sólo los 3 usuarios
+reales y el contenido real**. Las 18 clases demo con fotos de picsum y las
+cuentas `*.demo@brunela.local` **no se copian** — la data demo ya cumplió su
+función y no migrarla salda de paso la limpieza que estaba pendiente.
+
+Orden obligatorio:
+
+1. **`auth.users`** — preservando `id` y `encrypted_password`. Preservar el UUID
+   no es opcional: `profiles.id` referencia `auth.users(id)` y `user_progress`
+   cuelga de ahí.
+2. **`auth.identities`** — 🔴 **trampa 1.** Sin esto el login con Google crea un
+   usuario nuevo y deja el perfil de admin huérfano, sin dar ningún error.
+   **Copiar por `user_id`, no una fila por usuario:** el proyecto viejo tiene
+   **6 identidades para 5 usuarios**, así que alguna cuenta tiene dos métodos de
+   login (correo + Google) y una copia "una por cabeza" perdería uno.
+3. **`public.*`** respetando FKs: `profiles` → `categories` → `videos` →
+   `programs` → `program_days` → el resto.
+4. **`site_settings` NO se copia.** Ya viene de las migraciones 12, 13 y 15.
+   Copiarlo encima pisaría el catálogo bueno con el viejo.
+5. **Marcar a Brunela como dueña del estudio** (migración 16):
+
+   ```sql
+   begin;
+   -- El SQL Editor corre sin JWT: auth.uid() es null, is_admin() da false y el
+   -- trigger trg_profiles_protect_admin_fields revierte el update EN SILENCIO.
+   set local request.jwt.claims = '{"sub":"<UUID_DE_UNA_ADMIN_ACTUAL>"}';
+   update public.profiles
+      set is_admin = true, is_studio_owner = true, membership_tier = 'principal'
+    where email = 'brunela.dance@gmail.com';
+   commit;
+   ```
+
+   Conviene además **crear su cuenta primero**, para que el `created_at` deje
+   correcto también el camino de fallback de `get_studio_admin()`.
+
+#### Paso 7 — Storage
+
+Bajar y volver a subir el bucket `class-audio`. Las filas de `storage.objects`
+son metadatos: **los archivos no viajan con el SQL**. El bucket y sus policies sí
+los crea la migración 10.
+
+#### 🔴 Paso 8 — Variables + `vercel.json`, EN EL MISMO DEPLOY
+
+**Trampa 3.** Las dos cosas juntas, un solo deploy.
+
+```json
+{ "regions": ["fra1"] }
+```
+
+Y las 3 claves nuevas en **tres lugares**:
+
+| Dónde | Qué |
+|---|---|
+| Vercel (Production **y** Preview) | las 3 claves nuevas |
+| `.env.local` de desarrollo | las 3 claves nuevas |
+| `.env` del worker de mux | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
+
+#### Paso 9 — Cerrar la ventana
+
+Quitar el mantenimiento, restaurar el webhook, y reenviar desde Stripe los
+eventos del rato (`stripe events resend <id>` o el botón de reintento).
+
+#### Paso 10 — Proyecto viejo: pausado, NO borrado
+
+Dos semanas como mínimo. Es la única vuelta atrás.
+
+---
+
+### 4.4 Verificaciones
+
+Correr cada una en el proyecto **nuevo** y comparar contra la salida del Paso 0.
+
+```sql
+-- 1. POLICIES -> mismo numero que el paso 0.A
+select schemaname, count(*) from pg_policies
+where schemaname in ('public','storage') group by schemaname order by 1;
+
+-- 1b. si no coincide, cual falta (esto es lo que realmente sirve)
+select schemaname, tablename, policyname from pg_policies
+where schemaname in ('public','storage') order by 1,2,3;
+
+-- 2. TABLAS -> diff contra paso 0.C
+select table_name from information_schema.tables
+where table_schema='public' and table_type='BASE TABLE' order by 1;
+
+-- 3. RLS ACTIVA EN TODAS -> tiene que devolver CERO FILAS.
+--    Una tabla sin RLS es una fuga de datos, no un detalle.
+select relname from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;
+
+-- 4. get_studio_admin -> devuelve a Brunela, y anon NO puede ejecutarla
+select * from public.get_studio_admin();
+select grantee, privilege_type from information_schema.routine_privileges
+where routine_name='get_studio_admin';
+--    esperado: authenticated/EXECUTE presente, anon AUSENTE
+
+-- 5. CATALOGO: los 12 price ids -> tiene que dar 12
+select count(*) as ids_cargados
+from public.site_settings s,
+     jsonb_array_elements(s.value->'tiers') t,
+     lateral (values (t->'prices'->'test'->>'monthly'),
+                     (t->'prices'->'test'->>'yearly'),
+                     (t->'prices'->'live'->>'monthly'),
+                     (t->'prices'->'live'->>'yearly')) v(id)
+where s.setting_key='subscriptions.catalog' and v.id is not null;
+
+-- 5b. importes -> 16/154, 31/299, 59/559
+select t->>'tier', t->>'amount_monthly', t->>'amount_yearly'
+from public.site_settings s, jsonb_array_elements(s.value->'tiers') t
+where s.setting_key='subscriptions.catalog'
+order by (t->>'display_order')::int;
+
+-- 6. PERIODO DE GRACIA -> ["trialing", "active", "past_due"]
+select value->'access_granting_statuses'
+from public.site_settings where setting_key='subscriptions.access_defaults';
+
+-- 7. BUCKET class-audio -> privado, 52428800, 4 mime types
+select id, public, file_size_limit, allowed_mime_types
+from storage.buckets where id='class-audio';
+
+-- 8. REALTIME -> chat_messages TIENE que aparecer  (trampa 2)
+select schemaname, tablename from pg_publication_tables
+where pubname='supabase_realtime';
+
+-- 9. TRIGGER de creacion de perfiles -> 1 fila
+select tgname from pg_trigger where tgname='on_auth_user_created';
+
+-- 10. IDENTIDADES -> mismo conteo que el paso 0.G  (trampa 1)
+select count(*) from auth.identities;
+```
+
+**Y las pruebas a mano, en este orden** — cada una depende de la anterior:
+
+1. **Login con Google** → entra y cae en `/dashboard`. Si falla, es el Paso 4.
+2. **Que sea el MISMO usuario** → entrando como Brunela, el panel de admin tiene
+   que estar accesible. Si entra pero no es admin, es la **trampa 1**: se creó un
+   usuario nuevo.
+3. **Chat en vivo** → abrir el chat en dos navegadores; el mensaje tiene que
+   aparecer **sin recargar**. Si se guarda pero no aparece, es la **trampa 2**.
+4. **Reproducir una clase** con cambio de idioma → valida Bunny + el proxy de
+   manifests.
+5. **Checkout de prueba** con `4242 4242 4242 4242` → valida Stripe + webhook +
+   desbloqueo del tier.
+6. **La región**, que es el motivo de todo esto:
+
+```bash
+curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+# esperado: xxx1::fra1::...   <- el SEGUNDO segmento tiene que decir fra1
+```

@@ -1,5 +1,11 @@
 -- Migration: RLS for categories, documents, chat tables + admin tier fix
 -- Run this in Supabase SQL Editor
+--
+-- NOTE (2026-06-16): sections reordered so chat_bans and chat_mutes are created
+-- BEFORE chat_messages. The chat_messages insert policy references those two
+-- tables in its NOT EXISTS subqueries; creating it first caused
+-- "relation public.chat_bans does not exist". Table creation order is now:
+-- chat_rooms -> chat_bans -> chat_mutes -> chat_messages.
 
 begin;
 
@@ -126,7 +132,65 @@ create policy "chat_rooms_member_insert_dm"
   );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 6. chat_messages table
+-- 6. chat_bans table
+--    Created BEFORE chat_messages because the chat_messages insert policy
+--    references chat_bans in a NOT EXISTS subquery.
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists public.chat_bans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  banned_by uuid not null references public.profiles(id),
+  reason text,
+  expires_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique(user_id)
+);
+
+alter table public.chat_bans enable row level security;
+
+drop policy if exists "chat_bans_admin_manage" on public.chat_bans;
+create policy "chat_bans_admin_manage"
+  on public.chat_bans for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "chat_bans_select_own" on public.chat_bans;
+create policy "chat_bans_select_own"
+  on public.chat_bans for select
+  using (user_id = auth.uid() or public.is_admin());
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 7. chat_mutes table
+--    Created BEFORE chat_messages because the chat_messages insert policy
+--    references chat_mutes in a NOT EXISTS subquery.
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists public.chat_mutes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  muted_by uuid not null references public.profiles(id),
+  reason text,
+  expires_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique(user_id)
+);
+
+alter table public.chat_mutes enable row level security;
+
+drop policy if exists "chat_mutes_admin_manage" on public.chat_mutes;
+create policy "chat_mutes_admin_manage"
+  on public.chat_mutes for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "chat_mutes_select_own" on public.chat_mutes;
+create policy "chat_mutes_select_own"
+  on public.chat_mutes for select
+  using (user_id = auth.uid() or public.is_admin());
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. chat_messages table
+--    Created LAST: its insert policy references chat_rooms, chat_bans and
+--    chat_mutes, all of which now exist above.
 -- ─────────────────────────────────────────────────────────────────────────────
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
@@ -185,58 +249,6 @@ create policy "chat_messages_update_soft_delete"
   on public.chat_messages for update
   using (public.is_admin() or user_id = auth.uid())
   with check (public.is_admin() or user_id = auth.uid());
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 7. chat_bans table
--- ─────────────────────────────────────────────────────────────────────────────
-create table if not exists public.chat_bans (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references public.profiles(id) on delete cascade,
-  banned_by uuid not null references public.profiles(id),
-  reason text,
-  expires_at timestamptz,
-  created_at timestamptz not null default timezone('utc', now()),
-  unique(user_id)
-);
-
-alter table public.chat_bans enable row level security;
-
-drop policy if exists "chat_bans_admin_manage" on public.chat_bans;
-create policy "chat_bans_admin_manage"
-  on public.chat_bans for all
-  using (public.is_admin())
-  with check (public.is_admin());
-
-drop policy if exists "chat_bans_select_own" on public.chat_bans;
-create policy "chat_bans_select_own"
-  on public.chat_bans for select
-  using (user_id = auth.uid() or public.is_admin());
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 8. chat_mutes table
--- ─────────────────────────────────────────────────────────────────────────────
-create table if not exists public.chat_mutes (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references public.profiles(id) on delete cascade,
-  muted_by uuid not null references public.profiles(id),
-  reason text,
-  expires_at timestamptz,
-  created_at timestamptz not null default timezone('utc', now()),
-  unique(user_id)
-);
-
-alter table public.chat_mutes enable row level security;
-
-drop policy if exists "chat_mutes_admin_manage" on public.chat_mutes;
-create policy "chat_mutes_admin_manage"
-  on public.chat_mutes for all
-  using (public.is_admin())
-  with check (public.is_admin());
-
-drop policy if exists "chat_mutes_select_own" on public.chat_mutes;
-create policy "chat_mutes_select_own"
-  on public.chat_mutes for select
-  using (user_id = auth.uid() or public.is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 9. Enable Realtime on chat_messages
