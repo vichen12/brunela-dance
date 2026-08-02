@@ -60,6 +60,47 @@ export function getAppUrl() {
   return optionalUrlSchema.parse(process.env.NEXT_PUBLIC_APP_URL) ?? "http://localhost:3000";
 }
 
+const bunnyEnvSchema = z.object({
+  BUNNY_STREAM_API_KEY: z.string().min(1),
+  BUNNY_STREAM_LIBRARY_ID: z.string().min(1),
+  // CDN hostname of the Bunny pull zone tied to the library, e.g. vz-xxxx.b-cdn.net
+  BUNNY_STREAM_CDN_HOSTNAME: z.string().min(1)
+});
+
+/**
+ * Validates Bunny Stream env lazily so the build does not fail before the
+ * Bunny account is configured in Vercel.
+ */
+export function getBunnyStreamEnv() {
+  return bunnyEnvSchema.parse({
+    BUNNY_STREAM_API_KEY: process.env.BUNNY_STREAM_API_KEY,
+    BUNNY_STREAM_LIBRARY_ID: process.env.BUNNY_STREAM_LIBRARY_ID,
+    BUNNY_STREAM_CDN_HOSTNAME: process.env.BUNNY_STREAM_CDN_HOSTNAME
+  });
+}
+
+export function hasBunnyStreamEnv() {
+  return Boolean(
+    process.env.BUNNY_STREAM_API_KEY &&
+      process.env.BUNNY_STREAM_LIBRARY_ID &&
+      process.env.BUNNY_STREAM_CDN_HOSTNAME
+  );
+}
+
+/**
+ * Token Authentication signing key for the video library's pull zone.
+ *
+ * Optional on purpose: when it is absent we emit unsigned URLs, which is what
+ * local development wants before the Bunny account is fully configured. This
+ * does not fail open in production -- if Token Authentication is enabled in
+ * Bunny and this key is missing, Bunny rejects the unsigned URL and playback
+ * breaks loudly instead of silently serving unprotected video.
+ */
+export function getBunnyTokenAuthKey(): string | null {
+  const raw = process.env.BUNNY_STREAM_TOKEN_AUTH_KEY;
+  return raw && raw.trim().length > 0 ? raw.trim() : null;
+}
+
 export function hasSupabaseAuthEnv() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && resolveSupabasePublicKey());
 }

@@ -2,12 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { getStripeServerEnv } from "@/src/lib/env";
-
-type SubscriptionCatalogSetting = {
-  tier: "corps_de_ballet" | "solista" | "principal";
-  stripe_price_id: string | null;
-  display_order: number;
-};
+import { getSubscriptionCatalog, resolveTierFromPriceId } from "@/src/lib/stripe/catalog";
 
 function createServiceRoleClient() {
   const env = getStripeServerEnv();
@@ -19,15 +14,9 @@ async function resolveMembershipTierFromPriceId(priceId: string | null) {
     return null;
   }
 
-  const supabase = createServiceRoleClient();
-  const { data } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("setting_key", "subscriptions.catalog")
-    .single<{ value: { tiers?: SubscriptionCatalogSetting[] } }>();
-
-  const tiers = data?.value?.tiers ?? [];
-  return tiers.find((tier) => tier.stripe_price_id === priceId)?.tier ?? null;
+  const catalog = await getSubscriptionCatalog();
+  if (!catalog) return null;
+  return resolveTierFromPriceId(catalog, priceId);
 }
 
 async function persistWebhookAudit(event: Stripe.Event, processingError: string | null) {
@@ -48,23 +37,94 @@ async function persistWebhookAudit(event: Stripe.Event, processingError: string 
   );
 }
 
-async function syncSubscription(event: Stripe.Event) {
+/**
+ * Statuses a subscription can never come back from.
+ *
+ * Stripe does not resurrect a cancelled subscription: if the member signs up
+ * again they get a NEW subscription with a NEW id, which lands in its own row.
+ * So for one provider_subscription_id, reaching 'canceled' is final.
+ *
+ * This is NOT the same as cancelling from the Billing Portal, which by default
+ * only sets cancel_at_period_end and leaves the status 'active' until the paid
+ * period runs out. That path never reaches a terminal status, so a member who
+ * cancels and then changes their mind before the period ends is unaffected.
+ */
+const TERMINAL_STATUSES = new Set<string>(["canceled", "incomplete_expired"]);
+
+type SyncOutcome = { applied: true } | { applied: false; reason: string };
+
+async function syncSubscription(event: Stripe.Event): Promise<SyncOutcome> {
   if (
     event.type !== "customer.subscription.created" &&
     event.type !== "customer.subscription.updated" &&
     event.type !== "customer.subscription.deleted"
   ) {
-    return;
+    return { applied: false, reason: `evento ${event.type} no afecta suscripciones` };
   }
 
   const subscription = event.data.object as Stripe.Subscription;
   const supabase = createServiceRoleClient();
   const userId = subscription.metadata.user_id;
   const priceId = subscription.items.data[0]?.price.id ?? null;
-  const membershipTier = await resolveMembershipTierFromPriceId(priceId);
 
-  if (!userId || !membershipTier) {
-    throw new Error("Stripe subscription is missing metadata.user_id or a mapped price id");
+  // These two used to share one message, which made them impossible to tell
+  // apart from the Stripe dashboard. They have completely different fixes.
+  if (!userId) {
+    throw new Error(
+      `La suscripcion ${subscription.id} no trae metadata.user_id. Solo las creadas ` +
+        `desde /api/stripe/checkout lo llevan; si esta se creo a mano en el panel de ` +
+        `Stripe, agregale user_id en Metadata y reenvia el evento.`
+    );
+  }
+
+  const membershipTier = await resolveMembershipTierFromPriceId(priceId);
+  if (!membershipTier) {
+    throw new Error(
+      `El precio ${priceId ?? "(ninguno)"} no esta mapeado a ningun plan, ni en test ni ` +
+        `en live. Pegalo en site_settings -> subscriptions.catalog, en prices.test o ` +
+        `prices.live segun de donde venga, y reenvia el evento; Stripe reintenta solo y ` +
+        `esto se resuelve sin perder nada.`
+    );
+  }
+
+  // event.created is stamped by Stripe, so it orders events correctly even
+  // though DELIVERY order is not guaranteed and failed deliveries are retried.
+  const eventAt = new Date(event.created * 1000).toISOString();
+
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("status, last_event_at")
+    .eq("provider_subscription_id", subscription.id)
+    .maybeSingle<{ status: string; last_event_at: string | null }>();
+
+  // GUARD 1 -- ordering. Anything older than what we already applied is stale.
+  // Equal timestamps are allowed through: that is a replay of the same event,
+  // which rewrites identical data and is a no-op.
+  if (existing?.last_event_at && Date.parse(existing.last_event_at) > Date.parse(eventAt)) {
+    return {
+      applied: false,
+      reason:
+        `evento de ${eventAt} descartado: la fila ya tiene uno mas nuevo ` +
+        `(${existing.last_event_at})`
+    };
+  }
+
+  // GUARD 2 -- terminal state. Guard 1 alone is not enough: Stripe can stamp two
+  // events with the SAME second, so a 'deleted' and a stale 'updated' can tie,
+  // and the tie would slip through and set the row back to active. That is the
+  // exact failure that hands free access to someone who cancelled, so cancelled
+  // is treated as final regardless of timestamps.
+  if (
+    existing &&
+    TERMINAL_STATUSES.has(existing.status) &&
+    !TERMINAL_STATUSES.has(subscription.status)
+  ) {
+    return {
+      applied: false,
+      reason:
+        `la suscripcion ya estaba en '${existing.status}', que es definitivo; ` +
+        `no se revive con '${subscription.status}'`
+    };
   }
 
   const payload = {
@@ -88,12 +148,21 @@ async function syncSubscription(event: Stripe.Event) {
     canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
     ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000).toISOString() : null,
     last_webhook_event_id: event.id,
+    last_event_at: eventAt,
     metadata: subscription.metadata
   };
 
-  await supabase.from("subscriptions").upsert(payload, {
+  const { error } = await supabase.from("subscriptions").upsert(payload, {
     onConflict: "provider_subscription_id"
   });
+
+  // This used to be unchecked: a failed write answered 200 and Stripe never
+  // retried, so the subscription silently never reached the database.
+  if (error) {
+    throw new Error(`No se pudo guardar la suscripcion ${subscription.id}: ${error.message}`);
+  }
+
+  return { applied: true };
 }
 
 /**
@@ -120,9 +189,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    await syncSubscription(event);
+    const outcome = await syncSubscription(event);
     await persistWebhookAudit(event, null);
-    return NextResponse.json({ received: true });
+
+    // A skip is a correct outcome, not an error, so it is audited as processed.
+    // The reason travels in the response so it shows up in `stripe listen` and
+    // in the event log of the Stripe dashboard instead of vanishing.
+    return NextResponse.json(
+      outcome.applied ? { received: true } : { received: true, skipped: outcome.reason }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unhandled webhook error";
     await persistWebhookAudit(event, message);

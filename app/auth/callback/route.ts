@@ -74,9 +74,14 @@ export async function GET(request: NextRequest) {
     }
 
     console.error("[auth/callback] exchangeCodeForSession error:", error.message);
+    // Surface the real reason instead of a generic message so failures are
+    // diagnosable from the sign-in screen.
+    return NextResponse.redirect(
+      `${origin}/sign-in?error=${encodeURIComponent(`Google: ${error.message}`)}`
+    );
   }
 
   return NextResponse.redirect(
-    `${origin}/sign-in?error=${encodeURIComponent("Error de autenticacion con Google")}`
+    `${origin}/sign-in?error=${encodeURIComponent("Falto el codigo de autorizacion de Google")}`
   );
 }

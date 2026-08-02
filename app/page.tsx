@@ -197,8 +197,8 @@ const aboutCards = [
 const plans = [
   {
     name: "Corps de Ballet",
-    price: "20",
-    annual: "192",
+    price: "16",
+    annual: "154",
     badge: null,
     featured: false,
     oneLine: "Accedé a una biblioteca completa de clases diseñadas para mejorar tu técnica como bailarín.",
@@ -211,8 +211,8 @@ const plans = [
   },
   {
     name: "Solista",
-    price: "39",
-    annual: "374,40",
+    price: "31",
+    annual: "299",
     badge: "El más elegido",
     featured: true,
     oneLine: "Planes de trabajo estructurados con objetivos específicos.",
@@ -225,8 +225,8 @@ const plans = [
   },
   {
     name: "Principal",
-    price: "69",
-    annual: "662,40",
+    price: "59",
+    annual: "559",
     badge: "Experiencia completa con clases en vivo",
     featured: false,
     oneLine: "Experiencia completa y personalizada con clases en vivo.",

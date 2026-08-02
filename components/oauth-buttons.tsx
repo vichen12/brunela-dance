@@ -1,6 +1,7 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { useState } from "react";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase/client";
 import { usePublicI18n } from "@/components/language-provider";
 
 function GoogleIcon() {
@@ -18,55 +19,98 @@ type Props = { callbackUrl?: string | null };
 
 export function OAuthButtons({ callbackUrl }: Props) {
   const { t } = usePublicI18n();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function signInWithGoogle() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) return;
+    setError(null);
+    setLoading(true);
+    try {
+      // Uses the shared browser client, which validates the Supabase env and
+      // throws a clear error instead of silently doing nothing.
+      const supabase = createSupabaseBrowserClient();
+      const next = callbackUrl ?? "/dashboard";
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
-    const supabase = createBrowserClient(url, key);
-    const next = callbackUrl ?? "/dashboard";
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
 
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
+      if (oauthError) {
+        setError(oauthError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Supabase normally redirects automatically; do it manually as a fallback.
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "No pudimos conectar con Google. Intentá de nuevo.";
+      setError(message);
+      setLoading(false);
+    }
   }
 
   return (
-    <button
-      type="button"
-      onClick={signInWithGoogle}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.7rem",
-        width: "100%",
-        padding: "0.82rem 1.5rem",
-        borderRadius: "12px",
-        border: "1.5px solid #ede1ea",
-        background: "#fff",
-        color: "#1c1917",
-        fontSize: "0.85rem",
-        fontWeight: 600,
-        fontFamily: "var(--font-body)",
-        cursor: "pointer",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-        transition: "all 180ms",
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.borderColor = "#be185d";
-        e.currentTarget.style.boxShadow = "0 2px 14px rgba(190,24,93,0.12)";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = "#ede1ea";
-        e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
-      }}
-    >
-      <GoogleIcon />
-      {t("auth.google")}
-    </button>
+    <div style={{ width: "100%" }}>
+      <button
+        type="button"
+        onClick={signInWithGoogle}
+        disabled={loading}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.7rem",
+          width: "100%",
+          padding: "0.82rem 1.5rem",
+          borderRadius: "12px",
+          border: "1.5px solid #ede1ea",
+          background: "#fff",
+          color: "#1c1917",
+          fontSize: "0.85rem",
+          fontWeight: 600,
+          fontFamily: "var(--font-body)",
+          cursor: loading ? "default" : "pointer",
+          opacity: loading ? 0.7 : 1,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          transition: "all 180ms",
+        }}
+        onMouseOver={(e) => {
+          if (loading) return;
+          e.currentTarget.style.borderColor = "#be185d";
+          e.currentTarget.style.boxShadow = "0 2px 14px rgba(190,24,93,0.12)";
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.borderColor = "#ede1ea";
+          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+        }}
+      >
+        <GoogleIcon />
+        {loading ? "Conectando…" : t("auth.google")}
+      </button>
+
+      {error && (
+        <div
+          style={{
+            marginTop: "0.7rem",
+            borderRadius: 12,
+            border: "1px solid rgba(217, 105, 119, 0.3)",
+            background: "rgba(255, 238, 242, 0.95)",
+            color: "#B83251",
+            padding: "0.7rem 0.9rem",
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            lineHeight: 1.4,
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </div>
   );
 }

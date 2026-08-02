@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
+import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +25,7 @@ export default async function ChatPage({ searchParams }: {
   const params = (await searchParams) ?? {};
   const selectedUserId = typeof params.user === "string" ? params.user : null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, membership_tier, is_admin")
-    .eq("id", user.id)
-    .single<Profile>();
+  const profile = await getCurrentProfile(user.id);
 
   const isAdmin = profile?.is_admin ?? false;
 
@@ -74,14 +73,16 @@ export default async function ChatPage({ searchParams }: {
 
     let initialMessages: ChatMessage[] = [];
     if (activeRoom) {
+      // Newest 100, re-sorted oldest-first for display. Ordering ascending and
+      // then limiting would pin the room to its first 100 messages forever.
       const { data } = await supabase
         .from("chat_messages")
         .select("id, user_id, content, created_at, is_deleted, profiles(full_name, email, is_admin)")
         .eq("room_id", activeRoom.id)
         .eq("is_deleted", false)
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(100);
-      initialMessages = (data ?? []) as unknown as ChatMessage[];
+      initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
     }
 
     const activeMember = members.find((m) => m.id === activeUserId);
@@ -186,16 +187,34 @@ export default async function ChatPage({ searchParams }: {
   }
 
   // ─── MEMBER VIEW ────────────────────────────────────────────────
-  // Find admin user
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .eq("is_admin", true)
-    .limit(1)
-    .maybeSingle<{ id: string; full_name: string | null; email: string }>();
+  // Who the member is talking to.
+  //
+  // This CANNOT be a plain select on profiles: RLS lets a member read only
+  // their own row, so `where is_admin = true` came back empty and the whole DM
+  // block below was skipped -- which is why this page used to render
+  // "Cargando chat..." forever for every member. get_studio_admin() is a
+  // security-definer function that returns just the id and the display name,
+  // and nothing else about anyone. See 20260730_chat_studio_admin_lookup.sql.
+  const { data: studioAdmin, error: adminLookupError } = await supabase
+    .rpc("get_studio_admin")
+    .maybeSingle<{ admin_id: string; admin_name: string | null }>();
+
+  const adminProfile = studioAdmin ? { id: studioAdmin.admin_id, full_name: studioAdmin.admin_name } : null;
+
+  // Silent failure here is what produced the permanent fake "loading" screen.
+  if (adminLookupError || !adminProfile) {
+    console.error(
+      "[chat] no se pudo resolver la admin del estudio:",
+      adminLookupError?.message ?? "get_studio_admin() no devolvio filas"
+    );
+  }
 
   let dmRoom: DmRoom | null = null;
   let initialMessages: ChatMessage[] = [];
+
+  // Is the member's tier allowed to START a DM with the admin?
+  const dmAccess = await getDmAccess();
+  const canStartDm = tierCanStartDm(dmAccess, profile?.membership_tier ?? "none");
 
   if (adminProfile) {
     const { data: existingRoom } = await supabase
@@ -206,8 +225,10 @@ export default async function ChatPage({ searchParams }: {
       .maybeSingle<DmRoom>();
 
     if (existingRoom) {
+      // An existing conversation (possibly started by the admin) stays open
+      // regardless of the current plan.
       dmRoom = existingRoom;
-    } else {
+    } else if (canStartDm) {
       const { data: newRoom } = await supabase
         .from("chat_rooms")
         .insert({
@@ -219,18 +240,27 @@ export default async function ChatPage({ searchParams }: {
         .single<DmRoom>();
       dmRoom = newRoom;
     }
+    // else: no room + not allowed -> render the upgrade gate below.
 
     if (dmRoom) {
+      // Newest 100, re-sorted oldest-first for display. Ordering ascending and
+      // then limiting would pin the room to its first 100 messages forever.
       const { data } = await supabase
         .from("chat_messages")
         .select("id, user_id, content, created_at, is_deleted, profiles(full_name, email, is_admin)")
         .eq("room_id", dmRoom.id)
         .eq("is_deleted", false)
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(100);
-      initialMessages = (data ?? []) as unknown as ChatMessage[];
+      initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
     }
   }
+
+  // Con quien habla la alumna. Sin esto los mensajes de Brunela se ven como
+  // "Usuario": la RLS no deja a la alumna leer el perfil de la admin.
+  const interlocutorDeLaAlumna = adminProfile
+    ? { id: adminProfile.id, name: adminProfile.full_name ?? "Brunela", isAdmin: true }
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "var(--font-body), sans-serif" }}>
@@ -253,10 +283,8 @@ export default async function ChatPage({ searchParams }: {
             Instructora · Responde en menos de 24hs
           </p>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e" }}/>
-          <span style={{ fontSize: 9, color: "#22c55e", fontWeight: 700, letterSpacing: "0.08em" }}>EN LÍNEA</span>
-        </div>
+        {/* Antes habia un "EN LINEA" verde fijo. No hay sistema de presencia:
+            decia que Brunela estaba conectada aunque no lo estuviera. */}
       </div>
 
       {dmRoom ? (
@@ -266,10 +294,62 @@ export default async function ChatPage({ searchParams }: {
           isAdmin={false}
           initialMessages={initialMessages}
           placeholder="Escribile a Brunela..."
+          // Sin esto los mensajes de Brunela se ven como "Usuario": la RLS no
+          // deja a la alumna leer el perfil de la admin.
+          interlocutor={interlocutorDeLaAlumna}
         />
+      ) : !canStartDm ? (
+        // Plan gate: this tier cannot start a direct chat with Brunela.
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <div style={{
+            maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
+            border: "1px solid #fce7f3", borderRadius: 24, padding: "40px 32px",
+            backdropFilter: "blur(8px)",
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 14 }}>🔒</div>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>
+              El chat directo con Brunela es exclusivo de tu plan superior
+            </p>
+            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 22 }}>
+              Tu plan actual no incluye mensajes privados con Brunela. Actualizá tu plan
+              para tener acompañamiento personalizado uno a uno.
+            </p>
+            <Link
+              href="/dashboard/plan"
+              style={{
+                display: "inline-block", padding: "12px 26px", borderRadius: 99,
+                background: "var(--pink)", color: "#fff", fontSize: 12, fontWeight: 700,
+                textDecoration: "none", boxShadow: "0 4px 14px rgba(190,24,93,0.35)",
+              }}
+            >
+              Ver planes
+            </Link>
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 18 }}>
+              Mientras tanto, podés participar en los{" "}
+              <Link href="/dashboard/community" style={{ color: "var(--pink)", fontWeight: 600, textDecoration: "none" }}>
+                canales de comunidad
+              </Link>.
+            </p>
+          </div>
+        </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <p style={{ color: "var(--muted)" }}>Cargando chat...</p>
+        // Last resort. This used to say "Cargando chat..." and never resolve,
+        // which is how a hard failure spent months looking like a slow page.
+        // If we land here the conversation genuinely could not be opened.
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <div style={{
+            maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
+            border: "1px solid #fce7f3", borderRadius: 24, padding: "40px 32px",
+            backdropFilter: "blur(8px)",
+          }}>
+            <p style={{ fontSize: 15, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>
+              No pudimos abrir tu conversación
+            </p>
+            <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+              Volvé a cargar la página. Si sigue pasando, avisanos: es un problema nuestro,
+              no de tu plan ni de tu cuenta.
+            </p>
+          </div>
         </div>
       )}
     </div>

@@ -1,25 +1,35 @@
 import { cache } from "react";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
+import { getProgresoDelUsuario, paraRetomar } from "@/src/features/studio/progress";
 import { StudioSidebar } from "@/components/studio-sidebar";
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
 
-const getProfile = cache(async (userId: string): Promise<MemberProfile | null> => {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("full_name, membership_tier, is_admin")
-    .eq("id", userId)
-    .single<MemberProfile>();
-  return data;
+// El perfil sale de getCurrentProfile (memoizado por request), no de una
+// consulta propia: antes el layout y la pagina pedian la misma fila dos veces.
+const getProfile = getCurrentProfile;
+
+/**
+ * La clase empezada y sin terminar mas reciente, para el boton principal del
+ * menu. Devuelve null cuando no hay ninguna: en ese caso el boton NO lleva a
+ * una pantalla vacia, ofrece explorar la biblioteca.
+ *
+ * Sale del progreso ya memoizado por request, sin consulta propia: antes esta
+ * pantalla pedia `user_progress` una tercera vez.
+ */
+const getSeguirViendo = cache(async (userId: string) => {
+  const video = paraRetomar(await getProgresoDelUsuario(userId))?.videos;
+  if (!video?.slug) return null;
+  return { slug: video.slug, title: video.title_i18n?.es ?? video.title_i18n?.en ?? "tu clase" };
 });
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const profile = await getProfile(user.id);
+  const [profile, seguirViendo] = await Promise.all([getProfile(user.id), getSeguirViendo(user.id)]);
 
   const userName = profile?.is_admin
     ? "BRUNELA"
@@ -45,6 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             userName={userName}
             membershipTier={profile?.membership_tier ?? "none"}
             isAdmin={isAdmin}
+            seguirViendo={seguirViendo}
           />
         </div>
         <div className="dashboard-content" style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { invalidarAjustes } from "@/src/lib/settings";
+import { deleteBunnyVideo, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 
 const videoSchema = z.object({
   id: z.string().uuid().optional().or(z.literal("")),
@@ -21,9 +23,11 @@ const videoSchema = z.object({
   thumbnailUrl: z.string().optional(),
   streamPlaybackId: z.string().optional(),
   streamAssetId: z.string().optional(),
-  audioTrackEs: z.string().optional(),
-  audioTrackEn: z.string().optional(),
-  audioTrackPt: z.string().optional(),
+  // NOTE: audio_tracks is deliberately absent. It is written by the mux worker
+  // (worker/index.mjs) once a language is verified inside the encoded video.
+  // The old manual "Mux Audio Track ID" fields wrote it from this form, which
+  // wiped the worker's record on every save -- the inputs were always empty
+  // because Bunny has no per-track ids to paste in the first place.
   isFeatured: z.boolean().default(false)
 });
 
@@ -112,21 +116,12 @@ export async function upsertVideoAction(formData: FormData) {
     thumbnailUrl: formData.get("thumbnailUrl"),
     streamPlaybackId: formData.get("streamPlaybackId"),
     streamAssetId: formData.get("streamAssetId"),
-    audioTrackEs: formData.get("audioTrackEs"),
-    audioTrackEn: formData.get("audioTrackEn"),
-    audioTrackPt: formData.get("audioTrackPt"),
     isFeatured: checkboxValue(formData, "isFeatured")
   });
 
   if (!parsed.success) {
     redirectWithMessage("/admin/videos", "error", "Datos de video invalidos.");
   }
-
-  const audioTracks = [
-    { locale: "es", track_id: parsed.data.audioTrackEs?.trim() ?? "", label: "Espanol" },
-    { locale: "en", track_id: parsed.data.audioTrackEn?.trim() ?? "", label: "English" },
-    { locale: "pt", track_id: parsed.data.audioTrackPt?.trim() ?? "", label: "Portugues" },
-  ].filter((t) => t.track_id.length > 0);
 
   const payload = {
     slug: parsed.data.slug.trim(),
@@ -140,7 +135,6 @@ export async function upsertVideoAction(formData: FormData) {
     thumbnail_url: parsed.data.thumbnailUrl?.trim() || null,
     stream_playback_id: parsed.data.streamPlaybackId?.trim() || null,
     stream_asset_id: parsed.data.streamAssetId?.trim() || null,
-    audio_tracks: audioTracks,
     is_featured: parsed.data.isFeatured,
     published_at: parsed.data.status === "published" ? new Date().toISOString() : null,
     updated_by: user.id
@@ -163,14 +157,79 @@ export async function deleteVideoAction(formData: FormData) {
   const supabase = await createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
 
+  // Fetch the Bunny id first so we can clean up the CDN asset after DB deletion.
+  const { data: existing } = await supabase
+    .from("videos")
+    .select("bunny_video_id")
+    .eq("id", id)
+    .maybeSingle<{ bunny_video_id: string | null }>();
+
   const { error } = await supabase.from("videos").delete().eq("id", id);
 
   if (error) {
     redirectWithMessage("/admin/videos", "error", error.message);
   }
 
+  if (existing?.bunny_video_id && hasBunnyStreamEnv()) {
+    await deleteBunnyVideo(existing.bunny_video_id);
+  }
+
   refreshAdminRoutes();
   redirectWithMessage("/admin/videos", "success", "Video eliminado.");
+}
+
+/** A job stuck this long is a dead worker, not a slow encode. */
+const STUCK_JOB_HOURS = 4;
+
+/**
+ * Puts a mux job back in the queue.
+ *
+ * Without this the only way to retry is a hand-written UPDATE in the SQL editor
+ * (worker/README.md documents it), which is not something to hand to a client.
+ * Attempts reset to zero on purpose: an operator retrying after reading the
+ * error deserves the full budget again.
+ *
+ * Only failed jobs, plus 'processing' ones abandoned for longer than the
+ * worker's own encode timeout. Re-queueing a job a live worker still holds
+ * would let a second worker mux the same class in parallel: both upload a new
+ * Bunny video, only one wins the swap and the other leaks as an orphan asset.
+ */
+export async function requeueMuxJobAction(formData: FormData) {
+  await requireAdmin();
+  const supabase = await createSupabaseAdminClient();
+
+  const jobId = String(formData.get("jobId") ?? "");
+  if (!z.string().uuid().safeParse(jobId).success) {
+    redirectWithMessage("/admin/videos", "error", "Job de muxeo invalido.");
+  }
+
+  const cutoff = new Date(Date.now() - STUCK_JOB_HOURS * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("video_mux_jobs")
+    .update({ status: "pending", attempts: 0, last_error: null, claimed_at: null })
+    .eq("id", jobId)
+    .or(`status.eq.failed,and(status.eq.processing,claimed_at.lt.${cutoff})`)
+    .select("id");
+
+  if (error) {
+    redirectWithMessage("/admin/videos", "error", error.message);
+  }
+
+  if (!data || data.length === 0) {
+    redirectWithMessage(
+      "/admin/videos",
+      "error",
+      "No se reencolo: el job ya no estaba fallido, o hay un worker procesandolo ahora."
+    );
+  }
+
+  refreshAdminRoutes();
+  redirectWithMessage(
+    "/admin/videos",
+    "success",
+    "Muxeo reencolado. El worker lo toma en el proximo ciclo."
+  );
 }
 
 export async function upsertProgramAction(formData: FormData) {
@@ -314,6 +373,8 @@ export async function upsertSiteSettingAction(formData: FormData) {
   } catch {
     redirectWithMessage("/admin/settings", "error", "El JSON no es valido.");
   }
+
+  invalidarAjustes();
 
   const { error } = await supabase.from("site_settings").upsert(
     {

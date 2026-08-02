@@ -53,11 +53,34 @@ export default async function DocumentsPage({ searchParams }: {
       <section className="page-shell space-y-6">
 
         <header className="hero-stage">
-          <p className="eyebrow">Recursos del estudio</p>
-          <h1 className="display mt-5 text-5xl leading-none md:text-7xl">Documentos.</h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-            Guías, PDFs y material de referencia disponibles según tu plan.
-          </p>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="eyebrow">Recursos del estudio</p>
+              <h1 className="display mt-5 text-5xl leading-none md:text-7xl">
+                Documentos<span style={{ color: "var(--pink)" }}>.</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+                Guías, PDFs y material de referencia disponibles según tu plan.
+              </p>
+            </div>
+
+            <div className="soft-stat flex min-w-[15rem] items-center gap-4 p-5">
+              <div style={{
+                width: 46, height: 46, borderRadius: 14, flexShrink: 0,
+                background: "var(--pink-wash)", color: "var(--pink)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path d="M1.8 4.2A1.2 1.2 0 013 3h3.2l1.4 1.6h4.4A1.2 1.2 0 0113.2 5.8v6A1.2 1.2 0 0112 13H3a1.2 1.2 0 01-1.2-1.2V4.2z"
+                    stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="display text-3xl leading-none">{visible.length}</p>
+                <p className="mt-1 text-sm text-[color:var(--ink-soft)]">archivos disponibles</p>
+              </div>
+            </div>
+          </div>
         </header>
 
         {/* Filters */}
@@ -85,10 +108,42 @@ export default async function DocumentsPage({ searchParams }: {
 
         {visible.length === 0 ? (
           <div style={{
-            border: "1.5px dashed #fbcfe8", borderRadius: 20, padding: "40px 24px",
-            textAlign: "center", color: "var(--muted)", fontSize: 13,
+            border: "1.5px dashed var(--pink-soft)", borderRadius: 26,
+            background: "#fff", padding: "52px 28px", textAlign: "center",
           }}>
-            No hay documentos disponibles para tu plan todavía.
+            <div style={{
+              width: 88, height: 88, borderRadius: "50%", margin: "0 auto 24px",
+              background: "var(--pink-wash)", color: "var(--pink)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="38" height="38" viewBox="0 0 16 16" fill="none">
+                <path d="M5 1.5h5.5L14 5V14H5V1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                <path d="M10 1.5V5h4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 12 }}>
+              Sin documentos
+            </p>
+            <h2 className="display" style={{ fontSize: 27, color: "var(--ink)", lineHeight: 1.3 }}>
+              Todavía no hay <span style={{ color: "var(--pink)", fontStyle: "italic" }}>documentos</span> disponibles
+            </h2>
+            <p style={{ fontSize: 13.5, color: "var(--muted)", marginTop: 12, lineHeight: 1.7 }}>
+              Cuando Brunela suba nuevo material,<br />
+              lo vas a encontrar acá listo para leer o descargar.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
+              {/* Antes iba un "Avisarme cuando haya material": no existe ningun
+                  sistema de avisos. Estas dos salidas si funcionan hoy. */}
+              <a href="/dashboard/chat" style={{
+                background: "var(--pink)", color: "#fff", textDecoration: "none",
+                padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+              }}>Pedirle material a Brunela</a>
+              <a href="/dashboard/plan" style={{
+                background: "#fff", color: "var(--pink)", textDecoration: "none",
+                border: "1px solid var(--pink-wash)",
+                padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+              }}>Ver mi plan</a>
+            </div>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>

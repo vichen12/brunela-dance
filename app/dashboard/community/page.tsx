@@ -1,5 +1,6 @@
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 import { revalidatePath } from "next/cache";
@@ -85,11 +86,7 @@ export default async function CommunityPage({ searchParams }: {
   const activeRoomId = typeof params.room === "string" ? params.room : null;
   const showCreate = params.create === "1";
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, membership_tier, is_admin")
-    .eq("id", user.id)
-    .single<{ full_name: string | null; membership_tier: MembershipTier; is_admin: boolean }>();
+  const profile = await getCurrentProfile(user.id);
 
   const tier = profile?.membership_tier ?? "none";
   const isAdmin = profile?.is_admin ?? false;
@@ -112,26 +109,67 @@ export default async function CommunityPage({ searchParams }: {
 
   let initialMessages: ChatMessage[] = [];
   if (currentRoom) {
+    // Newest 100, re-sorted oldest-first for display. Ordering ascending and
+    // then limiting would pin the room to its first 100 messages forever.
     const { data } = await supabase
       .from("chat_messages")
       .select("id, user_id, content, created_at, is_deleted, profiles(full_name, email, is_admin)")
       .eq("room_id", currentRoom.id)
       .eq("is_deleted", false)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(100);
-    initialMessages = (data ?? []) as unknown as ChatMessage[];
+    initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
   }
 
   if (!isAdmin && accessibleRooms.length === 0) {
     return (
-      <main className="pb-20 pt-6">
-        <section className="page-shell">
+      <main className="pb-20 pt-6 md:pb-28 md:pt-10">
+        <section className="page-shell space-y-6">
           <div className="hero-stage">
             <p className="eyebrow">Comunidad</p>
-            <h1 className="display mt-5 text-5xl">Chat del estudio.</h1>
-            <p className="mt-4 text-base text-[color:var(--ink-soft)]">
+            <h1 className="display mt-5 text-5xl leading-none md:text-6xl">
+              Chat <span style={{ color: "var(--pink)", fontStyle: "italic" }}>del estudio.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
               Los chats de comunidad estarán disponibles pronto.
             </p>
+          </div>
+
+          <div style={{
+            borderRadius: 26, border: "1.5px dashed var(--pink-soft)",
+            background: "#fff", padding: "56px 32px", textAlign: "center",
+          }}>
+            <div style={{
+              width: 96, height: 96, borderRadius: "50%", margin: "0 auto 26px",
+              background: "var(--pink-wash)", color: "var(--pink)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="42" height="42" viewBox="0 0 16 16" fill="none">
+                <path d="M2.5 3.5h11c.28 0 .5.22.5.5v6c0 .28-.22.5-.5.5H7L4 13V10.5H2.5c-.28 0-.5-.22-.5-.5V4c0-.28.22-.5.5-.5z"
+                  stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 14 }}>
+              Sin canales
+            </p>
+            <h2 className="display" style={{ fontSize: 30, lineHeight: 1.25, color: "var(--ink)" }}>
+              Muy pronto podrás chatear<br />
+              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>con la comunidad.</span>
+            </h2>
+            <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 14, lineHeight: 1.7 }}>
+              Estamos preparando este espacio para que puedas conectar,<br />
+              compartir y acompañarte con otras alumnas.
+            </p>
+
+            {/* En vez de "te avisaremos": una salida que SI existe hoy. */}
+            <a href="/dashboard/chat" style={{
+              display: "inline-flex", alignItems: "center", gap: 9, marginTop: 26,
+              background: "var(--pink)", color: "#fff", textDecoration: "none",
+              padding: "13px 26px", borderRadius: 999, fontSize: 13.5, fontWeight: 700,
+            }}>
+              Mientras tanto, escribile a Brunela
+            </a>
           </div>
         </section>
       </main>

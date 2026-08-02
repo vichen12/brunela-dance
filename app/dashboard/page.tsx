@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
+import { getProgresoDelUsuario, ultimaVista } from "@/src/features/studio/progress";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,23 @@ type ResumeVideo = {
   max_position_seconds: number;
   completion_percent: number;
   updated_at: string;
-  videos: { title_i18n: Record<string, string>; duration_seconds: number; slug: string } | null;
+  videos: {
+    title_i18n: Record<string, string>;
+    duration_seconds: number;
+    slug: string;
+    thumbnail_url: string | null;
+    category_slugs: string[] | null;
+  } | null;
+};
+
+/** Clase sugerida en la fila "Para hoy". */
+type ClaseSugerida = {
+  id: string;
+  slug: string;
+  title_i18n: Record<string, string>;
+  duration_seconds: number;
+  category_slugs: string[] | null;
+  thumbnail_url: string | null;
 };
 
 type LiveSession = {
@@ -19,6 +37,7 @@ type LiveSession = {
   title_i18n: Record<string, string>;
   starts_at: string;
   membership_tier_required: MembershipTier;
+  cover_image_url: string | null;
 };
 
 type Announcement = { id: string; title: string; content: string; tier_target: string };
@@ -54,12 +73,44 @@ const CLASS_CATS = [
   { key: "pct",        label: "PCT",               sub: "PCT Certificado",   grad: "linear-gradient(145deg, #fff1f2, #be185d)" },
 ];
 
+/** Etiqueta legible de cada categoria, para no mostrar el slug crudo. */
+const CAT_LABEL: Record<string, string> = Object.fromEntries(
+  CLASS_CATS.map((c) => [c.key, c.label])
+);
+
 const QUICK_LINKS = [
-  { href: "/dashboard/library"   as const, label: "Biblioteca",     sub: "Clases a demanda" },
-  { href: "/dashboard/programs"  as const, label: "Programas",      sub: "Secuencias dia a dia" },
-  { href: "/dashboard/live"      as const, label: "Clases en vivo", sub: "Reservar proxima sesion" },
-  { href: "/dashboard/documents" as const, label: "Documentos",     sub: "PDFs y archivos" },
+  { href: "/dashboard/library"   as const, label: "Biblioteca",  sub: "Explorá todas las clases",
+    d: "M2.5 3h4a2 2 0 012 2v8a1.6 1.6 0 00-1.6-1.4H2.5V3z", d2: "M13.5 3h-4a2 2 0 00-2 2v8a1.6 1.6 0 011.6-1.4h4.4V3z" },
+  { href: "/dashboard/programs"  as const, label: "Programas",   sub: "Seguí tu plan paso a paso",
+    d: "M3 4.5h10M3 8h10M3 11.5h6" },
+  { href: "/dashboard/live"      as const, label: "Calendario",  sub: "Ver próximos en vivo",
+    d: "M3 4.5h10v9H3v-9z", d2: "M3 7.2h10M5.6 2.6v3M10.4 2.6v3" },
+  { href: "/dashboard/documents" as const, label: "Documentos",  sub: "PDFs y guías útiles",
+    d: "M5 1.5h5.5L14 5V14H5V1.5z", d2: "M10 1.5V5h4" },
 ];
+
+/** Icono de línea, del mismo trazo que el menú lateral. */
+function Ico({ d, d2, size = 16 }: { d: string; d2?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+      <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
+
+/** Cuadradito de color detrás de un icono, como en las tarjetas de la referencia. */
+function IcoCaja({ d, d2 }: { d: string; d2?: string }) {
+  return (
+    <div style={{
+      width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+      background: "var(--pink-wash)", color: "var(--pink)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <Ico d={d} d2={d2} size={18} />
+    </div>
+  );
+}
 
 function formatDate() {
   return new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
@@ -67,6 +118,16 @@ function formatDate() {
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + "h";
+}
+
+/** "Sabado 25 de mayo", para la tarjeta de la proxima clase en vivo. */
+function formatLiveDate(iso: string) {
+  const t = new Date(iso).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function formatDuracion(segundos: number) {
+  return `${Math.round(segundos / 60)} min`;
 }
 
 function timeAgo(iso: string) {
@@ -82,11 +143,7 @@ export default async function DashboardPage() {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, membership_tier, is_admin")
-    .eq("id", user.id)
-    .single<{ full_name: string | null; membership_tier: MembershipTier; is_admin: boolean }>();
+  const profile = await getCurrentProfile(user.id);
 
   const isAdmin = profile?.is_admin ?? false;
   const tier = profile?.membership_tier ?? "none";
@@ -99,25 +156,30 @@ export default async function DashboardPage() {
 
   // Base queries — available to all authenticated users
   const [
-    { data: resume },
+    progressList,
     { data: liveData },
-    { data: progressList },
     { data: announcementsData },
+    { data: paraHoy },
   ] = await Promise.all([
-    supabase.from("user_progress")
-      .select("max_position_seconds, completion_percent, updated_at, videos(title_i18n, duration_seconds, slug)")
-      .eq("user_id", user.id).gt("max_position_seconds", 0)
-      .order("updated_at", { ascending: false }).limit(1).maybeSingle<ResumeVideo>(),
+    // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
+    // veces y el layout una tercera. Ahora es una sola consulta por request.
+    getProgresoDelUsuario(user.id),
     supabase.from("live_sessions")
-      .select("id, title_i18n, starts_at, membership_tier_required")
+      .select("id, title_i18n, starts_at, membership_tier_required, cover_image_url")
       .in("status", ["scheduled"]).gte("starts_at", now)
       .order("starts_at", { ascending: true }).limit(1).maybeSingle<LiveSession>(),
-    supabase.from("user_progress").select("video_id, max_position_seconds")
-      .eq("user_id", user.id).gt("max_position_seconds", 0),
     supabase.from("studio_announcements")
       .select("id, title, content, tier_target").eq("is_active", true)
       .or("expires_at.is.null,expires_at.gt." + now)
       .order("published_at", { ascending: false }).limit(3),
+    // "Para hoy": las clases publicadas mas recientes a las que llega su plan.
+    // La RLS ya filtra por tier, asi que no hace falta condicionarlo aca.
+    supabase.from("videos")
+      .select("id, slug, title_i18n, duration_seconds, category_slugs, thumbnail_url")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(10)
+      .returns<ClaseSugerida[]>(),
   ]);
 
   // Admin-only queries — only run when the user is an admin and the admin client is available
@@ -182,10 +244,25 @@ export default async function DashboardPage() {
     }
   }
 
+  // "Continua viendo" sale de la misma lista, sin otra consulta.
+  const resume = ultimaVista(progressList);
+
   const classesWatched = progressList?.length ?? 0;
   const minutesPracticed = Math.floor(
     (progressList ?? []).reduce((acc, p) => acc + p.max_position_seconds, 0) / 60
   );
+
+  // Racha semanal: dias DISTINTOS con actividad en los ultimos 7. Antes esta
+  // tarjeta mostraba un guion fijo, sin calcular nada.
+  const hace7dias = Date.now() - 7 * 86400000;
+  const rachaSemanal = new Set(
+    (progressList ?? [])
+      .map((p) => (p as { updated_at?: string }).updated_at)
+      .filter((f): f is string => Boolean(f) && new Date(f!).getTime() >= hace7dias)
+      .map((f) => new Date(f).toISOString().slice(0, 10))
+  ).size;
+
+  const sugeridas = ((paraHoy ?? []) as ClaseSugerida[]).slice(0, 8);
   const resumeTitle = resume?.videos ? resolveI18nText(resume.videos.title_i18n) : null;
   const resumeProgress = Math.max(8, Math.min(100, Number(resume?.completion_percent ?? 0)));
   const resumeElapsed = Math.floor((Number(resume?.completion_percent ?? 0) / 100) * (resume?.videos?.duration_seconds ?? 0));
@@ -410,22 +487,23 @@ export default async function DashboardPage() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
             {!isAdmin && (
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#be185d", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
                 {formatDate()}
               </p>
             )}
             <h2 style={{
               fontFamily: "var(--font-display), serif",
-              fontSize: isAdmin ? 22 : 36, fontWeight: 800, color: "#1c1917",
+              fontSize: isAdmin ? 22 : 36, fontWeight: 800, color: "var(--ink)",
               lineHeight: 1.1, letterSpacing: "-0.01em",
             }}>
-              {greeting}, {firstName}.
+              {greeting},{" "}
+              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>{firstName}.</span>
             </h2>
             <p style={{ marginTop: 6, fontSize: 13, color: "#78716c", lineHeight: 1.5 }}>
               Tu cuerpo te espera. Segui donde lo dejaste.
             </p>
           </div>
-          {!isAdmin && (
+          {isAdmin && (
             <span style={{
               fontSize: 11, fontWeight: 700, padding: "6px 16px", borderRadius: 99,
               background: tierStyle.bg, color: tierStyle.color, alignSelf: "flex-start", marginTop: 4,
@@ -436,143 +514,212 @@ export default async function DashboardPage() {
         {/* Personal stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
           {[
-            { value: classesWatched,   label: "Clases vistas" },
-            { value: minutesPracticed, label: "Minutos practicados" },
-            { value: "—",             label: "Racha semanal" },
+            { value: classesWatched, label: classesWatched === 1 ? "Clase vista" : "Clases vistas",
+              d: "M4.5 3.5L13 8l-8.5 4.5V3.5z" },
+            { value: minutesPracticed, label: minutesPracticed === 1 ? "Minuto practicado" : "Minutos practicados",
+              d: "M8 4v4l2.5 1.5", d2: "M8 14A6 6 0 108 2a6 6 0 000 12z" },
+            { value: rachaSemanal, label: "Racha semanal",
+              d: "M8 14c2.5 0 4.5-1.9 4.5-4.3 0-3-2.6-4.3-3.4-7.2-1.3 1-2.1 2.3-2 3.8-1-.3-1.5-1-1.7-1.9C4.2 5.6 3.5 7.2 3.5 9.7 3.5 12.1 5.5 14 8 14z" },
           ].map((s, i) => (
-            <div key={i} style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "20px 22px" }}>
-              <p style={{ fontSize: 28, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-              <p style={{ fontSize: 12, color: "#78716c", marginTop: 6, fontWeight: 600 }}>{s.label}</p>
+            <div key={i} style={{
+              background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+              padding: "18px 20px", display: "flex", alignItems: "center", gap: 14,
+            }}>
+              <IcoCaja d={s.d} d2={s.d2} />
+              <div>
+                <p style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
+                <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 5, fontWeight: 500 }}>{s.label}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Continue watching */}
-        <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f9f7f6" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase" }}>
-              Continuar viendo
-            </p>
-          </div>
+        {/* Continua viendo */}
+        <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, padding: "18px 20px" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 14 }}>
+            Continua viendo
+          </p>
+
           {resume && resumeTitle ? (
-            <Link href={`/dashboard/library/${resume.videos!.slug}` as never} style={{ textDecoration: "none", display: "flex" }}>
+            <Link href={`/dashboard/library/${resume.videos!.slug}` as never} style={{
+              textDecoration: "none", display: "flex", alignItems: "center", gap: 18,
+            }}>
               <div style={{
-                width: 140, flexShrink: 0, minHeight: 88,
-                background: "linear-gradient(145deg, #fce7f3, #f9a8d4)",
+                width: 180, height: 100, flexShrink: 0, borderRadius: 14, overflow: "hidden",
+                background: "linear-gradient(145deg, var(--pink-wash), var(--pink-soft))",
+              }}>
+                {resume.videos!.thumbnail_url && (
+                  <img src={resume.videos!.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                )}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 17, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>{resumeTitle}</p>
+                <p style={{ fontSize: 13, color: "var(--pink)", marginBottom: 14 }}>
+                  {(resume.videos!.category_slugs ?? []).map((c) => CAT_LABEL[c] ?? c).join(" · ") || "Clase"}
+                </p>
+                <div style={{ background: "var(--pink-wash)", borderRadius: 99, height: 5 }}>
+                  <div style={{ background: "var(--pink)", height: "100%", width: `${resumeProgress}%`, borderRadius: 99 }} />
+                </div>
+                <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>{resumeProgress}% completado</p>
+              </div>
+
+              <div style={{
+                width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                background: "var(--pink-wash)", color: "var(--pink)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%",
-                  background: "rgba(190,24,93,0.15)", border: "2px solid rgba(190,24,93,0.6)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <div style={{ width: 0, height: 0, marginLeft: 3,
-                    borderTop: "6px solid transparent", borderBottom: "6px solid transparent",
-                    borderLeft: "10px solid #be185d" }} />
-                </div>
-              </div>
-              <div style={{ padding: "18px 20px", flex: 1 }}>
-                <p style={{ fontSize: 10, color: "#a8a29e", fontWeight: 600, letterSpacing: "0.08em", marginBottom: 4 }}>
-                  {resumeMin}:{String(resumeSec).padStart(2, "0")} visto
-                </p>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "#1c1917", marginBottom: 12 }}>{resumeTitle}</p>
-                <div style={{ background: "#fce7f3", borderRadius: 99, height: 4 }}>
-                  <div style={{ background: "linear-gradient(90deg, #db2777, #be185d)", height: "100%", width: `${resumeProgress}%`, borderRadius: 99 }} />
-                </div>
-                <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 5 }}>{resumeProgress}% completado</p>
+                <Ico d="M6 3.5L10.5 8 6 12.5" size={16} />
               </div>
             </Link>
           ) : (
-            <div style={{ padding: "24px 20px", textAlign: "center" }}>
-              <p style={{ fontSize: 13, color: "#a8a29e" }}>
-                Todavia no hay progreso guardado.{" "}
-                <Link href="/dashboard/library" style={{ color: "#be185d", textDecoration: "none", fontWeight: 600 }}>
-                  Empeza con una clase →
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <IcoCaja d="M4.5 3.5L13 8l-8.5 4.5V3.5z" />
+              <p style={{ fontSize: 13, color: "var(--muted)" }}>
+                Todavia no empezaste ninguna clase.{" "}
+                <Link href="/dashboard/library" style={{ color: "var(--pink)", textDecoration: "none", fontWeight: 600 }}>
+                  Elegi la primera →
                 </Link>
               </p>
             </div>
           )}
         </div>
 
-        {/* Live + Quick links */}
-        <div style={{ display: "grid", gridTemplateColumns: liveData ? "1fr 1fr" : "1fr", gap: 12 }}>
+        {/* Proxima en vivo + accesos rapidos */}
+        <div className="dash-2col" style={{ display: "grid", gridTemplateColumns: liveData ? "1fr 1fr" : "1fr", gap: 12 }}>
           {liveData && (
             <div style={{
-              background: canAccessLive ? "#1c1917" : "#fff",
-              border: `1px solid ${canAccessLive ? "transparent" : "#f0eeec"}`,
-              borderRadius: 20, padding: "20px 22px",
+              position: "relative", borderRadius: 20, overflow: "hidden",
+              minHeight: 190, background: "var(--ink)",
+              border: canAccessLive ? "none" : "1px solid #f0eeec",
             }}>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: canAccessLive ? "#f9a8d4" : "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
-                Proxima clase en vivo
-              </p>
-              <p style={{ fontSize: 15, fontWeight: 700, color: canAccessLive ? "#fdf2f8" : "#1c1917", marginBottom: 6 }}>
-                {resolveI18nText(liveData.title_i18n)}
-              </p>
-              <p style={{ fontSize: 12, color: canAccessLive ? "#f9a8d4" : "#78716c", marginBottom: 18 }}>
-                {formatTime(liveData.starts_at)}
-              </p>
-              {canAccessLive ? (
-                <Link href="/dashboard/live" style={{
-                  display: "inline-block", textDecoration: "none",
-                  background: "linear-gradient(135deg, #db2777, #be185d)",
-                  color: "#fff", borderRadius: 99, padding: "8px 20px",
-                  fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-                }}>Reservar lugar</Link>
-              ) : (
-                <Link href="/dashboard/plan" style={{
-                  display: "inline-block", textDecoration: "none",
-                  background: "transparent", color: "#be185d",
-                  border: "1.5px solid #fce7f3", borderRadius: 99,
-                  padding: "7px 18px", fontSize: 11, fontWeight: 700,
-                }}>Actualizar plan</Link>
+              {liveData.cover_image_url && (
+                <img src={liveData.cover_image_url} alt="" style={{
+                  position: "absolute", inset: 0, width: "100%", height: "100%",
+                  objectFit: "cover", opacity: 0.55,
+                }} />
               )}
+              <div style={{
+                position: "relative", height: "100%", padding: "22px 24px",
+                display: "flex", flexDirection: "column", alignItems: "flex-start",
+                background: "linear-gradient(100deg, rgba(28,25,23,0.94) 45%, rgba(28,25,23,0.35))",
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 12 }}>
+                  Proxima clase en vivo
+                </p>
+                <p style={{ fontSize: 19, fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: 12, maxWidth: 340 }}>
+                  {resolveI18nText(liveData.title_i18n)}
+                </p>
+                <div style={{ display: "flex", gap: 16, marginBottom: 20, color: "rgba(255,255,255,0.78)", fontSize: 12 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Ico d="M3 4.5h10v9H3v-9z" d2="M3 7.2h10M5.6 2.6v3M10.4 2.6v3" size={14} />
+                    {formatLiveDate(liveData.starts_at)}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Ico d="M8 4v4l2.5 1.5" d2="M8 14A6 6 0 108 2a6 6 0 000 12z" size={14} />
+                    {formatTime(liveData.starts_at)}
+                  </span>
+                </div>
+                {canAccessLive ? (
+                  <Link href="/dashboard/live" style={{
+                    display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
+                    background: "var(--pink)", color: "#fff", borderRadius: 99,
+                    padding: "11px 22px", fontSize: 13, fontWeight: 700,
+                  }}>
+                    Reservar lugar <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+                  </Link>
+                ) : (
+                  <Link href="/dashboard/plan" style={{
+                    display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
+                    background: "transparent", color: "#fff",
+                    border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 99,
+                    padding: "10px 20px", fontSize: 13, fontWeight: 700,
+                  }}>
+                    Actualizar plan <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+                  </Link>
+                )}
+              </div>
             </div>
           )}
 
           <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, padding: "20px 22px" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 14 }}>
               Accesos rapidos
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div className="quick-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {QUICK_LINKS.map((link) => (
                 <Link key={link.href} href={link.href} style={{
-                  display: "flex", flexDirection: "column", gap: 2, textDecoration: "none",
-                  padding: "10px 12px", borderRadius: 12, background: "#fafaf9", border: "1px solid #f0eeec",
+                  display: "flex", alignItems: "center", gap: 12, textDecoration: "none",
+                  padding: "12px 14px", borderRadius: 14, background: "#fff",
+                  border: "1px solid #f0eeec",
                 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#1c1917" }}>{link.label}</p>
-                  <p style={{ fontSize: 11, color: "#a8a29e" }}>{link.sub}</p>
+                  <IcoCaja d={link.d} d2={link.d2} />
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{link.label}</p>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{link.sub}</p>
+                  </div>
                 </Link>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Class categories */}
+        {/* Para hoy: carrusel de clases reales */}
         <div>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
-            Tus clases
-          </p>
-          <style>{`@media(max-width:600px){.cat-grid{grid-template-columns:repeat(2,1fr)!important}}`}</style>
-          <div className="cat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-            {CLASS_CATS.map((cat) => (
-              <Link key={cat.key} href={`/dashboard/library?category=${cat.key}` as never} style={{
-                position: "relative", borderRadius: 18, overflow: "hidden",
-                aspectRatio: "4/3", textDecoration: "none", display: "block",
-              }}>
-                <div style={{ width: "100%", height: "100%", background: cat.grad }} />
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(to top, rgba(28,25,23,0.65) 30%, transparent)",
-                  display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14,
-                }}>
-                  <p style={{ fontSize: 9, letterSpacing: "0.14em", color: "rgba(255,255,255,0.65)", marginBottom: 3, fontWeight: 700 }}>
-                    {cat.sub.toUpperCase()}
-                  </p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{cat.label}</p>
-                </div>
-              </Link>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "var(--muted)", textTransform: "uppercase" }}>
+              Para hoy, {firstName}
+            </p>
+            <Link href="/dashboard/library" style={{
+              display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none",
+              fontSize: 12, fontWeight: 600, color: "var(--pink)",
+            }}>
+              Ver todas las clases <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+            </Link>
           </div>
+
+          {sugeridas.length === 0 ? (
+            <div style={{
+              background: "#fff", border: "1px dashed #e7e5e4", borderRadius: 18,
+              padding: "26px 22px", fontSize: 13, color: "var(--muted)",
+            }}>
+              Todavia no hay clases publicadas para tu plan.
+            </div>
+          ) : (
+            <div className="hoy-fila" style={{
+              display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6,
+              scrollSnapType: "x mandatory",
+            }}>
+              {sugeridas.map((clase) => (
+                <Link key={clase.id} href={`/dashboard/library/${clase.slug}` as never} style={{
+                  position: "relative", flex: "0 0 auto", width: 190, aspectRatio: "3/4",
+                  borderRadius: 18, overflow: "hidden", textDecoration: "none",
+                  scrollSnapAlign: "start", background: "linear-gradient(145deg, var(--pink-wash), var(--pink-soft))",
+                }}>
+                  {clase.thumbnail_url && (
+                    <img src={clase.thumbnail_url} alt="" style={{
+                      position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+                    }} />
+                  )}
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(to top, rgba(28,25,23,0.82) 26%, rgba(28,25,23,0.05) 62%)",
+                    display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14,
+                  }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.82)", marginBottom: 2 }}>
+                      {(clase.category_slugs ?? []).map((c) => CAT_LABEL[c] ?? c)[0] ?? "Clase"}
+                    </p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
+                      {resolveI18nText(clase.title_i18n)}
+                    </p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 6 }}>
+                      {formatDuracion(clase.duration_seconds)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
       </section>

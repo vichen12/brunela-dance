@@ -1,11 +1,34 @@
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { invalidarAjustes } from "@/src/lib/settings";
+import {
+  DM_ACCESS_DEFAULT,
+  DM_TIER_LABEL,
+  DM_TIER_ORDER,
+  getDmAccess,
+  type DmAccessMap,
+  type MembershipTier,
+} from "@/src/features/admin/chat-settings";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+// Maps a moderation duration choice to an absolute expiry (null = permanent).
+const DURATION_TO_MS: Record<string, number | null> = {
+  "1h": 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  permanent: null,
+};
+
+function resolveExpiry(duration: string): string | null {
+  const ms = DURATION_TO_MS[duration];
+  if (ms == null) return null;
+  return new Date(Date.now() + ms).toISOString();
+}
 
 type Room = {
   id: string;
@@ -135,6 +158,123 @@ async function sendAsAdminAction(formData: FormData) {
   redirect(`/admin/chat?tab=rooms&room=${roomId}&success=Mensaje+enviado` as never);
 }
 
+async function saveDmAccessAction(formData: FormData) {
+  "use server";
+  const { user } = await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  // Each tier checkbox is present only when toggled on.
+  const value: DmAccessMap = {
+    none: formData.get("dm_none") === "on",
+    corps_de_ballet: formData.get("dm_corps_de_ballet") === "on",
+    solista: formData.get("dm_solista") === "on",
+    principal: formData.get("dm_principal") === "on",
+  };
+
+  invalidarAjustes();
+
+  const { error } = await supabase.from("site_settings").upsert(
+    {
+      setting_key: "chat.dm_access",
+      category: "chat",
+      description: "Per-tier toggle for who can START a direct chat with the admin.",
+      is_public: false,
+      value,
+      updated_by: user.id,
+    },
+    { onConflict: "setting_key" }
+  );
+
+  if (error) redirect(`/admin/chat?tab=dm&error=${encodeURIComponent(error.message)}` as never);
+
+  revalidatePath("/admin/chat");
+  revalidatePath("/dashboard/chat");
+  redirect("/admin/chat?tab=dm&success=Permisos+de+chat+actualizados" as never);
+}
+
+async function banUserAction(formData: FormData) {
+  "use server";
+  const { user } = await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  const schema = z.object({
+    user_id: z.string().uuid(),
+    reason: z.string().optional(),
+    duration: z.enum(["1h", "24h", "7d", "permanent"]),
+    room_id: z.string().optional(),
+  });
+  const parsed = schema.safeParse({
+    user_id: formData.get("user_id"),
+    reason: formData.get("reason"),
+    duration: formData.get("duration"),
+    room_id: formData.get("room_id"),
+  });
+  if (!parsed.success) redirect("/admin/chat?tab=bans&error=Datos+invalidos" as never);
+
+  // unique(user_id): upsert so re-banning updates the existing record.
+  const { error } = await supabase.from("chat_bans").upsert(
+    {
+      user_id: parsed.data.user_id,
+      banned_by: user.id,
+      reason: parsed.data.reason?.trim() || null,
+      expires_at: resolveExpiry(parsed.data.duration),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) redirect(`/admin/chat?tab=bans&error=${encodeURIComponent(error.message)}` as never);
+
+  revalidatePath("/admin/chat");
+  const back = parsed.data.room_id
+    ? `/admin/chat?tab=rooms&room=${parsed.data.room_id}&success=Usuario+baneado`
+    : "/admin/chat?tab=bans&success=Usuario+baneado";
+  redirect(back as never);
+}
+
+async function createCategoryRoomAction(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  const schema = z.object({
+    category_slug: z.string().min(1),
+    name: z.string().min(2),
+    tier_required: z.enum(["none", "corps_de_ballet", "solista", "principal"]),
+  });
+  const parsed = schema.safeParse({
+    category_slug: formData.get("category_slug"),
+    name: formData.get("name"),
+    tier_required: formData.get("tier_required"),
+  });
+  if (!parsed.success) redirect("/admin/chat?tab=rooms&error=Datos+invalidos" as never);
+
+  // Avoid duplicate channels for the same category.
+  const { data: existing } = await supabase
+    .from("chat_rooms")
+    .select("id")
+    .eq("category_slug", parsed.data.category_slug)
+    .maybeSingle<{ id: string }>();
+
+  if (existing) {
+    redirect(`/admin/chat?tab=rooms&room=${existing.id}&error=Ya+existe+un+canal+para+esa+categoria` as never);
+  }
+
+  const { error } = await supabase.from("chat_rooms").insert({
+    name: parsed.data.name.trim(),
+    type: "tier",
+    tier_required: parsed.data.tier_required,
+    category_slug: parsed.data.category_slug,
+    is_archived: false,
+    participant_ids: [],
+  });
+
+  if (error) redirect(`/admin/chat?tab=rooms&error=${encodeURIComponent(error.message)}` as never);
+
+  revalidatePath("/admin/chat");
+  revalidatePath("/dashboard/community");
+  redirect("/admin/chat?tab=rooms&success=Canal+de+categoria+creado" as never);
+}
+
 // ── UI helpers ────────────────────────────────────────────────────────────────
 
 const inp = "w-full rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm outline-none focus:border-pink-400 transition";
@@ -172,23 +312,39 @@ export default async function AdminChatPage({ searchParams }: {
   const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
   const activeRoomId = typeof params.room === "string" ? params.room : null;
 
-  const { data: roomsData } = await supabase
-    .from("chat_rooms")
-    .select("id, type, name, tier_required, is_archived")
-    .order("created_at");
+  // Cinco consultas independientes que estaban encadenadas: eran cinco viajes
+  // seguidos a Supabase. Medido antes: 1728 ms de espera pura en esta pantalla.
+  const [
+    { data: roomsData },
+    { data: bansData },
+    { data: mutesData },
+    dmAccess,
+    { data: categoriesData },
+  ] = await Promise.all([
+    supabase
+      .from("chat_rooms")
+      .select("id, type, name, tier_required, is_archived")
+      .order("created_at"),
+    supabase
+      .from("chat_bans")
+      .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("chat_mutes")
+      .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
+      .order("created_at", { ascending: false }),
+    getDmAccess(),
+    supabase
+      .from("categories")
+      .select("slug, name_i18n")
+      .eq("is_active", true)
+      .order("sort_order"),
+  ]);
+
   const rooms = (roomsData ?? []) as Room[];
-
-  const { data: bansData } = await supabase
-    .from("chat_bans")
-    .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
-    .order("created_at", { ascending: false });
   const bans = (bansData ?? []) as unknown as Ban[];
-
-  const { data: mutesData } = await supabase
-    .from("chat_mutes")
-    .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
-    .order("created_at", { ascending: false });
   const mutes = (mutesData ?? []) as unknown as Mute[];
+  const categories = (categoriesData ?? []) as { slug: string; name_i18n: Record<string, string> }[];
 
   const publicRooms = rooms.filter((r) => r.type !== "dm");
   const activeRoom = publicRooms.find((r) => r.id === activeRoomId) ?? null;
@@ -206,6 +362,7 @@ export default async function AdminChatPage({ searchParams }: {
 
   const TABS = [
     { key: "rooms", label: "Salas" },
+    { key: "dm", label: "Chat directo" },
     { key: "bans", label: `Baneos (${bans.length})` },
     { key: "mutes", label: `Muteos (${mutes.length})` },
   ];
@@ -275,6 +432,43 @@ export default async function AdminChatPage({ searchParams }: {
                 <button className="button-primary w-full" type="submit">Crear sala</button>
               </form>
             </div>
+
+            {/* Create category-linked channel */}
+            {categories.length > 0 && (
+              <div className="panel rounded-[2rem] p-5">
+                <p className="eyebrow mb-1">Canal por categoría</p>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
+                  Crea un canal alineado con una categoría de la biblioteca.
+                </p>
+                <form action={createCategoryRoomAction} className="space-y-3">
+                  <div>
+                    <label className={lbl}>Categoría</label>
+                    <select className={inp} name="category_slug" required defaultValue="">
+                      <option value="" disabled>Elegí una categoría…</option>
+                      {categories.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.name_i18n?.es ?? c.slug}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Nombre del canal</label>
+                    <input className={inp} name="name" required placeholder="Ballet · Comunidad" />
+                  </div>
+                  <div>
+                    <label className={lbl}>Tier mínimo</label>
+                    <select className={inp} name="tier_required" defaultValue="none">
+                      <option value="none">Sin restricción</option>
+                      <option value="corps_de_ballet">Corps de Ballet</option>
+                      <option value="solista">Solista</option>
+                      <option value="principal">Principal</option>
+                    </select>
+                  </div>
+                  <button className="button-secondary w-full" type="submit">Crear canal de categoría</button>
+                </form>
+              </div>
+            )}
 
             {/* Room list */}
             <div className="panel rounded-[2rem] p-5">
@@ -377,16 +571,51 @@ export default async function AdminChatPage({ searchParams }: {
                             </div>
                             <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.5, wordBreak: "break-word" }}>{msg.content}</p>
                           </div>
-                          {!msg.is_deleted && (
-                            <form action={deleteMessageAction} style={{ flexShrink: 0 }}>
-                              <input type="hidden" name="id" value={msg.id} />
-                              <input type="hidden" name="room_id" value={msg.room_id} />
-                              <button type="submit" style={{
-                                padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca",
-                                background: "#fef2f2", color: "#991b1b", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                              }}>Eliminar</button>
-                            </form>
-                          )}
+                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                            {!msg.is_deleted && (
+                              <form action={deleteMessageAction}>
+                                <input type="hidden" name="id" value={msg.id} />
+                                <input type="hidden" name="room_id" value={msg.room_id} />
+                                <button type="submit" style={{
+                                  padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca",
+                                  background: "#fef2f2", color: "#991b1b", fontSize: 10, fontWeight: 700, cursor: "pointer",
+                                }}>Eliminar</button>
+                              </form>
+                            )}
+                            {!msg.profiles?.is_admin && msg.user_id && (
+                              <details>
+                                <summary style={{
+                                  listStyle: "none", cursor: "pointer",
+                                  padding: "4px 10px", borderRadius: 8, border: "1px solid #fde68a",
+                                  background: "#fffbeb", color: "#92400e", fontSize: 10, fontWeight: 700,
+                                }}>Banear</summary>
+                                <form action={banUserAction} style={{
+                                  marginTop: 6, padding: 10, borderRadius: 10, border: "1px solid #fde68a",
+                                  background: "#fffbeb", display: "flex", flexDirection: "column", gap: 6, width: 180,
+                                }}>
+                                  <input type="hidden" name="user_id" value={msg.user_id} />
+                                  <input type="hidden" name="room_id" value={msg.room_id} />
+                                  <input name="reason" placeholder="Motivo (opcional)" style={{
+                                    borderRadius: 8, border: "1px solid #fde68a", padding: "6px 8px",
+                                    fontSize: 11, outline: "none", fontFamily: "inherit",
+                                  }} />
+                                  <select name="duration" defaultValue="24h" style={{
+                                    borderRadius: 8, border: "1px solid #fde68a", padding: "6px 8px",
+                                    fontSize: 11, outline: "none", fontFamily: "inherit", background: "#fff",
+                                  }}>
+                                    <option value="1h">1 hora</option>
+                                    <option value="24h">24 horas</option>
+                                    <option value="7d">7 días</option>
+                                    <option value="permanent">Permanente</option>
+                                  </select>
+                                  <button type="submit" style={{
+                                    padding: "6px 10px", borderRadius: 8, border: "none",
+                                    background: "#b45309", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer",
+                                  }}>Confirmar baneo</button>
+                                </form>
+                              </details>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -429,6 +658,57 @@ export default async function AdminChatPage({ searchParams }: {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── DM ACCESS TAB ── */}
+      {tab === "dm" && (
+        <div className="panel rounded-[2.4rem] p-7 md:p-9 space-y-5" style={{ maxWidth: 560 }}>
+          <div>
+            <p className="eyebrow mb-2">Chat directo con Brunela</p>
+            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
+              Elegí qué planes pueden <strong>iniciar</strong> un chat privado con vos.
+              Vos siempre podés escribirle a cualquier alumna desde la pestaña de mensajes,
+              sin importar su plan.
+            </p>
+          </div>
+
+          <form action={saveDmAccessAction} className="space-y-3">
+            {DM_TIER_ORDER.map((tier) => {
+              const enabled = dmAccess[tier as MembershipTier];
+              return (
+                <label
+                  key={tier}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "14px 18px", borderRadius: 16,
+                    background: enabled ? "linear-gradient(135deg, #fdf2f8, #fce7f3)" : "#fafafa",
+                    border: `1px solid ${enabled ? "#fbcfe8" : "#f0eeec"}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+                      {DM_TIER_LABEL[tier as MembershipTier]}
+                    </p>
+                    <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                      {enabled ? "Puede iniciar chat directo" : "No puede iniciar chat directo"}
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    name={`dm_${tier}`}
+                    defaultChecked={enabled}
+                    style={{ width: 20, height: 20, accentColor: "#be185d" }}
+                  />
+                </label>
+              );
+            })}
+            <p style={{ fontSize: 11, color: "var(--muted)" }}>
+              Por defecto solo el plan <strong>Principal</strong> tiene chat directo (coincide con la landing).
+            </p>
+            <button type="submit" className="button-primary">Guardar permisos</button>
+          </form>
         </div>
       )}
 

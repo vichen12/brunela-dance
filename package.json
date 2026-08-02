@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "rimraf .next && next dev",
+    "dev:insecure": "rimraf .next && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -12,6 +13,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "clsx": "^2.1.1",
+    "hls.js": "^1.6.16",
     "lucide-react": "^1.8.0",
     "motion": "^12.38.0",
     "next": "^15.0.0",
@@ -27,6 +29,7 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "eslint": "^9.19.0",
     "eslint-config-next": "^15.0.0",
     "postcss": "^8.5.1",

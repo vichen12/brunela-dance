@@ -18,6 +18,9 @@ iframe[id^="supabase"] {
   --pink:      #E64F55;
   --pink-mid:  #D93438;
   --pink-soft: #FFDADA;
+  /* Tinte mas claro de la familia coral: fondos de estado activo. Faltaba, y
+     era el hueco que obligaba a escribir a mano los rosas del dashboard. */
+  --pink-wash: #FDECEC;
   --rose:      #EB7478;
   --ink:       #1c1917;
   --muted:     #78716c;

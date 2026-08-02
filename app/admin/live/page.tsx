@@ -330,19 +330,21 @@ export default async function AdminLivePage({
   const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
   const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
 
-  const { data: sessionsData } = await supabase
-    .from("live_sessions")
-    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at")
-    .order("starts_at", { ascending: false });
-
-  const { data: bookingsData } = await supabase
-    .from("live_session_bookings")
-    .select("live_session_id, status")
-    .in("status", ["reserved", "attended"]);
-
-  const { data: accessLinksData } = await supabase
-    .from("live_session_access_links")
-    .select("live_session_id, join_url, passcode");
+  // Las tres son independientes: encadenadas costaban tres viajes seguidos a
+  // Supabase (~250 ms cada uno). En paralelo cuestan uno.
+  const [{ data: sessionsData }, { data: bookingsData }, { data: accessLinksData }] = await Promise.all([
+    supabase
+      .from("live_sessions")
+      .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at")
+      .order("starts_at", { ascending: false }),
+    supabase
+      .from("live_session_bookings")
+      .select("live_session_id, status")
+      .in("status", ["reserved", "attended"]),
+    supabase
+      .from("live_session_access_links")
+      .select("live_session_id, join_url, passcode"),
+  ]);
 
   const bookingsBySession = (bookingsData ?? []).reduce<Record<string, number>>((acc, b) => {
     acc[b.live_session_id] = (acc[b.live_session_id] ?? 0) + 1;

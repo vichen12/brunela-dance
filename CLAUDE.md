@@ -120,9 +120,56 @@ Required for Stripe webhook work:
 2. `npm run dev`
 3. `npm run build` before closing substantial changes
 
+## PENDIENTE: verificar el reproductor en iPhone / iPad
+
+Esta es la unica parte del reproductor que **no esta verificada**. Todo lo demas
+se probo en Chrome real (reproduccion, cambio de idioma, recuperacion de token
+vencido, control de acceso). El equipo de desarrollo trabaja en Windows y no
+tiene Safari ni dispositivo Apple, y el WebKit de Playwright en Windows no trae
+el motor HLS nativo, asi que correrlo ahi no probaria nada.
+
+Importa porque el publico de un producto de danza en casa usa iPhone y iPad.
+
+### Por que puede fallar justo ahi
+
+Bunny exige un token en CADA archivo (playlist y segmentos) y no manda cookie.
+Los reproductores no propagan el query string a los hijos, asi que servimos las
+playlists reescritas desde `/api/video/...` con los tokens ya adentro
+(`src/lib/video/hls-manifest.ts`). Safari tiene ademas dos caminos posibles:
+
+- iOS 17.1+ suele usar **hls.js** (Managed Media Source) — camino ya verificado.
+- Versiones anteriores usan el **motor HLS nativo**, que no expone ningun hook
+  de red y lista las pistas de audio por `video.audioTracks` de WebKit, una API
+  distinta. Ese camino esta implementado pero nunca se ejecuto en un Apple.
+
+### Que hay que probar (en Safari, iPhone y iPad)
+
+Abrir una clase que tenga mas de un idioma, estando logueada como miembro:
+
+1. El video **arranca** y sigue mas alla del primer minuto, no solo unos segundos.
+2. Arriba a la derecha aparecen los botones de idioma (ES / EN / FR / IT).
+3. Tocar otro idioma **cambia el audio** y la reproduccion NO se reinicia.
+4. Lo mismo en pantalla completa.
+5. Pausar, esperar 15 minutos, volver y adelantar: tiene que seguir reproduciendo.
+
+### Que sintoma es un fallo, y que significa
+
+| Sintoma | Que esta pasando |
+|---|---|
+| Pantalla negra o spinner eterno tras la miniatura, o el cartel "No se pudo cargar el video" | Los segmentos dan 403: el manifest reescrito no le esta llegando al motor nativo |
+| Reproduce bien pero **no aparece ningun boton de idioma** | `video.audioTracks` viene vacio en WebKit; habria que usar el menu nativo de pantalla completa |
+| Los botones aparecen pero tocarlos no cambia nada | WebKit ignora `track.enabled`; habria que cambiar de idioma recargando el stream |
+| Arranca y se corta a los pocos segundos | Problema de token o de segmentos, mismo origen que el primer caso |
+
+### Como diagnosticar
+
+Conectar el iPhone a una Mac, Safari → menu Desarrollo → elegir el dispositivo →
+pestana Red. Buscar respuestas **403** contra `*.b-cdn.net`. Si las hay, el
+problema es el token en los segmentos. Si no hay 403 y el video igual no se ve,
+el problema es de codecs o del motor, no de acceso.
+
 ## Known next steps
 
-- Build the real video player UI instead of progress shortcut buttons
 - Add full onboarding/profile editing for members
 - Connect Stripe checkout end-to-end
 - Keep expanding the ES/EN/FR/IT public dictionary as new landing sections are added

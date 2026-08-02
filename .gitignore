@@ -6,3 +6,6 @@ node_modules
 *.log
 *.tsbuildinfo
 .codex-screens/
+
+# Datos sensibles de migracion (hashes de contrasena). NUNCA al repo.
+_local/

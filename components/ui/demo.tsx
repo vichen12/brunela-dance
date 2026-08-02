@@ -4,7 +4,7 @@ const myPricingPlans: PricingCardProps[] = [
   {
     planName: "Corps de Ballet",
     description: "Entrada ideal para una practica constante y bien ordenada.",
-    price: "19",
+    price: "16",
     features: ["Biblioteca base", "Filtros por foco", "Continuidad de clase"],
     buttonText: "Elegir Corps",
     buttonVariant: "secondary",
@@ -13,7 +13,7 @@ const myPricingPlans: PricingCardProps[] = [
   {
     planName: "Solista",
     description: "La opcion mas equilibrada para entrenar con programas y mas guia.",
-    price: "39",
+    price: "31",
     features: ["Todo lo de Corps", "Programas guiados", "Checkpoints de progreso", "Mas profundidad tecnica"],
     buttonText: "Elegir Solista",
     isPopular: true,
@@ -23,7 +23,7 @@ const myPricingPlans: PricingCardProps[] = [
   {
     planName: "Principal",
     description: "La capa mas completa para vivir el studio con mas cercania.",
-    price: "69",
+    price: "59",
     features: ["Todo lo de Solista", "Clases en vivo", "Acceso prioritario", "Acompanamiento premium"],
     buttonText: "Elegir Principal",
     buttonVariant: "primary",

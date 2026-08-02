@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/src/lib/supabase/client';
 
 export type ChatMessage = {
@@ -12,8 +12,23 @@ export type ChatMessage = {
   profiles: { full_name: string | null; email: string; is_admin: boolean } | null;
 };
 
-function displayName(msg: ChatMessage): string {
-  if (!msg.profiles) return 'Usuario';
+/** Con quien habla la alumna. Ver el comentario de `displayName`. */
+export type Interlocutor = { id: string; name: string; isAdmin: boolean };
+
+/**
+ * Nombre a mostrar de quien escribio el mensaje.
+ *
+ * El `profiles` embebido en cada mensaje viene NULL cuando la RLS no deja leer
+ * ese perfil, que es justo lo que le pasa a una alumna con el perfil de la
+ * admin: los mensajes de Brunela se veian como "Usuario" con avatar "U".
+ * Por eso aceptamos el interlocutor por props -- la pagina ya lo resolvio con
+ * get_studio_admin() -- en vez de aflojar la RLS de profiles.
+ */
+function displayName(msg: ChatMessage, interlocutor?: Interlocutor | null): string {
+  if (!msg.profiles) {
+    if (interlocutor && msg.user_id === interlocutor.id) return interlocutor.name;
+    return 'Usuario';
+  }
   if (msg.profiles.is_admin) return 'Brunela';
   return msg.profiles.full_name?.split(' ')[0] ?? msg.profiles.email.split('@')[0];
 }
@@ -49,7 +64,7 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
 }
 
 function MessageBubble({
-  msg, isMe, isAdmin, canModerate, onDelete, onMute,
+  msg, isMe, isAdmin, canModerate, onDelete, onMute, interlocutor,
 }: {
   msg: ChatMessage;
   isMe: boolean;
@@ -57,22 +72,32 @@ function MessageBubble({
   canModerate: boolean;
   onDelete: (id: string) => void;
   onMute: (userId: string, name: string) => void;
+  interlocutor?: Interlocutor | null;
 }) {
   const [hover, setHover] = useState(false);
-  const name = displayName(msg);
-  const senderIsAdmin = msg.profiles?.is_admin ?? false;
+  const name = displayName(msg, interlocutor);
+  const senderIsAdmin =
+    msg.profiles?.is_admin ??
+    (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
 
   if (isMe) return (
     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
       <div style={{ maxWidth: '70%' }}>
         <div style={{
-          background: 'linear-gradient(135deg, #db2777, #be185d)',
-          color: '#fff', borderRadius: '16px 16px 4px 16px',
-          padding: '10px 14px', fontSize: 13, lineHeight: 1.55,
-          boxShadow: '0 2px 8px rgba(190,24,93,0.25)',
+          background: 'var(--pink)',
+          color: '#fff', borderRadius: '18px 18px 6px 18px',
+          padding: '12px 17px', fontSize: 13.5, lineHeight: 1.55,
         }}>{msg.content}</div>
-        <div style={{ fontSize: 9, color: 'var(--muted)', textAlign: 'right', marginTop: 4 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
+          fontSize: 10, color: 'var(--muted)', marginTop: 5,
+        }}>
           {timeLabel(msg.created_at)}
+          {/* Doble tilde: el mensaje quedo guardado en el servidor. */}
+          <svg width="15" height="10" viewBox="0 0 20 12" fill="none" aria-label="Enviado">
+            <path d="M1 6.2L4.2 9.5 10.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 6.2L11.2 9.5 17.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
     </div>
@@ -97,10 +122,10 @@ function MessageBubble({
           )}
         </div>
         <div style={{
-          background: senderIsAdmin ? '#fdf2f8' : '#fff',
-          border: senderIsAdmin ? '1.5px solid #fbcfe8' : '1px solid #f3f4f6',
-          borderRadius: '4px 16px 16px 16px',
-          padding: '10px 14px', fontSize: 13, color: 'var(--ink)', lineHeight: 1.55,
+          background: '#fff',
+          border: '1px solid #F1E9E7',
+          borderRadius: '6px 18px 18px 18px',
+          padding: '12px 17px', fontSize: 13.5, color: 'var(--ink)', lineHeight: 1.55,
         }}>{msg.content}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
           <span style={{ fontSize: 9, color: 'var(--muted)' }}>{timeLabel(msg.created_at)}</span>
@@ -131,6 +156,7 @@ export function ChatRoom({
   initialMessages,
   placeholder = 'Escribí un mensaje...',
   roomName,
+  interlocutor,
 }: {
   roomId: string;
   userId: string;
@@ -138,44 +164,74 @@ export function ChatRoom({
   initialMessages: ChatMessage[];
   placeholder?: string;
   roomName?: string;
+  /** Con quien habla, para los mensajes cuyo perfil la RLS no deja leer. */
+  interlocutor?: Interlocutor | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [muteTarget, setMuteTarget] = useState<{ id: string; name: string } | null>(null);
   const [muteReason, setMuteReason] = useState('');
+  const [muteDuration, setMuteDuration] = useState<'1h' | '24h' | '7d' | 'permanent'>('24h');
   const endRef = useRef<HTMLDivElement>(null);
-  const supabase = createSupabaseBrowserClient();
+  // Una sola instancia por montaje: sin esto cada render creaba un cliente
+  // nuevo y el efecto de abajo, que ahora depende de el, se resuscribiria en
+  // bucle.
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`chat-room-${roomId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'chat_messages',
-        filter: `room_id=eq.${roomId}`,
-      }, async (payload) => {
-        const { data } = await supabase
-          .from('chat_messages')
-          .select('*, profiles(full_name, email, is_admin)')
-          .eq('id', (payload.new as { id: string }).id)
-          .single<ChatMessage>();
-        if (data) setMessages((prev) => [...prev, data]);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'chat_messages',
-        filter: `room_id=eq.${roomId}`,
-      }, (payload) => {
-        const updated = payload.new as { id: string; is_deleted: boolean };
-        if (updated.is_deleted) {
-          setMessages((prev) => prev.filter((m) => m.id !== updated.id));
-        }
-      })
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelado = false;
 
-    return () => { supabase.removeChannel(channel); };
-  }, [roomId]);
+    (async () => {
+      // El socket TIENE que llevar el JWT de la usuaria antes de unirse al
+      // canal. postgres_changes filtra por RLS del lado del servidor, asi que
+      // un canal que se une solo con la clave anonima queda suscripto pero no
+      // recibe absolutamente nada, en silencio. Verificado: el frame phx_join
+      // salia sin access_token, y por eso ningun mensaje aparecia hasta
+      // recargar la pagina -- ni siquiera el que acababa de escribir una misma.
+      const { data } = await supabase.auth.getSession();
+      if (cancelado) return;
+
+      const token = data.session?.access_token;
+      if (token) await supabase.realtime.setAuth(token);
+      if (cancelado) return;
+
+      channel = supabase
+        .channel(`chat-room-${roomId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`,
+        }, async (payload) => {
+          const { data: fila } = await supabase
+            .from('chat_messages')
+            .select('*, profiles(full_name, email, is_admin)')
+            .eq('id', (payload.new as { id: string }).id)
+            .single<ChatMessage>();
+          // Sin duplicar: el evento llega tambien para los mensajes propios.
+          if (fila) {
+            setMessages((prev) => (prev.some((m) => m.id === fila.id) ? prev : [...prev, fila]));
+          }
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'chat_messages',
+          filter: `room_id=eq.${roomId}`,
+        }, (payload) => {
+          const updated = payload.new as { id: string; is_deleted: boolean };
+          if (updated.is_deleted) {
+            setMessages((prev) => prev.filter((m) => m.id !== updated.id));
+          }
+        })
+        .subscribe();
+    })();
+
+    return () => {
+      cancelado = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [roomId, supabase]);
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -192,14 +248,28 @@ export function ChatRoom({
 
   const confirmMute = useCallback(async () => {
     if (!muteTarget) return;
-    await supabase.from('chat_mutes').insert({
-      user_id: muteTarget.id,
-      muted_by: userId,
-      reason: muteReason || null,
-    });
+    const durationMs: Record<typeof muteDuration, number | null> = {
+      '1h': 60 * 60 * 1000,
+      '24h': 24 * 60 * 60 * 1000,
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      permanent: null,
+    };
+    const ms = durationMs[muteDuration];
+    const expiresAt = ms == null ? null : new Date(Date.now() + ms).toISOString();
+    // unique(user_id) on chat_mutes -> upsert so re-muting updates the record.
+    await supabase.from('chat_mutes').upsert(
+      {
+        user_id: muteTarget.id,
+        muted_by: userId,
+        reason: muteReason || null,
+        expires_at: expiresAt,
+      },
+      { onConflict: 'user_id' }
+    );
     setMuteTarget(null);
     setMuteReason('');
-  }, [muteTarget, muteReason, userId]);
+    setMuteDuration('24h');
+  }, [muteTarget, muteReason, muteDuration, userId]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -228,6 +298,7 @@ export function ChatRoom({
             canModerate={isAdmin}
             onDelete={deleteMessage}
             onMute={(uid, name) => setMuteTarget({ id: uid, name })}
+            interlocutor={interlocutor}
           />
         ))}
         <div ref={endRef} />
@@ -283,8 +354,37 @@ export function ChatRoom({
               Mutear a {muteTarget.name}
             </p>
             <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-              La alumna no podrá escribir en este canal.
+              La alumna no podrá escribir mientras dure el silencio.
             </p>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>
+              DURACIÓN
+            </label>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+              {([
+                { key: '1h', label: '1 hora' },
+                { key: '24h', label: '24 horas' },
+                { key: '7d', label: '7 días' },
+                { key: 'permanent', label: 'Permanente' },
+              ] as const).map((opt) => {
+                const active = muteDuration === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setMuteDuration(opt.key)}
+                    style={{
+                      padding: '7px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                      cursor: 'pointer',
+                      background: active ? 'var(--pink)' : '#fdf2f8',
+                      color: active ? '#fff' : 'var(--muted)',
+                      border: active ? 'none' : '1.5px solid #fce7f3',
+                    }}
+                  >{opt.label}</button>
+                );
+              })}
+            </div>
+
             <textarea
               value={muteReason}
               onChange={(e) => setMuteReason(e.target.value)}

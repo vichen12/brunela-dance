@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
+import { getProgresoDelUsuario } from "@/src/features/studio/progress";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import {
   formatDurationLabel,
   resolveI18nText,
@@ -25,9 +28,46 @@ type VideoRecord = {
   duration_seconds: number;
   category_slugs: string[];
   thumbnail_url: string | null;
+  stream_playback_id: string | null;
+  bunny_video_id: string | null;
   is_featured: boolean;
   status: VideoStatus;
+  published_at: string | null;
+  recommended_min_level: string | null;
+  recommended_max_level: string | null;
 };
+
+/** "42:18" -- mismo formato que muestra el reproductor. */
+function mmss(segundos: number) {
+  const m = Math.floor(segundos / 60);
+  const s = segundos % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** "22 MAYO" */
+function fechaCorta(iso: string | null) {
+  if (!iso) return null;
+  return new Date(iso)
+    .toLocaleDateString("es-ES", { day: "numeric", month: "long" })
+    .replace(" de ", " ")
+    .toUpperCase();
+}
+
+const NIVEL_LABEL: Record<string, string> = {
+  principiante: "Principiante",
+  intermedio: "Intermedio",
+  avanzado: "Avanzado",
+  profesional: "Profesional",
+  maestro: "Maestro",
+};
+
+/** Un solo texto de nivel, como en el diseno: "Intermedio" o "Todos los niveles". */
+function nivelTexto(min: string | null, max: string | null) {
+  if (!min || !max) return "Todos los niveles";
+  if (min === "principiante" && max === "maestro") return "Todos los niveles";
+  if (min === max) return NIVEL_LABEL[min] ?? min;
+  return `${NIVEL_LABEL[min] ?? min} a ${NIVEL_LABEL[max] ?? max}`;
+}
 
 type ProgressRecord = { video_id: string; completion_percent: number };
 
@@ -37,7 +77,8 @@ async function quickPublishToggleAction(formData: FormData) {
   "use server";
   // Una server action es un endpoint POST publico: que el formulario se
   // renderice bajo {isAdmin && ...} no impide que la llamen. Y esta corre con
-  // service_role, que saltea RLS.
+  // service_role, que saltea RLS -- sin esta linea, cualquier alumna logueada
+  // puede despublicar el catalogo.
   await requireAdmin();
   const supabase = createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
@@ -100,25 +141,23 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
   const activeCategory = typeof params.category === "string" ? params.category : "all";
+  const busqueda = (typeof params.q === "string" ? params.q : "").trim();
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single<{ is_admin: boolean }>();
-
+  const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
 
-  const [{ data: videosData }, { data: progressData }] = await Promise.all([
+  const [{ data: videosData }, progressData] = await Promise.all([
     supabase.from("videos")
-      .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, is_featured, status")
+      .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, stream_playback_id, bunny_video_id, is_featured, status, published_at, recommended_min_level, recommended_max_level")
       .order("is_featured", { ascending: false })
       .order("published_at", { ascending: false }),
-    supabase.from("user_progress").select("video_id, completion_percent").eq("user_id", user.id),
+    // Mismo progreso memoizado que ya trajo el layout: sin esto era un segundo
+    // viaje a Supabase por la misma tabla.
+    getProgresoDelUsuario(user.id),
   ]);
 
   const videos = (videosData ?? []) as VideoRecord[];
-  const progressMap = new Map(((progressData ?? []) as ProgressRecord[]).map((p) => [p.video_id, p]));
+  const progressMap = new Map(progressData.map((p) => [p.video_id, p]));
 
   const dbCats = Array.from(new Set(videos.flatMap((v) => v.category_slugs).filter(Boolean))).sort();
   const filters = [
@@ -127,7 +166,22 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     ...dbCats.filter((c) => !FIXED_FILTERS.some((f) => f.key === c)).map((c) => ({ key: c, label: c })),
   ];
 
-  const visible = activeCategory === "all" ? videos : videos.filter((v) => v.category_slugs.includes(activeCategory));
+  const porCategoria = activeCategory === "all"
+    ? videos
+    : videos.filter((v) => v.category_slugs.includes(activeCategory));
+
+  // Busqueda por titulo, descripcion y categoria. Sin acentos ni mayusculas,
+  // para que "tecnica" encuentre "Tecnica clasica".
+  const normalizar = (t: string) =>
+    t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const termino = normalizar(busqueda);
+  const visible = termino
+    ? porCategoria.filter((v) =>
+        normalizar(
+          [resolveI18nText(v.title_i18n), resolveI18nText(v.description_i18n), ...v.category_slugs].join(" ")
+        ).includes(termino)
+      )
+    : porCategoria;
 
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
@@ -135,15 +189,59 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
         {/* Header */}
         <header className="hero-stage" style={{ position: "relative" }}>
-          <p className="eyebrow">Biblioteca de clases</p>
-          <h1 className="display mt-5 text-5xl leading-none md:text-7xl">
-            {isAdmin ? "Gestión de clases." : "Tus clases."}
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-            {isAdmin
-              ? "Publicá, editá y organizá todas las clases del estudio."
-              : "Todo el contenido disponible según tu plan, con progreso guardado clase por clase."}
-          </p>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 280, flex: 1 }}>
+              <p className="eyebrow">Biblioteca de clases</p>
+              <h1 className="display mt-5 text-5xl leading-none md:text-7xl">
+                {isAdmin ? (
+                  <>Gestión de <span style={{ color: "var(--pink)", fontStyle: "italic" }}>clases.</span></>
+                ) : (
+                  <>Tus <span style={{ color: "var(--pink)", fontStyle: "italic" }}>clases.</span></>
+                )}
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+                {isAdmin
+                  ? "Publicá, editá y organizá todas las clases del estudio."
+                  : "Todo el contenido disponible según tu plan, para que sigas creciendo cada día."}
+              </p>
+            </div>
+
+            {/* Buscador: formulario GET, sin JavaScript. Conserva la categoria activa. */}
+            <form method="get" action="/dashboard/library" style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+              {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", display: "flex" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={busqueda}
+                  placeholder="Buscar clases, categorías, etc."
+                  aria-label="Buscar clases"
+                  style={{
+                    width: 300, maxWidth: "100%", padding: "13px 18px 13px 44px",
+                    borderRadius: 999, border: "1px solid #F1E9E7", background: "#fff",
+                    fontSize: 13, color: "var(--ink)", outline: "none", fontFamily: "inherit",
+                  }}
+                />
+              </div>
+              <button type="submit" style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "13px 22px", borderRadius: 999, cursor: "pointer",
+                background: "var(--pink-wash)", color: "var(--pink)",
+                border: "none", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+              }}>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4.5h12M4.5 8h7M6.5 11.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                Buscar
+              </button>
+            </form>
+          </div>
           {isAdmin && (
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
               <a
@@ -203,21 +301,29 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           {filters.map((f) => (
             <Link
               key={f.key}
-              href={f.key === "all" ? "/dashboard/library" : `/dashboard/library?category=${encodeURIComponent(f.key)}`}
+              href={
+                ((f.key === "all"
+                  ? "/dashboard/library"
+                  : `/dashboard/library?category=${encodeURIComponent(f.key)}`) +
+                  (busqueda ? `${f.key === "all" ? "?" : "&"}q=${encodeURIComponent(busqueda)}` : "")) as never
+              }
               style={{
                 padding: "7px 18px", textDecoration: "none", borderRadius: 99,
                 fontSize: 12, fontWeight: 700, letterSpacing: "0.02em",
-                background: activeCategory === f.key ? "var(--pink)" : "#fdf2f8",
-                color: activeCategory === f.key ? "#fff" : "var(--muted)",
-                border: activeCategory === f.key ? "none" : "1.5px solid #fce7f3",
-                boxShadow: activeCategory === f.key ? "0 4px 12px rgba(190,24,93,0.25)" : "none",
+                background: activeCategory === f.key ? "var(--pink)" : "#fff",
+                color: activeCategory === f.key ? "#fff" : "var(--pink)",
+                border: activeCategory === f.key ? "none" : "1px solid var(--pink-wash)",
               }}
             >{f.label}</Link>
           ))}
         </div>
 
         {/* Count */}
-        <p className="eyebrow">{visible.length} clases{isAdmin ? ` (${visible.filter(v => v.status !== "published").length} borradores)` : ""}</p>
+        <p className="eyebrow">
+          {visible.length} {visible.length === 1 ? "clase" : "clases"}
+          {busqueda ? ` para “${busqueda}”` : ""}
+          {isAdmin ? ` (${visible.filter(v => v.status !== "published").length} borradores)` : ""}
+        </p>
 
         {/* Grid */}
         {visible.length === 0 ? (
@@ -227,17 +333,24 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           }}>
             {isAdmin
               ? <>No hay clases todavía. <a href="/admin/videos" style={{ color: "var(--pink)", fontWeight: 700 }}>Subí la primera.</a></>
-              : "No hay clases para este filtro todavía."
+              : busqueda
+                ? `No encontramos clases para “${busqueda}”.`
+                : "No hay clases para este filtro todavía."
             }
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))", gap: 16 }}>
             {visible.map((video) => {
               const pct = safePercent(progressMap.get(video.id)?.completion_percent);
               const title = resolveI18nText(video.title_i18n);
               const desc = resolveI18nText(video.description_i18n);
               const tier = TIER_META[video.membership_tier_required] ?? TIER_META.none;
               const isDraft = video.status !== "published";
+              // Thumbnails live behind the same token-protected pull zone as the
+              // video, so they have to be signed per request too.
+              const bunnyId = video.bunny_video_id ?? bunnyVideoIdFromUrl(video.stream_playback_id);
+              const thumbSrc =
+                bunnyId && hasBunnyStreamEnv() ? bunnySignedUrls(bunnyId).thumbnail : video.thumbnail_url;
 
               return (
                 <div key={video.id} style={{ position: "relative" }}>
@@ -295,52 +408,59 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                     }}>
                       {/* Thumbnail */}
                       <div style={{ position: "relative", height: 166, flexShrink: 0 }}>
-                        {video.thumbnail_url ? (
-                          <img src={video.thumbnail_url} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                        {thumbSrc ? (
+                          <img src={thumbSrc} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
                         ) : (
                           <div style={{ width: "100%", height: "100%", background: catGradient(video.category_slugs) }}/>
                         )}
                         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(28,25,23,0.5) 0%, transparent 55%)" }}/>
-                        {video.is_featured && (
-                          <div style={{
-                            position: "absolute", top: 12, left: 12,
-                            fontSize: 8, letterSpacing: "0.15em", fontWeight: 700,
-                            background: "var(--pink)", color: "#fff",
-                            padding: "4px 10px", borderRadius: 99,
-                          }}>DESTACADA</div>
-                        )}
+                        <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
+                          <span style={{
+                            fontSize: 9, letterSpacing: "0.1em", fontWeight: 700,
+                            background: "#fff", color: "var(--pink)",
+                            padding: "5px 11px", borderRadius: 99, textTransform: "uppercase",
+                          }}>
+                            {video.category_slugs[0] ?? "Clase"}
+                          </span>
+                          {video.is_featured && (
+                            <span style={{
+                              fontSize: 9, letterSpacing: "0.1em", fontWeight: 700,
+                              background: "var(--pink)", color: "#fff",
+                              padding: "5px 11px", borderRadius: 99,
+                            }}>DESTACADA</span>
+                          )}
+                        </div>
                         <div style={{
                           position: "absolute", bottom: 10, right: 12,
-                          fontSize: 8, letterSpacing: "0.1em", fontWeight: 700,
-                          background: "rgba(28,25,23,0.6)", color: "#fff",
-                          padding: "3px 9px", borderRadius: 99,
-                        }}>{formatDurationLabel(video.duration_seconds)}</div>
+                          fontSize: 11, fontWeight: 600,
+                          background: "rgba(28,25,23,0.72)", color: "#fff",
+                          padding: "4px 10px", borderRadius: 8,
+                        }}>{mmss(video.duration_seconds)}</div>
                       </div>
 
                       {/* Info */}
                       <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
-                        <p style={{ fontSize: 8, letterSpacing: "0.18em", color: "var(--pink)", marginBottom: 6, fontWeight: 700 }}>
-                          {video.category_slugs.slice(0, 2).join(" · ").toUpperCase()}
-                        </p>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: 8, lineHeight: 1.3 }}>
+                        {fechaCorta(video.published_at) && (
+                          <p style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 7, fontWeight: 600 }}>
+                            {fechaCorta(video.published_at)}
+                          </p>
+                        )}
+                        <p style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ink)", marginBottom: 6, lineHeight: 1.3 }}>
                           {title}
                         </p>
-                        {desc && (
-                          <p style={{
-                            fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6, flex: 1,
-                            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-                          }}>{desc}</p>
-                        )}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
-                          <span style={{
-                            fontSize: 8, letterSpacing: "0.1em", fontWeight: 700,
-                            background: tier.bg, color: tier.color, padding: "4px 10px", borderRadius: 99,
-                          }}>{tier.label}</span>
-                          {pct > 0 && <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>{pct}%</span>}
-                        </div>
+                        <p style={{
+                          fontSize: 12, marginBottom: 12,
+                          color: pct > 0 ? "var(--pink)" : "var(--muted)",
+                        }}>
+                          {nivelTexto(video.recommended_min_level, video.recommended_max_level)}
+                        </p>
+
                         {pct > 0 && (
-                          <div style={{ background: "#fce7f3", borderRadius: 99, height: 3, marginTop: 10 }}>
-                            <div style={{ background: "linear-gradient(90deg, var(--pink-mid), var(--pink))", height: "100%", width: `${pct}%`, borderRadius: 99 }}/>
+                          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ flex: 1, background: "var(--pink-wash)", borderRadius: 99, height: 4 }}>
+                              <div style={{ background: "var(--pink)", height: "100%", width: `${pct}%`, borderRadius: 99 }}/>
+                            </div>
+                            <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>{pct}%</span>
                           </div>
                         )}
                       </div>

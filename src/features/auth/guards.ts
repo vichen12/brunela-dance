@@ -2,6 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { hasSupabaseAuthEnv } from "@/src/lib/env";
+import { getCurrentProfile } from "@/src/features/auth/profile";
 
 type ProfileGuard = {
   id: string;
@@ -47,12 +48,9 @@ export async function requireUser() {
  */
 export async function requireAdmin() {
   const { user } = await requireUser();
-  const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, email, is_admin, membership_tier")
-    .eq("id", user.id)
-    .single<ProfileGuard>();
+  // Mismo perfil memoizado que usan las pantallas: sin esto, entrar a /admin
+  // consultaba `profiles` una vez aca y otra en cada pagina.
+  const profile = await getCurrentProfile(user.id);
 
   if (!profile?.is_admin) {
     redirect("/dashboard");

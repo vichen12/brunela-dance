@@ -43,6 +43,28 @@ type AccessLinkRecord = {
   passcode: string | null;
 };
 
+/** Fila de detalle de una sesion: icono en cuadradito, etiqueta y valor. */
+function Detalle({ d, d2, titulo, valor }: { d: string; d2?: string; titulo: string; valor: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+        background: "var(--pink-wash)", color: "var(--pink)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />}
+        </svg>
+      </div>
+      <div>
+        <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>{titulo}</p>
+        <p style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>{valor}</p>
+      </div>
+    </div>
+  );
+}
+
 function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
   if (!message) return null;
 
@@ -96,11 +118,14 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
         <header className="hero-stage">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <span className="studio-chip">Live sessions</span>
-              <h1 className="display mt-8 text-5xl leading-none md:text-7xl">Clases en vivo y reservas.</h1>
+              <span className="studio-chip">Clases en vivo</span>
+              <h1 className="display mt-8 text-5xl leading-none md:text-7xl">
+                Clases en vivo y{" "}
+                <span style={{ color: "var(--pink)", fontStyle: "italic" }}>reservas.</span>
+              </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
-                Esta capa ya permite reservar, cancelar y mostrar el link de acceso cuando la politica de RLS lo
-                habilita para la alumna correcta.
+                Reservá tu lugar en las próximas clases con Brunela. Cuando se acerque el horario vas a
+                ver acá el enlace para entrar, y podés cancelar si te surge algo.
               </p>
             </div>
 
@@ -135,7 +160,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               </div>
             ) : null}
 
-            {sessions.map((session) => {
+            {sessions.map((session, indice) => {
               const booking = bookings.get(session.id);
               const accessLink = links.get(session.id);
               const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
@@ -144,12 +169,25 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                 <article key={session.id} className="feature-tile rounded-[2rem] border border-[rgba(var(--border-rgb),0.42)] bg-[rgba(255,255,255,0.88)] p-5">
                   <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
                     <div
-                      className="min-h-[14rem] rounded-[1.7rem] border border-[rgba(var(--border-rgb),0.3)] bg-cover bg-center"
+                      className="relative min-h-[14rem] overflow-hidden rounded-[1.7rem] border border-[rgba(var(--border-rgb),0.3)] bg-cover bg-center"
                       style={{
                         backgroundColor: "rgba(238, 225, 228, 0.85)",
                         backgroundImage: session.cover_image_url ? `url(${session.cover_image_url})` : undefined
                       }}
-                    />
+                    >
+                      {indice === 0 && (
+                        <span style={{
+                          position: "absolute", top: 14, left: 14,
+                          display: "inline-flex", alignItems: "center", gap: 7,
+                          background: "rgba(28,25,23,0.82)", color: "#fff",
+                          fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                          padding: "7px 13px", borderRadius: 99, textTransform: "uppercase",
+                        }}>
+                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--pink)" }} />
+                          Próxima clase
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex flex-col">
                       <div className="flex flex-wrap gap-2">
@@ -163,20 +201,28 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                         {resolveI18nText(session.description_i18n) || "Descripcion pendiente en admin."}
                       </p>
 
-                      <div className="mt-6 grid gap-3 text-sm leading-7 text-[color:var(--ink-soft)] md:grid-cols-2">
-                        <p>
-                          <strong className="text-[color:var(--ink)]">Inicio:</strong> {formatDateTimeLabel(session.starts_at)}
-                        </p>
-                        <p>
-                          <strong className="text-[color:var(--ink)]">Fin:</strong> {formatDateTimeLabel(session.ends_at)}
-                        </p>
-                        <p>
-                          <strong className="text-[color:var(--ink)]">Capacidad:</strong> {session.capacity} lugares
-                        </p>
-                        <p>
-                          <strong className="text-[color:var(--ink)]">Booking:</strong>{" "}
-                          {session.booking_closes_at ? formatDateTimeLabel(session.booking_closes_at) : "Sin cierre"}
-                        </p>
+                      <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        <Detalle
+                          d="M3 4.5h10v9H3v-9z" d2="M3 7.2h10M5.6 2.6v3M10.4 2.6v3"
+                          titulo="Inicio" valor={formatDateTimeLabel(session.starts_at)}
+                        />
+                        <Detalle
+                          d="M8 4v4l2.5 1.5" d2="M8 14A6 6 0 108 2a6 6 0 000 12z"
+                          titulo="Fin" valor={formatDateTimeLabel(session.ends_at)}
+                        />
+                        <Detalle
+                          d="M6.2 7.6a2.6 2.6 0 100-5.2 2.6 2.6 0 000 5.2zM1.6 13.4a4.6 4.6 0 019.2 0"
+                          d2="M10.6 3.1a2.2 2.2 0 010 4.3M11.6 9.2a3.8 3.8 0 012.8 3.6"
+                          titulo="Capacidad" valor={`${session.capacity} lugares`}
+                        />
+                        <Detalle
+                          d="M6.5 9.5a2.5 2.5 0 003.5 0l2-2a2.5 2.5 0 00-3.5-3.5l-.6.6"
+                          d2="M9.5 6.5a2.5 2.5 0 00-3.5 0l-2 2a2.5 2.5 0 003.5 3.5l.6-.6"
+                          titulo="Enlace"
+                          /* La regla real: el enlace se revela al reservar, no a una
+                             hora fija. No hay ventana de minutos en ningun lado. */
+                          valor={accessLink ? "Disponible ahora" : "Disponible al reservar"}
+                        />
                       </div>
 
                       <div className="mt-6 flex flex-wrap gap-3">
@@ -216,6 +262,27 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               );
             })}
           </div>
+
+          {/* Franja de cierre. Cada linea dice algo que el sistema HACE:
+              no promete avisos ni notificaciones, porque no existen. */}
+          {sessions.length > 0 && (
+            <div style={{
+              marginTop: 22, borderRadius: 20, padding: "18px 22px",
+              background: "var(--pink-wash)",
+              display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            }}>
+              {[
+                ["Reservás en un clic", "Sin formularios ni confirmaciones por mail."],
+                ["El enlace aparece acá", "En esta misma pantalla, una vez que reservaste."],
+                ["Cancelás cuando quieras", "El lugar vuelve a quedar libre al instante."],
+              ].map(([titulo, texto]) => (
+                <div key={titulo}>
+                  <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>{titulo}</p>
+                  <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, lineHeight: 1.55 }}>{texto}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </section>
     </main>
