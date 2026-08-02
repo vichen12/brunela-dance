@@ -1,19 +1,39 @@
 "use client";
 
-// ─── Sparkline (pure SVG, no interactivity needed, but kept here for co-location)sasa───
+// ─── Sparkline (SVG puro, sin interactividad) ────────────────────────────────
 function Sparkline({ points, color = "var(--pink-mid)" }: { points: string; color?: string }) {
-  const pts = points.split(" ").map((p) => { const [x, y] = p.split(","); return { x: +x, y: +y }; });
+  const pts = points
+    .split(" ")
+    .filter(Boolean)
+    .map((p) => { const [x, y] = p.split(","); return { x: +x, y: +y }; })
+    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+  // Sin puntos no hay nada que dibujar, y `last` seria undefined.
+  if (pts.length === 0) return <svg viewBox="0 0 80 32" width={80} height={32} aria-hidden />;
+
   const last = pts[pts.length - 1];
-  const fillPath = `${points} ${last.x},32 0,32 Z`;
+
+  // El atributo `points` de <polygon> SOLO acepta pares de numeros. La "Z" que
+  // habia aca es sintaxis de <path>, y hacia que el navegador rechazara el
+  // atributo entero: un error de consola por tarjeta, ocho en /admin. El
+  // poligono cierra solo, no hace falta.
+  const fillPath = `${points} ${last.x},32 0,32`;
+
+  // El id tiene que ser un identificador valido para url(#...). Con tokens
+  // (`var(--pink-mid)`) los parentesis y guiones rompen la referencia, asi que
+  // se limpia a alfanumerico. Mismo color -> mismo id, que es lo correcto:
+  // comparten el gradiente.
+  const gradId = `spark-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
+
   return (
-    <svg viewBox="0 0 80 32" width={80} height={32} style={{ overflow: "visible" }}>
+    <svg viewBox="0 0 80 32" width={80} height={32} style={{ overflow: "visible" }} aria-hidden>
       <defs>
-        <linearGradient id={`g-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.18} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
-      <polygon points={fillPath} fill={`url(#g-${color.replace("#", "")})`} />
+      <polygon points={fillPath} fill={`url(#${gradId})`} />
       <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={last.x} cy={last.y} r={2.5} fill={color} />
     </svg>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/src/lib/supabase/client';
+import { banearUsuarioAction } from '@/src/features/admin/chat-moderation';
 
 export type ChatMessage = {
   id: string;
@@ -64,7 +65,7 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
 }
 
 function MessageBubble({
-  msg, isMe, isAdmin, canModerate, onDelete, onMute, interlocutor,
+  msg, isMe, isAdmin, canModerate, onDelete, onMute, onBan, interlocutor,
 }: {
   msg: ChatMessage;
   isMe: boolean;
@@ -72,6 +73,7 @@ function MessageBubble({
   canModerate: boolean;
   onDelete: (id: string) => void;
   onMute: (userId: string, name: string) => void;
+  onBan: (userId: string, name: string) => void;
   interlocutor?: Interlocutor | null;
 }) {
   const [hover, setHover] = useState(false);
@@ -84,7 +86,11 @@ function MessageBubble({
     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
       <div style={{ maxWidth: '70%' }}>
         <div style={{
-          background: 'var(--pink)',
+          // --pink-mid y no --pink: esto es texto de LECTURA SOSTENIDA a 13.5px
+          // en peso normal, no una etiqueta que se mira de reojo. Blanco sobre
+          // --pink da 3.78:1 y sobre --pink-mid da 4.83:1, que cumple AA. A
+          // simple vista son casi el mismo coral.
+          background: 'var(--pink-mid)',
           color: '#fff', borderRadius: '18px 18px 6px 18px',
           padding: '12px 17px', fontSize: 13.5, lineHeight: 1.55,
         }}>{msg.content}</div>
@@ -136,10 +142,16 @@ function MessageBubble({
                 style={{ fontSize: 9, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
               >eliminar</button>
               {!senderIsAdmin && (
-                <button
-                  onClick={() => onMute(msg.user_id!, name)}
-                  style={{ fontSize: 9, color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
-                >mutear</button>
+                <>
+                  <button
+                    onClick={() => onMute(msg.user_id!, name)}
+                    style={{ fontSize: 9, color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                  >mutear</button>
+                  <button
+                    onClick={() => onBan(msg.user_id!, name)}
+                    style={{ fontSize: 9, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                  >banear</button>
+                </>
               )}
             </>
           )}
@@ -170,9 +182,14 @@ export function ChatRoom({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  // Un solo modal para mutear y banear: mismos campos (duracion + motivo), y
+  // `modo` decide el texto, el color del boton y a donde escribe.
   const [muteTarget, setMuteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [modo, setModo] = useState<'mute' | 'ban'>('mute');
   const [muteReason, setMuteReason] = useState('');
   const [muteDuration, setMuteDuration] = useState<'1h' | '24h' | '7d' | 'permanent'>('24h');
+  const [errorModeracion, setErrorModeracion] = useState<string | null>(null);
+  const [enviandoModeracion, setEnviandoModeracion] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   // Una sola instancia por montaje: sin esto cada render creaba un cliente
   // nuevo y el efecto de abajo, que ahora depende de el, se resuscribiria en
@@ -246,8 +263,38 @@ export function ChatRoom({
     await supabase.from('chat_messages').update({ is_deleted: true }).eq('id', id);
   }, []);
 
-  const confirmMute = useCallback(async () => {
-    if (!muteTarget) return;
+  const cerrarModal = useCallback(() => {
+    setMuteTarget(null);
+    setMuteReason('');
+    setMuteDuration('24h');
+    setErrorModeracion(null);
+  }, []);
+
+  const confirmarModeracion = useCallback(async () => {
+    if (!muteTarget || enviandoModeracion) return;
+    setEnviandoModeracion(true);
+    setErrorModeracion(null);
+
+    // BANEAR va por server action y MUTEAR por el cliente, y no es un descuido:
+    // la migracion 18 le dio a `authenticated` INSERT/UPDATE sobre chat_mutes
+    // pero dejo chat_bans de solo lectura. Escribir bans desde el navegador
+    // daria 42501. La action valida con requireAdmin() antes de usar
+    // service_role.
+    if (modo === 'ban') {
+      const r = await banearUsuarioAction({
+        userId: muteTarget.id,
+        reason: muteReason || undefined,
+        duration: muteDuration,
+      });
+      setEnviandoModeracion(false);
+      if (!r.ok) {
+        setErrorModeracion(r.error);
+        return;
+      }
+      cerrarModal();
+      return;
+    }
+
     const durationMs: Record<typeof muteDuration, number | null> = {
       '1h': 60 * 60 * 1000,
       '24h': 24 * 60 * 60 * 1000,
@@ -257,7 +304,7 @@ export function ChatRoom({
     const ms = durationMs[muteDuration];
     const expiresAt = ms == null ? null : new Date(Date.now() + ms).toISOString();
     // unique(user_id) on chat_mutes -> upsert so re-muting updates the record.
-    await supabase.from('chat_mutes').upsert(
+    const { error } = await supabase.from('chat_mutes').upsert(
       {
         user_id: muteTarget.id,
         muted_by: userId,
@@ -266,10 +313,13 @@ export function ChatRoom({
       },
       { onConflict: 'user_id' }
     );
-    setMuteTarget(null);
-    setMuteReason('');
-    setMuteDuration('24h');
-  }, [muteTarget, muteReason, muteDuration, userId]);
+    setEnviandoModeracion(false);
+    if (error) {
+      setErrorModeracion(error.message);
+      return;
+    }
+    cerrarModal();
+  }, [muteTarget, muteReason, muteDuration, userId, modo, enviandoModeracion, cerrarModal]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -297,7 +347,8 @@ export function ChatRoom({
             isAdmin={isAdmin}
             canModerate={isAdmin}
             onDelete={deleteMessage}
-            onMute={(uid, name) => setMuteTarget({ id: uid, name })}
+            onMute={(uid, name) => { setModo('mute'); setMuteTarget({ id: uid, name }); }}
+            onBan={(uid, name) => { setModo('ban'); setMuteTarget({ id: uid, name }); }}
             interlocutor={interlocutor}
           />
         ))}
@@ -351,10 +402,12 @@ export function ChatRoom({
             boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
           }}>
             <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
-              Mutear a {muteTarget.name}
+              {modo === 'ban' ? 'Banear' : 'Mutear'} a {muteTarget.name}
             </p>
             <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-              La alumna no podrá escribir mientras dure el silencio.
+              {modo === 'ban'
+                ? 'No va a poder entrar a ningún canal del estudio mientras dure el baneo.'
+                : 'La alumna no podrá escribir mientras dure el silencio.'}
             </p>
 
             <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>
@@ -395,11 +448,33 @@ export function ChatRoom({
                 fontFamily: 'var(--font-body), sans-serif', outline: 'none',
               }}
             />
+            {errorModeracion && (
+              <p style={{
+                fontSize: 12, color: '#991b1b', background: '#fef2f2',
+                border: '1px solid #fecaca', borderRadius: 10,
+                padding: '9px 12px', marginTop: 12, lineHeight: 1.5,
+              }}>
+                No se pudo aplicar: {errorModeracion}
+              </p>
+            )}
+
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={confirmMute} className="button-primary" style={{ flex: 1 }}>
-                Confirmar mute
+              <button
+                onClick={confirmarModeracion}
+                disabled={enviandoModeracion}
+                className="button-primary"
+                style={{
+                  flex: 1,
+                  opacity: enviandoModeracion ? 0.6 : 1,
+                  cursor: enviandoModeracion ? 'default' : 'pointer',
+                  ...(modo === 'ban' ? { background: '#991b1b' } : null),
+                }}
+              >
+                {enviandoModeracion
+                  ? 'Aplicando…'
+                  : modo === 'ban' ? 'Confirmar baneo' : 'Confirmar mute'}
               </button>
-              <button onClick={() => setMuteTarget(null)} className="button-secondary" style={{ flex: 1 }}>
+              <button onClick={cerrarModal} className="button-secondary" style={{ flex: 1 }}>
                 Cancelar
               </button>
             </div>

@@ -66,6 +66,14 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
   return (
     <main style={{ fontFamily: "inherit" }}>
+      <header className="hero-stage">
+        <p className="eyebrow">Comunidad</p>
+        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Alumnas.</h1>
+        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+          Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos.
+        </p>
+      </header>
+
       <Flash message={success} tone="success" />
       <Flash message={error} tone="error" />
 

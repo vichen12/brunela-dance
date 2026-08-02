@@ -302,15 +302,16 @@ function LiveForm({ session }: { session?: LiveSession }) {
         }}>
           {isNew ? "CREAR SESION" : "GUARDAR CAMBIOS"}
         </button>
+        {/* formAction en el boton, sin anidar formularios: ver la nota en
+            app/admin/videos/page.tsx. Anidado, el parser descartaba este form y
+            ELIMINAR terminaba llamando a updateLiveSessionAction. El id ya
+            viaja en el hidden del formulario externo. */}
         {!isNew && (
-          <form action={deleteLiveSessionAction} style={{ display: "inline" }}>
-            <input type="hidden" name="id" value={session!.id} />
-            <button type="submit" style={{
-              background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-              borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-              letterSpacing: "0.1em", cursor: "pointer",
-            }}>ELIMINAR</button>
-          </form>
+          <button type="submit" formAction={deleteLiveSessionAction} style={{
+            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
+            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.1em", cursor: "pointer",
+          }}>ELIMINAR</button>
         )}
       </div>
     </form>
@@ -368,6 +369,14 @@ export default async function AdminLivePage({
 
   return (
     <main style={{ fontFamily: "inherit" }}>
+      <header className="hero-stage">
+        <p className="eyebrow">Gestión de contenido</p>
+        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Sesiones en vivo.</h1>
+        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+          Programá las clases en directo, definí el cupo y controlá quién puede reservar según su plan.
+        </p>
+      </header>
+
       <Flash msg={success} tone="ok" />
       <Flash msg={error} tone="err" />
 

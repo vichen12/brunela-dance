@@ -278,7 +278,10 @@ export default async function ChatPage({ searchParams }: {
           boxShadow: "0 4px 12px rgba(190,24,93,0.3)",
         }}>B</div>
         <div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Brunela</p>
+          {/* h1 y no p: es el encabezado de la pantalla. Era la unica del area
+              de miembro sin ninguno, asi que un lector de pantalla entraba al
+              chat sin saber donde estaba. Los estilos son los mismos. */}
+          <h1 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Brunela</h1>
           <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
             Instructora · Responde en menos de 24hs
           </p>

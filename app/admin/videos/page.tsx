@@ -334,15 +334,18 @@ function VideoForm({ video }: { video?: VideoRecord }) {
         }}>
           {isNew ? "CREAR VIDEO" : "GUARDAR CAMBIOS"}
         </button>
+        {/* formAction en el boton, NO un <form> adentro de otro <form>.
+            Los formularios anidados son HTML invalido: el parser descarta el
+            interno, asi que el boton quedaba como submit del formulario de
+            arriba y ELIMINAR terminaba llamando a upsertVideoAction. O sea que
+            no borraba: guardaba. El id ya viaja en el hidden del form externo,
+            que es el que deleteVideoAction lee. */}
         {!isNew && (
-          <form action={deleteVideoAction} style={{ display: "inline" }}>
-            <input name="id" type="hidden" value={video.id} />
-            <button type="submit" style={{
-              background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-              borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-              letterSpacing: "0.1em", cursor: "pointer",
-            }}>ELIMINAR</button>
-          </form>
+          <button type="submit" formAction={deleteVideoAction} style={{
+            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
+            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.1em", cursor: "pointer",
+          }}>ELIMINAR</button>
         )}
       </div>
     </form>
@@ -414,6 +417,14 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
   return (
     <main style={{ fontFamily: "inherit" }}>
+      <header className="hero-stage">
+        <p className="eyebrow">Gestión de contenido</p>
+        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Clases.</h1>
+        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+          Subí, editá y publicá las clases del estudio, con su video, sus pistas de audio y el plan que las habilita.
+        </p>
+      </header>
+
       <Flash message={success} tone="success" />
       <Flash message={error} tone="error" />
 

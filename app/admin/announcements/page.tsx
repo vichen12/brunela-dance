@@ -135,6 +135,14 @@ export default async function AdminAnnouncementsPage({
 
   return (
     <main style={{ fontFamily: "inherit" }}>
+      <header className="hero-stage">
+        <p className="eyebrow">Comunicación</p>
+        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Anuncios.</h1>
+        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+          Avisos que ven las alumnas al entrar al estudio. Podés dirigirlos a un plan concreto y darlos de baja cuando dejan de aplicar.
+        </p>
+      </header>
+
       <Flash msg={success} tone="ok" />
       <Flash msg={error} tone="err" />
 

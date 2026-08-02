@@ -130,8 +130,12 @@ export default async function CommunityPage({ searchParams }: {
             <h1 className="display mt-5 text-5xl leading-none md:text-6xl">
               Chat <span style={{ color: "var(--pink)", fontStyle: "italic" }}>del estudio.</span>
             </h1>
+            {/* El chat de comunidad ESTA construido y funcionando: salas, tiempo
+                real y moderacion. Lo unico que falta son los canales, que los
+                abre Brunela desde /admin/chat. Decir "estara disponible pronto"
+                era mentirle a la alumna sobre la causa. */}
             <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-              Los chats de comunidad estarán disponibles pronto.
+              Todavía no hay canales abiertos para tu plan.
             </p>
           </div>
 
@@ -154,12 +158,12 @@ export default async function CommunityPage({ searchParams }: {
               Sin canales
             </p>
             <h2 className="display" style={{ fontSize: 30, lineHeight: 1.25, color: "var(--ink)" }}>
-              Muy pronto podrás chatear<br />
-              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>con la comunidad.</span>
+              Acá van a estar<br />
+              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>los canales del estudio.</span>
             </h2>
             <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 14, lineHeight: 1.7 }}>
-              Estamos preparando este espacio para que puedas conectar,<br />
-              compartir y acompañarte con otras alumnas.
+              Cuando Brunela abra un canal para tu plan, lo vas a ver acá<br />
+              y vas a poder escribir con las demás alumnas.
             </p>
 
             {/* En vez de "te avisaremos": una salida que SI existe hoy. */}

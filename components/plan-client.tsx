@@ -334,11 +334,12 @@ export function PlanClient({
                         color: oscura ? 'rgba(255,255,255,0.72)' : 'var(--pink)',
                       }}>{meta.encima}</div>
                     )}
+                    {/* La otra rama del mismo titulo: ver la nota de mas abajo. */}
                     {(oscura || suave) && (
-                      <div style={{
+                      <h2 style={{
                         fontSize: 15, fontWeight: 800, letterSpacing: '0.1em',
-                        color: oscura ? '#fff' : 'var(--ink)',
-                      }}>{meta.name}</div>
+                        color: oscura ? '#fff' : 'var(--ink)', margin: 0,
+                      }}>{meta.name}</h2>
                     )}
                   </div>
 
@@ -356,10 +357,14 @@ export function PlanClient({
                 </div>
 
                 <div style={{ padding: oscura || suave ? '22px 26px 0' : '18px 26px 0', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {/* h2 y no div: es el titulo de la tarjeta. En un <div> el
+                      lector de pantalla no puede saltar de plan en plan.
+                      margin: 0 para no heredar el margen por defecto del h2 y
+                      dejar el diseno igual. */}
                   {!oscura && !suave && (
-                    <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--pink)', marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.1em', color: 'var(--pink)', margin: '0 0 16px' }}>
                       {meta.name}
-                    </div>
+                    </h2>
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
