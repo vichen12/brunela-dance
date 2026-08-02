@@ -298,28 +298,33 @@ existe por duplicado y nada se copia solo.
 
 | Pieza | Región | Cómo se verifica |
 |---|---|---|
-| Supabase | `us-west-2` — Oregón | Panel de Supabase → Settings → General |
-| Vercel (funciones) | `pdx1` — Portland, Oregón | ver abajo |
+| Supabase (`howtuhfdxgyluskrlkze`) | `eu-central-1` — Fráncfort | Panel de Supabase → Settings → General |
+| Vercel (funciones) | `fra1` — Fráncfort | ver abajo |
 | Bunny Stream | CDN global | no aplica |
 
-`pdx1` **es** `us-west-2`: se eligió para que las funciones queden en el mismo
-centro de datos que la base. Está fijado en `vercel.json`:
+`fra1` **es** `eu-central-1`: las funciones quedan en el mismo centro de datos
+que la base. Está fijado en `vercel.json`:
 
 ```json
-{ "regions": ["pdx1"] }
+{ "regions": ["fra1"] }
 ```
 
-Antes de eso las funciones corrían en `iad1` (Virginia) y cada consulta cruzaba
-Estados Unidos: ~65 ms de ida y vuelta, contra ~2 ms ahora. Como las pantallas
-privadas encadenan 2 o 3 consultas, eran ~200 ms por navegación que se pagaban
-sin motivo.
+**El emparejamiento es lo que importa, no la ciudad.** Tener las dos piezas
+juntas ahorra ~160 ms por navegación; elegir entre Fráncfort, París o Dublín son
+~10 ms. Por eso `vercel.json` y la región de Supabase se cambian **siempre en el
+mismo deploy**: separarlas deja las funciones a un océano de la base.
+
+Historia: hasta el 2026-08-01 las funciones corrían en `iad1` (Virginia) con la
+base en Oregón — cada consulta cruzaba Estados Unidos, ~65 ms de ida y vuelta,
+y las pantallas privadas encadenan 2 o 3. Se pasó por `pdx1` (Oregón, junto a la
+base vieja) y de ahí a `fra1` con la mudanza a Europa.
 
 **Cómo confirmar en qué región corre de verdad** (no confiar en el panel, mirar
 la respuesta):
 
 ```bash
 curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
-# x-vercel-id: gru1::pdx1::xxxxx
+# x-vercel-id: gru1::fra1::xxxxx
 #              |      `-- región donde CORRIÓ la función  <- esto es lo que importa
 #              `--------- borde por donde ENTRÓ el request (varía según desde dónde mires)
 ```
@@ -407,7 +412,7 @@ proyecto nuevo, el bloque **no falla, no hace nada**.
 Síntoma: los mensajes se envían y se guardan bien, pero no aparecen del otro lado
 hasta recargar la página. Nadie reporta un error porque no hay ninguno.
 
-**3. `vercel.json` en `pdx1` con la base en Fráncfort — peor que no migrar.**
+**3. `vercel.json` y la region de Supabase separadas — peor que no migrar.**
 
 Si se cambian las variables de entorno y se olvida la región, quedan las
 funciones en Oregón y la base en Alemania: **~160 ms por consulta**, peor que
