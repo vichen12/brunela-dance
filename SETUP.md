@@ -41,6 +41,9 @@ no es el que devuelve `ls`:
 14. 20260730_stripe_webhook_event_ordering.sql
 15. 20260801_access_granting_past_due.sql
 16. 20260801_studio_owner_explicit.sql
+17. 20260801_data_api_grants.sql                    <-- ULTIMA: opera sobre
+                                                        "all tables", asi que
+                                                        necesita las 20 creadas
 ```
 
 > Las dos del **2026-08-01** existen porque dos reglas de negocio vivían sólo
@@ -478,7 +481,9 @@ service role key.
 
 #### Paso 2 — Esquema
 
-**a)** Las 16 migraciones **en el orden de § 1.1** — que no es el alfabético.
+**a)** Las 17 migraciones **en el orden de § 1.1** — que no es el alfabético.
+La **17 va última sin excepción**: usa `grant ... on all tables in schema
+public`, que sólo alcanza a las tablas que ya existen.
 
 **b)** Verificar que `20260801_access_granting_past_due.sql` (la 15) haya
 quedado aplicada. Esa migración existe precisamente porque el período de gracia
