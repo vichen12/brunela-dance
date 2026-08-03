@@ -174,6 +174,38 @@ de una residente de la UE.
 **No es un descuido: es una asimetría deliberada** que hay que reflejar en la
 política de privacidad. La alternativa europea evaluada fue Brevo (Francia).
 
+### 🔴 NUNCA correr `npm audit fix --force` en este proyecto
+
+**Comprobado el 2026-08-03.** El aviso de Next abarca `9.3.4-canary.0` hasta
+`16.3.0-canary.5`, o sea *todas* las versiones publicadas. npm no encuentra
+ninguna "segura" por arriba, así que elige la única por abajo y anuncia:
+
+```
+Will install next@9.3.3, which is a breaking change
+```
+
+Eso es **bajar de Next 15 a Next 9**: seis años y cuatro majors atrás, sin App
+Router. Destruye la aplicación entera. `npm audit fix` a secas es seguro; el
+`--force` no.
+
+La forma correcta es subir a la última 15.x a mano (`npm install next@15.5.x`).
+
+### El `overrides` de `package.json` no es decorativo
+
+Dos dependencias **transitivas** quedaron sin parche porque Next las fija:
+
+| Paquete | Next pide | Forzado a | Por qué |
+|---|---|---|---|
+| `sharp` | `^0.34.3` (opcional) | `^0.35.3` | 4 CVE de libvips |
+| `postcss` | `8.4.31` (anidada) | `$postcss` → 8.5.25 | XSS y lectura de archivos |
+
+`postcss` va como `$postcss` y no como un rango: al ser también dependencia
+directa nuestra, npm rechaza cualquier otra cosa con `EOVERRIDE`.
+
+Si alguien borra este bloque, las dos vuelven solas a la versión vulnerable y el
+`npm audit` deja de estar en cero. Lo que hay que verificar después de tocarlo es
+`/_next/image`, que es lo que ejercita `sharp` de verdad.
+
 ---
 
 ## Project
