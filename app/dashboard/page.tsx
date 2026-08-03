@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users, Play, CalendarDays, Megaphone } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -427,16 +428,16 @@ export default async function DashboardPage() {
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                 {([
-                  { href: "/admin/users",         label: "Gestionar alumnas", icon: "👥" },
-                  { href: "/admin/videos",         label: "Subir video",       icon: "🎬" },
-                  { href: "/admin/live",           label: "Nueva sesion",      icon: "📡" },
-                  { href: "/admin/announcements",  label: "Nuevo anuncio",     icon: "📢" },
+                  { href: "/admin/users",         label: "Gestionar alumnas", Icon: Users },
+                  { href: "/admin/videos",         label: "Subir clase",       Icon: Play },
+                  { href: "/admin/live",           label: "Nueva sesión",      Icon: CalendarDays },
+                  { href: "/admin/announcements",  label: "Nuevo anuncio",     Icon: Megaphone },
                 ] as const).map((a) => (
                   <Link key={a.href} href={a.href} style={{
                     display: "flex", flexDirection: "column", gap: 8, textDecoration: "none",
                     padding: "16px 18px", borderRadius: 14, background: "#fafaf9", border: "1.5px solid #f0eeec",
                   }}>
-                    <span style={{ fontSize: 20 }}>{a.icon}</span>
+                    <a.Icon size={19} strokeWidth={1.9} style={{ color: "var(--pink-deep)" }} />
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917" }}>{a.label}</p>
                   </Link>
                 ))}

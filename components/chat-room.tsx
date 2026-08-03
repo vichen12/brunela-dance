@@ -336,7 +336,7 @@ export function ChatRoom({
       <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px,3vw,20px) clamp(12px,3vw,20px) 8px' }}>
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)', fontSize: 13 }}>
-            Todavía no hay mensajes. Sé la primera en escribir 🩰
+            Todavía no hay mensajes. Sé la primera en escribir.
           </div>
         )}
         {messages.map((m) => (

@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { upsertDocumentAction, deleteDocumentAction } from "@/src/features/admin/document-actions";
 import { AdminDocumentUpload } from "@/components/admin-document-upload";
@@ -36,8 +37,11 @@ function Flash({ message, tone }: { message: string | null; tone: "success" | "e
 const inp = "w-full rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm outline-none focus:border-pink-400 transition";
 const lbl = "block text-xs font-bold uppercase tracking-widest text-[color:var(--muted)] mb-2";
 
-const FILE_ICONS: Record<string, string> = {
-  pdf: "📄", image: "🖼️", video: "🎬", audio: "🎵", doc: "📝", other: "📎",
+// Iconos de lucide en vez de emojis: los emojis los dibuja cada sistema
+// operativo distinto, no heredan el color de la marca y no se pueden alinear
+// con el resto de la interfaz.
+const FILE_ICONS: Record<string, LucideIcon> = {
+  pdf: FileText, image: Image, video: Video, audio: Music, doc: FileType, other: Paperclip,
 };
 
 export default async function AdminDocumentsPage({ searchParams }: { searchParams?: SearchParams }) {
@@ -151,7 +155,7 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
                   background: "rgba(253,242,248,0.4)",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 20 }}>{FILE_ICONS[doc.file_type] ?? "📎"}</span>
+                    {(() => { const I = FILE_ICONS[doc.file_type] ?? Paperclip; return <I size={20} strokeWidth={1.8} style={{ color: "var(--pink-deep)", flexShrink: 0 }} />; })()}
                     <div>
                       <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{doc.title}</p>
                       <div style={{ display: "flex", gap: 8, marginTop: 3 }}>

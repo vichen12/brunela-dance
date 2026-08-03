@@ -45,7 +45,7 @@ const PLAN_META: Record<CatalogTier['tier'], {
     desc: 'Programa guiado con progresos estructurados.',
     features: ['Todo Corps de Ballet', 'Programas estructurados', 'Mayor profundidad técnica', 'Objetivos por semana'],
     cabecera: 'suave',
-    encima: '★ MÁS ELEGIDA',
+    encima: 'MÁS ELEGIDA',
     // corona
     icono: 'M2.6 12h10.8l.9-6.2-3.2 2.2L8 3.3 4.9 8 1.7 5.8 2.6 12z',
   },

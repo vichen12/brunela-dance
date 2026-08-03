@@ -24,8 +24,8 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
       }}
     >
       {/* Background glows */}
-      <div aria-hidden style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80%", height: "50%", background: "radial-gradient(ellipse at 50% 0%, rgba(190,24,93,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: "40%", height: "40%", background: "radial-gradient(ellipse at 100% 100%, rgba(190,24,93,0.05) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div aria-hidden style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80%", height: "50%", background: "radial-gradient(ellipse at 50% 0%, rgba(230, 79, 85,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div aria-hidden style={{ position: "absolute", bottom: 0, right: 0, width: "40%", height: "40%", background: "radial-gradient(ellipse at 100% 100%, rgba(230, 79, 85,0.05) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       <div style={{ width: "100%", maxWidth: "480px", position: "relative", zIndex: 1 }}>
         {/* Back link */}
@@ -38,7 +38,7 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
         </Link>
 
         {/* Card */}
-        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "2rem", border: "1px solid rgba(190,24,93,0.1)", boxShadow: "0 8px 48px rgba(190,24,93,0.08), 0 0 0 1px rgba(255,255,255,0.8)", padding: "clamp(2rem, 5vw, 3rem)" }}>
+        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "2rem", border: "1px solid rgba(230, 79, 85,0.1)", boxShadow: "0 8px 48px rgba(230, 79, 85,0.08), 0 0 0 1px rgba(255,255,255,0.8)", padding: "clamp(2rem, 5vw, 3rem)" }}>
           <div style={{ width: 48, height: 48, borderRadius: "14px", background: "linear-gradient(135deg, var(--pink-soft), var(--pink-line))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pink-mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>

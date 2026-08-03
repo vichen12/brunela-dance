@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { Users, Gem, MessageSquare } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarAjustes } from "@/src/lib/settings";
@@ -394,7 +395,7 @@ export default async function AdminChatPage({ searchParams }: {
             background: tab === t.key ? "var(--pink)" : "var(--pink-wash)",
             color: tab === t.key ? "#fff" : "var(--muted)",
             border: tab === t.key ? "none" : "1.5px solid var(--pink-soft)",
-            boxShadow: tab === t.key ? "0 4px 12px rgba(190,24,93,0.25)" : "none",
+            boxShadow: tab === t.key ? "0 4px 12px rgba(230, 79, 85,0.25)" : "none",
           }}>{t.label}</a>
         ))}
       </div>
@@ -477,7 +478,7 @@ export default async function AdminChatPage({ searchParams }: {
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {publicRooms.map((room) => {
                   const active = room.id === activeRoomId;
-                  const icon = room.type === "community" ? "🌸" : "💎";
+                  const Icon = room.type === "community" ? Users : Gem;
                   return (
                     <div key={room.id} style={{
                       borderRadius: 14,
@@ -489,7 +490,7 @@ export default async function AdminChatPage({ searchParams }: {
                         display: "flex", alignItems: "center", gap: 10,
                         padding: "10px 12px", textDecoration: "none",
                       }}>
-                        <span style={{ fontSize: 16 }}>{icon}</span>
+                        <Icon size={16} strokeWidth={1.9} style={{ flexShrink: 0, color: active ? "var(--pink)" : "var(--muted)" }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 12, fontWeight: 700, color: active ? "var(--pink)" : "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {room.name}
@@ -653,7 +654,7 @@ export default async function AdminChatPage({ searchParams }: {
               </div>
             ) : (
               <div className="panel rounded-[2rem] p-10" style={{ textAlign: "center", color: "var(--muted)" }}>
-                <p style={{ fontSize: 32, marginBottom: 12 }}>💬</p>
+                <MessageSquare size={30} strokeWidth={1.5} style={{ color: "var(--pink)", marginBottom: 12 }} />
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Seleccioná una sala para ver sus mensajes</p>
                 <p style={{ fontSize: 12, marginTop: 4 }}>O creá una sala nueva desde el panel izquierdo</p>
               </div>

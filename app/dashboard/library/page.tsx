@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pencil, Rocket, Archive, Clapperboard } from "lucide-react";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -282,7 +283,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                   padding: "10px 20px", borderRadius: 99,
                   background: "var(--pink)", color: "#fff",
                   fontSize: 12, fontWeight: 700, textDecoration: "none",
-                  boxShadow: "0 4px 14px rgba(190,24,93,0.35)",
+                  boxShadow: "0 4px 14px rgba(230, 79, 85,0.35)",
                 }}
               >
                 <span style={{ fontSize: 15 }}>+</span> Nueva clase
@@ -297,7 +298,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                   fontSize: 12, fontWeight: 700, textDecoration: "none",
                 }}
               >
-                🗂️ Categorías
+                Categorías
               </a>
             </div>
           )}
@@ -312,7 +313,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 16 }}>🎬</span>
+              <Clapperboard size={16} strokeWidth={1.9} />
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "var(--pink-wash)" }}>Modo administración</p>
                 <p style={{ fontSize: 10, color: "#a8a29e", marginTop: 1 }}>Ves todas las clases incluidas borradores. Los botones de edición aparecen en cada tarjeta.</p>
@@ -412,7 +413,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                           boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                           border: "1px solid rgba(0,0,0,0.06)",
                         }}
-                      >✏️</a>
+                      ><Pencil size={13} strokeWidth={2} /></a>
                       <form action={quickPublishToggleAction} style={{ display: "inline" }}>
                         <input type="hidden" name="id" value={video.id}/>
                         <input type="hidden" name="status" value={video.status}/>
@@ -421,13 +422,13 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                           title={isDraft ? "Publicar" : "Volver a borrador"}
                           style={{
                             width: 28, height: 28, borderRadius: 8, cursor: "pointer",
-                            background: isDraft ? "rgba(190,24,93,0.9)" : "rgba(255,255,255,0.92)",
+                            background: isDraft ? "rgba(230, 79, 85,0.9)" : "rgba(255,255,255,0.92)",
                             backdropFilter: "blur(4px)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: 11, border: "1px solid rgba(0,0,0,0.06)",
                             boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                           }}
-                        >{isDraft ? "🚀" : "📥"}</button>
+                        >{isDraft ? <Rocket size={13} strokeWidth={2} /> : <Archive size={13} strokeWidth={2} />}</button>
                       </form>
                     </div>
                   )}
@@ -537,7 +538,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                     width: 48, height: 48, borderRadius: 14,
                     background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 22, color: "#fff", boxShadow: "0 4px 12px rgba(190,24,93,0.3)",
+                    fontSize: 22, color: "#fff", boxShadow: "0 4px 12px rgba(230, 79, 85,0.3)",
                   }}>+</div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink)" }}>Nueva clase</p>
                   <p style={{ fontSize: 11, color: "var(--muted)" }}>Subir video al catálogo</p>

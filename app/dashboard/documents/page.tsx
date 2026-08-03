@@ -1,4 +1,5 @@
 import { requireUser } from "@/src/features/auth/guards";
+import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { firmarDescarga } from "@/src/lib/documents/storage";
 
@@ -18,8 +19,11 @@ type Doc = {
   video_slug: string | null;
 };
 
-const FILE_ICONS: Record<string, string> = {
-  pdf: "📄", image: "🖼️", video: "🎬", audio: "🎵", doc: "📝", other: "📎",
+// Iconos de lucide en vez de emojis: los emojis los dibuja cada sistema
+// operativo distinto, no heredan el color de la marca y no se pueden alinear
+// con el resto de la interfaz.
+const FILE_ICONS: Record<string, LucideIcon> = {
+  pdf: FileText, image: Image, video: Video, audio: Music, doc: FileType, other: Paperclip,
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -108,7 +112,7 @@ export default async function DocumentsPage({ searchParams }: {
                   background: activeCategory === f.key ? "var(--pink)" : "var(--pink-wash)",
                   color: activeCategory === f.key ? "#fff" : "var(--muted)",
                   border: activeCategory === f.key ? "none" : "1.5px solid var(--pink-soft)",
-                  boxShadow: activeCategory === f.key ? "0 4px 12px rgba(190,24,93,0.25)" : "none",
+                  boxShadow: activeCategory === f.key ? "0 4px 12px rgba(230, 79, 85,0.25)" : "none",
                 }}
               >{f.label}</a>
             ))}
@@ -175,7 +179,7 @@ export default async function DocumentsPage({ searchParams }: {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 32,
                   }}>
-                    {FILE_ICONS[doc.file_type] ?? "📎"}
+                    {(() => { const I = FILE_ICONS[doc.file_type] ?? Paperclip; return <I size={30} strokeWidth={1.6} />; })()}
                   </div>
 
                   <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: 1.3, marginBottom: 6 }}>

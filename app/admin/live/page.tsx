@@ -462,8 +462,8 @@ export default async function AdminLivePage({
                         <img src={session.cover_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                          <circle cx="10" cy="10" r="8" stroke="rgba(190,24,93,0.5)" strokeWidth="1.5" />
-                          <polygon points="8,7 14,10 8,13" fill="rgba(190,24,93,0.6)" />
+                          <circle cx="10" cy="10" r="8" stroke="rgba(230, 79, 85,0.5)" strokeWidth="1.5" />
+                          <polygon points="8,7 14,10 8,13" fill="rgba(230, 79, 85,0.6)" />
                         </svg>
                       )}
                     </div>

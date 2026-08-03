@@ -1,4 +1,5 @@
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
+import { Users, Gem } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -250,7 +251,7 @@ export default async function CommunityPage({ searchParams }: {
                     opacity: room.is_archived ? 0.5 : 1,
                   }}
                 >
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>{room.type === "community" ? "🌸" : "💎"}</span>
+                  {room.type === "community" ? <Users size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} /> : <Gem size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{
                       fontSize: 12, fontWeight: active ? 700 : 500,
@@ -298,7 +299,7 @@ export default async function CommunityPage({ searchParams }: {
             background: "linear-gradient(135deg, var(--pink-soft), var(--rose))",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
           }}>
-            {currentRoom?.type === "community" ? "🌸" : "💎"}
+            {currentRoom?.type === "community" ? <Users size={16} strokeWidth={1.8} /> : <Gem size={16} strokeWidth={1.8} />}
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{currentRoom?.name ?? "Comunidad"}</p>
@@ -327,7 +328,7 @@ export default async function CommunityPage({ searchParams }: {
           />
         ) : (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10 }}>
-            <p style={{ fontSize: 32 }}>🌸</p>
+            <Users size={30} strokeWidth={1.5} style={{ color: "var(--pink)" }} />
             <p style={{ color: "var(--ink)", fontSize: 14, fontWeight: 600 }}>
               {isAdmin ? "Creá la primera sala con el botón +" : "Seleccioná un canal"}
             </p>

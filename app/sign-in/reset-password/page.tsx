@@ -22,11 +22,11 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
       }}
     >
       {/* Background glows */}
-      <div aria-hidden style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80%", height: "50%", background: "radial-gradient(ellipse at 50% 0%, rgba(190,24,93,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div aria-hidden style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80%", height: "50%", background: "radial-gradient(ellipse at 50% 0%, rgba(230, 79, 85,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       <div style={{ width: "100%", maxWidth: "480px", position: "relative", zIndex: 1 }}>
         {/* Card */}
-        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "2rem", border: "1px solid rgba(190,24,93,0.1)", boxShadow: "0 8px 48px rgba(190,24,93,0.08), 0 0 0 1px rgba(255,255,255,0.8)", padding: "clamp(2rem, 5vw, 3rem)" }}>
+        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "2rem", border: "1px solid rgba(230, 79, 85,0.1)", boxShadow: "0 8px 48px rgba(230, 79, 85,0.08), 0 0 0 1px rgba(255,255,255,0.8)", padding: "clamp(2rem, 5vw, 3rem)" }}>
           <div style={{ width: 48, height: 48, borderRadius: "14px", background: "linear-gradient(135deg, var(--pink-soft), var(--pink-line))", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pink-mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>

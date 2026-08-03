@@ -3,52 +3,57 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/src/features/auth/actions";
 import type { Route } from "next";
+import {
+  LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
+  MessageSquare, Megaphone, Settings, Eye, LogOut,
+} from "lucide-react";
 
-function Ico({ d, d2 }: { d: string; d2?: string }) {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-      <path d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}
-    </svg>
-  );
-}
+/**
+ * Menú del panel de administración.
+ *
+ * POR QUE SE REESCRIBIO
+ *   Era visualmente otro producto que el menú de miembro: 220px contra 268,
+ *   marca chica sobre un separador, items cuadrados de 13px, encabezados de
+ *   seccion en gris, sin accion principal y sin bloque de identidad. Pasar del
+ *   estudio al panel se sentia como salir del producto.
+ *
+ *   Ahora comparte el mismo lenguaje: wordmark grande en coral, items en
+ *   pildora con el activo en --pink-wash, una accion principal arriba y el
+ *   bloque de identidad abajo.
+ *
+ *   Los iconos pasan a lucide-react, que ya estaba instalado. Los trazos que
+ *   habia estaban dibujados a mano uno por uno: no eran consistentes entre si
+ *   ni con el resto del producto.
+ */
 
-const NAV = [
+type NavItem = { href: string; exact?: boolean; label: string; Icon: typeof LayoutGrid };
+
+const NAV: { label: string; items: NavItem[] }[] = [
   {
-    label: "GENERAL",
+    label: "Estudio",
+    items: [{ href: "/admin", exact: true, label: "Resumen", Icon: LayoutGrid }],
+  },
+  {
+    label: "Contenido",
     items: [
-      { href: "/admin", exact: true, label: "Dashboard",
-        d: "M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z" },
+      { href: "/admin/videos",     label: "Clases",     Icon: Play },
+      { href: "/admin/categories", label: "Categorías", Icon: Grid2x2 },
+      { href: "/admin/programs",   label: "Programas",  Icon: AlignLeft },
+      { href: "/admin/documents",  label: "Documentos", Icon: FileText },
     ],
   },
   {
-    label: "CONTENIDO",
+    label: "Comunidad",
     items: [
-      { href: "/admin/videos",     label: "Videos",     d: "M4.5 3.5L13 8l-8.5 4.5V3.5z" },
-      { href: "/admin/categories", label: "Categorías", d: "M2 2h4v4H2V2zm8 0h4v4h-4V2zM2 10h4v4H2v-4zm8 0h4v4h-4v-4z" },
-      { href: "/admin/programs",   label: "Programas",  d: "M3 5h10M3 8h10M3 11h6" },
-      { href: "/admin/documents",  label: "Documentos", d: "M5 1.5h5.5L14 5V14H5V1.5z", d2: "M10 1.5V5h4" },
+      { href: "/admin/users",         label: "Alumnas",          Icon: Users },
+      { href: "/admin/live",          label: "Sesiones en vivo", Icon: CalendarDays },
+      { href: "/admin/chat",          label: "Chat",             Icon: MessageSquare },
+      { href: "/admin/announcements", label: "Anuncios",         Icon: Megaphone },
     ],
   },
   {
-    label: "STUDIO",
-    items: [
-      { href: "/admin/users", label: "Alumnas",
-        d: "M6.5 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5.5 5.5 0 0111 0M12 3.5a2.5 2.5 0 010 5M15 14a4 4 0 00-3-3.8" },
-      { href: "/admin/live",  label: "Sesiones en vivo",
-        d: "M2 5h12v8H2V5zm3-3v3m6-3v3M5.5 10.5l2-2 2 2 2-2" },
-      { href: "/admin/chat",  label: "Chat",
-        d: "M2.5 3.5h11c.28 0 .5.22.5.5v6c0 .28-.22.5-.5.5H7L4 13V10.5H2.5c-.28 0-.5-.22-.5-.5V4c0-.28.22-.5.5-.5z" },
-      { href: "/admin/announcements", label: "Anuncios",
-        d: "M13 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2v2.5l3-2.5h5a1 1 0 001-1V3a1 1 0 00-1-1zM5 6h6M5 8.5h4" },
-    ],
-  },
-  {
-    label: "SISTEMA",
-    items: [
-      { href: "/admin/settings", label: "Settings",
-        d: "M8 10a2 2 0 100-4 2 2 0 000 4zM8 2v1.5M8 12.5V14M2 8H3.5M12.5 8H14M3.88 3.88l1.06 1.06M11.06 11.06l1.06 1.06M3.88 12.12l1.06-1.06M11.06 4.94l1.06-1.06" },
-    ],
+    label: "Ajustes",
+    items: [{ href: "/admin/settings", label: "Configuración", Icon: Settings }],
   },
 ];
 
@@ -60,68 +65,90 @@ export function AdminSidebar() {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
+  const fila: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+    padding: "11px 14px",
+    borderRadius: 12,
+    textDecoration: "none",
+    fontSize: 14,
+    minHeight: 44,
+  };
+
   return (
     <aside style={{
-      width: 220, flexShrink: 0,
-      background: "#fff",
-      borderRight: "1.5px solid #f5f0ef",
-      display: "flex", flexDirection: "column",
-      height: "100vh", position: "sticky", top: 0,
-      overflow: "hidden",
+      width: 268,
+      flexShrink: 0,
+      background: "#FDFBFA",
+      borderRight: "1px solid #F1E9E7",
+      display: "flex",
+      flexDirection: "column",
+      height: "100vh",
+      position: "sticky",
+      top: 0,
     }}>
-      {/* Brand */}
-      <div style={{ padding: "20px 16px 16px", borderBottom: "1.5px solid #f5f0ef" }}>
-        {/* Mismo wordmark que el sidebar de miembro, a escala menor: el sistema
-            entero se lee como una sola marca. El cuadrado con la "B" salio
-            porque era un segundo logo compitiendo con el de la landing. */}
-        <div>
+      {/* Marca — mismo wordmark y escala que el menú de miembro */}
+      <div style={{ padding: "34px 22px 22px" }}>
+        <Link href={"/admin" as Route} style={{ textDecoration: "none", display: "block" }}>
           <p style={{
             fontFamily: "var(--font-display), sans-serif",
-            fontSize: 22, fontWeight: 800, letterSpacing: "0.1em",
+            fontSize: 30, fontWeight: 800, letterSpacing: "0.1em",
             color: "var(--pink)", lineHeight: 1,
           }}>
             BRUNELA
           </p>
           <p style={{
-            fontSize: 8, fontWeight: 500, letterSpacing: "0.34em",
-            color: "var(--ink)", marginTop: 7, opacity: 0.75,
+            fontSize: 10, fontWeight: 500, letterSpacing: "0.34em",
+            color: "var(--ink)", marginTop: 9, opacity: 0.75,
           }}>
             DANCE TRAINER
           </p>
-          <p style={{
-            fontSize: 9, color: "var(--pink-muted)", fontWeight: 700,
-            letterSpacing: "0.14em", marginTop: 10, textTransform: "uppercase",
-          }}>
-            Backstage
-          </p>
-        </div>
+        </Link>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
-        {NAV.map((section) => (
-          <div key={section.label}>
+      {/* Acción principal: el equivalente a "Explorar clases" del lado alumna */}
+      <div style={{ padding: "0 20px 20px" }}>
+        <Link
+          href={"/admin/videos" as Route}
+          style={{
+            ...fila,
+            justifyContent: "center", gap: 11,
+            padding: "15px 18px", borderRadius: 999,
+            background: "var(--pink)", color: "#fff",
+            fontWeight: 700, fontSize: 13.5, letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          <Play size={16} strokeWidth={2.2} />
+          Subir una clase
+        </Link>
+      </div>
+
+      {/* Navegación */}
+      <nav style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
+        {NAV.map((grupo, gi) => (
+          <div key={grupo.label} style={{ marginTop: gi === 0 ? 0 : 18 }}>
             <p style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: "0.13em",
-              color: "#c4b5af", padding: "0 8px", marginBottom: 3,
-              textTransform: "uppercase",
-            }}>{section.label}</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {section.items.map((item) => {
-                const active = isActive(item.href, (item as { exact?: boolean }).exact);
+              fontSize: 9.5, fontWeight: 700, letterSpacing: "0.18em",
+              color: "var(--pink-muted)", textTransform: "uppercase",
+              padding: "0 14px", marginBottom: 7,
+            }}>
+              {grupo.label}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {grupo.items.map(({ href, exact, label, Icon }) => {
+                const active = isActive(href, exact);
                 return (
-                  <Link key={item.href} href={item.href as Route} style={{
-                    display: "flex", alignItems: "center", gap: 9,
-                    padding: "7px 9px", borderRadius: 8, textDecoration: "none",
+                  <Link key={href} href={href as Route} style={{
+                    ...fila,
                     background: active ? "var(--pink-wash)" : "transparent",
-                    color: active ? "var(--pink-mid)" : "#78716c",
+                    color: active ? "var(--pink)" : "var(--ink)",
                     fontWeight: active ? 700 : 500,
-                    fontSize: 13,
-                    borderLeft: active ? "2px solid var(--pink-mid)" : "2px solid transparent",
-                    transition: "background 0.12s, color 0.12s",
+                    transition: "background 0.14s, color 0.14s",
                   }}>
-                    <Ico d={item.d} d2={(item as { d2?: string }).d2} />
-                    {item.label}
+                    <Icon size={17} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
+                    {label}
                   </Link>
                 );
               })}
@@ -130,25 +157,41 @@ export function AdminSidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div style={{ padding: "10px 10px 14px", borderTop: "1.5px solid #f5f0ef", display: "flex", flexDirection: "column", gap: 1 }}>
-        <Link href="/dashboard" style={{
-          display: "flex", alignItems: "center", gap: 9,
-          padding: "7px 9px", borderRadius: 8, textDecoration: "none",
-          color: "#a8a29e", fontSize: 13, fontWeight: 500,
+      {/* Identidad y salida */}
+      <div style={{ padding: "18px 20px 22px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ borderTop: "1px solid #F1E9E7", marginBottom: 12 }} />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 4px 12px" }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+            background: "var(--pink-wash)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 17, fontWeight: 700, color: "var(--pink)",
+          }}>B</div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.01em" }}>
+              BRUNELA
+            </p>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Backstage</p>
+          </div>
+        </div>
+
+        <Link href={"/dashboard" as Route} style={{
+          ...fila, color: "var(--ink)", fontWeight: 500, background: "var(--pink-wash)",
         }}>
-          <Ico d="M1.5 8c0-3.59 2.91-6.5 6.5-6.5S14.5 4.41 14.5 8s-2.91 6.5-6.5 6.5S1.5 11.59 1.5 8zm4-2l4 2-4 2V6z" />
+          <Eye size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
           Vista alumna
         </Link>
+
         <form action={signOutAction}>
           <button type="submit" style={{
-            display: "flex", alignItems: "center", gap: 9,
-            padding: "7px 9px", borderRadius: 8, width: "100%",
-            background: "none", border: "none", cursor: "pointer",
-            color: "#a8a29e", fontSize: 13, fontWeight: 500, textAlign: "left",
+            ...fila,
+            width: "100%", background: "none", border: "none", cursor: "pointer",
+            color: "var(--pink)", fontWeight: 600, textAlign: "left",
+            fontFamily: "inherit",
           }}>
-            <Ico d="M11 2h3v12h-3M6.5 11L10 8l-3.5-3M10 8H2" />
-            Cerrar sesion
+            <LogOut size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+            Cerrar sesión
           </button>
         </form>
       </div>

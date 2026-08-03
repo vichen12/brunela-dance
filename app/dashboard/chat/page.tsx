@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
+import { Mail, Lock } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
@@ -176,7 +177,7 @@ export default async function ChatPage({ searchParams }: {
             </>
           ) : (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-              <div style={{ fontSize: 36 }}>💌</div>
+              <Mail size={34} strokeWidth={1.5} style={{ color: "var(--pink)" }} />
               <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Seleccioná una alumna para chatear</p>
               <p style={{ fontSize: 12, color: "var(--muted)" }}>Los mensajes son privados entre vos y cada alumna</p>
             </div>
@@ -275,7 +276,7 @@ export default async function ChatPage({ searchParams }: {
           background: "linear-gradient(135deg, var(--rose), var(--pink-mid))",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, fontWeight: 800, color: "#fff",
-          boxShadow: "0 4px 12px rgba(190,24,93,0.3)",
+          boxShadow: "0 4px 12px rgba(230, 79, 85,0.3)",
         }}>B</div>
         <div>
           {/* h1 y no p: es el encabezado de la pantalla. Era la unica del area
@@ -309,7 +310,7 @@ export default async function ChatPage({ searchParams }: {
             border: "1px solid var(--pink-soft)", borderRadius: 24, padding: "40px 32px",
             backdropFilter: "blur(8px)",
           }}>
-            <div style={{ fontSize: 36, marginBottom: 14 }}>🔒</div>
+            <Lock size={32} strokeWidth={1.5} style={{ color: "var(--pink)", marginBottom: 14 }} />
             <p style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>
               El chat directo con Brunela es exclusivo de tu plan superior
             </p>
@@ -322,7 +323,7 @@ export default async function ChatPage({ searchParams }: {
               style={{
                 display: "inline-block", padding: "12px 26px", borderRadius: 99,
                 background: "var(--pink)", color: "#fff", fontSize: 12, fontWeight: 700,
-                textDecoration: "none", boxShadow: "0 4px 14px rgba(190,24,93,0.35)",
+                textDecoration: "none", boxShadow: "0 4px 14px rgba(230, 79, 85,0.35)",
               }}
             >
               Ver planes

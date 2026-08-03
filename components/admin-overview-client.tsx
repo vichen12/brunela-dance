@@ -1,5 +1,7 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+
 // ─── Sparkline (SVG puro, sin interactividad) ────────────────────────────────
 function Sparkline({ points, color = "var(--pink-mid)" }: { points: string; color?: string }) {
   const pts = points
@@ -63,7 +65,7 @@ export function MetricCard({
         gap: 4,
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(190,24,93,0.12)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(230, 79, 85,0.12)";
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
       }}
       onMouseLeave={(e) => {
@@ -98,7 +100,9 @@ export function MetricCard({
 
 // ─── QuickLinks grid ─────────────────────────────────────────────────────────
 export function QuickLinksGrid({ links }: {
-  links: { href: string; icon: string; label: string; desc: string }[];
+  // Icon es un componente de lucide, no una cadena con un emoji: hereda el
+  // color de la marca y se dibuja igual en todos los sistemas operativos.
+  links: { href: string; Icon: LucideIcon; label: string; desc: string }[];
 }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
@@ -112,7 +116,7 @@ export function QuickLinksGrid({ links }: {
               transition: "box-shadow 0.2s, transform 0.2s",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.boxShadow = "0 6px 20px rgba(190,24,93,0.12)";
+              (e.currentTarget as HTMLDivElement).style.boxShadow = "0 6px 20px rgba(230, 79, 85,0.12)";
               (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
             }}
             onMouseLeave={(e) => {
@@ -124,8 +128,8 @@ export function QuickLinksGrid({ links }: {
               width: 38, height: 38, borderRadius: 12,
               background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, marginBottom: 12,
-            }}>{lnk.icon}</div>
+              marginBottom: 12, color: "var(--pink-deep)",
+            }}><lnk.Icon size={19} strokeWidth={1.9} /></div>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>{lnk.label}</p>
             <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 3 }}>{lnk.desc}</p>
           </div>

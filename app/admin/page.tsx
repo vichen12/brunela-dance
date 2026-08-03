@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { Play, Grid2x2, AlignLeft, Users, FileText, MessageSquare, Settings, Eye } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { MetricCard, QuickLinksGrid } from "@/components/admin-overview-client";
 
@@ -110,15 +111,18 @@ export default async function AdminOverviewPage() {
     },
   ];
 
+  // Iconos de lucide en vez de emojis: los emojis los dibuja cada sistema
+  // operativo a su manera, no heredan el color de la marca y en un panel de
+  // trabajo se leen como decoracion, no como interfaz.
   const quickLinks = [
-    { href: "/admin/videos",     icon: "🎬", label: "Videos",       desc: "Subir y publicar clases" },
-    { href: "/admin/categories", icon: "🗂️", label: "Categorías",   desc: "Crear y configurar" },
-    { href: "/admin/programs",   icon: "📋", label: "Programas",    desc: "Secuencias día a día" },
-    { href: "/admin/users",      icon: "👥", label: "Alumnas",      desc: "Tiers y permisos" },
-    { href: "/admin/documents",  icon: "📄", label: "Documentos",   desc: "PDFs y archivos" },
-    { href: "/admin/chat",       icon: "💬", label: "Chat",         desc: "Salas y moderación" },
-    { href: "/admin/settings",   icon: "⚙️", label: "Settings",     desc: "Configuración global" },
-    { href: "/dashboard",        icon: "🌸", label: "Vista alumna", desc: "Ver como estudiante" },
+    { href: "/admin/videos",     Icon: Play,          label: "Clases",       desc: "Subir y publicar clases" },
+    { href: "/admin/categories", Icon: Grid2x2,       label: "Categorías",   desc: "Crear y configurar" },
+    { href: "/admin/programs",   Icon: AlignLeft,     label: "Programas",    desc: "Secuencias día a día" },
+    { href: "/admin/users",      Icon: Users,         label: "Alumnas",      desc: "Planes y permisos" },
+    { href: "/admin/documents",  Icon: FileText,      label: "Documentos",   desc: "PDF y archivos" },
+    { href: "/admin/chat",       Icon: MessageSquare, label: "Chat",         desc: "Salas y moderación" },
+    { href: "/admin/settings",   Icon: Settings,      label: "Configuración", desc: "Ajustes del estudio" },
+    { href: "/dashboard",        Icon: Eye,           label: "Vista alumna", desc: "Ver como estudiante" },
   ];
 
   return (
@@ -129,7 +133,7 @@ export default async function AdminOverviewPage() {
         borderRadius: 24, padding: "28px 32px",
         background: "linear-gradient(135deg, var(--pink-wash) 0%, #fff 50%, var(--pink-soft) 100%)",
         border: "1px solid var(--pink-soft)",
-        boxShadow: "0 4px 24px rgba(190,24,93,0.06)",
+        boxShadow: "0 4px 24px rgba(230, 79, 85,0.06)",
       }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase" }}>
           {dateLabel}

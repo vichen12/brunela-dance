@@ -525,7 +525,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         <img src={adminThumb(video)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                          <polygon points="7,4 16,10 7,16" fill="rgba(190,24,93,0.5)" />
+                          <polygon points="7,4 16,10 7,16" fill="rgba(230, 79, 85,0.5)" />
                         </svg>
                       )}
                     </div>

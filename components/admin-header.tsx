@@ -3,8 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ROUTES: Record<string, string> = {
-  "/admin":               "Dashboard",
-  "/admin/videos":        "Videos",
+  "/admin":               "Resumen",
+  "/admin/videos":        "Clases",
   "/admin/categories":    "Categorías",
   "/admin/programs":      "Programas",
   "/admin/documents":     "Documentos",
@@ -17,7 +17,7 @@ const ROUTES: Record<string, string> = {
 
 export function AdminHeader() {
   const pathname = usePathname();
-  const title = ROUTES[pathname] ?? "Admin";
+  const title = ROUTES[pathname] ?? "Backstage";
 
   return (
     <header style={{
@@ -41,7 +41,7 @@ export function AdminHeader() {
           border: "1px solid #e7e5e4",
           transition: "background 0.12s",
         }}>
-          Vista alumna ↗
+          Vista alumna
         </Link>
         <div style={{
           width: 30, height: 30, borderRadius: "50%",
