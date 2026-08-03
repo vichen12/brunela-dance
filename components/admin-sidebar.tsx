@@ -25,7 +25,7 @@ const NAV = [
     label: "CONTENIDO",
     items: [
       { href: "/admin/videos",     label: "Videos",     d: "M4.5 3.5L13 8l-8.5 4.5V3.5z" },
-      { href: "/admin/categories", label: "Categorias", d: "M2 2h4v4H2V2zm8 0h4v4h-4V2zM2 10h4v4H2v-4zm8 0h4v4h-4v-4z" },
+      { href: "/admin/categories", label: "Categorías", d: "M2 2h4v4H2V2zm8 0h4v4h-4V2zM2 10h4v4H2v-4zm8 0h4v4h-4v-4z" },
       { href: "/admin/programs",   label: "Programas",  d: "M3 5h10M3 8h10M3 11h6" },
       { href: "/admin/documents",  label: "Documentos", d: "M5 1.5h5.5L14 5V14H5V1.5z", d2: "M10 1.5V5h4" },
     ],

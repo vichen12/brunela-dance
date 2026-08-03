@@ -14,33 +14,33 @@ const adminMessages = {
       error: "Ocurrio un error al guardar."
     },
     overview: {
-      title: "Panel de administracion",
+      title: "Panel de administración",
       description: "Centro de control para contenido, configuracion y usuarios.",
       sectionTitle: "Modulos activos",
       cards: {
         videos: "Biblioteca de videos",
         programs: "Programas de 14 dias",
-        settings: "Configuracion global",
+        settings: "Configuración del estudio",
         users: "Usuarios y accesos"
       }
     },
     videos: {
-      title: "Gestion de videos",
+      title: "Gestión de clases",
       description: "Crea, edita y publica videos con metadata administrable.",
       createTitle: "Nuevo video",
       listTitle: "Videos existentes",
       form: {
-        slug: "Slug",
-        titleEs: "Titulo ES",
-        titleEn: "Titulo EN",
-        descriptionEs: "Descripcion ES",
-        descriptionEn: "Descripcion EN",
+        slug: "Dirección",
+        titleEs: "Título en español",
+        titleEn: "Título en inglés",
+        descriptionEs: "Descripción en español",
+        descriptionEn: "Descripción en inglés",
         tier: "Tier requerido",
         status: "Estado",
-        duration: "Duracion (segundos)",
-        categories: "Categorias (coma separada)",
-        equipment: "Materiales (coma separada)",
-        thumbnail: "Thumbnail URL",
+        duration: "Duración (minutos)",
+        categories: "Categorías",
+        equipment: "Materiales",
+        thumbnail: "Imagen de portada",
         playbackId: "Playback ID",
         assetId: "Asset ID",
         featured: "Destacado",
@@ -50,17 +50,17 @@ const adminMessages = {
       }
     },
     programs: {
-      title: "Gestion de programas",
+      title: "Gestión de programas",
       description: "Administra programas y la secuencia dia por dia con slugs de video.",
       createTitle: "Nuevo programa",
       listTitle: "Programas existentes",
       daysTitle: "Dias del programa",
       form: {
-        slug: "Slug",
-        titleEs: "Titulo ES",
-        titleEn: "Titulo EN",
-        descriptionEs: "Descripcion ES",
-        descriptionEn: "Descripcion EN",
+        slug: "Dirección",
+        titleEs: "Título en español",
+        titleEn: "Título en inglés",
+        descriptionEs: "Descripción en español",
+        descriptionEn: "Descripción en inglés",
         tier: "Tier requerido",
         status: "Estado",
         durationDays: "Cantidad de dias",
@@ -70,22 +70,22 @@ const adminMessages = {
         submitUpdate: "Guardar programa",
         delete: "Eliminar programa",
         dayNumber: "Dia",
-        videoSlug: "Slug de video",
+        videoSlug: "Clase",
         addDay: "Guardar dia",
         deleteDay: "Quitar dia"
       }
     },
     settings: {
-      title: "Configuracion global",
+      title: "Configuración del estudio",
       description: "Edita site_settings sin hardcoding en frontend ni backend.",
       newTitle: "Nueva setting",
       listTitle: "Settings existentes",
       form: {
         key: "Setting key",
         category: "Categoria",
-        description: "Descripcion",
+        description: "Descripción",
         public: "Visible para clientes",
-        value: "JSON value",
+        value: "Valor",
         submitCreate: "Guardar setting",
         submitUpdate: "Actualizar setting"
       }
@@ -96,7 +96,7 @@ const adminMessages = {
       listTitle: "Perfiles",
       form: {
         tier: "Tier",
-        level: "Nivel tecnico",
+        level: "Nivel técnico",
         onboarding: "Onboarding completo",
         admin: "Es admin",
         submit: "Guardar usuario"
@@ -136,7 +136,7 @@ const adminMessages = {
       createTitle: "New video",
       listTitle: "Existing videos",
       form: {
-        slug: "Slug",
+        slug: "Dirección",
         titleEs: "Title ES",
         titleEn: "Title EN",
         descriptionEs: "Description ES",
@@ -146,7 +146,7 @@ const adminMessages = {
         duration: "Duration (seconds)",
         categories: "Categories (comma separated)",
         equipment: "Equipment (comma separated)",
-        thumbnail: "Thumbnail URL",
+        thumbnail: "Imagen de portada",
         playbackId: "Playback ID",
         assetId: "Asset ID",
         featured: "Featured",
@@ -162,7 +162,7 @@ const adminMessages = {
       listTitle: "Existing programs",
       daysTitle: "Program days",
       form: {
-        slug: "Slug",
+        slug: "Dirección",
         titleEs: "Title ES",
         titleEn: "Title EN",
         descriptionEs: "Description ES",
@@ -191,7 +191,7 @@ const adminMessages = {
         category: "Category",
         description: "Description",
         public: "Visible to clients",
-        value: "JSON value",
+        value: "Valor",
         submitCreate: "Save setting",
         submitUpdate: "Update setting"
       }

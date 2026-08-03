@@ -232,75 +232,88 @@ function Flash({ message, tone }: { message: string | null; tone: "success" | "e
 
 // ── Video form ─────────────────────────────────────────────────────────────────
 
-function VideoForm({ video }: { video?: VideoRecord }) {
-  const isNew = !video;
+/**
+ * Editor de una clase YA EXISTENTE.
+ *
+ * Crear una clase se hace solo desde AdminVideoUpload, que sube el archivo. Este
+ * formulario tenia tambien modo creacion, y convivian dos maneras de dar de alta
+ * una clase: Brunela veia las dos y no tenia como saber cual usar -- y la de
+ * aca creaba una clase SIN video.
+ */
+function VideoForm({ video }: { video: VideoRecord }) {
   // Read-only: audio_tracks is owned by the mux worker, not by this form.
-  const muxedLocales = (video?.audio_tracks ?? []).map((t) => t.locale);
+  const muxedLocales = (video.audio_tracks ?? []).map((t) => t.locale);
 
   return (
     <form action={upsertVideoAction}>
-      <input name="id" type="hidden" value={video?.id ?? ""} />
+      <input name="id" type="hidden" value={video.id} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Slug">
-          <input style={inp} defaultValue={video?.slug ?? ""} name="slug" required placeholder="ballet-centro-basico" />
+        <F label="Dirección">
+          {/* Solo lectura: cambiar el slug de una clase publicada rompe
+              cualquier enlace que alguien haya guardado o compartido. Se muestra
+              porque es la direccion de esa clase y a Brunela le sirve verla. */}
+          <input style={{ ...inp, background: "#fafaf9", color: "#78716c" }} defaultValue={video.slug} name="slug" readOnly />
         </F>
         <F label="Estado">
-          <select style={sel} defaultValue={video?.status ?? "draft"} name="status">
+          <select style={sel} defaultValue={video.status} name="status">
             <option value="draft">Borrador</option>
             <option value="published">Publicado</option>
             <option value="archived">Archivado</option>
           </select>
         </F>
 
-        <F label="Titulo en Espanol">
-          <input style={inp} defaultValue={video?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
+        <F label="Título en español">
+          <input style={inp} defaultValue={video.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
         </F>
-        <F label="Titulo en Ingles">
-          <input style={inp} defaultValue={video?.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
+        <F label="Título en inglés">
+          <input style={inp} defaultValue={video.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
         </F>
 
-        <F label="Duracion (segundos)">
-          <input style={inp} defaultValue={video?.duration_seconds ?? 900} min={1} name="durationSeconds" required type="number" />
+        <F label="Duración (minutos)">
+          {/* En minutos, que es como piensa una clase quien la da. La conversion
+              a segundos se hace en la accion: la base sigue guardando segundos. */}
+          <input style={inp} defaultValue={Math.round(video.duration_seconds / 60)} min={1} name="durationMinutes" required type="number" />
         </F>
-        <F label="Tier requerido">
-          <select style={sel} defaultValue={video?.membership_tier_required ?? "corps_de_ballet"} name="membershipTierRequired">
+        <F label="Plan que la puede ver">
+          <select style={sel} defaultValue={video.membership_tier_required} name="membershipTierRequired">
             <option value="corps_de_ballet">Corps de Ballet</option>
             <option value="solista">Solista</option>
             <option value="principal">Principal</option>
           </select>
         </F>
 
-        <F label="Categorias (coma separada)">
-          <input style={inp} defaultValue={video?.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
+        <F label="Categorías">
+          <input style={inp} defaultValue={video.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
         </F>
-        <F label="Materiales (coma separada)">
-          <input style={inp} defaultValue={video?.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
-        </F>
-
-        <F label="Thumbnail URL">
-          <input style={inp} defaultValue={video?.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
-        </F>
-        <F label="Mux Playback ID">
-          <input style={inp} defaultValue={video?.stream_playback_id ?? ""} name="streamPlaybackId" placeholder="xxxxxxxxxxxxxxxx" />
+        <F label="Materiales">
+          <input style={inp} defaultValue={video.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
         </F>
 
-        <F label="Mux Asset ID">
-          <input style={inp} defaultValue={video?.stream_asset_id ?? ""} name="streamAssetId" placeholder="xxxxxxxxxxxxxxxx" />
+        <F label="Imagen de portada">
+          <input style={inp} defaultValue={video.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
         </F>
+        {/* Los campos "Mux Playback ID" y "Mux Asset ID" salieron el 2026-08-03:
+            Mux fue reemplazado por Bunny, y esos valores los escribe sola la ruta
+            de finalizacion de subida. Editarlos a mano solo podia romper la
+            reproduccion.
+
+            OJO: stream_playback_id NO es basura -- Bunny lo escribe con la URL
+            del HLS y el proxy de video lo usa como respaldo para las clases
+            viejas. Lo que se saco es el CAMPO del formulario, no la columna. */}
         <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={video?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
+            <input defaultChecked={video.is_featured} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
           </label>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <F label="Descripcion en Espanol">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripcion de la clase..." />
+        <F label="Descripción en español">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripción de la clase…" />
         </F>
-        <F label="Descripcion en Ingles">
+        <F label="Descripción en inglés">
           <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.en ?? ""} name="descriptionEn" placeholder="Class description..." />
         </F>
       </div>
@@ -327,12 +340,12 @@ function VideoForm({ video }: { video?: VideoRecord }) {
 
       <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
         <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#1c1917",
+          background: "#1c1917",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",
         }}>
-          {isNew ? "CREAR VIDEO" : "GUARDAR CAMBIOS"}
+          GUARDAR CAMBIOS
         </button>
         {/* formAction en el boton, NO un <form> adentro de otro <form>.
             Los formularios anidados son HTML invalido: el parser descarta el
@@ -340,7 +353,7 @@ function VideoForm({ video }: { video?: VideoRecord }) {
             arriba y ELIMINAR terminaba llamando a upsertVideoAction. O sea que
             no borraba: guardaba. El id ya viaja en el hidden del form externo,
             que es el que deleteVideoAction lee. */}
-        {!isNew && (
+        {(
           <button type="submit" formAction={deleteVideoAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
@@ -483,7 +496,10 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
             {videos.map((video) => {
               const st = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
               const tier = TIER_STYLE[video.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
-              const hasMux = !!(video.stream_playback_id || video.stream_asset_id);
+              // El nombre viejo era hasMux y el badge decia "Mux OK": nombraba al
+              // proveedor en vez de responder lo unico que importa mirando la lista,
+              // que es si esa clase ya se puede ver.
+              const tieneVideo = !!(video.bunny_video_id || video.stream_playback_id);
               // Spanish always rides inside the video file, so it is never in
               // audio_tracks -- but it IS a language the class plays in.
               const audioLocales = (video.audio_tracks ?? []).map((t) => t.locale);
@@ -530,7 +546,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         <span>/{video.slug}</span>
                         <span>{durMin} min</span>
                         {video.category_slugs?.length > 0 && <span>{video.category_slugs.join(", ")}</span>}
-                        {hasMux && <span style={{ color: "#059669", fontWeight: 600 }}>Mux OK</span>}
+                        {tieneVideo && <span style={{ color: "#059669", fontWeight: 600 }}>Video listo</span>}
                         {allLocales.length > 0 && (
                           <span style={{ color: "#7c3aed", fontWeight: 600 }}>Audio: {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
                         )}

@@ -70,7 +70,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           <input name="id" type="hidden" value="" />
 
           <div>
-            <label className={labelCls}>Slug</label>
+            <label className={labelCls}>Dirección de la clase</label>
             <input className={inputCls} name="slug" required placeholder="ballet-clasico" />
           </div>
 
@@ -85,7 +85,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           </div>
 
           <div>
-            <label className={labelCls}>Tier requerido</label>
+            <label className={labelCls}>Plan que la puede ver</label>
             <select className={inputCls} name="membershipTierRequired" defaultValue="none">
               <option value="none">Sin restricción (todas)</option>
               <option value="corps_de_ballet">Corps de Ballet</option>
@@ -100,7 +100,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           </div>
 
           <div>
-            <label className={labelCls}>Cover Image URL</label>
+            <label className={labelCls}>Imagen de portada</label>
             <input className={inputCls} name="coverImageUrl" type="url" placeholder="https://..." />
           </div>
 
@@ -174,7 +174,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     <input name="id" type="hidden" value={cat.id} />
 
                     <div>
-                      <label className={labelCls}>Slug</label>
+                      <label className={labelCls}>Dirección de la clase</label>
                       <input className={inputCls} name="slug" defaultValue={cat.slug} required />
                     </div>
 
@@ -189,7 +189,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     </div>
 
                     <div>
-                      <label className={labelCls}>Tier requerido</label>
+                      <label className={labelCls}>Plan que la puede ver</label>
                       <select className={inputCls} name="membershipTierRequired" defaultValue={cat.membership_tier_required}>
                         <option value="none">Sin restricción</option>
                         <option value="corps_de_ballet">Corps de Ballet</option>
@@ -204,7 +204,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     </div>
 
                     <div>
-                      <label className={labelCls}>Cover Image URL</label>
+                      <label className={labelCls}>Imagen de portada</label>
                       <input className={inputCls} name="coverImageUrl" defaultValue={cat.cover_image_url ?? ""} type="url" />
                     </div>
 

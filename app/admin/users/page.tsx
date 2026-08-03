@@ -80,7 +80,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { value: profiles.length,                   label: "Total alumnas",   color: "#1c1917" },
+          // profiles.length incluye a las admin. El panel de inicio cuenta solo
+          // alumnas, asi que los dos numeros no coinciden -- y no coincidian por
+          // una etiqueta, no por un error. Ahora cada uno dice lo que cuenta.
+          { value: profiles.filter((p) => !p.is_admin).length, label: "Alumnas", color: "#1c1917" },
           { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)" },
           { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)" },
           { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)" },
@@ -102,7 +105,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           padding: "10px 20px", borderBottom: "1px solid #f0eeec",
           fontSize: 10, fontWeight: 700, color: "#a8a29e", letterSpacing: "0.1em", textTransform: "uppercase",
         }}>
-          <span>Alumna</span>
+          <span>Persona</span>
           <span>Plan</span>
           <span>Nivel</span>
           <span>Onboarding</span>
@@ -187,7 +190,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     <input name="profileId" type="hidden" value={profile.id} />
 
                     <label style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Plan / Tier</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Plan</span>
                       <select style={sel} defaultValue={profile.membership_tier} name="membershipTier">
                         <option value="none">Sin plan</option>
                         <option value="corps_de_ballet">Corps de Ballet</option>
@@ -197,7 +200,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     </label>
 
                     <label style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Nivel tecnico</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Nivel técnico</span>
                       <select style={sel} defaultValue={profile.technical_level} name="technicalLevel">
                         <option value="principiante">Principiante</option>
                         <option value="intermedio">Intermedio</option>

@@ -13,6 +13,7 @@ import {
   reserveLiveSessionAction
 } from "@/src/features/studio/actions";
 import { requireUser } from "@/src/features/auth/guards";
+import { HoraSesion } from "@/components/hora-sesion";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -26,6 +27,9 @@ type LiveSessionRecord = {
   membership_tier_required: MembershipTier;
   starts_at: string;
   ends_at: string;
+  /** Zona en la que Brunela programo la clase. Sin esto la hora se mostraba en
+      la del servidor (UTC en Vercel) sin aclarar cual era. */
+  session_timezone: string;
   booking_opens_at: string | null;
   booking_closes_at: string | null;
   capacity: number;
@@ -44,7 +48,7 @@ type AccessLinkRecord = {
 };
 
 /** Fila de detalle de una sesion: icono en cuadradito, etiqueta y valor. */
-function Detalle({ d, d2, titulo, valor }: { d: string; d2?: string; titulo: string; valor: string }) {
+function Detalle({ d, d2, titulo, valor }: { d: string; d2?: string; titulo: string; valor: React.ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
       <div style={{
@@ -93,7 +97,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     supabase
       .from("live_sessions")
       .select(
-        "id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, booking_opens_at, booking_closes_at, capacity, cover_image_url"
+        "id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, booking_opens_at, booking_closes_at, capacity, cover_image_url"
       )
       .order("starts_at", { ascending: true }),
     supabase
@@ -204,11 +208,11 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                       <div className="mt-6 grid gap-4 md:grid-cols-2">
                         <Detalle
                           d="M3 4.5h10v9H3v-9z" d2="M3 7.2h10M5.6 2.6v3M10.4 2.6v3"
-                          titulo="Inicio" valor={formatDateTimeLabel(session.starts_at)}
+                          titulo="Inicio" valor={<HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} />}
                         />
                         <Detalle
                           d="M8 4v4l2.5 1.5" d2="M8 14A6 6 0 108 2a6 6 0 000 12z"
-                          titulo="Fin" valor={formatDateTimeLabel(session.ends_at)}
+                          titulo="Fin" valor={<HoraSesion iso={session.ends_at} zonaEstudio={session.session_timezone} />}
                         />
                         <Detalle
                           d="M6.2 7.6a2.6 2.6 0 100-5.2 2.6 2.6 0 000 5.2zM1.6 13.4a4.6 4.6 0 019.2 0"

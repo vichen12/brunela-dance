@@ -59,7 +59,7 @@ async function createUpload(ticket: Ticket, file: File, title: string): Promise<
   if (res.status !== 201) throw new Error(`Bunny rechazo el inicio de la subida (HTTP ${res.status}).`);
 
   const location = res.headers.get("location");
-  if (!location) throw new Error("Bunny no devolvio la ubicacion de subida.");
+  if (!location) throw new Error("El servicio de video no devolvió la ubicación de subida.");
 
   // Bunny answers with a RELATIVE location; resolve it against the endpoint.
   return new URL(location, ticket.endpoint).toString();
@@ -344,7 +344,8 @@ export function AdminVideoUpload() {
             descriptionEn: fd.get("descriptionEn"),
             membershipTierRequired: fd.get("membershipTierRequired"),
             status: fd.get("status"),
-            durationSeconds: fd.get("durationSeconds"),
+            // La interfaz habla en minutos; la base guarda segundos.
+            durationSeconds: Number(fd.get("durationMinutes") ?? 0) * 60,
             categories: fd.get("categories"),
             equipment: fd.get("equipment"),
             isFeatured: fd.get("isFeatured") === "on"
@@ -363,7 +364,7 @@ export function AdminVideoUpload() {
           finalizeJson.warning ??
             (audioFiles.length > 0
               ? `Clase subida. Los ${audioFiles.length} idiomas extra quedaron en cola de procesamiento.`
-              : "Clase subida y guardada. Bunny la esta procesando.")
+              : "Clase subida y guardada. Se está procesando.")
         );
         form.reset();
         setSizeErrors({});
@@ -394,7 +395,7 @@ export function AdminVideoUpload() {
   return (
     <form onSubmit={onSubmit}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Field label="Slug">
+        <Field label="Dirección">
           <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
         </Field>
         <Field label="Estado">
@@ -405,17 +406,17 @@ export function AdminVideoUpload() {
           </select>
         </Field>
 
-        <Field label="Titulo en Espanol">
+        <Field label="Título en español">
           <input style={inp} name="titleEs" required placeholder="Ballet centro basico" disabled={busy} />
         </Field>
-        <Field label="Titulo en Ingles">
+        <Field label="Título en inglés">
           <input style={inp} name="titleEn" placeholder="Basic ballet center" disabled={busy} />
         </Field>
 
-        <Field label="Duracion (segundos)">
-          <input style={inp} defaultValue={900} min={1} name="durationSeconds" required type="number" disabled={busy} />
+        <Field label="Duración (minutos)">
+          <input style={inp} defaultValue={15} min={1} name="durationMinutes" required type="number" disabled={busy} />
         </Field>
-        <Field label="Tier requerido">
+        <Field label="Plan que la puede ver">
           <select style={sel} defaultValue="corps_de_ballet" name="membershipTierRequired" disabled={busy}>
             <option value="corps_de_ballet">Corps de Ballet</option>
             <option value="solista">Solista</option>
@@ -423,19 +424,19 @@ export function AdminVideoUpload() {
           </select>
         </Field>
 
-        <Field label="Categorias (coma separada)">
+        <Field label="Categorías">
           <input style={inp} name="categories" placeholder="ballet, reformer" disabled={busy} />
         </Field>
-        <Field label="Materiales (coma separada)">
+        <Field label="Materiales">
           <input style={inp} name="equipment" placeholder="colchoneta, banda elastica" disabled={busy} />
         </Field>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <Field label="Descripcion en Espanol">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEs" required disabled={busy} placeholder="Descripcion de la clase..." />
+        <Field label="Descripción en español">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEs" required disabled={busy} placeholder="Descripción de la clase…" />
         </Field>
-        <Field label="Descripcion en Ingles">
+        <Field label="Descripción en inglés">
           <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEn" disabled={busy} placeholder="Class description..." />
         </Field>
       </div>

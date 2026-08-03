@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { upsertDocumentAction, deleteDocumentAction } from "@/src/features/admin/document-actions";
+import { AdminDocumentUpload } from "@/components/admin-document-upload";
 
 export const dynamic = "force-dynamic";
 
@@ -88,34 +89,17 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
           </div>
 
           <div className="md:col-span-2">
-            <label className={lbl}>URL del archivo</label>
-            <input className={inp} name="fileUrl" required placeholder="https://... (PDF, imagen, etc.)" />
-            <p className="mt-1 text-xs text-[color:var(--muted)]">
-              Subí el archivo a Supabase Storage o cualquier CDN y pegá la URL acá.
-            </p>
+            <label className={lbl}>Archivo</label>
+            {/* El tipo y el peso los deduce el componente del archivo real. Antes
+                eran dos campos a tipear a mano, y nada garantizaba que
+                coincidieran con lo que se subia. */}
+            <AdminDocumentUpload />
           </div>
 
           <div>
-            <label className={lbl}>Tipo de archivo</label>
-            <select className={inp} name="fileType" defaultValue="pdf">
-              <option value="pdf">PDF</option>
-              <option value="image">Imagen</option>
-              <option value="video">Video</option>
-              <option value="audio">Audio</option>
-              <option value="doc">Documento Word</option>
-              <option value="other">Otro</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={lbl}>Tamaño (KB)</label>
-            <input className={inp} name="fileSizeKb" type="number" min={0} placeholder="1200" />
-          </div>
-
-          <div>
-            <label className={lbl}>Tier requerido</label>
+            <label className={lbl}>Plan que lo puede ver</label>
             <select className={inp} name="membershipTierRequired" defaultValue="none">
-              <option value="none">Sin restricción</option>
+              <option value="none">Todas las alumnas</option>
               <option value="corps_de_ballet">Corps de Ballet</option>
               <option value="solista">Solista</option>
               <option value="principal">Principal</option>
@@ -128,12 +112,12 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
           </div>
 
           <div>
-            <label className={lbl}>Categoría (slug, opcional)</label>
+            <label className={lbl}>Categoría <span className="opacity-60">(opcional)</span></label>
             <input className={inp} name="categorySlug" placeholder="ballet, reformer..." />
           </div>
 
           <div>
-            <label className={lbl}>Video asociado (slug, opcional)</label>
+            <label className={lbl}>Clase relacionada <span className="opacity-60">(opcional)</span></label>
             <input className={inp} name="videoSlug" placeholder="ballet-centro-basico" />
           </div>
 
@@ -194,21 +178,20 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
                       <input className={inp} name="title" defaultValue={doc.title} required />
                     </div>
                     <div>
-                      <label className={lbl}>URL</label>
-                      <input className={inp} name="fileUrl" defaultValue={doc.file_url} required />
+                      <label className={lbl}>Archivo</label>
+                      {/* Precargado con el que ya tiene: elegir otro lo reemplaza. */}
+                      <AdminDocumentUpload valorInicial={doc.file_url} />
                     </div>
                     <div>
-                      <label className={lbl}>Tier</label>
+                      <label className={lbl}>Plan que lo puede ver</label>
                       <select className={inp} name="membershipTierRequired" defaultValue={doc.membership_tier_required}>
-                        <option value="none">Sin restricción</option>
+                        <option value="none">Todas las alumnas</option>
                         <option value="corps_de_ballet">Corps de Ballet</option>
                         <option value="solista">Solista</option>
                         <option value="principal">Principal</option>
                       </select>
                     </div>
                     <input name="description" type="hidden" defaultValue={doc.description ?? ""} />
-                    <input name="fileType" type="hidden" defaultValue={doc.file_type} />
-                    <input name="fileSizeKb" type="hidden" defaultValue={doc.file_size_kb ?? ""} />
                     <input name="categorySlug" type="hidden" defaultValue={doc.category_slug ?? ""} />
                     <input name="videoSlug" type="hidden" defaultValue={doc.video_slug ?? ""} />
                     <input name="sortOrder" type="hidden" defaultValue={doc.sort_order} />

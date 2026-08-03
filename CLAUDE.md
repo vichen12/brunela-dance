@@ -428,6 +428,13 @@ Ordenados por lo que bloquea a lo que puede esperar.
 - [ ] **Plan de escalabilidad A–E**, aprobado y postergado: filtrado de la
       biblioteca en SQL, los `count exact` de `/admin`, rate limiting,
       degradación con gracia.
+- [ ] **`videos.stream_asset_id` es una COLUMNA MUERTA.** Quedo de la epoca de
+      Mux.com. Cero filas la usan, nadie la escribe ni la lee. Se saco de la
+      interfaz el 2026-08-03 pero la columna sigue en la base a proposito: una
+      migracion menos es una cosa menos que puede salir mal. **No confundir con
+      `stream_playback_id`, que SI esta viva**: Bunny la escribe con la URL del
+      HLS y el proxy de video la usa como respaldo para las clases viejas.
+
 - [ ] **Unificar el CSS de las pantallas de auth.** `sign-in-form.tsx` y
       `registro-form.tsx` tienen el mismo bloque `<style>` duplicado, porque en
       este proyecto cada pantalla de auth lleva su CSS adentro en vez de

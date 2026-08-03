@@ -34,6 +34,7 @@ type ProgramDayRecord = {
 type VideoLookup = {
   id: string;
   slug: string;
+  title_i18n: Record<string, string> | null;
 };
 
 function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
@@ -64,7 +65,9 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       .select("id, slug, title_i18n, description_i18n, membership_tier_required, status, duration_days, cover_image_url, is_featured")
       .order("created_at", { ascending: false }),
     supabase.from("program_days").select("id, program_id, day_number, video_id").order("day_number", { ascending: true }),
-    supabase.from("videos").select("id, slug").order("slug", { ascending: true })
+    // title_i18n hace falta para que el selector de clases muestre titulos y no
+    // slugs. Se ordena por titulo para que la lista se pueda recorrer con la vista.
+    supabase.from("videos").select("id, slug, title_i18n").order("title_i18n->>es", { ascending: true })
   ]);
 
   const programs = (programsData ?? []) as ProgramRecord[];
@@ -114,20 +117,24 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                 <ProgramForm actionLabel={copy.programs.form.submitUpdate} program={program} />
 
                 <div className="mt-8 rounded-[24px] border border-black/6 bg-mist p-5">
-                  <p className="eyebrow mb-3">{copy.programs.daysTitle}</p>
+                  <p className="eyebrow mb-3">Días del programa</p>
                   <div className="space-y-3">
                     {days.map((day) => {
                       const video = videoById.get(day.video_id);
                       return (
                         <div key={day.id} className="flex items-center justify-between gap-4 rounded-2xl border border-black/6 bg-white px-4 py-3">
                           <div className="text-sm">
-                            <span className="font-semibold">Dia {day.day_number}</span>{" "}
-                            <span className="text-ink/65">- {video?.slug ?? day.video_id}</span>
+                            <span className="font-semibold">Día {day.day_number}</span>{" "}
+                            {/* El titulo, no el slug: Brunela no tiene por que
+                                saber que "demo-barra-suelo-i" es "Barra de suelo I". */}
+                            <span className="text-ink/65">
+                              — {video ? (video.title_i18n?.es ?? video.title_i18n?.en ?? video.slug) : day.video_id}
+                            </span>
                           </div>
                           <form action={deleteProgramDayAction}>
                             <input name="id" type="hidden" value={day.id} />
                             <button className="button-secondary" type="submit">
-                              {copy.programs.form.deleteDay}
+                              Quitar
                             </button>
                           </form>
                         </div>
@@ -138,21 +145,31 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                   <form action={upsertProgramDayAction} className="mt-5 grid gap-4 md:grid-cols-[120px_1fr_auto]">
                     <input name="programId" type="hidden" value={program.id} />
                     <label className="text-sm font-semibold text-ink">
-                      {copy.programs.form.dayNumber}
+                      Día número
                       <input className="mt-2 w-full rounded-2xl border border-black/8 bg-white px-4 py-3" min={1} name="dayNumber" required type="number" />
                     </label>
                     <label className="text-sm font-semibold text-ink">
-                      {copy.programs.form.videoSlug}
-                      <input className="mt-2 w-full rounded-2xl border border-black/8 bg-white px-4 py-3" list={`video-slugs-${program.id}`} name="videoSlug" required />
-                      <datalist id={`video-slugs-${program.id}`}>
+                      Clase de ese día
+                      {/* Antes era un input donde habia que escribir el slug de
+                          memoria. El datalist autocompletaba, pero listaba
+                          slugs: en la practica, memorizar codigos. */}
+                      <select
+                        className="mt-2 w-full rounded-2xl border border-black/8 bg-white px-4 py-3"
+                        name="videoSlug"
+                        required
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Elegí una clase…</option>
                         {videos.map((video) => (
-                          <option key={video.id} value={video.slug} />
+                          <option key={video.id} value={video.slug}>
+                            {video.title_i18n?.es ?? video.title_i18n?.en ?? video.slug}
+                          </option>
                         ))}
-                      </datalist>
+                      </select>
                     </label>
                     <div className="self-end">
                       <button className="button-primary" type="submit">
-                        {copy.programs.form.addDay}
+                        Agregar día
                       </button>
                     </div>
                   </form>

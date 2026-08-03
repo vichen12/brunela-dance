@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 const ROUTES: Record<string, string> = {
   "/admin":               "Dashboard",
   "/admin/videos":        "Videos",
-  "/admin/categories":    "Categorias",
+  "/admin/categories":    "Categorías",
   "/admin/programs":      "Programas",
   "/admin/documents":     "Documentos",
   "/admin/users":         "Alumnas",
   "/admin/live":          "Sesiones en vivo",
   "/admin/chat":          "Chat",
   "/admin/announcements": "Anuncios",
-  "/admin/settings":      "Configuracion",
+  "/admin/settings":      "Configuración",
 };
 
 export function AdminHeader() {

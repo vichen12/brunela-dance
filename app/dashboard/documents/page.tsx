@@ -1,5 +1,6 @@
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { firmarDescarga } from "@/src/lib/documents/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,18 @@ export default async function DocumentsPage({ searchParams }: {
     .order("sort_order")
     .order("created_at", { ascending: false });
 
-  const allDocs = (docs ?? []) as Doc[];
+  // Los documentos nuevos guardan la RUTA dentro del bucket privado, no una
+  // URL. Se firma aca, del lado del servidor, DESPUES de que RLS ya filtro por
+  // plan: firmar es entregar el acceso, asi que no puede pasar antes.
+  //
+  // Las filas viejas guardaban una URL completa; firmarDescarga() las devuelve
+  // tal cual, para que las dos formas convivan.
+  const allDocs = await Promise.all(
+    ((docs ?? []) as Doc[]).map(async (d) => ({
+      ...d,
+      file_url: await firmarDescarga(d.file_url),
+    }))
+  );
 
   const categories = Array.from(new Set(allDocs.map((d) => d.category_slug).filter(Boolean))) as string[];
 

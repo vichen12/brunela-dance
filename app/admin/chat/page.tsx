@@ -177,7 +177,8 @@ async function saveDmAccessAction(formData: FormData) {
     {
       setting_key: "chat.dm_access",
       category: "chat",
-      description: "Per-tier toggle for who can START a direct chat with the admin.",
+      // Se veia tal cual en pantalla, en ingles.
+      description: "Qué planes pueden abrir un chat privado con el estudio.",
       is_public: false,
       value,
       updated_by: user.id,
@@ -417,11 +418,11 @@ export default async function AdminChatPage({ searchParams }: {
                   <label className={lbl}>Tipo</label>
                   <select className={inp} name="type" defaultValue="community">
                     <option value="community">Comunidad (todas)</option>
-                    <option value="tier">Exclusiva por tier</option>
+                    <option value="tier">Exclusiva por plan</option>
                   </select>
                 </div>
                 <div>
-                  <label className={lbl}>Tier mínimo</label>
+                  <label className={lbl}>Plan mínimo</label>
                   <select className={inp} name="tier_required" defaultValue="none">
                     <option value="none">Sin restricción</option>
                     <option value="corps_de_ballet">Corps de Ballet</option>
@@ -457,7 +458,7 @@ export default async function AdminChatPage({ searchParams }: {
                     <input className={inp} name="name" required placeholder="Ballet · Comunidad" />
                   </div>
                   <div>
-                    <label className={lbl}>Tier mínimo</label>
+                    <label className={lbl}>Plan mínimo</label>
                     <select className={inp} name="tier_required" defaultValue="none">
                       <option value="none">Sin restricción</option>
                       <option value="corps_de_ballet">Corps de Ballet</option>

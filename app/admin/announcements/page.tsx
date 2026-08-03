@@ -174,7 +174,7 @@ export default async function AdminAnnouncementsPage({
         <form action={createAnnouncementAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <label style={{ display: "flex", flexDirection: "column" }}>
-              <Lbl>Titulo</Lbl>
+              <Lbl>Título</Lbl>
               <input style={inp} name="title" required placeholder="Nuevos horarios disponibles" />
             </label>
             <label style={{ display: "flex", flexDirection: "column" }}>

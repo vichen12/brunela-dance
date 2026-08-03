@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
+import { HoraSesion } from "@/components/hora-sesion";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -73,7 +74,7 @@ async function createLiveSessionAction(fd: FormData) {
 
   revalidatePath("/admin/live");
   revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Sesion+creada" as never);
+  redirect("/admin/live?success=Sesión+creada" as never);
 }
 
 async function updateLiveSessionAction(fd: FormData) {
@@ -120,7 +121,7 @@ async function updateLiveSessionAction(fd: FormData) {
 
   revalidatePath("/admin/live");
   revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Sesion+actualizada" as never);
+  redirect("/admin/live?success=Sesión+actualizada" as never);
 }
 
 async function deleteLiveSessionAction(fd: FormData) {
@@ -130,7 +131,7 @@ async function deleteLiveSessionAction(fd: FormData) {
   const id = fd.get("id") as string;
   await supabase.from("live_sessions").delete().eq("id", id);
   revalidatePath("/admin/live");
-  redirect("/admin/live?success=Sesion+eliminada" as never);
+  redirect("/admin/live?success=Sesión+eliminada" as never);
 }
 
 async function updateStatusAction(fd: FormData) {
@@ -218,7 +219,7 @@ function LiveForm({ session }: { session?: LiveSession }) {
       {!isNew && <input type="hidden" name="id" value={session.id} />}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Slug">
+        <F label="Dirección">
           <input style={inp} name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
         </F>
         <F label="Estado">
@@ -230,10 +231,10 @@ function LiveForm({ session }: { session?: LiveSession }) {
           </select>
         </F>
 
-        <F label="Titulo en Espanol">
+        <F label="Título en español">
           <input style={inp} name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
         </F>
-        <F label="Titulo en Ingles">
+        <F label="Título en inglés">
           <input style={inp} name="titleEn" defaultValue={session?.title_i18n?.en ?? ""} placeholder="Ballet Class — Monday" />
         </F>
 
@@ -244,7 +245,7 @@ function LiveForm({ session }: { session?: LiveSession }) {
           <input style={inp} name="endsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.ends_at ?? null)} />
         </F>
 
-        <F label="Tier requerido">
+        <F label="Plan que la puede ver">
           <select style={sel} name="membershipTierRequired" defaultValue={session?.membership_tier_required ?? "corps_de_ballet"}>
             <option value="corps_de_ballet">Corps de Ballet</option>
             <option value="solista">Solista</option>
@@ -271,10 +272,10 @@ function LiveForm({ session }: { session?: LiveSession }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Descripcion en Espanol">
-          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEs" defaultValue={session?.description_i18n?.es ?? ""} placeholder="Descripcion de la sesion..." />
+        <F label="Descripción en español">
+          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEs" defaultValue={session?.description_i18n?.es ?? ""} placeholder="Descripción de la sesión…" />
         </F>
-        <F label="Descripcion en Ingles">
+        <F label="Descripción en inglés">
           <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEn" defaultValue={session?.description_i18n?.en ?? ""} placeholder="Session description..." />
         </F>
       </div>
@@ -287,7 +288,7 @@ function LiveForm({ session }: { session?: LiveSession }) {
           <F label="URL de ingreso">
             <input style={inp} name="zoomJoinUrl" type="url" defaultValue={session?.access_link?.join_url ?? ""} placeholder="https://zoom.us/j/..." />
           </F>
-          <F label="Codigo de acceso">
+          <F label="Código de acceso">
             <input style={inp} name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
           </F>
         </div>
@@ -385,7 +386,7 @@ export default async function AdminLivePage({
         {[
           { value: total,     label: "Sesiones totales", sub: "en el sistema" },
           { value: scheduled, label: "Publicadas",        sub: "visibles a alumnas" },
-          { value: upcoming,  label: "Proximas",          sub: "pendientes de dar" },
+          { value: upcoming,  label: "Próximas",          sub: "pendientes de dar" },
         ].map((s) => (
           <div key={s.label} style={{
             background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
@@ -442,8 +443,6 @@ export default async function AdminLivePage({
               const st = STATUS_STYLE[session.status] ?? STATUS_STYLE.draft;
               const tier = TIER_STYLE[session.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
               const startDate = new Date(session.starts_at);
-              const dateStr = startDate.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-              const timeStr = startDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
               const isPast = startDate < new Date();
 
               return (
@@ -486,7 +485,10 @@ export default async function AdminLivePage({
                       </div>
                       <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#a8a29e", flexWrap: "wrap" }}>
                         <span style={{ color: isPast ? "#a8a29e" : "#1c1917", fontWeight: isPast ? 400 : 600 }}>
-                          {dateStr} a las {timeStr}
+                          {/* perspectiva="admin": Brunela ve primero la hora de
+                              la zona en la que programo la clase, que es la que
+                              tiene en la cabeza. */}
+                          <HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} perspectiva="admin" />
                         </span>
                         <span>{session.bookings_count} / {session.capacity} reservas</span>
                         {session.access_link && (

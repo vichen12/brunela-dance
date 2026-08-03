@@ -17,7 +17,8 @@ const videoSchema = z.object({
   descriptionEn: z.string().optional(),
   membershipTierRequired: z.enum(["corps_de_ballet", "solista", "principal"]),
   status: z.enum(["draft", "published", "archived"]),
-  durationSeconds: z.coerce.number().int().positive(),
+  /** Llega en MINUTOS desde el formulario; se convierte antes de guardar. */
+  durationMinutes: z.coerce.number().int().positive().max(600),
   categories: z.string().optional(),
   equipment: z.string().optional(),
   thumbnailUrl: z.string().optional(),
@@ -110,7 +111,7 @@ export async function upsertVideoAction(formData: FormData) {
     descriptionEn: formData.get("descriptionEn"),
     membershipTierRequired: formData.get("membershipTierRequired"),
     status: formData.get("status"),
-    durationSeconds: formData.get("durationSeconds"),
+    durationMinutes: formData.get("durationMinutes"),
     categories: formData.get("categories"),
     equipment: formData.get("equipment"),
     thumbnailUrl: formData.get("thumbnailUrl"),
@@ -129,7 +130,7 @@ export async function upsertVideoAction(formData: FormData) {
     description_i18n: buildI18n(parsed.data.descriptionEs.trim(), parsed.data.descriptionEn),
     membership_tier_required: parsed.data.membershipTierRequired,
     status: parsed.data.status,
-    duration_seconds: parsed.data.durationSeconds,
+    duration_seconds: parsed.data.durationMinutes * 60,
     category_slugs: parseCsv(parsed.data.categories),
     equipment: parseCsv(parsed.data.equipment),
     thumbnail_url: parsed.data.thumbnailUrl?.trim() || null,
@@ -351,52 +352,22 @@ export async function deleteProgramDayAction(formData: FormData) {
   redirectWithMessage("/admin/programs", "success", "Dia eliminado.");
 }
 
-export async function upsertSiteSettingAction(formData: FormData) {
-  const { user } = await requireAdmin();
-  const supabase = await createSupabaseAdminClient();
-  const parsed = siteSettingSchema.safeParse({
-    settingKey: formData.get("settingKey"),
-    category: formData.get("category"),
-    description: formData.get("description"),
-    isPublic: checkboxValue(formData, "isPublic"),
-    value: formData.get("value")
-  });
-
-  if (!parsed.success) {
-    redirectWithMessage("/admin/settings", "error", "Setting invalida.");
-  }
-
-  let parsedValue: unknown = null;
-
-  try {
-    parsedValue = JSON.parse(parsed.data.value);
-  } catch {
-    redirectWithMessage("/admin/settings", "error", "El JSON no es valido.");
-  }
-
-  invalidarAjustes();
-
-  const { error } = await supabase.from("site_settings").upsert(
-    {
-      setting_key: parsed.data.settingKey.trim(),
-      category: parsed.data.category.trim(),
-      description: parsed.data.description?.trim() || null,
-      is_public: parsed.data.isPublic,
-      value: parsedValue,
-      updated_by: user.id
-    },
-    {
-      onConflict: "setting_key"
-    }
-  );
-
-  if (error) {
-    redirectWithMessage("/admin/settings", "error", error.message);
-  }
-
-  refreshAdminRoutes();
-  redirectWithMessage("/admin/settings", "success", "Setting guardada.");
-}
+/*
+ * upsertSiteSettingAction SE ELIMINO el 2026-08-03.
+ *
+ * Escribia cualquier clave de site_settings con cualquier JSON, y era lo que
+ * alimentaba el editor crudo de /admin/settings. Ese editor dejaba a Brunela a
+ * un tipeo de romper `subscriptions.catalog` -- y con el, el cobro -- o
+ * `subscriptions.access_defaults`, que decide quien tiene acceso.
+ *
+ * No alcanzaba con sacar el editor de la pantalla: una server action exportada
+ * sigue siendo un endpoint POST publico aunque ninguna interfaz la use. Mientras
+ * existiera, la proteccion era decorativa.
+ *
+ * La reemplazan dos acciones acotadas en src/features/admin/settings-actions.ts,
+ * una por ajuste, que solo pueden tocar sus propios campos. Las claves
+ * peligrosas se cambian por migracion, que queda versionada y revisable.
+ */
 
 export async function updateProfileAdminAction(formData: FormData) {
   const { user } = await requireAdmin();
