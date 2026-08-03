@@ -102,6 +102,15 @@ Cinco cosas que fallan **en silencio**. Ninguna da error.
 5. **Reglas de negocio que viven sólo en el panel se pierden al reconstruir.**
    Pasó con el período de gracia de `past_due` y con la dueña del estudio. Si una
    regla no está en una migración, no existe.
+6. **Un componente no puede cruzar de servidor a cliente como prop.** Un ícono de
+   lucide es una función, y React serializa las props para mandarlas por la red.
+   Poner `{ Icon: Play }` en un array de un server component y pasárselo a uno de
+   cliente tira `Functions cannot be passed directly to Client Components` **en
+   tiempo de ejecución**. `tsc` pasa y `next build` pasa: `/admin` compiló
+   perfecto y reventó en producción con un 500.
+   Por la frontera va una **cadena**, y el mapa de íconos vive del lado del
+   cliente (`components/admin-overview-client.tsx`). Renderizar el ícono dentro
+   del mismo server component sí es válido — lo que no se puede es pasarlo.
 
 ## Decisiones conscientes (no son descuidos)
 

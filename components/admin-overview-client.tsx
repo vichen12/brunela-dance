@@ -1,6 +1,21 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import {
+  Play, Grid2x2, AlignLeft, Users, FileText, MessageSquare, Settings, Eye,
+  type LucideIcon,
+} from "lucide-react";
+
+// Un icono de lucide es un componente, o sea una FUNCION. Un server component no
+// puede pasarle una funcion a uno de cliente: React serializa las props para
+// mandarlas por la red y una funcion no se puede serializar. Revienta en
+// tiempo de ejecucion, no al compilar -- `tsc` y `next build` pasan igual.
+//
+// Por eso por la frontera viaja solo una CADENA y el mapa vive de este lado.
+// Si agregas un acceso rapido nuevo, sumalo aca tambien o cae en el de reserva.
+const ICONOS: Record<string, LucideIcon> = {
+  videos: Play, categorias: Grid2x2, programas: AlignLeft, alumnas: Users,
+  documentos: FileText, chat: MessageSquare, ajustes: Settings, alumna: Eye,
+};
 
 // ─── Sparkline (SVG puro, sin interactividad) ────────────────────────────────
 function Sparkline({ points, color = "var(--pink-mid)" }: { points: string; color?: string }) {
@@ -100,9 +115,9 @@ export function MetricCard({
 
 // ─── QuickLinks grid ─────────────────────────────────────────────────────────
 export function QuickLinksGrid({ links }: {
-  // Icon es un componente de lucide, no una cadena con un emoji: hereda el
-  // color de la marca y se dibuja igual en todos los sistemas operativos.
-  links: { href: string; Icon: LucideIcon; label: string; desc: string }[];
+  // `icono` es una clave de ICONOS, no el componente: ver el comentario de
+  // arriba. Todo lo que llega aca desde el servidor tiene que ser dato plano.
+  links: { href: string; icono: string; label: string; desc: string }[];
 }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
@@ -129,7 +144,7 @@ export function QuickLinksGrid({ links }: {
               background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
               display: "flex", alignItems: "center", justifyContent: "center",
               marginBottom: 12, color: "var(--pink-deep)",
-            }}><lnk.Icon size={19} strokeWidth={1.9} /></div>
+            }}>{(() => { const I = ICONOS[lnk.icono] ?? Play; return <I size={19} strokeWidth={1.9} />; })()}</div>
             <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>{lnk.label}</p>
             <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 3 }}>{lnk.desc}</p>
           </div>

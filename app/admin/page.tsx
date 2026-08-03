@@ -1,5 +1,4 @@
 import { requireAdmin } from "@/src/features/auth/guards";
-import { Play, Grid2x2, AlignLeft, Users, FileText, MessageSquare, Settings, Eye } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { MetricCard, QuickLinksGrid } from "@/components/admin-overview-client";
 
@@ -114,15 +113,17 @@ export default async function AdminOverviewPage() {
   // Iconos de lucide en vez de emojis: los emojis los dibuja cada sistema
   // operativo a su manera, no heredan el color de la marca y en un panel de
   // trabajo se leen como decoracion, no como interfaz.
+  // Solo cadenas: QuickLinksGrid es un componente de CLIENTE y no se le puede
+  // pasar un componente de lucide como prop (ver el comentario en ese archivo).
   const quickLinks = [
-    { href: "/admin/videos",     Icon: Play,          label: "Clases",       desc: "Subir y publicar clases" },
-    { href: "/admin/categories", Icon: Grid2x2,       label: "Categorías",   desc: "Crear y configurar" },
-    { href: "/admin/programs",   Icon: AlignLeft,     label: "Programas",    desc: "Secuencias día a día" },
-    { href: "/admin/users",      Icon: Users,         label: "Alumnas",      desc: "Planes y permisos" },
-    { href: "/admin/documents",  Icon: FileText,      label: "Documentos",   desc: "PDF y archivos" },
-    { href: "/admin/chat",       Icon: MessageSquare, label: "Chat",         desc: "Salas y moderación" },
-    { href: "/admin/settings",   Icon: Settings,      label: "Configuración", desc: "Ajustes del estudio" },
-    { href: "/dashboard",        Icon: Eye,           label: "Vista alumna", desc: "Ver como estudiante" },
+    { href: "/admin/videos",     icono: "videos",     label: "Clases",        desc: "Subir y publicar clases" },
+    { href: "/admin/categories", icono: "categorias", label: "Categorías",    desc: "Crear y configurar" },
+    { href: "/admin/programs",   icono: "programas",  label: "Programas",     desc: "Secuencias día a día" },
+    { href: "/admin/users",      icono: "alumnas",    label: "Alumnas",       desc: "Planes y permisos" },
+    { href: "/admin/documents",  icono: "documentos", label: "Documentos",    desc: "PDF y archivos" },
+    { href: "/admin/chat",       icono: "chat",       label: "Chat",          desc: "Salas y moderación" },
+    { href: "/admin/settings",   icono: "ajustes",    label: "Configuración", desc: "Ajustes del estudio" },
+    { href: "/dashboard",        icono: "alumna",     label: "Vista alumna",  desc: "Ver como estudiante" },
   ];
 
   return (
