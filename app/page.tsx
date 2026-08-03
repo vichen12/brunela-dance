@@ -194,8 +194,13 @@ const aboutCards = [
   { title: "about.card4.title", text: "about.card4.text" },
 ] as const;
 
+// El `tier` ata cada tarjeta al enum membership_tier de la base. Sin el, lo
+// unico que unia la landing con los planes reales era `name`, que es un texto
+// de presentacion y ademas se traduce a cuatro idiomas: no habia forma de saber
+// que plan eligio la alumna.
 const plans = [
   {
+    tier: "corps_de_ballet",
     name: "Corps de Ballet",
     price: "16",
     annual: "154",
@@ -210,6 +215,7 @@ const plans = [
     ],
   },
   {
+    tier: "solista",
     name: "Solista",
     price: "31",
     annual: "299",
@@ -224,6 +230,7 @@ const plans = [
     ],
   },
   {
+    tier: "principal",
     name: "Principal",
     price: "59",
     annual: "559",

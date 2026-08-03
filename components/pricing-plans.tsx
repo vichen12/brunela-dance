@@ -8,7 +8,11 @@ import type { PublicLocale, PublicMessageKey } from "@/src/i18n/public";
 
 type BillingMode = "monthly" | "annual";
 
+export type PlanTier = "corps_de_ballet" | "solista" | "principal";
+
 type Plan = {
+  /** Ata la tarjeta al enum membership_tier: es lo que viaja hasta el checkout. */
+  tier: PlanTier;
   name: string;
   price: string;
   annual: string;
@@ -148,7 +152,14 @@ export function PricingPlans({ plans }: PricingPlansProps) {
                   ))}
                 </ul>
 
-                <Link href="/sign-in" className="classic-plan-action" suppressHydrationWarning>
+                {/* Antes iba a /sign-in pelado y el plan elegido se perdia en el
+                    primer clic. Ahora viaja como parametro y de ahi pasa a
+                    user_metadata al crear la cuenta. */}
+                <Link
+                  href={`/registro?plan=${plan.tier}&interval=${billing === "annual" ? "yearly" : "monthly"}` as never}
+                  className="classic-plan-action"
+                  suppressHydrationWarning
+                >
                   {t("pricing.action")}
                 </Link>
               </article>

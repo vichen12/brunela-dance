@@ -145,6 +145,9 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
   const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
+  // Sin plan: RLS le devuelve CERO clases, asi que veria el estudio vacio y
+  // pareceria roto. Se le muestra el catalogo con candado -- ver `vitrina`.
+  const sinPlan = !isAdmin && (profileData?.membership_tier ?? "none") === "none";
 
   const [{ data: videosData }, progressData] = await Promise.all([
     supabase.from("videos")
@@ -156,7 +159,35 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     getProgresoDelUsuario(user.id),
   ]);
 
-  const videos = (videosData ?? []) as VideoRecord[];
+  // ── VITRINA para quien todavia no pago ────────────────────────────────────
+  //
+  // Se lee con service_role porque RLS -- correctamente -- no le deja ver nada.
+  // Por eso la lista de columnas es CORTA Y EXPLICITA: solo lo que hace falta
+  // para dibujar la tarjeta.
+  //
+  // 🔴 NUNCA agregar aca bunny_video_id, stream_playback_id ni stream_asset_id.
+  //    Con cualquiera de esos, alguien sin plan podria armar la URL del video y
+  //    saltarse el pago entero. La tarjeta de la vitrina tampoco enlaza al
+  //    detalle: lleva a /dashboard/plan.
+  let vitrina: VideoRecord[] = [];
+  if (sinPlan) {
+    const admin = createSupabaseAdminClient();
+    const { data } = await admin
+      .from("videos")
+      .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, is_featured, status, published_at, recommended_min_level, recommended_max_level")
+      .eq("status", "published")
+      .order("is_featured", { ascending: false })
+      .order("published_at", { ascending: false });
+    vitrina = ((data ?? []) as unknown as VideoRecord[]).map((v) => ({
+      ...v,
+      // Explicito: aunque la consulta ya no los pide, quedan en null para que
+      // ningun render futuro los pueda leer por accidente.
+      stream_playback_id: null,
+      bunny_video_id: null,
+    }));
+  }
+
+  const videos = (sinPlan ? vitrina : ((videosData ?? []) as VideoRecord[]));
   const progressMap = new Map(progressData.map((p) => [p.video_id, p]));
 
   const dbCats = Array.from(new Set(videos.flatMap((v) => v.category_slugs).filter(Boolean))).sort();
@@ -401,7 +432,29 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                     </div>
                   )}
 
-                  <Link href={`/dashboard/library/${video.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
+                  {/* Sin plan la tarjeta NO enlaza al detalle: lleva a elegir
+                      plan. El detalle es donde se firma la URL del video. */}
+                  <Link
+                    href={(sinPlan ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
+                    style={{ textDecoration: "none", display: "block", height: "100%", position: "relative" }}
+                  >
+                    {sinPlan && (
+                      <span style={{
+                        position: "absolute", top: 12, right: 12, zIndex: 3,
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        background: "rgba(255,255,255,0.94)", color: "var(--pink-deep)",
+                        borderRadius: 999, padding: "6px 12px",
+                        fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                        textTransform: "uppercase", border: "1px solid var(--pink-line)",
+                        boxShadow: "0 4px 14px rgba(28,25,23,0.12)",
+                      }}>
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
+                          <path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2M3.5 7h9v6h-9V7Z"
+                            stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                        </svg>
+                        {TIER_META[video.membership_tier_required]?.label ?? "Plan"}
+                      </span>
+                    )}
                     <div className="feature-tile" style={{
                       padding: 0, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column",
                       opacity: isDraft && !isAdmin ? 0.5 : 1,

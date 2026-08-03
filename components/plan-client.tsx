@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Tier = 'none' | 'corps_de_ballet' | 'solista' | 'principal';
 type Interval = 'monthly' | 'yearly';
@@ -118,6 +118,39 @@ export function PlanClient({
       setLoadingTier(null);
     }
   }
+
+  // ── Arranque automatico despues del onboarding ───────────────────────────
+  //
+  // La alumna ya eligio su plan en la landing: no se le vuelve a pedir. El
+  // onboarding redirige aca con ?plan=<tier>&iniciar=1.
+  //
+  // EL TIER SE VALIDA CONTRA EL CATALOGO antes de disparar nada. No porque el
+  // precio pueda falsificarse -- no puede: /api/stripe/checkout recibe un tier,
+  // no un precio, y resuelve el price id desde el catalogo del servidor, asi
+  // que forzar ?plan=principal cobra principal. Se valida para no mandar basura
+  // al endpoint y para no dejar un boton cargando por un valor inexistente.
+  const [autoIntentado, setAutoIntentado] = useState(false);
+  useEffect(() => {
+    if (autoIntentado || hasActiveSub || !catalog) return;
+
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('iniciar') !== '1') return;
+
+    const pedido = q.get('plan');
+    const valido = orderedTiers.find((t) => t.tier === pedido);
+    if (!valido) return;
+
+    const intervaloPedido = q.get('interval');
+    if (intervaloPedido === 'monthly' || intervaloPedido === 'yearly') {
+      setInterval(intervaloPedido);
+    }
+
+    setAutoIntentado(true);
+    // Se limpia la URL para que un F5 no vuelva a mandarla a Stripe.
+    window.history.replaceState({}, '', '/dashboard/plan');
+    void startCheckout(valido.tier);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoIntentado, hasActiveSub, catalog, orderedTiers]);
 
   async function openPortal() {
     setError(null);

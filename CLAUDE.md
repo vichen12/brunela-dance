@@ -132,6 +132,39 @@ es donde el contraste realmente importa.
 > Regla practica que salió de esto: `--pink` para superficie glanceable,
 > `--pink-mid` cuando encima va texto que alguien va a **leer**.
 
+### 🔴 "Confirm email" está APAGADO a propósito — hay que volver a encenderlo
+
+**Decidido el 2026-08-02.** El registro necesitaba un recorrido continuo
+(landing → registro → onboarding → checkout) y la confirmación por correo lo
+parte en dos con un salto por la bandeja de entrada.
+
+Pero el motivo real de apagarlo fue otro: **el SMTP de prueba de Supabase no
+sirve para producción** (2-4 correos por hora) y todavía no hay dominio propio.
+
+**Se enciende de nuevo cuando estén el dominio y el SMTP.** Y hace falta igual
+para los avisos de clase nueva que pidió Brunela, así que no es opcional.
+
+Mientras esté apagado, cualquiera puede crear una cuenta con un correo que no
+es suyo. Con 0 alumnas reales no importa; el día que se abra al público, sí.
+
+Verificarlo sin entrar al panel:
+
+```bash
+curl -s "https://howtuhfdxgyluskrlkze.supabase.co/auth/v1/settings" -H "apikey: <publishable>" 
+# mailer_autoconfirm: true  -> confirmacion APAGADA
+# disable_signup: false     -> altas habilitadas
+```
+
+### El correo va a salir de Resend, que es estadounidense
+
+**Decidido el 2026-08-02.** La base se movió a Fráncfort por residencia de
+datos, pero **el proveedor de correo elegido opera en Estados Unidos**. Un
+correo transaccional lleva nombre y dirección de la alumna, o sea dato personal
+de una residente de la UE.
+
+**No es un descuido: es una asimetría deliberada** que hay que reflejar en la
+política de privacidad. La alternativa europea evaluada fue Brevo (Francia).
+
 ---
 
 ## Project
@@ -395,7 +428,12 @@ Ordenados por lo que bloquea a lo que puede esperar.
 - [ ] **Plan de escalabilidad A–E**, aprobado y postergado: filtrado de la
       biblioteca en SQL, los `count exact` de `/admin`, rate limiting,
       degradación con gracia.
-- [ ] Onboarding y edición de perfil para miembros. La policy
-      `profiles_update_self_or_admin` y el grant de `UPDATE` ya están puestos
-      esperando esto.
+- [ ] **Unificar el CSS de las pantallas de auth.** `sign-in-form.tsx` y
+      `registro-form.tsx` tienen el mismo bloque `<style>` duplicado, porque en
+      este proyecto cada pantalla de auth lleva su CSS adentro en vez de
+      `globals.css`. Se dejó así para no mezclar la limpieza con el alta de
+      usuarios; si las dos se desincronizan, el login y el registro dejan de
+      parecerse.
+- [ ] Edición de perfil para miembros (el onboarding inicial ya está). La policy
+      `profiles_update_self_or_admin` y el grant de `UPDATE` ya están puestos.
 - [ ] Seguir ampliando el diccionario público ES/EN/FR/IT.

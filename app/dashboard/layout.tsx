@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -30,6 +31,20 @@ const getSeguirViendo = cache(async (userId: string) => {
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
   const [profile, seguirViendo] = await Promise.all([getProfile(user.id), getSeguirViendo(user.id)]);
+
+  // COMPUERTA DE ONBOARDING
+  //
+  // Va en el layout y no en el flujo de registro a proposito: un parametro en
+  // la URL se puede perder o esquivar, una compuerta no. Da igual como haya
+  // entrado -- por correo, por Google o por un marcador guardado: si le falta
+  // el onboarding, lo hace.
+  //
+  // Las admin quedan afuera: sus cuentas se crearon a mano o se importaron, y
+  // ninguna paso por este flujo. Sin esta excepcion, Brunela entraria a su
+  // propio panel y le pediriamos que declare su nivel de ballet.
+  if (profile && !profile.is_admin && !profile.onboarding_completed) {
+    redirect("/registro/onboarding" as never);
+  }
 
   const userName = profile?.is_admin
     ? "BRUNELA"
