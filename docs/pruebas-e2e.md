@@ -316,7 +316,8 @@ Con **`brunela.sssdance@gmail.com`**, la única con suscripción real.
 
 Con `brunela.dance@gmail.com`.
 
-- [ ] **9.1 Encabezados.**
+- [ ] **9.1 Encabezados.** *(§ 11.3 cubre `/admin/settings`, que cambió por
+      completo: ya no es un editor de JSON.)*
       Recorré `/admin`, `/admin/videos`, `/admin/programs`, `/admin/live`,
       `/admin/users`, `/admin/chat`, `/admin/categories`, `/admin/documents`,
       `/admin/announcements`, `/admin/settings`.
@@ -373,10 +374,169 @@ Desde el teléfono, o con el emulador del navegador.
 
 ---
 
+## 11 · Panel de admin, lo nuevo (2026-08-03)
+
+Todo esto se hizo **después** de escribir las secciones 1-10, así que no está
+cubierto arriba. Se prueba con `brunela.dance@gmail.com`.
+
+> **Requisito:** la migración `20260803_studio_documents_bucket.sql` tiene que
+> estar corrida. Verificación: `storage.buckets` tiene `studio-documents` con
+> `public = false`, y las policies de `storage` son **2**.
+
+### 11.1 · Subir un documento
+
+- [ ] **11.1.1** En `/admin/documents`, tocá **Elegir archivo** y subí un PDF.
+      **Ver:** barra de progreso y después `✓ nombre.pdf — PDF · 340 KB`.
+      **Fallo:** que no pase nada al tocar el botón, o un error de Storage —
+      sería que la migración no está corrida.
+
+- [ ] **11.1.2** Completá título y **Plan que lo puede ver: Solista**, y guardá.
+      **Ver:** aparece en la lista.
+      **Fallo:** que pida una URL — sería la pantalla vieja.
+
+- [ ] **11.1.3 El tipo y el peso salen del archivo.**
+      **Ver:** no hay campos para tipearlos. En la lista figuran los correctos.
+      **Fallo:** que muestre "pdf · 0 KB" con un archivo que pesa.
+
+- [ ] **11.1.4 🔴 Que la alumna del plan correcto lo pueda abrir.**
+      Con `solista@brunela.test`, entrá a `/dashboard/documents` y abrilo.
+      **Ver:** el archivo se descarga o se abre.
+      **Fallo:** un error de permiso o un enlace roto — sería que la firma de
+      descarga no se está generando.
+
+- [ ] **11.1.5 🔴 Que la de plan menor NO lo vea.**
+      Con `corps@brunela.test`, mirá `/dashboard/documents`.
+      **Ver:** ese documento no aparece.
+      **🔴 Fallo grave:** que aparezca.
+
+- [ ] **11.1.6 🔴 La URL firmada no es un pase libre.**
+      Copiá el enlace de descarga que ves como solista y abrilo **en una ventana
+      de incógnito, sin sesión**.
+      **Ver:** funciona (la firma es válida un rato) — **eso es correcto y
+      esperado**. Lo que importa es que sea temporal.
+      **🔴 Fallo grave:** que la URL sea del tipo
+      `.../storage/v1/object/public/...` sin firma. Sería un bucket público, y
+      cualquiera con el enlace tendría el documento para siempre.
+
+- [ ] **11.1.7 El archivo grande se rechaza.**
+      Probá con uno de más de 50 MB.
+      **Ver:** `"nombre" pesa 62.4 MB y el máximo es 50 MB.` **antes** de subir
+      nada.
+
+### 11.2 · Selector de clases en programas
+
+- [ ] **11.2.1** En `/admin/programs`, abrí un programa y mirá el alta de día.
+      **Ver:** un desplegable **"Clase de ese día"** con los **títulos** de las
+      clases, ordenados alfabéticamente.
+      **Fallo:** un campo de texto donde haya que escribir — sería la pantalla
+      vieja.
+
+- [ ] **11.2.2** Agregá un día eligiendo una clase.
+      **Ver:** aparece en la lista como `Día 8 — Barra de suelo I`.
+      **Fallo:** que diga `Día 8 — demo-barra-suelo-i`.
+
+- [ ] **11.2.3** Mirá los días que ya existían.
+      **Ver:** todos con título, ninguno con slug.
+
+### 11.3 · Ajustes acotados
+
+- [ ] **11.3.1** Entrá a `/admin/settings`.
+      **Ver:** dos bloques con interruptores (**Reservas** y **Quién puede
+      escribirte**) y un bloque gris de **Ajustes técnicos**.
+      **🔴 Fallo:** un `<textarea>` con JSON — sería la pantalla vieja, y
+      Brunela estaría a un tipeo de romper el cobro.
+
+- [ ] **11.3.2** Cambiá **"Lista de espera cuando se llena"** y guardá.
+      **Ver:** cartel de éxito y el interruptor queda como lo dejaste al
+      recargar.
+      **Fallo:** que vuelva al valor anterior — sería el caché de ajustes sin
+      invalidar.
+
+- [ ] **11.3.3** En **Quién puede escribirte**, activá sólo Solista y Principal.
+      **Ver:** se guarda. Y con `corps@brunela.test`, `/dashboard/chat` refleja
+      esa restricción.
+
+- [ ] **11.3.4 🔴 Los ajustes peligrosos no se pueden editar.**
+      Mirá el bloque **Ajustes técnicos**.
+      **Ver:** *Planes y precios*, *Reglas de acceso*, *Acceso al contenido*,
+      *Logros y constancia* e *Idiomas* — con nombres en castellano, **sin
+      ningún campo editable**, y el texto de que lo cambia el equipo técnico.
+      **🔴 Fallo:** cualquier campo que se pueda escribir ahí.
+
+- [ ] **11.3.5** Nada en inglés.
+      **Ver:** no aparece *"Per-tier toggle for who can START a direct chat…"*.
+
+### 11.4 · Hora con zona
+
+- [ ] **11.4.1** En `/admin/live`, mirá una sesión.
+      **Ver:** `mié, 6 ago, 05:00 (Madrid) · 00:00 (Buenos Aires)` — **la del
+      estudio primero**, que es la que Brunela programó.
+      **Fallo:** una hora sola sin zona.
+
+- [ ] **11.4.2** Con `solista@brunela.test`, mirá la misma sesión en
+      `/dashboard/live`.
+      **Ver:** la misma información pero **con tu zona primero**.
+
+- [ ] **11.4.3 No hay parpadeo con hora equivocada.**
+      Recargá con la consola abierta y mirá el instante inicial.
+      **Ver:** un espacio vacío que se completa. Nunca una hora que cambie
+      delante tuyo.
+      **Fallo:** ver una hora y que salte a otra — sería un render de servidor
+      con la zona equivocada.
+
+- [ ] **11.4.4** Cambiá la zona de tu sistema operativo y recargá.
+      **Ver:** la hora secundaria acompaña el cambio; la de Madrid no se mueve.
+
+### 11.5 · Restos de Mux
+
+- [ ] **11.5.1** En `/admin/videos`, abrí una clase para editar.
+      **Ver:** **no** hay campos *Mux Playback ID* ni *Mux Asset ID*.
+
+- [ ] **11.5.2** Mirá la lista de clases.
+      **Ver:** la que tiene video dice **"Video listo"**, no *"Mux OK"*.
+
+- [ ] **11.5.3 La dirección de la clase se ve pero no se toca.**
+      **Ver:** el campo con el slug, en gris y no editable.
+      **Fallo:** que se pueda escribir — cambiarlo rompe enlaces compartidos.
+
+- [ ] **11.5.4 Una sola forma de crear una clase.**
+      **Ver:** *Nuevo video* abre **sólo** el flujo con selector de archivo. El
+      formulario de abajo aparece únicamente al editar una existente.
+
+- [ ] **11.5.5 🔴 Lo que muxea sigue vivo.**
+      Subí una clase con dos pistas de audio.
+      **Ver:** aparece el estado *"Idiomas en cola"*.
+      **🔴 Fallo:** que no aparezca — significaría que se limpió de más y se
+      rompió el multi-idioma. *(El worker no está corriendo, así que va a quedar
+      en cola: eso es esperado.)*
+
+### 11.6 · Lenguaje
+
+- [ ] **11.6.1** Recorré las 10 pantallas del panel.
+      **Ver:** ni *Slug*, ni *Tier*, ni *Cover Image URL*, ni *Thumbnail URL*,
+      ni *(coma separada)*.
+
+- [ ] **11.6.2 La duración está en minutos.**
+      Al editar una clase, mirá el campo **Duración (minutos)**.
+      **🔴 Fallo grave:** que diga minutos y muestre `2700`. Sería que la
+      etiqueta cambió pero no la conversión, y una clase de 45 minutos se
+      guardaría como 45 segundos.
+      **Ver:** para una clase de 45 minutos tiene que decir **45**. Cambialo a
+      50, guardá, y confirmá que la lista muestra `50 min`.
+
+- [ ] **11.6.3 Los conteos coinciden.**
+      Compará el número de alumnas en `/admin` con el de `/admin/users`.
+      **Ver:** el mismo número, y en `/admin/users` la etiqueta dice **Alumnas**
+      (no cuenta a las 3 admin).
+
+---
+
 ## Al terminar
 
 - [ ] Borrar las cuentas `@brunela.test` y las que hayas creado en § 1.
 - [ ] Borrar `brunela.sssdance@gmail.com` **y cancelar su suscripción en
       Stripe**, que no se va sola al borrar el perfil.
 - [ ] Limpiar el contenido demo: el bloque final de `scripts/seed-demo.sql`.
+- [ ] Borrar los documentos de prueba subidos en § 11.1 (borran también el
+      archivo del bucket).
 - [ ] Anotar en `CLAUDE.md` lo que haya quedado fallando.
