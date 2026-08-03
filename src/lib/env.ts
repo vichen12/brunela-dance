@@ -56,8 +56,30 @@ export function getStripeServerEnv() {
   });
 }
 
+/**
+ * La URL publica de la app. De aca sale el success_url del checkout de Stripe,
+ * o sea a donde vuelve la alumna despues de pagar.
+ *
+ * POR QUE NO CAE DIRECTO A LOCALHOST
+ *   Antes, si NEXT_PUBLIC_APP_URL faltaba, esto devolvia "http://localhost:3000"
+ *   sin decir nada. En un deploy de Vercel eso significa que la alumna paga y
+ *   Stripe la manda a SU PROPIA maquina, donde no hay nada escuchando. Cobrado
+ *   el dinero, pantalla de error. Y como el fallback es silencioso, no hay
+ *   ningun log que lo delate: parece que "el checkout no anda".
+ *
+ *   Corriendo en Vercel usamos el dominio que la propia plataforma expone. El
+ *   fallback a localhost queda solo para desarrollo, que es donde tiene sentido.
+ */
 export function getAppUrl() {
-  return optionalUrlSchema.parse(process.env.NEXT_PUBLIC_APP_URL) ?? "http://localhost:3000";
+  const explicito = optionalUrlSchema.parse(process.env.NEXT_PUBLIC_APP_URL);
+  if (explicito) return explicito;
+
+  // VERCEL_PROJECT_PRODUCTION_URL es el dominio de produccion; VERCEL_URL es el
+  // de este deploy puntual (sirve para previews). Ninguna trae el esquema.
+  const dominio = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (dominio) return `https://${dominio}`;
+
+  return "http://localhost:3000";
 }
 
 const bunnyEnvSchema = z.object({

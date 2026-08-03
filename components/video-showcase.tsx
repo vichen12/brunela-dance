@@ -34,6 +34,10 @@ export function VideoShowcase() {
           playsInline
           preload="metadata"
         >
+          {/* El archivo no estuvo en el repo hasta 2026-08-03: no hay commit que
+              lo agregue ni que lo borre, y la landing devolvia 404 en cada
+              visita. Si vuelve a faltar, el <video> cae en su `poster` y la
+              seccion se ve igual, sin romperse. */}
           <source src="/videos/brunela-trailer.mp4" type="video/mp4" />
         </video>
 
