@@ -4,6 +4,9 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+/** Alumnas por pagina. Con 50 entra una pantalla larga sin scroll infinito. */
+const POR_PAGINA = 50;
+
 type ProfileRow = {
   id: string;
   email: string;
@@ -73,16 +76,35 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   const success = typeof params.success === "string" ? params.success : null;
   const error = typeof params.error === "string" ? params.error : null;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at")
-    .order("created_at", { ascending: false });
+  // Fase D: paginado. Antes traia TODOS los perfiles con sus objetivos en cada
+  // carga -- una consulta que anda perfecto con 10 alumnas y se vuelve pesada
+  // con 500, justo cuando el estudio empieza a funcionar.
+  const pagina = Math.max(0, Math.min(200, Number(params.pagina) || 0));
 
-  const profiles = (data ?? []) as ProfileRow[];
-  const tierCounts = profiles.reduce<Record<string, number>>((acc, p) => {
+  // ⚠️ Los totales van en su PROPIA consulta, y no es un viaje de mas al pedo.
+  //    Contarlos sobre las filas de la pagina daria "3 solistas" habiendo 30:
+  //    el resumen de arriba mentiria, y mentiria hacia abajo, que es peor
+  //    porque parece que el estudio anda peor de lo que anda.
+  //
+  //    Trae una sola columna, asi que pesa poco aunque no se pagine.
+  const [{ data }, { data: todosLosTiers }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at")
+      .order("created_at", { ascending: false })
+      .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA),
+    supabase.from("profiles").select("membership_tier, is_admin"),
+  ]);
+
+  const crudas = (data ?? []) as ProfileRow[];
+  const hayMasPaginas = crudas.length > POR_PAGINA;
+  const profiles = crudas.slice(0, POR_PAGINA);
+
+  const tierCounts = (todosLosTiers ?? []).reduce<Record<string, number>>((acc, p) => {
     acc[p.membership_tier] = (acc[p.membership_tier] ?? 0) + 1;
     return acc;
   }, {});
+  const totalAlumnas = (todosLosTiers ?? []).filter((p) => !p.is_admin).length;
 
   return (
     <main style={{ fontFamily: "inherit" }}>
@@ -103,7 +125,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           // profiles.length incluye a las admin. El panel de inicio cuenta solo
           // alumnas, asi que los dos numeros no coinciden -- y no coincidian por
           // una etiqueta, no por un error. Ahora cada uno dice lo que cuenta.
-          { value: profiles.filter((p) => !p.is_admin).length, label: "Alumnas", color: "#1c1917" },
+          { value: totalAlumnas, label: "Alumnas", color: "#1c1917" },
           { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)" },
           { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)" },
           { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)" },
@@ -273,6 +295,36 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           })
         )}
       </div>
+
+      {/* Paginacion. A diferencia de la biblioteca, aca es de a paginas y no
+          acumulativa: en un listado de gestion se busca a UNA alumna, no se
+          recorre el conjunto. */}
+      {(pagina > 0 || hayMasPaginas) && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 14, marginTop: 18,
+        }}>
+          {pagina > 0 ? (
+            <a href={`/admin/users?pagina=${pagina - 1}`} style={{
+              padding: "10px 18px", borderRadius: 999, textDecoration: "none",
+              background: "#fff", color: "var(--pink-deep)",
+              border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
+            }}>← Anteriores</a>
+          ) : <span />}
+
+          <span style={{ fontSize: 11.5, color: "#a8a29e" }}>
+            {pagina * POR_PAGINA + 1}–{pagina * POR_PAGINA + profiles.length} de {totalAlumnas} alumnas
+          </span>
+
+          {hayMasPaginas ? (
+            <a href={`/admin/users?pagina=${pagina + 1}`} style={{
+              padding: "10px 18px", borderRadius: 999, textDecoration: "none",
+              background: "#fff", color: "var(--pink-deep)",
+              border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
+            }}>Siguientes →</a>
+          ) : <span />}
+        </div>
+      )}
     </main>
   );
 }

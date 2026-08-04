@@ -215,6 +215,15 @@ export function ChatRoom({
   const [reintentos, setReintentos] = useState(0);
   /** Cambiar esto vuelve a correr el efecto del canal, o sea reconecta. */
   const [intento, setIntento] = useState(0);
+
+  // Historial hacia atras (fase D). Antes se cargaban los ultimos 100 mensajes
+  // y no habia NINGUNA forma de ver mas atras: una conversacion vieja quedaba
+  // inalcanzable desde la aplicacion.
+  //
+  // `hayMasViejos` arranca en true solo si la primera tanda vino llena; si vino
+  // con 12 mensajes, ya estan todos y el boton no aparece.
+  const [cargandoViejos, setCargandoViejos] = useState(false);
+  const [hayMasViejos, setHayMasViejos] = useState(initialMessages.length >= 100);
   // Un solo modal para mutear y banear: mismos campos (duracion + motivo), y
   // `modo` decide el texto, el color del boton y a donde escribe.
   const [muteTarget, setMuteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -229,7 +238,20 @@ export function ChatRoom({
   // bucle.
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Bajar solo cuando llega un mensaje NUEVO, no cuando se carga historial.
+  //
+  // Antes bajaba ante cualquier cambio de `messages`. Con el boton de "ver
+  // mensajes anteriores" eso lo volveria inservible: cargaria los viejos y
+  // acto seguido te devolveria al fondo, sin llegar a verlos.
+  //
+  // Se compara el ULTIMO id: al agregar arriba, el ultimo no cambia.
+  const ultimoIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const ultimo = messages[messages.length - 1]?.id ?? null;
+    if (ultimo === ultimoIdRef.current) return;
+    ultimoIdRef.current = ultimo;
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -328,6 +350,36 @@ export function ChatRoom({
     };
   }, [roomId, supabase, intento]);
 
+  const cargarViejos = useCallback(async () => {
+    if (cargandoViejos || messages.length === 0) return;
+    setCargandoViejos(true);
+    try {
+      // Se pide lo ANTERIOR al mas viejo que ya tenemos, con keyset y no con
+      // offset: con offset, un mensaje nuevo que entra mientras tanto corre la
+      // ventana y aparecen repetidos o se saltean.
+      const masViejo = messages[0].created_at;
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*, profiles(full_name, email, is_admin)')
+        .eq('room_id', roomId)
+        .eq('is_deleted', false)
+        .lt('created_at', masViejo)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      const tanda = ((data ?? []) as unknown as ChatMessage[]).reverse();
+      if (tanda.length < 50) setHayMasViejos(false);
+      if (tanda.length > 0) {
+        setMessages((prev) => {
+          const vistos = new Set(prev.map((m) => m.id));
+          return [...tanda.filter((m) => !vistos.has(m.id)), ...prev];
+        });
+      }
+    } finally {
+      setCargandoViejos(false);
+    }
+  }, [cargandoViejos, messages, roomId, supabase]);
+
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
@@ -417,6 +469,25 @@ export function ChatRoom({
             Todavía no hay mensajes. Sé la primera en escribir.
           </div>
         )}
+
+        {/* Historial hacia atras. Va ARRIBA de la lista, que es donde se busca
+            cuando se quiere leer lo anterior. */}
+        {hayMasViejos && messages.length > 0 && (
+          <div style={{ textAlign: 'center', paddingBottom: 14 }}>
+            <button
+              onClick={cargarViejos}
+              disabled={cargandoViejos}
+              style={{
+                border: '1.5px solid var(--pink-line)', borderRadius: 999,
+                background: '#fff', color: 'var(--pink-deep)',
+                padding: '8px 18px', fontSize: 11.5, fontWeight: 700,
+                fontFamily: 'inherit', cursor: cargandoViejos ? 'default' : 'pointer',
+                opacity: cargandoViejos ? 0.6 : 1,
+              }}
+            >{cargandoViejos ? 'Cargando…' : 'Ver mensajes anteriores'}</button>
+          </div>
+        )}
+
         {messages.map((m) => (
           <MessageBubble
             key={m.id}

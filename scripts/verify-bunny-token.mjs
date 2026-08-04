@@ -67,6 +67,14 @@ console.log(`\nBunny token check -- library host ${CDN}, video ${guid}\n`);
 
 const results = [];
 
+// Las comprobaciones SALTEADAS se cuentan aparte y anulan el "all passed".
+//
+// Antes, si el chequeo del segmento no llegaba a correr, no se empujaba a
+// `results`, asi que `failed === 0` y el script anunciaba que todo estaba bien
+// -- sin haber probado justamente lo que caza la pantalla negra. Una prueba que
+// no corre no es una prueba que pasa.
+const salteadas = [];
+
 // 1. Unsigned must be blocked.
 results.push(
   await status("unsigned playlist is blocked", `${base}/playlist.m3u8`, [401, 403])
@@ -87,6 +95,7 @@ if (playlistRes.code === 200) {
 
   if (!child) {
     console.log("  ?  segment check skipped: master playlist listed no child files");
+    salteadas.push("child file inherits token (the master playlist listed no child files)");
   } else {
     const childUrl = child.startsWith("http")
       ? child
@@ -95,6 +104,7 @@ if (playlistRes.code === 200) {
   }
 } else {
   console.log("  -- segment check skipped: the signed playlist did not load");
+  salteadas.push("child file inherits token (the signed playlist did not load)");
 }
 
 // 4. An already-expired signature must be refused.

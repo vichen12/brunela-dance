@@ -18,6 +18,9 @@ type DmRoom = {
   participant_ids: string[];
 };
 
+/** Alumnas por tanda en la barra lateral de mensajes privados. */
+const POR_PAGINA_MIEMBROS = 40;
+
 export default async function ChatPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
@@ -25,6 +28,9 @@ export default async function ChatPage({ searchParams }: {
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
   const selectedUserId = typeof params.user === "string" ? params.user : null;
+  // Barra lateral de alumnas: acumulativa, como la biblioteca. Se recorre
+  // buscando a alguien, asi que perder las anteriores al pedir mas seria peor.
+  const paginaMiembros = Math.max(0, Math.min(200, Number(params.pmiembros) || 0));
 
   const profile = await getCurrentProfile(user.id);
 
@@ -36,24 +42,32 @@ export default async function ChatPage({ searchParams }: {
       .from("profiles")
       .select("id, full_name, email, membership_tier, is_admin")
       .eq("is_admin", false)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // Fase D: la barra lateral traia TODAS las alumnas del estudio en cada
+      // carga. Se pide una de mas para saber si hay siguiente sin contar.
+      .range(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
 
-    const members = (allProfiles ?? []) as Profile[];
-
-    const { data: allDmRooms } = await supabase
-      .from("chat_rooms")
-      .select("id, type, participant_ids")
-      .eq("type", "dm");
-
-    const dmRooms = (allDmRooms ?? []) as DmRoom[];
+    const crudas = (allProfiles ?? []) as Profile[];
+    const hayMasMiembros = crudas.length > POR_PAGINA_MIEMBROS * (paginaMiembros + 1);
+    const members = crudas.slice(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
 
     const activeUserId = selectedUserId ?? members[0]?.id ?? null;
     let activeRoom: DmRoom | null = null;
 
     if (activeUserId) {
-      activeRoom = dmRooms.find((r) =>
-        r.participant_ids.includes(user.id) && r.participant_ids.includes(activeUserId)
-      ) ?? null;
+      // Antes se traian TODAS las salas de DM -- una por alumna -- y se buscaba
+      // la correcta en memoria. Ahora se pide directamente la que corresponde:
+      // `.contains()` es un `@>` que va contra idx_chat_rooms_participant_ids,
+      // el indice GIN que ya existe. Deja de importar cuantas salas haya.
+      const { data: encontrada } = await supabase
+        .from("chat_rooms")
+        .select("id, type, participant_ids")
+        .eq("type", "dm")
+        .contains("participant_ids", [user.id, activeUserId])
+        .limit(1)
+        .maybeSingle<DmRoom>();
+
+      activeRoom = encontrada ?? null;
 
       if (!activeRoom) {
         const activeMember = members.find((m) => m.id === activeUserId);
@@ -104,7 +118,12 @@ export default async function ChatPage({ searchParams }: {
             <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>
               MENSAJES DIRECTOS
             </p>
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{members.length} alumnas</p>
+            {/* "cargadas" y no "alumnas" a secas: la lista esta paginada, asi
+                que este numero es lo que se ve, no el total del estudio. Decir
+                "12 alumnas" con 300 en la base seria mentir. */}
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+              {members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}
+            </p>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
             {members.map((m) => {
@@ -139,6 +158,18 @@ export default async function ChatPage({ searchParams }: {
                 </a>
               );
             })}
+
+            {hayMasMiembros && (
+              <a
+                href={`/dashboard/chat?pmiembros=${paginaMiembros + 1}${activeUserId ? `&user=${activeUserId}` : ""}`}
+                style={{
+                  display: "block", textAlign: "center", margin: "8px 4px 4px",
+                  padding: "10px 12px", borderRadius: 12, textDecoration: "none",
+                  border: "1.5px solid var(--pink-line)", color: "var(--pink-deep)",
+                  fontSize: 11.5, fontWeight: 700,
+                }}
+              >Ver más alumnas</a>
+            )}
           </div>
         </div>
 
