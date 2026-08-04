@@ -1,5 +1,6 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
+import { AdminBuscador } from "@/components/admin-buscador";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -81,6 +82,20 @@ const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> =
 };
 
 const LOCALE_FLAGS: Record<string, string> = { es: "ES", en: "EN", fr: "FR", it: "IT" };
+
+const ESTADOS = [
+  { key: "", label: "Cualquier estado" },
+  { key: "published", label: "Publicadas" },
+  { key: "draft", label: "Borradores" },
+  { key: "archived", label: "Archivadas" },
+];
+
+const PLANES = [
+  { key: "", label: "Cualquier plan" },
+  { key: "corps_de_ballet", label: "Corps de ballet" },
+  { key: "solista", label: "Solista" },
+  { key: "principal", label: "Principal" },
+];
 
 // ── Mux job state ──────────────────────────────────────────────────────────────
 
@@ -389,15 +404,35 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const error = typeof params.error === "string" ? params.error : null;
   const bunnyReady = hasBunnyStreamEnv();
 
-  const [{ data }, { data: jobData }] = await Promise.all([
-    supabase
-      .from("videos")
-      .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, stream_asset_id, bunny_video_id, audio_tracks, is_featured")
-      .order("created_at", { ascending: false }),
+  // Buscador y filtros, del lado del SERVIDOR.
+  //
+  // Filtrar en memoria sobre lo ya traido parece mas simple y miente: el
+  // contador de arriba diria "3 borradores" contando solo los de la pagina.
+  // Y con paginacion futura seria directamente incorrecto.
+  const q = (typeof params.q === "string" ? params.q : "").trim();
+  const fEstado = ESTADOS.some((e) => e.key === params.estado) ? (params.estado as string) : "";
+  const fPlan = PLANES.some((e) => e.key === params.plan) ? (params.plan as string) : "";
+
+  let consultaVideos = supabase
+    .from("videos")
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, stream_asset_id, bunny_video_id, audio_tracks, is_featured");
+
+  if (fEstado) consultaVideos = consultaVideos.eq("status", fEstado);
+  if (fPlan) consultaVideos = consultaVideos.eq("membership_tier_required", fPlan);
+  if (q) {
+    // Titulo en espanol o slug. `or` de PostgREST: una sola consulta.
+    const t = q.replace(/[,()]/g, " ");
+    consultaVideos = consultaVideos.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
+  }
+
+  const [{ data }, { data: jobData }, { count: totalVideos }] = await Promise.all([
+    consultaVideos.order("created_at", { ascending: false }),
     supabase
       .from("video_mux_jobs")
       .select("id, video_id, status, attempts, last_error, expected_locales, created_at, claimed_at")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    // El total SIN filtrar, para que el contador diga "5 de 19" y no "5 de 5".
+    supabase.from("videos").select("*", { count: "exact", head: true }),
   ]);
 
   const videos = (data ?? []) as VideoRecord[];

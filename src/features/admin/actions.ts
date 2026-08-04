@@ -90,6 +90,26 @@ function redirectWithMessage(path: string, kind: "success" | "error", message: s
   redirect(`${path}?${kind}=${encodeURIComponent(message)}` as never);
 }
 
+/**
+ * Guardado exitoso: revalida y NO navega.
+ *
+ * POR QUE
+ *   Antes toda accion terminaba en redirect(), o sea una navegacion completa
+ *   por cada campo guardado -- el mismo problema que tenia el chat al enviar un
+ *   mensaje. Con el panel lateral es peor todavia: al navegar se cerraria solo
+ *   y Brunela perderia el lugar en la lista.
+ *
+ *   El aviso de que esta trabajando ya lo da BotonEnviar (useFormStatus), y el
+ *   resultado se ve en la lista, que se revalida. No hace falta un cartel.
+ *
+ * EL ERROR SI SIGUE NAVEGANDO
+ *   Un error tiene que decir QUE fallo, y ese texto necesita un lugar donde
+ *   aparecer. Un guardado que falla en silencio es peor que uno que navega.
+ */
+function guardadoOk(path: string): void {
+  revalidatePath(path);
+}
+
 function refreshAdminRoutes() {
   revalidatePath("/admin");
   revalidatePath("/admin/videos");
@@ -150,7 +170,7 @@ export async function upsertVideoAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/videos", "success", "Video guardado.");
+  guardadoOk("/admin/videos");
 }
 
 export async function deleteVideoAction(formData: FormData) {
@@ -176,7 +196,7 @@ export async function deleteVideoAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/videos", "success", "Video eliminado.");
+  guardadoOk("/admin/videos");
 }
 
 /** A job stuck this long is a dead worker, not a slow encode. */
@@ -277,7 +297,7 @@ export async function upsertProgramAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/programs", "success", "Programa guardado.");
+  guardadoOk("/admin/programs");
 }
 
 export async function deleteProgramAction(formData: FormData) {
@@ -292,7 +312,7 @@ export async function deleteProgramAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/programs", "success", "Programa eliminado.");
+  guardadoOk("/admin/programs");
 }
 
 export async function upsertProgramDayAction(formData: FormData) {
@@ -334,7 +354,7 @@ export async function upsertProgramDayAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/programs", "success", "Dia guardado.");
+  guardadoOk("/admin/programs");
 }
 
 export async function deleteProgramDayAction(formData: FormData) {
@@ -349,7 +369,7 @@ export async function deleteProgramDayAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/programs", "success", "Dia eliminado.");
+  guardadoOk("/admin/programs");
 }
 
 /*
@@ -403,5 +423,5 @@ export async function updateProfileAdminAction(formData: FormData) {
   }
 
   refreshAdminRoutes();
-  redirectWithMessage("/admin/users", "success", "Usuario actualizado.");
+  guardadoOk("/admin/users");
 }

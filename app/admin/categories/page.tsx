@@ -166,8 +166,16 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                   </form>
                 </div>
 
-                {/* Edit form */}
-                <div style={{ padding: "20px 22px" }}>
+                {/* Edicion. Plegada: antes las 7 categorias mostraban sus 8
+                    campos a la vez -- 56 campos en pantalla, y para llegar a
+                    la ultima habia que pasar por todos. */}
+                <details>
+                  <summary style={{
+                    listStyle: "none", cursor: "pointer", padding: "12px 22px",
+                    fontSize: 12, fontWeight: 700, color: "var(--pink-deep)",
+                    display: "flex", alignItems: "center", gap: 8, minHeight: 40,
+                  }}>Editar<span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 500 }}>8 campos</span></summary>
+                  <div style={{ padding: "4px 22px 20px" }}>
                   <form action={upsertCategoryAction} className="grid gap-4 md:grid-cols-2">
                     <input name="id" type="hidden" value={cat.id} />
 
@@ -230,6 +238,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     </div>
                   </form>
                 </div>
+                </details>
               </div>
             ))}
           </div>
