@@ -1,5 +1,7 @@
 'use client';
 
+import Link from "next/link";
+
 import { useState, useEffect } from 'react';
 
 type Tier = 'none' | 'corps_de_ballet' | 'solista' | 'principal';
@@ -503,7 +505,7 @@ export function PlanClient({
             }}>?</div>
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>
               ¿Tenés dudas? Escribinos por el{' '}
-              <a href="/dashboard/chat" style={{ color: 'var(--pink)', textDecoration: 'none', fontWeight: 700 }}>chat</a>
+              <Link href="/dashboard/chat" style={{ color: 'var(--pink)', textDecoration: 'none', fontWeight: 700 }}>chat</Link>
               {' '}y te ayudamos.
             </span>
           </div>

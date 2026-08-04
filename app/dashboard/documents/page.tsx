@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -103,7 +104,7 @@ export default async function DocumentsPage({ searchParams }: {
         {categories.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: c }))].map((f) => (
-              <a
+              <Link
                 key={f.key}
                 href={f.key === "all" ? "/dashboard/documents" : `/dashboard/documents?cat=${f.key}`}
                 style={{
@@ -114,7 +115,7 @@ export default async function DocumentsPage({ searchParams }: {
                   border: activeCategory === f.key ? "none" : "1.5px solid var(--pink-soft)",
                   boxShadow: activeCategory === f.key ? "0 4px 12px rgba(230, 79, 85,0.25)" : "none",
                 }}
-              >{f.label}</a>
+              >{f.label}</Link>
             ))}
           </div>
         )}
@@ -150,15 +151,15 @@ export default async function DocumentsPage({ searchParams }: {
             <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
               {/* Antes iba un "Avisarme cuando haya material": no existe ningun
                   sistema de avisos. Estas dos salidas si funcionan hoy. */}
-              <a href="/dashboard/chat" style={{
+              <Link href="/dashboard/chat" style={{
                 background: "var(--pink)", color: "#fff", textDecoration: "none",
                 padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
-              }}>Pedirle material a Brunela</a>
-              <a href="/dashboard/plan" style={{
+              }}>Pedirle material a Brunela</Link>
+              <Link href="/dashboard/plan" style={{
                 background: "#fff", color: "var(--pink)", textDecoration: "none",
                 border: "1px solid var(--pink-wash)",
                 padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
-              }}>Ver mi plan</a>
+              }}>Ver mi plan</Link>
             </div>
           </div>
         ) : (

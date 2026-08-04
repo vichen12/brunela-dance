@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -190,10 +191,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     {/* La ficha completa: progreso, plan, reservas y mensajes.
                         Es la pantalla desde la que se puede ACTUAR, asi que se
                         entra desde aca y no solo desde las analiticas. */}
-                    <a href={`/admin/users/${profile.id}`} style={{
+                    <Link href={`/admin/users/${profile.id}`} style={{
                       display: "inline-block", marginTop: 5, fontSize: 10.5,
                       fontWeight: 700, color: "var(--pink-deep)", textDecoration: "none",
-                    }}>Ver ficha completa →</a>
+                    }}>Ver ficha completa →</Link>
 
                     {/* Que busca mejorar. Lo eligio ella en el onboarding. */}
                     {profile.training_goals && profile.training_goals.length > 0 && (
@@ -306,11 +307,11 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           gap: 14, marginTop: 18,
         }}>
           {pagina > 0 ? (
-            <a href={`/admin/users?pagina=${pagina - 1}`} style={{
+            <Link href={`/admin/users?pagina=${pagina - 1}`} style={{
               padding: "10px 18px", borderRadius: 999, textDecoration: "none",
               background: "#fff", color: "var(--pink-deep)",
               border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
-            }}>← Anteriores</a>
+            }}>← Anteriores</Link>
           ) : <span />}
 
           <span style={{ fontSize: 11.5, color: "#a8a29e" }}>
@@ -318,11 +319,11 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           </span>
 
           {hayMasPaginas ? (
-            <a href={`/admin/users?pagina=${pagina + 1}`} style={{
+            <Link href={`/admin/users?pagina=${pagina + 1}`} style={{
               padding: "10px 18px", borderRadius: 999, textDecoration: "none",
               background: "#fff", color: "var(--pink-deep)",
               border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
-            }}>Siguientes →</a>
+            }}>Siguientes →</Link>
           ) : <span />}
         </div>
       )}

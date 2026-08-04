@@ -68,6 +68,13 @@ bajó a **un sexto**.
 - La biblioteca **pagina** de a 24 en vez de traer el catálogo entero.
 - `/admin/chat` descarta los DM **en SQL**. Antes traía uno por alumna para
   tirarlos al llegar.
+- **`/admin/users` pagina** de a 50. Los totales de arriba van en su propia
+  consulta: contarlos sobre la página diría "3 solistas" habiendo 30.
+- **La barra lateral de DM pagina** de a 40, y la sala se pide con `.contains()`
+  contra el índice GIN en vez de traer todas y buscar en memoria.
+- **El historial de chat va hacia atrás**, por keyset (`created_at <` el más
+  viejo cargado) y no por offset — con offset, un mensaje nuevo corre la ventana
+  y aparecen repetidos.
 
 ### Los datos compartidos (fase E)
 
@@ -115,10 +122,21 @@ clases —decenas, no millones— no justifica complicar la consulta.
 `?q=` compara en JavaScript. Hacerlo bien necesita full-text search de Postgres,
 que es una migración con `tsvector` y su índice.
 
-### ⚠️ Historial de chat sin paginación hacia atrás
+### La navegación, que era el problema que más se sentía
 
-Se cargan los últimos 100–200 mensajes y no hay forma de ir más atrás. No es un
-problema de rendimiento sino una función que falta.
+No era la base: el servidor respondía bien. Había **3 `loading.tsx`** en todo el
+proyecto y **0 `<Suspense>`**, así que cada clic dejaba la pantalla congelada
+hasta que el servidor terminaba de renderizar.
+
+Ahora hay **19 esqueletos** con la forma de su pantalla, y las rutas de chat
+**no llevan** —ahí cambiar de conversación no es cambiar de página—.
+
+Las **22 anclas internas** pasaron a `<Link>`. Quedan 5 `<a>` a propósito: tres
+enlaces externos, la descarga del CSV y la URL firmada de un documento. `<Link>`
+haría navegación de cliente y rompería las descargas.
+
+El chat envía **optimista**: el mensaje aparece antes de salir, con un tilde
+gris, y si el insert falla queda marcado en rojo con opción de reintentar.
 
 ---
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   Play, Grid2x2, AlignLeft, Users, FileText, MessageSquare, Settings, Eye,
   type LucideIcon,
@@ -109,7 +111,7 @@ export function MetricCard({
     </div>
   );
 
-  if (href) return <a href={href} style={{ textDecoration: "none", display: "block", height: "100%" }}>{inner}</a>;
+  if (href) return <Link href={href as never} style={{ textDecoration: "none", display: "block", height: "100%" }}>{inner}</Link>;
   return inner;
 }
 
@@ -122,7 +124,7 @@ export function QuickLinksGrid({ links }: {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
       {links.map((lnk) => (
-        <a key={lnk.href} href={lnk.href} style={{ textDecoration: "none" }}>
+        <Link key={lnk.href} href={lnk.href as never} style={{ textDecoration: "none" }}>
           <div
             style={{
               background: "#fff", borderRadius: 18, padding: "18px 20px",
@@ -148,7 +150,7 @@ export function QuickLinksGrid({ links }: {
             <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>{lnk.label}</p>
             <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 3 }}>{lnk.desc}</p>
           </div>
-        </a>
+        </Link>
       ))}
     </div>
   );

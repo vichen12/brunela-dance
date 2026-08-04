@@ -501,7 +501,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             </button>
 
             {hayFiltros && (
-              <a
+              <Link
                 href={`/dashboard/library${
                   activeCategory !== "all" || busqueda
                     ? `?${[
@@ -517,12 +517,12 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                 }}
               >
                 Quitar filtros
-              </a>
+              </Link>
             )}
           </form>
           {isAdmin && (
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-              <a
+              <Link
                 href="/admin/videos"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
@@ -533,8 +533,8 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                 }}
               >
                 <span style={{ fontSize: 15 }}>+</span> Nueva clase
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/admin/categories"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
@@ -545,7 +545,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                 }}
               >
                 Categorías
-              </a>
+              </Link>
             </div>
           )}
         </header>
@@ -566,10 +566,10 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <a href="/admin/videos" style={{
+              <Link href="/admin/videos" style={{
                 padding: "6px 14px", borderRadius: 99, fontSize: 10, fontWeight: 700,
                 background: "var(--pink)", color: "#fff", textDecoration: "none",
-              }}>Panel completo</a>
+              }}>Panel completo</Link>
             </div>
           </div>
         )}
@@ -620,7 +620,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             fontSize: 13, color: "var(--muted)", textAlign: "center",
           }}>
             {isAdmin
-              ? <>No hay clases todavía. <a href="/admin/videos" style={{ color: "var(--pink)", fontWeight: 700 }}>Subí la primera.</a></>
+              ? <>No hay clases todavía. <Link href="/admin/videos" style={{ color: "var(--pink)", fontWeight: 700 }}>Subí la primera.</Link></>
               : busqueda
                 ? `No encontramos clases para “${busqueda}”.`
                 : "No hay clases para este filtro todavía."
@@ -658,7 +658,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                       position: "absolute", top: 10, right: 10, zIndex: 10,
                       display: "flex", gap: 5,
                     }}>
-                      <a
+                      <Link
                         href={`/admin/videos`}
                         title="Editar en panel"
                         style={{
@@ -669,7 +669,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                           boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                           border: "1px solid rgba(0,0,0,0.06)",
                         }}
-                      ><Pencil size={13} strokeWidth={2} /></a>
+                      ><Pencil size={13} strokeWidth={2} /></Link>
                       <form action={quickPublishToggleAction} style={{ display: "inline" }}>
                         <input type="hidden" name="id" value={video.id}/>
                         <input type="hidden" name="status" value={video.status}/>
@@ -782,7 +782,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
             {/* Add new card — admin only */}
             {isAdmin && (
-              <a href="/admin/videos" style={{ textDecoration: "none" }}>
+              <Link href="/admin/videos" style={{ textDecoration: "none" }}>
                 <div style={{
                   height: "100%", minHeight: 280, borderRadius: "2rem",
                   border: "2px dashed var(--pink-line)", display: "flex", flexDirection: "column",
@@ -799,7 +799,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                   <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink)" }}>Nueva clase</p>
                   <p style={{ fontSize: 11, color: "var(--muted)" }}>Subir video al catálogo</p>
                 </div>
-              </a>
+              </Link>
             )}
           </div>
         )}

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import Image from "next/image";
 import {
   FaFacebookF,
@@ -72,15 +74,15 @@ export function BrunelaFooter() {
 
         <nav className="footer-nav" aria-label="Footer navigation">
           {navLinks.map((link) => (
-            <a href={link.href} key={link.label} suppressHydrationWarning>
+            <Link href={link.href} key={link.label} suppressHydrationWarning>
               {t(link.label as PublicMessageKey)}
-            </a>
+            </Link>
           ))}
         </nav>
 
         <div className="footer-socials">
           {socialLinks.map(({ label, href, icon: Icon }) => (
-            <a
+            <Link
               href={href}
               key={label}
               target="_blank"
@@ -89,7 +91,7 @@ export function BrunelaFooter() {
               suppressHydrationWarning
             >
               <Icon />
-            </a>
+            </Link>
           ))}
         </div>
       </div>
