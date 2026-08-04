@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getBunnyTokenAuthKey } from "@/src/lib/env";
 import {
   bunnyAssetUrlFactory,
   bunnyManifestUrl,
@@ -43,6 +44,16 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   if (!hasBunnyStreamEnv()) {
+    // Mismo motivo que el log de mas abajo: sin esto, un deploy al que le falta
+    // una variable devuelve 503 en silencio y en los logs no queda rastro.
+    console.error(
+      "[video] faltan variables de Bunny",
+      JSON.stringify({
+        apiKey: Boolean(process.env.BUNNY_STREAM_API_KEY),
+        libraryId: Boolean(process.env.BUNNY_STREAM_LIBRARY_ID),
+        cdnHostname: Boolean(process.env.BUNNY_STREAM_CDN_HOSTNAME),
+      })
+    );
     return NextResponse.json({ error: "video no configurado" }, { status: 503 });
   }
 
@@ -88,9 +99,48 @@ export async function GET(_request: Request, { params }: Params) {
   });
 
   if (!upstream.ok) {
+    // Bunny suele explicar el rechazo en el cuerpo, y son pocas lineas.
+    const detalle = await upstream.text().then((t) => t.slice(0, 300)).catch(() => "");
+
+    // POR QUE SE REGISTRA ACA
+    //   Este camino no lanza ninguna excepcion: devuelve una respuesta a
+    //   proposito. Asi que en los Runtime Logs de Vercel la invocacion figura
+    //   como exitosa, en ~100 ms, sin un solo mensaje. Ya nos costo una tarde:
+    //   el 502 se veia en el navegador y en los logs no habia absolutamente
+    //   nada que mirar.
+    //
+    //   NUNCA la clave, ni firmada ni en partes. Solo si esta puesta.
+    console.error(
+      "[video] bunny rechazo el manifest",
+      JSON.stringify({
+        bunnyStatus: upstream.status,
+        videoId,
+        manifestPath,
+        // 403 con esto en false = falta BUNNY_STREAM_TOKEN_AUTH_KEY en el
+        // entorno, o el deploy todavia no la tomo. Es la causa mas comun.
+        tokenKeyPresente: getBunnyTokenAuthKey() !== null,
+        detalle,
+      })
+    );
+
+    // 404 es del contenido: ese video no existe en la biblioteca.
+    if (upstream.status === 404) {
+      return NextResponse.json({ error: "not found", motivo: "bunny_404" }, { status: 404 });
+    }
+
+    // 401 y 403 de Bunny NO son "la alumna no tiene acceso": eso ya se decidio
+    // arriba con RLS y esta persona paso. Si Bunny nos rechaza a NOSOTROS es
+    // porque nuestra firma esta mal, o sea configuracion del servidor. Por eso
+    // sale como 5xx y no como 403: un 403 aca mandaria a revisar el plan de la
+    // alumna, que es el lugar equivocado.
+    const esFirma = upstream.status === 401 || upstream.status === 403;
     return NextResponse.json(
-      { error: `bunny respondio ${upstream.status}` },
-      { status: upstream.status === 404 ? 404 : 502 }
+      {
+        error: esFirma ? "firma rechazada por el CDN" : "el CDN de video no respondio bien",
+        motivo: esFirma ? "upstream_firma" : "upstream_error",
+        bunnyStatus: upstream.status,
+      },
+      { status: 502 }
     );
   }
 
