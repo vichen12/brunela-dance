@@ -51,19 +51,22 @@ function chequear(nombre, condicion, detalle) {
 }
 
 async function main() {
-  // ── 0. La funcion existe? ────────────────────────────────────────────────
-  const sonda = await fetch(`${U}/rest/v1/rpc/guardar_progreso`, {
-    method: "POST", headers: admin, body: "{}",
-  }).then(j);
-
-  if (sonda?.code === "PGRST202") {
-    console.log("\n🔴 La funcion guardar_progreso NO existe todavia.");
-    console.log("   Falta correr supabase/migrations/20260804_guardar_progreso_rpc.sql");
-    console.log("   Corre la migracion y volve a ejecutar esto.\n");
-    process.exitCode = 2;
-    return;
-  }
-  console.log("\n  La funcion existe. Empieza la prueba.\n");
+  // NO se sondea la funcion con service_role, y hay dos motivos, los dos
+  // aprendidos a los golpes:
+  //
+  //   1. PostgREST resuelve las RPC por nombre Y firma. Llamarla sin
+  //      argumentos devuelve PGRST202 -- "searched for the function WITHOUT
+  //      PARAMETERS" -- aunque la funcion exista perfectamente. Es un falso
+  //      negativo que parece "falta correr la migracion".
+  //
+  //   2. Aunque se la llame bien, service_role recibe 42501: la migracion hace
+  //      `revoke all from public` y otorga execute solo a `authenticated`.
+  //      Eso es correcto -- nadie mas deberia llamarla -- pero significa que
+  //      service_role no sirve para probarla.
+  //
+  // Asi que la deteccion se hace mas abajo, con el JWT de la usuaria y con los
+  // argumentos de verdad, que es el unico camino que refleja como la usa la
+  // aplicacion.
 
   // ── 1. Datos con los que probar ──────────────────────────────────────────
   const videos = await rest("videos?select=id,slug&limit=1");
@@ -127,6 +130,16 @@ async function main() {
       p_video_id: video.id, p_program_id: null, p_program_day_number: null,
       p_last_position_seconds: 18, p_completion_percent: 100,
     });
+
+    // Aca si, con la firma correcta y como usuaria: un PGRST202 ahora si
+    // significa que la funcion no esta.
+    if (a1.body?.code === "PGRST202") {
+      console.log("\n🔴 La funcion guardar_progreso NO existe (o PostgREST tiene la cache vieja).");
+      console.log("   Si la migracion ya se corrio, en el SQL Editor:  notify pgrst, 'reload schema';\n");
+      process.exitCode = 2;
+      return;
+    }
+
     chequear("primera llamada (posicion 18)", a1.status < 300,
       a1.status >= 300 ? JSON.stringify(a1.body).slice(0, 160) : `http ${a1.status}`);
 
