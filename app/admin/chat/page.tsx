@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { leerCategorias } from "@/src/lib/categorias";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
@@ -337,14 +338,14 @@ export default async function AdminChatPage({ searchParams }: {
       {/* Tab nav */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {TABS.map((t) => (
-          <a key={t.key} href={`/admin/chat?tab=${t.key}`} style={{
+          <Link key={t.key} href={`/admin/chat?tab=${t.key}` as never} style={{
             padding: "7px 18px", borderRadius: 99, textDecoration: "none",
             fontSize: 12, fontWeight: 700,
             background: tab === t.key ? "var(--pink)" : "var(--pink-wash)",
             color: tab === t.key ? "#fff" : "var(--muted)",
             border: tab === t.key ? "none" : "1.5px solid var(--pink-soft)",
             boxShadow: tab === t.key ? "0 4px 12px rgba(230, 79, 85,0.25)" : "none",
-          }}>{t.label}</a>
+          }}>{t.label}</Link>
         ))}
       </div>
 
@@ -374,7 +375,7 @@ export default async function AdminChatPage({ searchParams }: {
                       border: active ? "1.5px solid var(--pink-line)" : "1.5px solid transparent",
                       overflow: "hidden",
                     }}>
-                      <a href={`/admin/chat?tab=rooms&room=${room.id}`} style={{
+                      <Link href={`/admin/chat?tab=rooms&room=${room.id}` as never} style={{
                         display: "flex", alignItems: "center", gap: 10,
                         padding: "10px 12px", textDecoration: "none",
                       }}>
@@ -393,7 +394,7 @@ export default async function AdminChatPage({ searchParams }: {
                             )}
                           </div>
                         </div>
-                      </a>
+                      </Link>
                       <form action={archiveRoomAction} style={{ padding: "0 12px 8px" }}>
                         <input type="hidden" name="id" value={room.id} />
                         <input type="hidden" name="archived" value={String(room.is_archived)} />

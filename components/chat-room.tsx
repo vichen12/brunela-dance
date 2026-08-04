@@ -90,7 +90,13 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
 
 function MessageBubble({
   msg, isMe, isAdmin, canModerate, onDelete, onMute, onBan, interlocutor,
+  enviando = false, fallido = false, onReintentar,
 }: {
+  /** Optimista: todavia no confirmado por el servidor. */
+  enviando?: boolean;
+  /** El insert fallo. Se queda a la vista, marcado. */
+  fallido?: boolean;
+  onReintentar?: () => void;
   msg: ChatMessage;
   isMe: boolean;
   isAdmin: boolean;
@@ -115,20 +121,48 @@ function MessageBubble({
           // en peso normal, no una etiqueta que se mira de reojo. Blanco sobre
           // --pink da 3.78:1 y sobre --pink-mid da 4.83:1, que cumple AA. A
           // simple vista son casi el mismo coral.
-          background: 'var(--pink-mid)',
-          color: '#fff', borderRadius: '18px 18px 6px 18px',
+          background: fallido ? '#fff' : 'var(--pink-mid)',
+          color: fallido ? '#991b1b' : '#fff',
+          border: fallido ? '1.5px solid #fecaca' : 'none',
+          borderRadius: '18px 18px 6px 18px',
           padding: '12px 17px', fontSize: 13.5, lineHeight: 1.55,
+          // Mientras viaja, apenas translucido. Sutil a proposito: el mensaje ya
+          // esta ahi, solo todavia no confirmado.
+          opacity: enviando ? 0.62 : 1,
+          transition: 'opacity 160ms ease',
         }}>{msg.content}</div>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
-          fontSize: 10, color: 'var(--muted)', marginTop: 5,
+          fontSize: 10, color: fallido ? '#991b1b' : 'var(--muted)', marginTop: 5,
         }}>
-          {timeLabel(msg.created_at)}
-          {/* Doble tilde: el mensaje quedo guardado en el servidor. */}
-          <svg width="15" height="10" viewBox="0 0 20 12" fill="none" aria-label="Enviado">
-            <path d="M1 6.2L4.2 9.5 10.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M8 6.2L11.2 9.5 17.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {fallido ? (
+            <>
+              <span style={{ fontWeight: 700 }}>No se envió</span>
+              <button
+                onClick={onReintentar}
+                style={{
+                  fontSize: 10, fontWeight: 700, color: '#991b1b', background: 'none',
+                  border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline',
+                }}
+              >Reintentar</button>
+            </>
+          ) : (
+            <>
+              {timeLabel(msg.created_at)}
+              {enviando ? (
+                /* Un solo tilde gris: salio, todavia no confirmado. */
+                <svg width="11" height="10" viewBox="0 0 12 12" fill="none" aria-label="Enviando">
+                  <path d="M1 6.2L4.2 9.5 10.5 2.5" stroke="var(--muted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                /* Doble tilde: el mensaje quedo guardado en el servidor. */
+                <svg width="15" height="10" viewBox="0 0 20 12" fill="none" aria-label="Enviado">
+                  <path d="M1 6.2L4.2 9.5 10.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 6.2L11.2 9.5 17.5 2.5" stroke="var(--pink)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -224,6 +258,11 @@ export function ChatRoom({
   // con 12 mensajes, ya estan todos y el boton no aparece.
   const [cargandoViejos, setCargandoViejos] = useState(false);
   const [hayMasViejos, setHayMasViejos] = useState(initialMessages.length >= 100);
+
+  // Mensajes que salieron optimistas y el insert fallo. Se quedan a la vista,
+  // marcados, con opcion de reintentar: desaparecer sin avisar es peor.
+  const [fallidos, setFallidos] = useState<Set<string>>(new Set());
+  const [textoFallido, setTextoFallido] = useState<Record<string, string>>({});
   // Un solo modal para mutear y banear: mismos campos (duracion + motivo), y
   // `modo` decide el texto, el color del boton y a donde escribe.
   const [muteTarget, setMuteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -383,11 +422,82 @@ export function ChatRoom({
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
+
+    // ── Envio optimista ──────────────────────────────────────────────────
+    // Antes esto esperaba el insert Y DESPUES esperaba a que el propio mensaje
+    // volviera por el canal de realtime para pintarlo: dos viajes completos
+    // antes de ver lo que una acaba de escribir. En un chat eso se siente roto
+    // aunque tarde 300 ms.
+    //
+    // Ahora el mensaje entra en la lista ANTES de salir. El id temporal empieza
+    // con "tmp-" para poder reemplazarlo o marcarlo si falla.
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const optimista: ChatMessage = {
+      id: tempId,
+      user_id: userId,
+      content: text,
+      created_at: new Date().toISOString(),
+      is_deleted: false,
+      profiles: null,
+      // El nombre se resuelve solo: es un mensaje propio, y displayName ya
+      // usa `isMe` para pintarlo del lado correcto.
+      author_name: null,
+      author_is_admin: isAdmin,
+    };
+
     setSending(true);
     setInput('');
-    await supabase.from('chat_messages').insert({ room_id: roomId, user_id: userId, content: text });
+    setMessages((prev) => [...prev, optimista]);
+
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert({ room_id: roomId, user_id: userId, content: text });
+
+    if (error) {
+      // No se borra: se MARCA. Que desaparezca sin decir nada es la peor de las
+      // opciones -- la alumna cree que lo mando y nadie lo recibio.
+      setFallidos((prev) => new Set(prev).add(tempId));
+      setTextoFallido((prev) => ({ ...prev, [tempId]: text }));
+    }
+    // Si salio bien no se hace nada mas: el eco de realtime trae la fila real y
+    // el efecto de abajo saca la copia temporal.
+
     setSending(false);
-  }, [input, sending, roomId, userId]);
+  }, [input, sending, roomId, userId, isAdmin, supabase]);
+
+  /**
+   * Saca las copias optimistas cuando llega la fila de verdad.
+   *
+   * Se comparan por contenido + autor dentro de una ventana de 60 segundos, no
+   * por id, porque el id definitivo lo pone la base y el cliente no lo conoce.
+   */
+  useEffect(() => {
+    setMessages((prev) => {
+      const reales = prev.filter((m) => !m.id.startsWith('tmp-'));
+      if (reales.length === 0) return prev;
+      const sinDuplicar = prev.filter((m) => {
+        if (!m.id.startsWith('tmp-')) return true;
+        if (fallidos.has(m.id)) return true; // los fallidos se quedan a la vista
+        return !reales.some(
+          (r) =>
+            r.user_id === m.user_id &&
+            r.content === m.content &&
+            Math.abs(+new Date(r.created_at) - +new Date(m.created_at)) < 60_000
+        );
+      });
+      return sinDuplicar.length === prev.length ? prev : sinDuplicar;
+    });
+  }, [messages, fallidos]);
+
+  const reintentar = useCallback(async (tempId: string) => {
+    const text = textoFallido[tempId];
+    if (!text) return;
+    setFallidos((prev) => { const s = new Set(prev); s.delete(tempId); return s; });
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert({ room_id: roomId, user_id: userId, content: text });
+    if (error) setFallidos((prev) => new Set(prev).add(tempId));
+  }, [textoFallido, roomId, userId, supabase]);
 
   const deleteMessage = useCallback(async (id: string) => {
     await supabase.from('chat_messages').update({ is_deleted: true }).eq('id', id);

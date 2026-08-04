@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { Users, Gem } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -168,13 +169,13 @@ export default async function CommunityPage({ searchParams }: {
             </p>
 
             {/* En vez de "te avisaremos": una salida que SI existe hoy. */}
-            <a href="/dashboard/chat" style={{
+            <Link href={"/dashboard/chat" as never} style={{
               display: "inline-flex", alignItems: "center", gap: 9, marginTop: 26,
               background: "var(--pink)", color: "#fff", textDecoration: "none",
               padding: "13px 26px", borderRadius: 999, fontSize: 13.5, fontWeight: 700,
             }}>
               Mientras tanto, escribile a Brunela
-            </a>
+            </Link>
           </div>
         </section>
       </main>
@@ -240,8 +241,8 @@ export default async function CommunityPage({ searchParams }: {
             const active = room.id === currentRoom?.id;
             return (
               <div key={room.id} style={{ marginBottom: 2 }}>
-                <a
-                  href={`/dashboard/community?room=${room.id}`}
+                <Link
+                  href={`/dashboard/community?room=${room.id}` as never}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 10px", borderRadius: 10,
@@ -265,7 +266,7 @@ export default async function CommunityPage({ searchParams }: {
                   {isAdmin && room.is_archived && (
                     <span style={{ fontSize: 8, background: "#fef3c7", color: "#92400e", padding: "1px 5px", borderRadius: 99, fontWeight: 700, flexShrink: 0 }}>ARC</span>
                   )}
-                </a>
+                </Link>
                 {/* Admin archive toggle */}
                 {isAdmin && (
                   <form action={archiveRoomAction} style={{ paddingLeft: 34 }}>
@@ -310,11 +311,11 @@ export default async function CommunityPage({ searchParams }: {
             </p>
           </div>
           {isAdmin && (
-            <a href="/admin/chat" style={{
+            <Link href={"/admin/chat" as never} style={{
               padding: "6px 14px", borderRadius: 99, textDecoration: "none",
               fontSize: 10, fontWeight: 700, background: "var(--pink-wash)", color: "var(--pink)",
               border: "1px solid var(--pink-soft)",
-            }}>Panel de moderación →</a>
+            }}>Panel de moderación →</Link>
           )}
         </div>
 
