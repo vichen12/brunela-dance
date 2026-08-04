@@ -84,6 +84,71 @@ alter default privileges in schema public grant usage, select on sequences to au
 alter default privileges in schema public revoke all on tables    from anon;
 alter default privileges in schema public revoke all on sequences from anon;
 
+-- ---------------------------------------------------------------------------
+-- 3. COMPROBACION QUE NO SE PUEDE PASAR POR ALTO
+-- ---------------------------------------------------------------------------
+-- El bloque 2 arregla el default DEL ROL QUE CORRE ESTA MIGRACION. Si el
+-- default de Supabase estuviera declarado para otro rol (supabase_admin, por
+-- ejemplo) y las tablas las creara ESE rol, el arreglo no serviria de nada y no
+-- habria forma de notarlo hasta crear la proxima tabla, dentro de dos meses.
+--
+-- Asi que en vez de confiar, se prueba: se crea una tabla de verdad, se miran
+-- sus permisos y se borra. Si nace con algo mas que SELECT, esto lanza una
+-- excepcion y, como estamos dentro de la transaccion, la migracion ENTERA se
+-- revierte. Preferible a que se aplique a medias y parezca que funciono.
+
+do $$
+declare
+  sobrantes text;
+  otros     text;
+begin
+  create table public.zz_chequeo_permisos (id int);
+
+  select string_agg(privilege_type, ', ' order by privilege_type)
+    into sobrantes
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name   = 'zz_chequeo_permisos'
+    and grantee      = 'authenticated'
+    and privilege_type <> 'SELECT';
+
+  drop table public.zz_chequeo_permisos;
+
+  if sobrantes is not null then
+    raise exception
+      'Una tabla nueva TODAVIA nace con % para authenticated. El default que '
+      'manda no es el de % (el rol que corre esto). Correr la consulta (c) de '
+      'abajo, mirar la columna lo_creo, y repetir el bloque 2 con '
+      '"alter default privileges FOR ROLE <ese rol> ...". No se aplico nada.',
+      sobrantes, current_user;
+  end if;
+
+  -- Aviso, no error: una entrada de otro rol solo molesta si ese rol llega a
+  -- crear tablas, cosa que hoy no pasa. Pero conviene verlo.
+  select string_agg(distinct pg_get_userbyid(d.defaclrole)::text, ', ')
+    into otros
+  from pg_default_acl d
+  join pg_namespace n on n.oid = d.defaclnamespace
+  where n.nspname        = 'public'
+    and d.defaclobjtype  = 'r'
+    and pg_get_userbyid(d.defaclrole) <> current_user
+    and exists (
+      select 1 from aclexplode(d.defaclacl) a
+      where a.grantee = 'authenticated'::regrole
+        and a.privilege_type in ('TRUNCATE', 'REFERENCES', 'TRIGGER')
+    );
+
+  if otros is not null then
+    raise notice
+      'AVISO: los roles [%] tambien tienen un default con TRUNCATE/REFERENCES/'
+      'TRIGGER para authenticated. Hoy no afecta porque las tablas las crea %, '
+      'pero si alguna vez se crea una tabla desde otra herramienta, revisarlo.',
+      otros, current_user;
+  end if;
+
+  raise notice 'OK: una tabla nueva nace solo con SELECT para authenticated.';
+end $$;
+
 commit;
 
 -- =============================================================================
@@ -133,15 +198,13 @@ commit;
 --    `for role <ese rol>`. La consulta (c) muestra en `lo_creo` de que rol es
 --    cada entrada: si hay mas de una fila, hay mas de un default que arreglar.
 --
--- e) PRUEBA DE FUEGO -- que una tabla nueva nazca bien.
---    Se crea, se mira y se borra:
+-- e) La prueba de fuego YA VA ADENTRO (bloque 3): la migracion crea una tabla,
+--    le mira los permisos y la borra. Si nace con algo mas que SELECT, lanza
+--    excepcion y se revierte todo. O sea que si esto commiteo, (e) paso.
 --
--- create table public.zz_prueba_permisos (id int);
--- select privilege_type from information_schema.role_table_grants
---  where table_schema='public' and table_name='zz_prueba_permisos'
---    and grantee='authenticated';
---    ESPERADO: solo SELECT.
--- drop table public.zz_prueba_permisos;
+--    En la salida del SQL Editor tienen que aparecer estos avisos:
+--      NOTICE: OK: una tabla nueva nace solo con SELECT para authenticated.
+--    y, si hay defaults de otros roles, un AVISO que no impide nada.
 --
 -- f) Que el registro de actividad SIGA funcionando despues de esto: reproducir
 --    una clase mas de un minuto y confirmar que entran filas.
