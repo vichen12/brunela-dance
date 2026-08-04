@@ -1,7 +1,8 @@
 import { leerCategorias } from "@/src/lib/categorias";
 import { BotonEnviar } from "@/components/boton-enviar";
+import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { Users, Gem, MessageSquare } from "lucide-react";
+import { Users, Gem, MessageSquare, Plus } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarAjustes } from "@/src/lib/settings";
@@ -117,16 +118,6 @@ async function archiveRoomAction(formData: FormData) {
   redirect("/admin/chat?tab=rooms&success=Sala+actualizada" as never);
 }
 
-async function deleteMessageAction(formData: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = String(formData.get("id") ?? "");
-  const roomId = String(formData.get("room_id") ?? "");
-  await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", id);
-  revalidatePath("/admin/chat");
-  redirect((`/admin/chat?tab=rooms&room=${roomId}`) as never);
-}
 
 async function unbanUserAction(formData: FormData) {
   "use server";
@@ -148,18 +139,6 @@ async function unmuteUserAction(formData: FormData) {
   redirect("/admin/chat?tab=mutes&success=Usuario+desmuteado" as never);
 }
 
-async function sendAsAdminAction(formData: FormData) {
-  "use server";
-  const { user } = await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const roomId = String(formData.get("room_id") ?? "");
-  const content = String(formData.get("content") ?? "").trim();
-  if (!content || !roomId) redirect(`/admin/chat?tab=rooms&room=${roomId}` as never);
-  await supabase.from("chat_messages").insert({ room_id: roomId, user_id: user.id, content });
-  revalidatePath("/admin/chat");
-  revalidatePath("/dashboard/community");
-  redirect(`/admin/chat?tab=rooms&room=${roomId}&success=Mensaje+enviado` as never);
-}
 
 async function saveDmAccessAction(formData: FormData) {
   "use server";
@@ -196,44 +175,6 @@ async function saveDmAccessAction(formData: FormData) {
   redirect("/admin/chat?tab=dm&success=Permisos+de+chat+actualizados" as never);
 }
 
-async function banUserAction(formData: FormData) {
-  "use server";
-  const { user } = await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-
-  const schema = z.object({
-    user_id: z.string().uuid(),
-    reason: z.string().optional(),
-    duration: z.enum(["1h", "24h", "7d", "permanent"]),
-    room_id: z.string().optional(),
-  });
-  const parsed = schema.safeParse({
-    user_id: formData.get("user_id"),
-    reason: formData.get("reason"),
-    duration: formData.get("duration"),
-    room_id: formData.get("room_id"),
-  });
-  if (!parsed.success) redirect("/admin/chat?tab=bans&error=Datos+invalidos" as never);
-
-  // unique(user_id): upsert so re-banning updates the existing record.
-  const { error } = await supabase.from("chat_bans").upsert(
-    {
-      user_id: parsed.data.user_id,
-      banned_by: user.id,
-      reason: parsed.data.reason?.trim() || null,
-      expires_at: resolveExpiry(parsed.data.duration),
-    },
-    { onConflict: "user_id" }
-  );
-
-  if (error) redirect(`/admin/chat?tab=bans&error=${encodeURIComponent(error.message)}` as never);
-
-  revalidatePath("/admin/chat");
-  const back = parsed.data.room_id
-    ? `/admin/chat?tab=rooms&room=${parsed.data.room_id}&success=Usuario+baneado`
-    : "/admin/chat?tab=bans&success=Usuario+baneado";
-  redirect(back as never);
-}
 
 async function createCategoryRoomAction(formData: FormData) {
   "use server";
@@ -308,7 +249,8 @@ const TIER_LABEL: Record<string, string> = {
 export default async function AdminChatPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireAdmin();
+  const { user: adminUser } = await requireAdmin();
+  const adminUserId = adminUser.id;
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
   const tab = typeof params.tab === "string" ? params.tab : "rooms";
@@ -369,7 +311,7 @@ export default async function AdminChatPage({ searchParams }: {
   }
 
   const TABS = [
-    { key: "rooms", label: "Salas" },
+    { key: "rooms", label: `Salas (${publicRooms.length})` },
     { key: "dm", label: "Chat directo" },
     { key: "bans", label: `Baneos (${bans.length})` },
     { key: "mutes", label: `Muteos (${mutes.length})` },
@@ -414,71 +356,11 @@ export default async function AdminChatPage({ searchParams }: {
           <div style={{ width: 270, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
 
             {/* Create room */}
-            <div className="panel rounded-[2rem] p-5">
-              <p className="eyebrow mb-4">Nueva sala</p>
-              <form action={createRoomAction} className="space-y-3">
-                <div>
-                  <label className={lbl}>Nombre</label>
-                  <input className={inp} name="name" required placeholder="General · Ballet Avanzado..." />
-                </div>
-                <div>
-                  <label className={lbl}>Tipo</label>
-                  <select className={inp} name="type" defaultValue="community">
-                    <option value="community">Comunidad (todas)</option>
-                    <option value="tier">Exclusiva por plan</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={lbl}>Plan mínimo</label>
-                  <select className={inp} name="tier_required" defaultValue="none">
-                    <option value="none">Sin restricción</option>
-                    <option value="corps_de_ballet">Corps de Ballet</option>
-                    <option value="solista">Solista</option>
-                    <option value="principal">Principal</option>
-                  </select>
-                </div>
-                <button className="button-primary w-full" type="submit">Crear sala</button>
-              </form>
-            </div>
-
-            {/* Create category-linked channel */}
-            {categories.length > 0 && (
-              <div className="panel rounded-[2rem] p-5">
-                <p className="eyebrow mb-1">Canal por categoría</p>
-                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
-                  Crea un canal alineado con una categoría de la biblioteca.
-                </p>
-                <form action={createCategoryRoomAction} className="space-y-3">
-                  <div>
-                    <label className={lbl}>Categoría</label>
-                    <select className={inp} name="category_slug" required defaultValue="">
-                      <option value="" disabled>Elegí una categoría…</option>
-                      {categories.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.name_i18n?.es ?? c.slug}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={lbl}>Nombre del canal</label>
-                    <input className={inp} name="name" required placeholder="Ballet · Comunidad" />
-                  </div>
-                  <div>
-                    <label className={lbl}>Plan mínimo</label>
-                    <select className={inp} name="tier_required" defaultValue="none">
-                      <option value="none">Sin restricción</option>
-                      <option value="corps_de_ballet">Corps de Ballet</option>
-                      <option value="solista">Solista</option>
-                      <option value="principal">Principal</option>
-                    </select>
-                  </div>
-                  <button className="button-secondary w-full" type="submit">Crear canal de categoría</button>
-                </form>
-              </div>
-            )}
-
-            {/* Room list */}
+            {/* LA LISTA PRIMERO.
+                Antes los dos formularios ocupaban la columna entera siempre y
+                la lista quedaba empujada al fondo: al crear una sala no habia
+                forma de encontrarla. Lo que se ve por defecto tiene que ser lo
+                que YA existe; crear es la excepcion, no lo normal. */}
             <div className="panel rounded-[2rem] p-5">
               <p className="eyebrow mb-3">Salas ({publicRooms.length})</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -512,15 +394,13 @@ export default async function AdminChatPage({ searchParams }: {
                           </div>
                         </div>
                       </a>
-                      <form action={archiveRoomAction} style={{ borderTop: "1px solid var(--pink-soft)", padding: "6px 12px" }}>
+                      <form action={archiveRoomAction} style={{ padding: "0 12px 8px" }}>
                         <input type="hidden" name="id" value={room.id} />
                         <input type="hidden" name="archived" value={String(room.is_archived)} />
-                        <button type="submit" style={{
-                          fontSize: 10, fontWeight: 700, color: "var(--muted)", background: "none",
-                          border: "none", cursor: "pointer", padding: 0,
-                        }}>
-                          {room.is_archived ? "Desarchivar" : "Archivar"}
-                        </button>
+                        <BotonEnviar pendingLabel="…" style={{
+                          fontSize: 9.5, fontWeight: 700, color: "var(--muted)", background: "none",
+                          border: "none", padding: 0,
+                        }}>{room.is_archived ? "Desarchivar" : "Archivar"}</BotonEnviar>
                       </form>
                     </div>
                   );
@@ -530,133 +410,106 @@ export default async function AdminChatPage({ searchParams }: {
                 )}
               </div>
             </div>
+
+            <details className="panel rounded-[2rem]" style={{ padding: "14px 18px" }}>
+              <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 32 }}>
+                <span className="eyebrow" style={{ margin: 0 }}>Crear una sala</span>
+                <Plus size={16} strokeWidth={2.2} style={{ color: "var(--pink)" }} />
+              </summary>
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="panel rounded-[2rem] p-5">
+              <p className="eyebrow mb-4">Nueva sala</p>
+              <form action={createRoomAction} className="space-y-3">
+                <div>
+                  <label className={lbl}>Nombre</label>
+                  <input className={inp} name="name" required placeholder="General · Ballet Avanzado..." />
+                </div>
+                <div>
+                  <label className={lbl}>Tipo</label>
+                  <select className={inp} name="type" defaultValue="community">
+                    <option value="community">Comunidad (todas)</option>
+                    <option value="tier">Exclusiva por plan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={lbl}>Plan mínimo</label>
+                  <select className={inp} name="tier_required" defaultValue="none">
+                    <option value="none">Sin restricción</option>
+                    <option value="corps_de_ballet">Corps de Ballet</option>
+                    <option value="solista">Solista</option>
+                    <option value="principal">Principal</option>
+                  </select>
+                </div>
+                <button className="button-primary w-full" type="submit">Crear sala</button>
+              </form>
+            </div>
+              <div className="panel rounded-[2rem] p-5">
+                <p className="eyebrow mb-1">Canal por categoría</p>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
+                  Crea un canal alineado con una categoría de la biblioteca.
+                </p>
+                <form action={createCategoryRoomAction} className="space-y-3">
+                  <div>
+                    <label className={lbl}>Categoría</label>
+                    <select className={inp} name="category_slug" required defaultValue="">
+                      <option value="" disabled>Elegí una categoría…</option>
+                      {categories.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.name_i18n?.es ?? c.slug}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Nombre del canal</label>
+                    <input className={inp} name="name" required placeholder="Ballet · Comunidad" />
+                  </div>
+                  <div>
+                    <label className={lbl}>Plan mínimo</label>
+                    <select className={inp} name="tier_required" defaultValue="none">
+                      <option value="none">Sin restricción</option>
+                      <option value="corps_de_ballet">Corps de Ballet</option>
+                      <option value="solista">Solista</option>
+                      <option value="principal">Principal</option>
+                    </select>
+                  </div>
+                  <button className="button-secondary w-full" type="submit">Crear canal de categoría</button>
+                </form>
+              </div>
+              </div>
+            </details>
           </div>
 
           {/* Right: messages */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {activeRoom ? (
-              <div className="panel rounded-[2rem] p-5 space-y-3">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <p className="eyebrow">{activeRoom.name}</p>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                    background: "var(--pink-wash)", color: "var(--pink)", border: "1px solid var(--pink-soft)",
-                  }}>{messages.length} mensajes</span>
-                </div>
-
-                {messages.length === 0 ? (
-                  <p style={{ fontSize: 13, color: "var(--muted)" }}>No hay mensajes en esta sala.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" }}>
-                    {messages.map((msg) => {
-                      const name = msg.profiles?.is_admin
-                        ? "Brunela"
-                        : (msg.profiles?.full_name ?? msg.profiles?.email?.split("@")[0] ?? "Usuario");
-                      return (
-                        <div key={msg.id} style={{
-                          display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10,
-                          padding: "10px 14px", borderRadius: 14,
-                          background: msg.profiles?.is_admin
-                            ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))"
-                            : (msg.is_deleted ? "#fef2f2" : "rgba(253,242,248,0.4)"),
-                          border: `1px solid ${msg.is_deleted ? "#fecaca" : msg.profiles?.is_admin ? "var(--pink-line)" : "var(--pink-soft)"}`,
-                          opacity: msg.is_deleted ? 0.6 : 1,
-                        }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: msg.profiles?.is_admin ? "var(--pink)" : "var(--ink)" }}>
-                                {name}
-                              </span>
-                              {msg.profiles?.is_admin && (
-                                <span style={{ fontSize: 9, background: "var(--pink)", color: "#fff", padding: "1px 7px", borderRadius: 99, fontWeight: 700 }}>BRUNELA</span>
-                              )}
-                              <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                                {new Date(msg.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
-                              </span>
-                              {msg.is_deleted && (
-                                <span style={{ fontSize: 9, background: "#fecaca", color: "#991b1b", padding: "1px 6px", borderRadius: 99, fontWeight: 700 }}>ELIMINADO</span>
-                              )}
-                            </div>
-                            <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.5, wordBreak: "break-word" }}>{msg.content}</p>
-                          </div>
-                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
-                            {!msg.is_deleted && (
-                              <form action={deleteMessageAction}>
-                                <input type="hidden" name="id" value={msg.id} />
-                                <input type="hidden" name="room_id" value={msg.room_id} />
-                                <BotonEnviar pendingLabel="Borrando…" style={{
-                                  padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca",
-                                  background: "#fef2f2", color: "#991b1b", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                                }}>Eliminar</BotonEnviar>
-                              </form>
-                            )}
-                            {!msg.profiles?.is_admin && msg.user_id && (
-                              <details>
-                                <summary style={{
-                                  listStyle: "none", cursor: "pointer",
-                                  padding: "4px 10px", borderRadius: 8, border: "1px solid #fde68a",
-                                  background: "#fffbeb", color: "#92400e", fontSize: 10, fontWeight: 700,
-                                }}>Banear</summary>
-                                <form action={banUserAction} style={{
-                                  marginTop: 6, padding: 10, borderRadius: 10, border: "1px solid #fde68a",
-                                  background: "#fffbeb", display: "flex", flexDirection: "column", gap: 6, width: 180,
-                                }}>
-                                  <input type="hidden" name="user_id" value={msg.user_id} />
-                                  <input type="hidden" name="room_id" value={msg.room_id} />
-                                  <input name="reason" placeholder="Motivo (opcional)" style={{
-                                    borderRadius: 8, border: "1px solid #fde68a", padding: "6px 8px",
-                                    fontSize: 11, outline: "none", fontFamily: "inherit",
-                                  }} />
-                                  <select name="duration" defaultValue="24h" style={{
-                                    borderRadius: 8, border: "1px solid #fde68a", padding: "6px 8px",
-                                    fontSize: 11, outline: "none", fontFamily: "inherit", background: "#fff",
-                                  }}>
-                                    <option value="1h">1 hora</option>
-                                    <option value="24h">24 horas</option>
-                                    <option value="7d">7 días</option>
-                                    <option value="permanent">Permanente</option>
-                                  </select>
-                                  <BotonEnviar style={{
-                                    padding: "6px 10px", borderRadius: 8, border: "none",
-                                    background: "#b45309", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                                  }}>Confirmar baneo</BotonEnviar>
-                                </form>
-                              </details>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Send as Brunela */}
-                <div style={{
-                  borderTop: "1px solid var(--pink-soft)", paddingTop: 16, marginTop: 8,
-                }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 10 }}>
-                    Enviar como Brunela
-                  </p>
-                  <form action={sendAsAdminAction} style={{ display: "flex", gap: 8 }}>
-                    <input type="hidden" name="room_id" value={activeRoom.id} />
-                    <input
-                      name="content"
-                      required
-                      placeholder="Escribi un mensaje como Brunela..."
-                      style={{
-                        flex: 1, borderRadius: 12, border: "1.5px solid var(--pink-line)",
-                        background: "#fff", color: "var(--ink)", padding: "10px 14px",
-                        fontSize: 13, outline: "none", fontFamily: "inherit",
-                      }}
-                    />
-                    <BotonEnviar style={{
-                      background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-                      color: "#fff", border: "none", borderRadius: 12,
-                      padding: "10px 20px", fontSize: 12, fontWeight: 700,
-                      cursor: "pointer", flexShrink: 0,
-                    }}>Enviar</BotonEnviar>
-                  </form>
-                </div>
+              /*
+               * El MISMO componente que usan las alumnas.
+               *
+               * POR QUE SE REEMPLAZO LO QUE HABIA
+               *   Esta pantalla tenia su propia implementacion: los mensajes se
+               *   renderizaban en el servidor y enviar disparaba una server
+               *   action que terminaba en revalidatePath x2 + redirect(). O sea
+               *   UNA NAVEGACION COMPLETA por cada mensaje. Ademas no tenia
+               *   realtime: para ver lo que escribia una alumna habia que
+               *   recargar a mano.
+               *
+               *   Eran dos implementaciones del mismo chat, y la de Brunela era
+               *   la peor de las dos.
+               *
+               * `canModerate` sale de isAdmin dentro del componente, asi que
+               * eliminar, mutear y banear siguen estando -- pero al pasar el
+               * mouse, no como botones gritando en cada mensaje.
+               */
+              <div style={{ height: "calc(100vh - 220px)", minHeight: 420, border: "1.5px solid var(--pink-soft)", borderRadius: 24, overflow: "hidden", background: "#fff" }}>
+                <ChatRoom
+                  roomId={activeRoom.id}
+                  userId={adminUserId}
+                  isAdmin
+                  initialMessages={messages as unknown as ChatMessage[]}
+                  roomName={activeRoom.name}
+                  placeholder="Escribí un mensaje como Brunela…"
+                />
               </div>
             ) : (
               <div className="panel rounded-[2rem] p-10" style={{ textAlign: "center", color: "var(--muted)" }}>
