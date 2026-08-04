@@ -159,6 +159,15 @@ function coincideCategoria(slugsDeLaClase: string[], filtro: string): boolean {
   return slugsDeLaClase.some((s) => aceptados.includes(s));
 }
 
+/** Invierte CATEGORIA_EQUIVALENTES: 'reformer' -> 'pilates'. Una sola fuente. */
+const SLUG_CANONICO: Record<string, string> = Object.fromEntries(
+  Object.entries(CATEGORIA_EQUIVALENTES).flatMap(([canonico, variantes]) =>
+    variantes.map((v) => [v, canonico])
+  )
+);
+
+const canonico = (slug: string) => SLUG_CANONICO[slug] ?? slug;
+
 // ── Los cuatro filtros ───────────────────────────────────────────────────────
 // Todos salen de datos que ya existen: ninguno necesita capturar nada nuevo.
 
@@ -291,7 +300,14 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const videos = (sinPlan ? vitrina : ((videosData ?? []) as VideoRecord[]));
   const progressMap = new Map(progressData.map((p) => [p.video_id, p]));
 
-  const dbCats = Array.from(new Set(videos.flatMap((v) => v.category_slugs).filter(Boolean))).sort();
+  // Los slugs se canonizan ANTES de armar los chips. Sin esto, mientras las
+  // clases sigan con 'reformer' en la base, el chip "Pilates" no aparece (no
+  // esta entre los slugs presentes) y en su lugar sale uno crudo en minuscula.
+  // Es la misma ventana entre despliegue y migracion que ya cubren el degrade y
+  // la etiqueta del dashboard.
+  const dbCats = Array.from(
+    new Set(videos.flatMap((v) => v.category_slugs).filter(Boolean).map(canonico))
+  ).sort();
   const filters = [
     FIXED_FILTERS[0],
     ...FIXED_FILTERS.slice(1).filter((f) => dbCats.includes(f.key)),
