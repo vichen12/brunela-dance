@@ -1,4 +1,5 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -174,12 +175,10 @@ function MuxStatus({ job }: { job: MuxJob }) {
       {job.status === "failed" && (
         <form action={requeueMuxJobAction} style={{ flexShrink: 0 }}>
           <input type="hidden" name="jobId" value={job.id} />
-          <button type="submit" style={{
+          <BotonEnviar pendingLabel="Reintentando…" style={{
             fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
             background: "#991b1b", color: "#fff", border: "none", cursor: "pointer",
-          }}>
-            REINTENTAR
-          </button>
+          }}>REINTENTAR</BotonEnviar>
         </form>
       )}
     </div>
@@ -339,14 +338,12 @@ function VideoForm({ video }: { video: VideoRecord }) {
       </div>
 
       <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
-        <button type="submit" style={{
+        <BotonEnviar style={{
           background: "#1c1917",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",
-        }}>
-          GUARDAR CAMBIOS
-        </button>
+        }}>GUARDAR CAMBIOS</BotonEnviar>
         {/* formAction en el boton, NO un <form> adentro de otro <form>.
             Los formularios anidados son HTML invalido: el parser descarta el
             interno, asi que el boton quedaba como submit del formulario de
@@ -354,11 +351,11 @@ function VideoForm({ video }: { video: VideoRecord }) {
             no borraba: guardaba. El id ya viaja en el hidden del form externo,
             que es el que deleteVideoAction lee. */}
         {(
-          <button type="submit" formAction={deleteVideoAction} style={{
+          <BotonEnviar pendingLabel="Borrando…" formAction={deleteVideoAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</button>
+          }}>ELIMINAR</BotonEnviar>
         )}
       </div>
     </form>
@@ -591,20 +588,20 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         <form action={quickStatusAction}>
                           <input type="hidden" name="id" value={video.id} />
                           <input type="hidden" name="status" value="published" />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
                             background: "#dcfce7", color: "#166534", border: "none", cursor: "pointer",
-                          }}>Publicar</button>
+                          }}>Publicar</BotonEnviar>
                         </form>
                       )}
                       {video.status !== "archived" && (
                         <form action={quickStatusAction}>
                           <input type="hidden" name="id" value={video.id} />
                           <input type="hidden" name="status" value="archived" />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
                             background: "#f1f5f9", color: "#64748b", border: "none", cursor: "pointer",
-                          }}>Archivar</button>
+                          }}>Archivar</BotonEnviar>
                         </form>
                       )}
                       <form action={quickFeaturedAction}>

@@ -1,4 +1,5 @@
 import { leerCategorias } from "@/src/lib/categorias";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { Users, Gem, MessageSquare } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -583,10 +584,10 @@ export default async function AdminChatPage({ searchParams }: {
                               <form action={deleteMessageAction}>
                                 <input type="hidden" name="id" value={msg.id} />
                                 <input type="hidden" name="room_id" value={msg.room_id} />
-                                <button type="submit" style={{
+                                <BotonEnviar pendingLabel="Borrando…" style={{
                                   padding: "4px 10px", borderRadius: 8, border: "1px solid #fecaca",
                                   background: "#fef2f2", color: "#991b1b", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                                }}>Eliminar</button>
+                                }}>Eliminar</BotonEnviar>
                               </form>
                             )}
                             {!msg.profiles?.is_admin && msg.user_id && (
@@ -615,10 +616,10 @@ export default async function AdminChatPage({ searchParams }: {
                                     <option value="7d">7 días</option>
                                     <option value="permanent">Permanente</option>
                                   </select>
-                                  <button type="submit" style={{
+                                  <BotonEnviar style={{
                                     padding: "6px 10px", borderRadius: 8, border: "none",
                                     background: "#b45309", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer",
-                                  }}>Confirmar baneo</button>
+                                  }}>Confirmar baneo</BotonEnviar>
                                 </form>
                               </details>
                             )}
@@ -648,12 +649,12 @@ export default async function AdminChatPage({ searchParams }: {
                         fontSize: 13, outline: "none", fontFamily: "inherit",
                       }}
                     />
-                    <button type="submit" style={{
+                    <BotonEnviar style={{
                       background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
                       color: "#fff", border: "none", borderRadius: 12,
                       padding: "10px 20px", fontSize: 12, fontWeight: 700,
                       cursor: "pointer", flexShrink: 0,
-                    }}>Enviar</button>
+                    }}>Enviar</BotonEnviar>
                   </form>
                 </div>
               </div>
@@ -714,7 +715,7 @@ export default async function AdminChatPage({ searchParams }: {
             <p style={{ fontSize: 11, color: "var(--muted)" }}>
               Por defecto solo el plan <strong>Principal</strong> tiene chat directo (coincide con la landing).
             </p>
-            <button type="submit" className="button-primary">Guardar permisos</button>
+            <BotonEnviar className="button-primary">Guardar permisos</BotonEnviar>
           </form>
         </div>
       )}
@@ -753,9 +754,7 @@ export default async function AdminChatPage({ searchParams }: {
                     </div>
                     <form action={unbanUserAction}>
                       <input type="hidden" name="id" value={ban.id} />
-                      <button type="submit" className="button-secondary" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>
-                        Desbanear
-                      </button>
+                      <BotonEnviar className="button-secondary" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>Desbanear</BotonEnviar>
                     </form>
                   </div>
                 );
@@ -799,9 +798,7 @@ export default async function AdminChatPage({ searchParams }: {
                     </div>
                     <form action={unmuteUserAction}>
                       <input type="hidden" name="id" value={mute.id} />
-                      <button type="submit" className="button-secondary" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>
-                        Desmutear
-                      </button>
+                      <BotonEnviar className="button-secondary" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>Desmutear</BotonEnviar>
                     </form>
                   </div>
                 );

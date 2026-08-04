@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { upsertCategoryAction, deleteCategoryAction } from "@/src/features/admin/category-actions";
 
@@ -158,13 +159,10 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                   </div>
                   <form action={deleteCategoryAction} style={{ display: "inline" }}>
                     <input name="id" type="hidden" value={cat.id} />
-                    <button
-                      type="submit"
+                    <BotonEnviar pendingLabel="Borrando…"
                       className="button-secondary"
                       style={{ padding: "6px 14px", fontSize: "0.7rem" }}
-                    >
-                      Eliminar
-                    </button>
+                    >Eliminar</BotonEnviar>
                   </form>
                 </div>
 

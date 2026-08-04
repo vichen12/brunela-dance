@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { HoraSesion } from "@/components/hora-sesion";
@@ -308,11 +309,11 @@ function LiveForm({ session }: { session?: LiveSession }) {
             ELIMINAR terminaba llamando a updateLiveSessionAction. El id ya
             viaja en el hidden del formulario externo. */}
         {!isNew && (
-          <button type="submit" formAction={deleteLiveSessionAction} style={{
+          <BotonEnviar pendingLabel="Borrando…" formAction={deleteLiveSessionAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</button>
+          }}>ELIMINAR</BotonEnviar>
         )}
       </div>
     </form>
@@ -503,30 +504,30 @@ export default async function AdminLivePage({
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="scheduled" />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                             background: "#dcfce7", color: "#166534", border: "none", cursor: "pointer",
-                          }}>Publicar</button>
+                          }}>Publicar</BotonEnviar>
                         </form>
                       )}
                       {session.status === "scheduled" && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="completed" />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                             background: "#f1f5f9", color: "#475569", border: "none", cursor: "pointer",
-                          }}>Completar</button>
+                          }}>Completar</BotonEnviar>
                         </form>
                       )}
                       {(session.status === "draft" || session.status === "scheduled") && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="canceled" />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                             background: "#fee2e2", color: "#991b1b", border: "none", cursor: "pointer",
-                          }}>Cancelar</button>
+                          }}>Cancelar</BotonEnviar>
                         </form>
                       )}
                     </div>

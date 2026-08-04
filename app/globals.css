@@ -2512,3 +2512,35 @@ body {
     min-height: 162px !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Esqueletos de carga
+   ---------------------------------------------------------------------------
+   POR QUE ESQUELETOS Y NO UN SPINNER
+     Un spinner dice "esperá" sin decir cuánto ni qué viene. Un esqueleto con la
+     forma de la pantalla que está por aparecer se percibe MÁS RÁPIDO aunque
+     tarde lo mismo: el ojo ya ubica dónde va a estar cada cosa y el cambio se
+     siente como que se completa, no como que arranca.
+
+   POR QUE ACA Y NO EN CADA loading.tsx
+     Estaba duplicado en los tres que existían. Con 22 rutas serían 22 copias de
+     la misma animación, y la primera que alguien retoque se desincroniza.
+
+   `prefers-reduced-motion`: para quien pidió menos movimiento, el esqueleto se
+   queda quieto en vez de latir. Sigue marcando la forma, que es lo que importa.
+   --------------------------------------------------------------------------- */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sk {
+  background: linear-gradient(90deg, #f5f0ef 25%, #ede8e6 50%, #f5f0ef 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}

@@ -1,4 +1,5 @@
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -282,12 +283,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                       <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Es admin</span>
                     </label>
 
-                    <button type="submit" style={{
+                    <BotonEnviar style={{
                       background: "#1c1917", color: "#fff", border: "none",
                       borderRadius: 99, padding: "9px 20px",
                       fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
                       whiteSpace: "nowrap",
-                    }}>GUARDAR</button>
+                    }}>GUARDAR</BotonEnviar>
                   </form>
                 </div>
               </details>

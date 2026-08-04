@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { guardarAjusteDeReservasAction, guardarAjusteDeChatAction } from "@/src/features/admin/settings-actions";
 
@@ -163,9 +164,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
               </span>
             </label>
 
-            <button type="submit" className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>
-              Guardar
-            </button>
+            <BotonEnviar className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>Guardar</BotonEnviar>
           </form>
         </section>
 
@@ -186,9 +185,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{p.label}</span>
               </label>
             ))}
-            <button type="submit" className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>
-              Guardar
-            </button>
+            <BotonEnviar className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>Guardar</BotonEnviar>
           </form>
         </section>
 

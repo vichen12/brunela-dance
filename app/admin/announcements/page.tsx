@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -202,14 +203,12 @@ export default async function AdminAnnouncementsPage({
               <input style={inp} name="expiresAt" type="datetime-local" />
             </label>
           </div>
-          <button type="submit" style={{
+          <BotonEnviar style={{
             background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             color: "#fff", border: "none", borderRadius: 99,
             padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
             cursor: "pointer", alignSelf: "flex-start",
-          }}>
-            PUBLICAR ANUNCIO
-          </button>
+          }}>PUBLICAR ANUNCIO</BotonEnviar>
         </form>
       </div>
 
@@ -268,18 +267,18 @@ export default async function AdminAnnouncementsPage({
                       {a.is_active && (
                         <form action={deactivateAnnouncementAction}>
                           <input type="hidden" name="id" value={a.id} />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                             background: "#fef9c3", color: "#854d0e", border: "none", cursor: "pointer",
-                          }}>Desactivar</button>
+                          }}>Desactivar</BotonEnviar>
                         </form>
                       )}
                       <form action={deleteAnnouncementAction}>
                         <input type="hidden" name="id" value={a.id} />
-                        <button type="submit" style={{
+                        <BotonEnviar pendingLabel="Borrando…" style={{
                           fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                           background: "#fee2e2", color: "#991b1b", border: "none", cursor: "pointer",
-                        }}>Eliminar</button>
+                        }}>Eliminar</BotonEnviar>
                       </form>
                     </div>
                   </div>

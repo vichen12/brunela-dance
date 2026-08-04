@@ -1,3 +1,4 @@
+import { BotonEnviar } from "@/components/boton-enviar";
 import {
   deleteProgramAction,
   deleteProgramDayAction,
@@ -275,11 +276,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                         </span>
                         <form action={deleteProgramDayAction}>
                           <input name="id" type="hidden" value={day.id} />
-                          <button type="submit" style={{
+                          <BotonEnviar style={{
                             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
                             borderRadius: 99, padding: "5px 14px", fontSize: 10, fontWeight: 700,
                             letterSpacing: "0.08em", cursor: "pointer",
-                          }}>QUITAR</button>
+                          }}>QUITAR</BotonEnviar>
                         </form>
                       </div>
                     ))}
@@ -304,11 +305,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                         ))}
                       </select>
                     </F>
-                    <button type="submit" style={{
+                    <BotonEnviar style={{
                       background: "var(--pink)", color: "#fff", border: "none", borderRadius: 99,
                       padding: "9px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
                       cursor: "pointer", whiteSpace: "nowrap",
-                    }}>AGREGAR DÍA</button>
+                    }}>AGREGAR DÍA</BotonEnviar>
                   </form>
                 </div>
               </div>
@@ -399,11 +400,11 @@ function ProgramForm({ actionLabel, program }: { actionLabel: string; program?: 
         }}>{actionLabel}</button>
 
         {!esNuevo && (
-          <button type="submit" formAction={deleteProgramAction} style={{
+          <BotonEnviar pendingLabel="Borrando…" formAction={deleteProgramAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</button>
+          }}>ELIMINAR</BotonEnviar>
         )}
       </div>
     </form>
