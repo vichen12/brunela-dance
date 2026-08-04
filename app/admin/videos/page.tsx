@@ -1,6 +1,7 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { EditarClase } from "@/components/admin-video-drawer";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -244,138 +245,6 @@ function Flash({ message, tone }: { message: string | null; tone: "success" | "e
   );
 }
 
-// ── Video form ─────────────────────────────────────────────────────────────────
-
-/**
- * Editor de una clase YA EXISTENTE.
- *
- * Crear una clase se hace solo desde AdminVideoUpload, que sube el archivo. Este
- * formulario tenia tambien modo creacion, y convivian dos maneras de dar de alta
- * una clase: Brunela veia las dos y no tenia como saber cual usar -- y la de
- * aca creaba una clase SIN video.
- */
-function VideoForm({ video }: { video: VideoRecord }) {
-  // Read-only: audio_tracks is owned by the mux worker, not by this form.
-  const muxedLocales = (video.audio_tracks ?? []).map((t) => t.locale);
-
-  return (
-    <form action={upsertVideoAction}>
-      <input name="id" type="hidden" value={video.id} />
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Dirección">
-          {/* Solo lectura: cambiar el slug de una clase publicada rompe
-              cualquier enlace que alguien haya guardado o compartido. Se muestra
-              porque es la direccion de esa clase y a Brunela le sirve verla. */}
-          <input style={{ ...inp, background: "#fafaf9", color: "#78716c" }} defaultValue={video.slug} name="slug" readOnly />
-        </F>
-        <F label="Estado">
-          <select style={sel} defaultValue={video.status} name="status">
-            <option value="draft">Borrador</option>
-            <option value="published">Publicado</option>
-            <option value="archived">Archivado</option>
-          </select>
-        </F>
-
-        <F label="Título en español">
-          <input style={inp} defaultValue={video.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
-        </F>
-        <F label="Título en inglés">
-          <input style={inp} defaultValue={video.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
-        </F>
-
-        <F label="Duración (minutos)">
-          {/* En minutos, que es como piensa una clase quien la da. La conversion
-              a segundos se hace en la accion: la base sigue guardando segundos. */}
-          <input style={inp} defaultValue={Math.round(video.duration_seconds / 60)} min={1} name="durationMinutes" required type="number" />
-        </F>
-        <F label="Plan que la puede ver">
-          <select style={sel} defaultValue={video.membership_tier_required} name="membershipTierRequired">
-            <option value="corps_de_ballet">Corps de Ballet</option>
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
-        </F>
-
-        <F label="Categorías">
-          <input style={inp} defaultValue={video.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
-        </F>
-        <F label="Materiales">
-          <input style={inp} defaultValue={video.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
-        </F>
-
-        <F label="Imagen de portada">
-          <input style={inp} defaultValue={video.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
-        </F>
-        {/* Los campos "Mux Playback ID" y "Mux Asset ID" salieron el 2026-08-03:
-            Mux fue reemplazado por Bunny, y esos valores los escribe sola la ruta
-            de finalizacion de subida. Editarlos a mano solo podia romper la
-            reproduccion.
-
-            OJO: stream_playback_id NO es basura -- Bunny lo escribe con la URL
-            del HLS y el proxy de video lo usa como respaldo para las clases
-            viejas. Lo que se saco es el CAMPO del formulario, no la columna. */}
-        <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={video.is_featured} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
-          </label>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripción de la clase…" />
-        </F>
-        <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.en ?? ""} name="descriptionEn" placeholder="Class description..." />
-        </F>
-      </div>
-
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>
-        <Lbl>Pistas de audio por idioma</Lbl>
-        <div style={{ fontSize: 11, color: "#78716c", marginTop: 8, lineHeight: 1.7 }}>
-          {muxedLocales.length > 0 ? (
-            <>
-              Idiomas ya integrados en el video:{" "}
-              <strong style={{ color: "#1c1917" }}>
-                {["es", ...muxedLocales].join(", ").toUpperCase()}
-              </strong>
-            </>
-          ) : (
-            <>Solo espanol. Los idiomas extra se cargan al subir la clase, como un mp3 por idioma.</>
-          )}
-          <div style={{ marginTop: 6, color: "#a8a29e" }}>
-            Esto no se edita a mano: el worker de muxeo lo escribe cuando verifica que el
-            idioma quedo dentro del video.
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
-        <BotonEnviar style={{
-          background: "#1c1917",
-          color: "#fff", border: "none", borderRadius: 99,
-          padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-          cursor: "pointer",
-        }}>GUARDAR CAMBIOS</BotonEnviar>
-        {/* formAction en el boton, NO un <form> adentro de otro <form>.
-            Los formularios anidados son HTML invalido: el parser descarta el
-            interno, asi que el boton quedaba como submit del formulario de
-            arriba y ELIMINAR terminaba llamando a upsertVideoAction. O sea que
-            no borraba: guardaba. El id ya viaja en el hidden del form externo,
-            que es el que deleteVideoAction lee. */}
-        {(
-          <BotonEnviar pendingLabel="Borrando…" formAction={deleteVideoAction} style={{
-            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</BotonEnviar>
-        )}
-      </div>
-    </form>
-  );
-}
 
 // ── Upload form (real Bunny upload: video file + audio file per language) ────────
 
@@ -655,23 +524,18 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                   {/* Mux state — only while there is something to act on */}
                   {job && job.status !== "done" && <MuxStatus job={job} />}
 
-                  {/* Collapsible edit form */}
-                  <details>
-                    <summary style={{
-                      listStyle: "none", cursor: "pointer",
-                      padding: "9px 18px", fontSize: 11, fontWeight: 600, color: "#a8a29e",
-                      borderTop: "1px solid #f9f7f6",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 6,
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 4.5h8M2 7.5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                      Editar video
-                    </summary>
-                    <div style={{ padding: "22px 22px", borderTop: "1px solid #f9f7f6" }}>
-                      <VideoForm video={video} />
-                    </div>
-                  </details>
+                  {/* Edicion en panel lateral.
+                      Antes el formulario COMPLETO de cada clase vivia aca
+                      dentro de un <details>. Colapsado o no, React lo renderiza
+                      igual: con 19 clases eran ~250 controles de formulario en
+                      el DOM, y eso es lo que hacia scrollear metros. Ahora el
+                      formulario no existe hasta que se abre el panel. */}
+                  <div style={{
+                    padding: "9px 18px", borderTop: "1px solid #f9f7f6",
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <EditarClase video={video} />
+                  </div>
                 </div>
               );
             })}
