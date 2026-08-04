@@ -194,14 +194,14 @@ export default async function CommunityPage({ searchParams }: {
         <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--pink-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>CANALES</p>
           {isAdmin && (
-            <a
+            <Link
               href={showCreate ? "/dashboard/community" : "/dashboard/community?create=1"}
               style={{
                 width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
                 background: showCreate ? "var(--pink)" : "var(--pink-wash)", color: showCreate ? "#fff" : "var(--pink)",
                 fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid var(--pink-soft)",
               }}
-            >{showCreate ? "×" : "+"}</a>
+            >{showCreate ? "×" : "+"}</Link>
           )}
         </div>
 

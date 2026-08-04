@@ -130,7 +130,7 @@ export default async function ChatPage({ searchParams }: {
               const active = m.id === activeUserId;
               const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
               return (
-                <a
+                <Link
                   key={m.id}
                   href={`/dashboard/chat?user=${m.id}`}
                   style={{
@@ -155,12 +155,12 @@ export default async function ChatPage({ searchParams }: {
                       {TIER_BADGE[m.membership_tier] ?? "Sin plan"}
                     </p>
                   </div>
-                </a>
+                </Link>
               );
             })}
 
             {hayMasMiembros && (
-              <a
+              <Link
                 href={`/dashboard/chat?pmiembros=${paginaMiembros + 1}${activeUserId ? `&user=${activeUserId}` : ""}`}
                 style={{
                   display: "block", textAlign: "center", margin: "8px 4px 4px",
@@ -168,7 +168,7 @@ export default async function ChatPage({ searchParams }: {
                   border: "1.5px solid var(--pink-line)", color: "var(--pink-deep)",
                   fontSize: 11.5, fontWeight: 700,
                 }}
-              >Ver más alumnas</a>
+              >Ver más alumnas</Link>
             )}
           </div>
         </div>
