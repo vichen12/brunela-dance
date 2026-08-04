@@ -150,12 +150,16 @@ async function main() {
     chequear("segunda llamada (posicion 3)", b1.status < 300,
       b1.status >= 300 ? JSON.stringify(b1.body).slice(0, 160) : `http ${b1.status}`);
 
-    const f1 = (await leer(`video_id=eq.${video.id}&program_id=is.null`))?.[0];
+    const filas1 = (await leer(`video_id=eq.${video.id}&program_id=is.null`)) ?? [];
+    const f1 = filas1[0];
     if (!f1) {
       chequear("la fila existe", false, "no se encontro ninguna fila");
     } else {
       console.log(`       fila: last=${f1.last_position_seconds} max=${f1.max_position_seconds} pct=${f1.completion_percent} completa=${f1.is_completed}`);
-      chequear("UNA sola fila (no duplico)", true);
+      // Se CUENTA. Antes esto pasaba `true` literal y no podia fallar: si el
+      // on conflict no hubiera resuelto contra el indice parcial, habrian
+      // quedado dos filas y la prueba habria dicho que todo bien igual.
+      chequear("UNA sola fila (no duplico)", filas1.length === 1, `hay ${filas1.length}`);
       chequear("last_position_seconds = 3", f1.last_position_seconds === 3, `es ${f1.last_position_seconds}`);
       chequear("max_position_seconds SIGUE en 18", f1.max_position_seconds === 18,
         f1.max_position_seconds === 3 ? "bajo a 3: el greatest() NO funciona" : `es ${f1.max_position_seconds}`);
@@ -181,11 +185,13 @@ async function main() {
       chequear("segunda llamada (posicion 3)", b2.status < 300,
         b2.status >= 300 ? JSON.stringify(b2.body).slice(0, 160) : `http ${b2.status}`);
 
-      const f2 = (await leer(`video_id=eq.${vid}&program_id=eq.${dia.program_id}`))?.[0];
+      const filas2 = (await leer(`video_id=eq.${vid}&program_id=eq.${dia.program_id}`)) ?? [];
+      const f2 = filas2[0];
       if (!f2) {
         chequear("la fila existe", false, "no se encontro ninguna fila");
       } else {
         console.log(`       fila: last=${f2.last_position_seconds} max=${f2.max_position_seconds} pct=${f2.completion_percent}`);
+        chequear("UNA sola fila (no duplico)", filas2.length === 1, `hay ${filas2.length}`);
         chequear("last_position_seconds = 3", f2.last_position_seconds === 3, `es ${f2.last_position_seconds}`);
         chequear("max_position_seconds SIGUE en 18", f2.max_position_seconds === 18,
           f2.max_position_seconds === 3 ? "bajo a 3: el greatest() NO funciona" : `es ${f2.max_position_seconds}`);
@@ -202,9 +208,17 @@ async function main() {
         user_id: "00000000-0000-4000-a000-000000000000",
       }),
     }).then(async (r) => ({ status: r.status, body: await j(r) }));
-    chequear("un user_id de mas es rechazado o ignorado",
-      ajeno.status >= 400 || ajeno.status < 300,
-      `http ${ajeno.status}`);
+    chequear("un user_id de mas es RECHAZADO", ajeno.status >= 400, `http ${ajeno.status}`);
+
+    // Y lo que de verdad importa: que no exista progreso a nombre del uuid
+    // inventado. Se lee con service_role porque como usuaria RLS lo ocultaria
+    // igual, y entonces la prueba pasaria sin probar nada.
+    const ajenas = await rest(
+      "user_progress?select=user_id&user_id=eq.00000000-0000-4000-a000-000000000000"
+    );
+    chequear("no se escribio progreso a nombre de otra persona",
+      Array.isArray(ajenas) && ajenas.length === 0,
+      Array.isArray(ajenas) ? `${ajenas.length} filas` : "no se pudo leer");
 
   } finally {
     // Se borra pase lo que pase. El cascade se lleva perfil y progreso.
