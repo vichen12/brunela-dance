@@ -50,7 +50,17 @@ no es el que devuelve `ls`:
 20. 20260803_activity_events.sql            \
 21. 20260803_marketing_consent.sql           |  independientes entre si,
 22. 20260803_unify_pilates_categories.sql   /   en cualquier orden
+23. 20260804_fix_default_privileges.sql     <-- DESPUES de la 20
 ```
+
+> **La 23 corrige un error de la 17**, no de la 20. La 17 resetea el default de
+> `anon` antes de otorgar, pero a `authenticated` sólo le hace un `grant`, que
+> es **aditivo**: se suma al default de Supabase (`ALL`) en vez de
+> reemplazarlo. Resultado: toda tabla creada después de la 18 nace con
+> `TRUNCATE`, `REFERENCES` y `TRIGGER` para `authenticated`. Las 20 tablas
+> viejas no están afectadas porque sobre ellas sí corrió un `revoke all`.
+> **Si algún día se reconstruye la base desde cero, la 23 sigue siendo
+> necesaria.**
 
 > **De la 19 en adelante el orden entre ellas da igual**, pero todas van
 > **después de la 18**, y no por costumbre: la 18 termina con un

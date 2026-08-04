@@ -444,6 +444,18 @@ Van **después de la 18** y entre ellas en cualquier orden. Además, dos pasos
 manuales fuera del repo: suscribir `invoice.paid` en Stripe y activar Web
 Analytics en Vercel.
 
+**Y una cuarta, `20260804_fix_default_privileges.sql`, que corrige la 17:** su
+`alter default privileges ... grant` sobre `authenticated` es **aditivo** y
+nunca reemplazó al default de Supabase, así que toda tabla creada después de la
+18 nace con `TRUNCATE`, `REFERENCES` y `TRIGGER`. `activity_events` fue la
+primera y lo destapó. **RLS no se aplica a `TRUNCATE`** — Postgres sólo evalúa
+policies para select/insert/update/delete. Las 20 tablas viejas están bien.
+
+- [ ] **Hay 22 tablas en `public` y las migraciones crean 21.** La de más no
+      tiene ninguna policy (el conteo cuadra exacto en 45). Diagnóstico sin
+      efectos secundarios en `scripts/diagnostico-tabla-de-mas.sql`. **No
+      borrarla antes de mirar si tiene datos y si tiene RLS.**
+
 ### Bloqueantes para dar por cerrada la migración
 
 - [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,
