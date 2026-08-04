@@ -11,6 +11,15 @@ export type ChatMessage = {
   created_at: string;
   is_deleted: boolean;
   profiles: { full_name: string | null; email: string; is_admin: boolean } | null;
+  /**
+   * Autor copiado en la propia fila por el trigger de la migracion
+   * 20260804_chat_autor_y_rate_limit.sql.
+   *
+   * Opcionales porque el codigo se despliega ANTES que la migracion: mientras
+   * las columnas no existan vienen undefined y todo cae al camino de siempre.
+   */
+  author_name?: string | null;
+  author_is_admin?: boolean | null;
 };
 
 /** Con quien habla la alumna. Ver el comentario de `displayName`. */
@@ -26,12 +35,27 @@ export type Interlocutor = { id: string; name: string; isAdmin: boolean };
  * get_studio_admin() -- en vez de aflojar la RLS de profiles.
  */
 function displayName(msg: ChatMessage, interlocutor?: Interlocutor | null): string {
+  // 1. La copia en la propia fila. Es la que resuelve el caso que la RLS de
+  //    profiles no deja resolver -- el nombre viaja con el mensaje, asi que ya
+  //    no hace falta poder leer el perfil ajeno.
+  if (msg.author_name) {
+    if (msg.author_is_admin) return 'Brunela';
+    return msg.author_name.split(' ')[0];
+  }
+
+  // 2. Mientras la migracion no este corrida, el camino de siempre.
   if (!msg.profiles) {
     if (interlocutor && msg.user_id === interlocutor.id) return interlocutor.name;
     return 'Usuario';
   }
   if (msg.profiles.is_admin) return 'Brunela';
   return msg.profiles.full_name?.split(' ')[0] ?? msg.profiles.email.split('@')[0];
+}
+
+/** Igual que displayName pero para el avatar y la burbuja. */
+function esDeAdmin(msg: ChatMessage): boolean {
+  if (msg.author_name) return Boolean(msg.author_is_admin);
+  return Boolean(msg.profiles?.is_admin);
 }
 
 function initial(name: string) {
@@ -78,9 +102,10 @@ function MessageBubble({
 }) {
   const [hover, setHover] = useState(false);
   const name = displayName(msg, interlocutor);
-  const senderIsAdmin =
-    msg.profiles?.is_admin ??
-    (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
+  const senderIsAdmin = msg.author_name
+    ? esDeAdmin(msg)
+    : msg.profiles?.is_admin ??
+      (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
 
   if (isMe) return (
     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
@@ -182,6 +207,14 @@ export function ChatRoom({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+
+  // B5. `enVivo` arranca en true para no mostrar un aviso durante el segundo
+  // que tarda la primera conexion: parpadear "sin conexion" al abrir la sala
+  // seria peor que el problema que resuelve.
+  const [enVivo, setEnVivo] = useState(true);
+  const [reintentos, setReintentos] = useState(0);
+  /** Cambiar esto vuelve a correr el efecto del canal, o sea reconecta. */
+  const [intento, setIntento] = useState(0);
   // Un solo modal para mutear y banear: mismos campos (duracion + motivo), y
   // `modo` decide el texto, el color del boton y a donde escribe.
   const [muteTarget, setMuteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -222,12 +255,28 @@ export function ChatRoom({
           event: 'INSERT', schema: 'public', table: 'chat_messages',
           filter: `room_id=eq.${roomId}`,
         }, async (payload) => {
+          const nuevo = payload.new as Partial<ChatMessage> & { id: string };
+
+          // ── B2: el N+1 se elimina aca ──────────────────────────────────
+          // El payload de postgres_changes trae la fila ENTERA. Antes se la
+          // volvia a pedir al servidor solo para resolver el nombre del autor,
+          // o sea UNA CONSULTA POR MENSAJE: una sala de 50 personas con 20
+          // mensajes por minuto hacia 1000 consultas por minuto para pintar
+          // nombres. Con el autor copiado en la fila (migracion
+          // 20260804_chat_autor_y_rate_limit.sql) no hace falta ningun viaje.
+          if (nuevo.author_name) {
+            const fila = nuevo as ChatMessage;
+            setMessages((prev) => (prev.some((m) => m.id === fila.id) ? prev : [...prev, fila]));
+            return;
+          }
+
+          // Camino viejo, solo mientras la migracion no este corrida. Se puede
+          // borrar en cuanto author_name este poblado en produccion.
           const { data: fila } = await supabase
             .from('chat_messages')
             .select('*, profiles(full_name, email, is_admin)')
-            .eq('id', (payload.new as { id: string }).id)
+            .eq('id', nuevo.id)
             .single<ChatMessage>();
-          // Sin duplicar: el evento llega tambien para los mensajes propios.
           if (fila) {
             setMessages((prev) => (prev.some((m) => m.id === fila.id) ? prev : [...prev, fila]));
           }
@@ -241,14 +290,43 @@ export function ChatRoom({
             setMessages((prev) => prev.filter((m) => m.id !== updated.id));
           }
         })
-        .subscribe();
+        // ── B5: degradacion con gracia ───────────────────────────────────
+        // Antes esto era `.subscribe()` a secas, ignorando el estado. Si el
+        // canal fallaba -- limite de conexiones concurrentes del plan, red
+        // caida, token vencido -- la sala quedaba MUDA: los mensajes propios
+        // se veian (optimismo local) pero los ajenos no llegaban nunca, y la
+        // alumna no tenia forma de enterarse. Parecia que nadie le contestaba.
+        //
+        // Es justo el modo de fallo que aparece cuando entra mas gente, que es
+        // lo que esta fase viene a evitar.
+        .subscribe((status) => {
+          if (cancelado) return;
+          if (status === 'SUBSCRIBED') {
+            setEnVivo(true);
+            setReintentos(0);
+            return;
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setEnVivo(false);
+            // Reintento con espera creciente, con techo: sin el techo, una
+            // caida larga termina martillando el servidor desde cada pestana
+            // abierta, que es como una degradacion se convierte en una caida.
+            setReintentos((n) => {
+              const proximo = n + 1;
+              if (proximo <= 5) {
+                window.setTimeout(() => setIntento((i) => i + 1), Math.min(1000 * 2 ** n, 30_000));
+              }
+              return proximo;
+            });
+          }
+        });
     })();
 
     return () => {
       cancelado = true;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [roomId, supabase]);
+  }, [roomId, supabase, intento]);
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -354,6 +432,31 @@ export function ChatRoom({
         ))}
         <div ref={endRef} />
       </div>
+
+      {/* B5. El aviso que convierte una sala muda en una sala que avisa. */}
+      {!enVivo && (
+        <div style={{
+          padding: '10px 20px', flexShrink: 0,
+          background: 'var(--pink-wash)', borderTop: '1px solid var(--pink-soft)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--pink-deep)', fontWeight: 600, lineHeight: 1.5 }}>
+            {reintentos > 5
+              ? 'Sin conexión con el chat. Podés seguir escribiendo, pero no vas a ver mensajes nuevos hasta recargar.'
+              : 'Reconectando… puede que no estés viendo los mensajes más nuevos.'}
+          </span>
+          {reintentos > 5 && (
+            <button
+              onClick={() => { setReintentos(0); setIntento((i) => i + 1); }}
+              style={{
+                flexShrink: 0, border: 0, borderRadius: 999, cursor: 'pointer',
+                padding: '7px 15px', background: 'var(--pink)', color: '#fff',
+                fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit',
+              }}
+            >Reintentar</button>
+          )}
+        </div>
+      )}
 
       {/* Input */}
       <div style={{

@@ -135,8 +135,15 @@ export function VideoPlayer({
       const video = videoRef.current;
       if (!video || !Number.isFinite(video.currentTime)) return;
       const position = Math.floor(video.currentTime);
-      // Throttle: only persist every ~10s of progress unless forced.
-      if (!force && Math.abs(position - lastSavedRef.current) < 10) return;
+      // Cada 30 segundos de avance, no cada 10 (fase C del plan de
+      // escalabilidad). Es una reduccion de 3x en escrituras cambiando una
+      // constante: una clase de 45 minutos pasa de 270 guardados a 90.
+      //
+      // No se pierde nada: `force` sigue guardando al pausar, al cerrar la
+      // pestana y al desmontar, que son los momentos en los que la posicion
+      // importa de verdad. Lo unico que cambia es cuanto se puede perder si el
+      // navegador muere de golpe -- de 10 a 30 segundos de una clase.
+      if (!force && Math.abs(position - lastSavedRef.current) < 30) return;
       lastSavedRef.current = position;
       const total = durationSeconds || video.duration || 0;
       const percent = total > 0 ? Math.min(100, Math.round((position / total) * 100)) : 0;

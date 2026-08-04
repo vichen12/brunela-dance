@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidarCategorias } from "@/src/lib/categorias";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -65,6 +66,8 @@ export async function upsertCategoryAction(formData: FormData) {
     redirectMsg("error", result.error.message);
   }
 
+  // Sin esto, Brunela crea una categoria y no la ve hasta que expire el cache.
+  invalidarCategorias();
   revalidatePath("/admin/categories");
   revalidatePath("/dashboard/library");
   redirectMsg("success", "Categoría guardada.");
@@ -81,6 +84,8 @@ export async function deleteCategoryAction(formData: FormData) {
     redirectMsg("error", error.message);
   }
 
+  // Sin esto, Brunela crea una categoria y no la ve hasta que expire el cache.
+  invalidarCategorias();
   revalidatePath("/admin/categories");
   redirectMsg("success", "Categoría eliminada.");
 }

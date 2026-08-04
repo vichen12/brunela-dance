@@ -24,7 +24,8 @@ type VideoRecord = {
   id: string;
   slug: string;
   title_i18n: Record<string, string>;
-  description_i18n: Record<string, string>;
+  /** Solo viaja cuando hay busqueda. Ver la consulta de la fase D. */
+  description_i18n?: Record<string, string>;
   membership_tier_required: MembershipTier;
   duration_seconds: number;
   category_slugs: string[];
@@ -130,6 +131,9 @@ function catGradient(slugs: string[]): string {
   for (const s of slugs) if (CAT_GRADIENTS[s]) return CAT_GRADIENTS[s];
   return "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-line) 100%)";
 }
+
+/** Cuantas clases por tanda. Con menos, "Ver más" aparece demasiado seguido. */
+const POR_PAGINA = 24;
 
 const FIXED_FILTERS = [
   { key: "all",        label: "Todas"      },
@@ -253,17 +257,50 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const fEstado   = uno("estado", OPCIONES_ESTADO.map((o) => o.key));
   const hayFiltros = Boolean(fNivel || fDuracion || fPlan || fEstado);
 
+  // Paginacion acumulativa: "Ver más" trae la pagina siguiente SIN perder las
+  // anteriores, que es lo que espera alguien recorriendo un catalogo. Se pide
+  // uno de mas para saber si hay siguiente sin una segunda consulta de conteo.
+  const pagina = Math.max(0, Math.min(50, Number(params.pagina) || 0));
+
   const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
   // Sin plan: RLS le devuelve CERO clases, asi que veria el estudio vacio y
   // pareceria roto. Se le muestra el catalogo con candado -- ver `vitrina`.
   const sinPlan = !isAdmin && (profileData?.membership_tier ?? "none") === "none";
 
+  // ── Fase D: lo que puede filtrar SQL, lo filtra SQL ───────────────────────
+  //
+  // La categoria usa `.contains()`, que es un `@>` de Postgres y va contra
+  // idx_videos_category_slugs -- un indice GIN que existe desde el primer dia
+  // y que hasta ahora no se usaba nunca, porque el filtrado se hacia en
+  // JavaScript despues de traer TODAS las clases.
+  //
+  // Lo que NO se puede empujar a SQL, y por que:
+  //   - el estado personal (empezada / completada) depende del progreso de esta
+  //     alumna, que es otra tabla y otra consulta
+  //   - nivel y duracion son rangos derivados; con el volumen de un catalogo de
+  //     clases no justifican complicar la consulta
+  //   - la busqueda por texto necesitaria full-text search, que es una
+  //     migracion aparte
+  //
+  // `description_i18n` SOLO viaja cuando hay busqueda: es el campo mas pesado
+  // de la fila y en el listado no se muestra. Con 200 clases son cientos de KB
+  // por carga que no se usaban para nada.
+  const COLUMNAS_BASE =
+    "id, slug, title_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, stream_playback_id, bunny_video_id, is_featured, status, published_at, recommended_min_level, recommended_max_level";
+  const columnas = busqueda ? `${COLUMNAS_BASE}, description_i18n` : COLUMNAS_BASE;
+
+  let consulta = supabase.from("videos").select(columnas);
+  if (activeCategory !== "all") {
+    consulta = consulta.overlaps("category_slugs", CATEGORIA_EQUIVALENTES[activeCategory] ?? [activeCategory]);
+  }
+  if (fPlan) consulta = consulta.eq("membership_tier_required", fPlan);
+
   const [{ data: videosData }, progressData] = await Promise.all([
-    supabase.from("videos")
-      .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, stream_playback_id, bunny_video_id, is_featured, status, published_at, recommended_min_level, recommended_max_level")
+    consulta
       .order("is_featured", { ascending: false })
-      .order("published_at", { ascending: false }),
+      .order("published_at", { ascending: false })
+      .limit(POR_PAGINA * (pagina + 1) + 1),
     // Mismo progreso memoizado que ya trajo el layout: sin esto era un segundo
     // viaje a Supabase por la misma tabla.
     getProgresoDelUsuario(user.id),
@@ -297,7 +334,14 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     }));
   }
 
-  const videos = (sinPlan ? vitrina : ((videosData ?? []) as VideoRecord[]));
+  // Se pidio una fila de mas que el tope de la pagina: si volvio, hay
+  // siguiente. Evita un `count exact` aparte solo para saber si mostrar el
+  // boton -- que seria un viaje mas en cada carga.
+  const crudas = (videosData ?? []) as unknown as VideoRecord[];
+  const tope = POR_PAGINA * (pagina + 1);
+  const hayMasPaginas = !sinPlan && crudas.length > tope;
+
+  const videos = (sinPlan ? vitrina : crudas.slice(0, tope));
   const progressMap = new Map(progressData.map((p) => [p.video_id, p]));
 
   // Los slugs se canonizan ANTES de armar los chips. Sin esto, mientras las
@@ -324,7 +368,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const porTexto = termino
     ? porCategoria.filter((v) =>
         normalizar(
-          [resolveI18nText(v.title_i18n), resolveI18nText(v.description_i18n), ...v.category_slugs].join(" ")
+          [resolveI18nText(v.title_i18n), resolveI18nText(v.description_i18n ?? {}), ...v.category_slugs].join(" ")
         ).includes(termino)
       )
     : porCategoria;
@@ -587,7 +631,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             {visible.map((video) => {
               const pct = safePercent(progressMap.get(video.id)?.completion_percent);
               const title = resolveI18nText(video.title_i18n);
-              const desc = resolveI18nText(video.description_i18n);
+              const desc = resolveI18nText(video.description_i18n ?? {});
               const tier = TIER_META[video.membership_tier_required] ?? TIER_META.none;
               const isDraft = video.status !== "published";
               // Thumbnails live behind the same token-protected pull zone as the
@@ -757,6 +801,34 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                 </div>
               </a>
             )}
+          </div>
+        )}
+
+        {/* Fase D: "Ver más" en vez de traer el catalogo entero de una.
+            Es acumulativo -- la pagina siguiente se suma, no reemplaza -- que
+            es lo que espera alguien recorriendo clases. */}
+        {hayMasPaginas && (
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>
+            <Link
+              href={(() => {
+                const qs = [
+                  activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
+                  busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
+                  fNivel ? `nivel=${fNivel}` : "",
+                  fDuracion ? `dur=${fDuracion}` : "",
+                  fPlan ? `plan=${fPlan}` : "",
+                  fEstado ? `estado=${fEstado}` : "",
+                  `pagina=${pagina + 1}`,
+                ].filter(Boolean).join("&");
+                return `/dashboard/library?${qs}`;
+              })() as never}
+              style={{
+                display: "inline-flex", alignItems: "center", minHeight: 48,
+                padding: "13px 30px", borderRadius: 999, textDecoration: "none",
+                background: "#fff", color: "var(--pink-deep)",
+                border: "1.5px solid var(--pink-line)", fontSize: 13, fontWeight: 700,
+              }}
+            >Ver más clases</Link>
           </div>
         )}
       </section>

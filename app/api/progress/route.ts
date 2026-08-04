@@ -32,6 +32,35 @@ export async function POST(request: Request) {
 
   const { videoId, programId, programDayNumber, lastPositionSeconds, completionPercent } = parsed.data;
 
+  // ── Camino nuevo: UN viaje ────────────────────────────────────────────────
+  // La funcion resuelve el maximo con greatest() del lado de la base, asi que
+  // desaparece el select previo. Ver 20260804_guardar_progreso_rpc.sql.
+  //
+  // El user_id NO se manda: la funcion lo toma de auth.uid(). Un parametro se
+  // puede falsificar desde la consola; auth.uid() no.
+  const rpc = await supabase.rpc("guardar_progreso", {
+    p_video_id: videoId,
+    p_program_id: programId ?? null,
+    p_program_day_number: programId ? programDayNumber ?? null : null,
+    p_last_position_seconds: lastPositionSeconds,
+    p_completion_percent: completionPercent,
+  });
+
+  if (!rpc.error) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // ── Camino viejo: dos viajes ──────────────────────────────────────────────
+  // Solo mientras la migracion no este corrida. PostgREST devuelve PGRST202
+  // ("could not find the function") cuando la funcion no existe todavia.
+  //
+  // Cualquier OTRO error se propaga: si la funcion existe pero fallo, caer al
+  // camino viejo escondería el problema y guardaría igual, que es peor que
+  // fallar -- nadie se enteraría de que la ruta rapida esta rota.
+  if (rpc.error.code !== "PGRST202") {
+    return NextResponse.json({ error: rpc.error.message }, { status: 500 });
+  }
+
   const baseQuery = supabase
     .from("user_progress")
     .select("id, max_position_seconds")

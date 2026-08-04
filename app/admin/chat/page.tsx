@@ -1,3 +1,4 @@
+import { leerCategorias } from "@/src/lib/categorias";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { Users, Gem, MessageSquare } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -321,11 +322,18 @@ export default async function AdminChatPage({ searchParams }: {
     { data: bansData },
     { data: mutesData },
     dmAccess,
-    { data: categoriesData },
+    categoriesData,
   ] = await Promise.all([
     supabase
       .from("chat_rooms")
       .select("id, type, name, tier_required, is_archived")
+      // Fase D: los DM se descartan en SQL y no en memoria.
+      //
+      // Esta pantalla ya los filtraba con `rooms.filter(r => r.type !== "dm")`,
+      // pero DESPUES de traerlos. Y hay UN DM POR ALUMNA: con 500 alumnas eran
+      // 500 filas viajando en cada carga para tirarlas al llegar. Es la clase
+      // de consulta que anda perfecto hasta que el estudio crece.
+      .neq("type", "dm")
       .order("created_at"),
     supabase
       .from("chat_bans")
@@ -336,17 +344,14 @@ export default async function AdminChatPage({ searchParams }: {
       .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
       .order("created_at", { ascending: false }),
     getDmAccess(),
-    supabase
-      .from("categories")
-      .select("slug, name_i18n")
-      .eq("is_active", true)
-      .order("sort_order"),
+    // Fase E: cacheado. Las categorias no dependen de quien mira.
+    leerCategorias(),
   ]);
 
   const rooms = (roomsData ?? []) as Room[];
   const bans = (bansData ?? []) as unknown as Ban[];
   const mutes = (mutesData ?? []) as unknown as Mute[];
-  const categories = (categoriesData ?? []) as { slug: string; name_i18n: Record<string, string> }[];
+  const categories = categoriesData ?? [];
 
   const publicRooms = rooms.filter((r) => r.type !== "dm");
   const activeRoom = publicRooms.find((r) => r.id === activeRoomId) ?? null;
@@ -355,7 +360,7 @@ export default async function AdminChatPage({ searchParams }: {
   if (activeRoom) {
     const { data } = await supabase
       .from("chat_messages")
-      .select("id, room_id, user_id, content, created_at, is_deleted, profiles(full_name, email, is_admin)")
+      .select("*, profiles(full_name, email, is_admin)")
       .eq("room_id", activeRoom.id)
       .order("created_at", { ascending: false })
       .limit(200);

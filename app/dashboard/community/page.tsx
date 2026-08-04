@@ -114,7 +114,7 @@ export default async function CommunityPage({ searchParams }: {
     // then limiting would pin the room to its first 100 messages forever.
     const { data } = await supabase
       .from("chat_messages")
-      .select("id, user_id, content, created_at, is_deleted, profiles(full_name, email, is_admin)")
+      .select("*, profiles(full_name, email, is_admin)")
       .eq("room_id", currentRoom.id)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })

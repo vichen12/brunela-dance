@@ -493,9 +493,29 @@ policies para select/insert/update/delete. Las 20 tablas viejas están bien.
 - [ ] **Migración de color**: ~304 ocurrencias de magenta hardcodeado en 24
       archivos. Unas 166 son tintes claros que ya tienen `--pink-wash`. El
       sidebar y el dashboard están migrados; el resto no.
-- [ ] **Plan de escalabilidad A–E**, aprobado y postergado: filtrado de la
-      biblioteca en SQL, los `count exact` de `/admin`, rate limiting,
-      degradación con gracia.
+- [x] **Plan de escalabilidad A–E** — hecho salvo B3. Detalle completo de qué
+      se resuelve pagando y qué no: `docs/escalabilidad.md`.
+
+      - **A** · guarda de orden del webhook: verificada, seguía intacta
+      - **B** · chat: autor desnormalizado, N+1 eliminado, rate limit por
+        trigger, degradación con gracia. **B3 (Broadcast) SIN HACER**
+      - **C** · progreso en un viaje (RPC) + guardado cada 30 s en vez de 10
+      - **D** · categoría en SQL con el índice GIN, paginación, DM fuera en SQL
+      - **E** · `categories` cacheada; `site_settings` ya lo estaba
+
+- [ ] **🔴 B3 · `postgres_changes` → Broadcast.** Es lo único del plan que
+      queda, y lo único que no se arregla pagando: con `postgres_changes`
+      Postgres evalúa RLS **una vez por conexión suscrita** en cada cambio.
+      500 alumnas en una sala = 500 evaluaciones por mensaje.
+
+      **No se hizo por riesgo, no por tiempo.** Broadcast mueve la
+      autorización de las policies de la tabla a las de `realtime.messages`;
+      un error ahí filtra mensajes entre salas o entre planes. Verificarlo
+      pide dos sesiones autenticadas de planes distintos contra Supabase real,
+      y no hay banco de pruebas para eso.
+
+      **Mitigante:** el costo dominante era el N+1, que ya no está. Broadcast
+      recién importa con **cientos** de personas conectadas a la vez.
 
 - [ ] **Agregación en TypeScript: el techo son ~500 alumnas.** `/admin` usa
       `count exact` por métrica, y `/admin/analiticas` trae las filas crudas y
