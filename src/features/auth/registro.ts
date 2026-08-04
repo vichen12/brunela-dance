@@ -129,6 +129,10 @@ const esquemaOnboarding = z.object({
   ])).min(1, "Elegí al menos un objetivo."),
   plan: z.enum(TIERS).optional(),
   interval: z.enum(INTERVALOS).optional(),
+  // Una casilla sin marcar no llega en el FormData, asi que la ausencia ES el
+  // "no". Por eso el default es false y no hay forma de que un formulario
+  // manipulado active el consentimiento por omision.
+  marketingOptIn: z.boolean().default(false),
 });
 
 export async function completarOnboardingAction(formData: FormData) {
@@ -142,6 +146,7 @@ export async function completarOnboardingAction(formData: FormData) {
     goals: formData.getAll("goals").map(String),
     plan,
     interval,
+    marketingOptIn: formData.get("marketingOptIn") === "si",
   });
 
   if (!parsed.success) {
@@ -165,6 +170,31 @@ export async function completarOnboardingAction(formData: FormData) {
     const q = new URLSearchParams({ error: error.message });
     if (plan) q.set("plan", plan);
     redirect(`/registro/onboarding?${q.toString()}` as never);
+  }
+
+  // El consentimiento va en una escritura APARTE, y a proposito.
+  //
+  // El codigo se despliega antes de que se corra
+  // 20260803_marketing_consent.sql. Si `marketing_opt_in` viajara en el update
+  // de arriba, mientras falte esa columna PostgREST rechaza la fila ENTERA y el
+  // onboarding se rompe para toda alumna nueva: no guardaria ni el nivel ni los
+  // objetivos, y quedaria en un bucle contra la compuerta del layout.
+  //
+  // Separado, el peor caso es que no se registre el consentimiento -- y como el
+  // envio de correos todavia no existe, eso no le quita nada a nadie.
+  //
+  // La FECHA no se escribe aca: la sella el trigger stamp_marketing_consent.
+  const { error: errorConsentimiento } = await supabase
+    .from("profiles")
+    .update({ marketing_opt_in: parsed.data.marketingOptIn })
+    .eq("id", user.id);
+
+  if (errorConsentimiento) {
+    console.error(
+      "[onboarding] no se pudo guardar el consentimiento (falta correr " +
+        "20260803_marketing_consent.sql?):",
+      errorConsentimiento.message
+    );
   }
 
   // El plan puede venir por URL (camino Google) o de la metadata (camino

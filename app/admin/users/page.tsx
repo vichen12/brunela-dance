@@ -10,9 +10,29 @@ type ProfileRow = {
   full_name: string | null;
   membership_tier: "none" | "corps_de_ballet" | "solista" | "principal";
   technical_level: "principiante" | "intermedio" | "avanzado" | "profesional" | "maestro";
+  training_goals: string[] | null;
   onboarding_completed: boolean;
   is_admin: boolean;
   created_at: string;
+};
+
+/**
+ * Objetivos del onboarding, con el nombre que vio la alumna al elegirlos.
+ *
+ * Se venian guardando desde el alta y no se mostraban en ningun lado: Brunela
+ * le pedia ocho objetivos a cada alumna y despues no los podia leer. Las claves
+ * son las de OBJETIVOS en app/registro/onboarding/page.tsx -- si se agrega uno
+ * alla, va aca tambien o se muestra el slug crudo.
+ */
+const OBJETIVO_LABEL: Record<string, string> = {
+  movilidad: "Movilidad",
+  fuerza_centro: "Fuerza y centro",
+  flexibilidad: "Flexibilidad",
+  recuperacion: "Recuperación",
+  resistencia: "Resistencia",
+  alineacion_postural: "Alineación postural",
+  rendimiento_escenico: "Rendimiento escénico",
+  bienestar_general: "Bienestar general",
 };
 
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
@@ -55,7 +75,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, email, full_name, membership_tier, technical_level, onboarding_completed, is_admin, created_at")
+    .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at")
     .order("created_at", { ascending: false });
 
   const profiles = (data ?? []) as ProfileRow[];
@@ -143,6 +163,18 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     </p>
                     <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 1 }}>{profile.email}</p>
                     <p style={{ fontSize: 10, color: "#c4b5af", marginTop: 1 }}>Ingreso: {joinDate}</p>
+
+                    {/* Que busca mejorar. Lo eligio ella en el onboarding. */}
+                    {profile.training_goals && profile.training_goals.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                        {profile.training_goals.map((g) => (
+                          <span key={g} style={{
+                            fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 99,
+                            background: "var(--pink-wash)", color: "var(--pink-deep)",
+                          }}>{OBJETIVO_LABEL[g] ?? g}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tier */}

@@ -26,6 +26,20 @@ type Props = {
    * Receives last position and completion percent (0-100).
    */
   onProgress: (lastPositionSeconds: number, completionPercent: number) => void;
+  /**
+   * Registro de actividad (opcional). A diferencia de onProgress, que pisa
+   * siempre la misma fila, esto deja historia: de aca salen frecuencia de uso,
+   * franjas horarias y visualizaciones por clase.
+   *
+   * `secondsWatched` es tiempo REALMENTE reproducido desde el evento anterior,
+   * medido con reloj de pared. No es diferencia de posicion: si adelanta diez
+   * minutos con la barra, la posicion salta y esto suma cero.
+   */
+  onActivity?: (event: {
+    type: "video_start" | "video_heartbeat" | "video_complete";
+    positionSeconds: number;
+    secondsWatched: number;
+  }) => void;
 };
 
 /** Mirrors AUDIO_LOCALES in src/lib/audio/config.ts (plus the original, es). */
@@ -95,12 +109,20 @@ export function VideoPlayer({
   durationSeconds,
   initialPositionSeconds = 0,
   preferredLocale = "es",
-  onProgress
+  onProgress,
+  onActivity
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const lastSavedRef = useRef(0);
   const recoveriesRef = useRef(0);
+
+  // Contabilidad del tiempo reproducido. playingSinceRef guarda el instante en
+  // que arranco el tramo actual; null significa pausado.
+  const playingSinceRef = useRef<number | null>(null);
+  const watchedRef = useRef(0);
+  const startedRef = useRef(false);
+  const completedRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,6 +289,79 @@ export function VideoPlayer({
       saveProgress(true);
     };
   }, [saveProgress]);
+
+  // ── Registro de actividad ────────────────────────────────────────────────
+  // Efecto aparte del de progreso a proposito: si algun dia hay que apagar la
+  // analitica, se saca este bloque entero sin tocar el guardado de posicion,
+  // que es lo que la alumna nota si falla.
+  useEffect(() => {
+    if (!onActivity) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    /** Cierra el tramo en curso y devuelve los segundos acumulados. */
+    function corte(): number {
+      if (playingSinceRef.current !== null) {
+        watchedRef.current += (Date.now() - playingSinceRef.current) / 1000;
+        playingSinceRef.current = Date.now();
+      }
+      const segundos = Math.round(watchedRef.current);
+      watchedRef.current -= segundos; // conserva el resto decimal
+      return segundos;
+    }
+
+    function posicion(): number {
+      return video && Number.isFinite(video.currentTime) ? Math.floor(video.currentTime) : 0;
+    }
+
+    const onPlay = () => {
+      playingSinceRef.current = Date.now();
+      if (!startedRef.current) {
+        startedRef.current = true;
+        onActivity?.({ type: "video_start", positionSeconds: posicion(), secondsWatched: 0 });
+      }
+    };
+
+    const onPause = () => {
+      corte();
+      playingSinceRef.current = null;
+    };
+
+    const onEnded = () => {
+      const segundos = corte();
+      playingSinceRef.current = null;
+      if (!completedRef.current) {
+        completedRef.current = true;
+        onActivity?.({ type: "video_complete", positionSeconds: posicion(), secondsWatched: segundos });
+      }
+    };
+
+    // Un latido por minuto, no cada 10 segundos como el progreso: son filas que
+    // se guardan para siempre. Una clase de 40 minutos deja ~42 filas, no 240.
+    const latido = window.setInterval(() => {
+      if (playingSinceRef.current === null) return; // pausada: no se registra nada
+      const segundos = corte();
+      if (segundos <= 0) return;
+      onActivity?.({ type: "video_heartbeat", positionSeconds: posicion(), secondsWatched: segundos });
+    }, 60_000);
+
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+    video.addEventListener("ended", onEnded);
+
+    return () => {
+      window.clearInterval(latido);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+      video.removeEventListener("ended", onEnded);
+      // Al salir de la pantalla se manda lo que quedo suelto. Sin esto, quien
+      // mira 40 segundos y cierra no aparece en ninguna metrica.
+      const segundos = corte();
+      if (segundos > 0) {
+        onActivity?.({ type: "video_heartbeat", positionSeconds: posicion(), secondsWatched: segundos });
+      }
+    };
+  }, [onActivity]);
 
   function switchAudio(id: number) {
     const hls = hlsRef.current;

@@ -44,9 +44,21 @@ no es el que devuelve `ls`:
 17. 20260801_data_api_grants.sql                    <-- opera sobre "all
                                                         tables": necesita las
                                                         20 ya creadas
-18. 20260801_authenticated_least_privilege.sql      <-- ULTIMA: refina lo que
-                                                        otorga la 17
+18. 20260801_authenticated_least_privilege.sql      <-- refina lo que otorga
+                                                        la 17
+19. 20260803_studio_documents_bucket.sql
+20. 20260803_activity_events.sql            \
+21. 20260803_marketing_consent.sql           |  independientes entre si,
+22. 20260803_unify_pilates_categories.sql   /   en cualquier orden
 ```
+
+> **De la 19 en adelante el orden entre ellas da igual**, pero todas van
+> **después de la 18**, y no por costumbre: la 18 termina con un
+> `alter default privileges ... revoke insert, update, delete`, así que toda
+> tabla creada después nace **sin permiso de escritura** para `authenticated`.
+> Por eso `20260803_activity_events.sql` trae su propio `grant` al final. Si se
+> corriera antes de la 18, ese grant se perdería y el registro de actividad
+> fallaría con `42501` sin que se note en pantalla.
 
 > Las dos del **2026-08-01** existen porque dos reglas de negocio vivían sólo
 > como ediciones manuales en la base y se habrían perdido al reconstruir desde

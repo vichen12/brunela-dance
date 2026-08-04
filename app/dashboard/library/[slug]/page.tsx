@@ -166,6 +166,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
                 initialPositionSeconds={resumeFrom}
                 preferredLocale={profile?.preferred_locale ?? "es"}
                 videoId={video.id}
+                videoSlug={video.slug}
                 programId={programId || null}
                 programDayNumber={programDayNumber}
               />

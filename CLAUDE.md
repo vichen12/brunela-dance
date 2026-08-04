@@ -429,6 +429,21 @@ el problema es de codecs o del motor, no de acceso.
 
 Ordenados por lo que bloquea a lo que puede esperar.
 
+### 🔴 Fase 0 de analíticas — 3 migraciones escritas SIN CORRER
+
+El código ya está desplegado; la base todavía no. Detalle completo en
+`docs/fase-0-analitica.md`.
+
+| Migración | Sin correrla |
+|---|---|
+| `20260803_activity_events.sql` | No se guarda **ningún** evento. `/api/activity` devuelve 204 igual y deja el error en los logs: no se ve roto |
+| `20260803_marketing_consent.sql` | La casilla del onboarding no guarda nada (el resto del alta sí funciona: la escritura va aparte a propósito) |
+| `20260803_unify_pilates_categories.sql` | Las clases siguen con `category_slugs` viejos. El código los mapea, así que no se rompe nada visible |
+
+Van **después de la 18** y entre ellas en cualquier orden. Además, dos pasos
+manuales fuera del repo: suscribir `invoice.paid` en Stripe y activar Web
+Analytics en Vercel.
+
 ### Bloqueantes para dar por cerrada la migración
 
 - [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,

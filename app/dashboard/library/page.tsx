@@ -113,11 +113,17 @@ const TIER_META: Record<string, { bg: string; color: string; label: string }> = 
 
 const CAT_GRADIENTS: Record<string, string> = {
   ballet:     "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
-  reformer:   "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
-  mat:        "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink) 100%)",
+  pilates:    "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
   stretching: "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
   pbt:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
   pct:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
+
+  // Se dejan mapeadas para que una clase que todavia tenga el slug viejo no
+  // pierda su degrade y caiga en el gris de reserva. Desaparecen solas cuando
+  // se corra 20260803_unify_pilates_categories.sql; antes de eso, la pantalla
+  // no se rompe.
+  reformer:   "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
+  mat:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
 };
 
 function catGradient(slugs: string[]): string {
@@ -126,14 +132,96 @@ function catGradient(slugs: string[]): string {
 }
 
 const FIXED_FILTERS = [
-  { key: "all",        label: "Todas"        },
-  { key: "ballet",     label: "Ballet"       },
-  { key: "reformer",   label: "P. Reformer"  },
-  { key: "mat",        label: "Pilates Mat"  },
-  { key: "stretching", label: "Stretching"   },
-  { key: "pbt",        label: "PBT"          },
-  { key: "pct",        label: "PCT"          },
+  { key: "all",        label: "Todas"      },
+  { key: "ballet",     label: "Ballet"     },
+  { key: "pilates",    label: "Pilates"    },
+  { key: "stretching", label: "Stretching" },
+  { key: "pbt",        label: "PBT"        },
+  { key: "pct",        label: "PCT"        },
 ];
+
+/**
+ * Slugs que cuentan como parte de una categoria.
+ *
+ * "Pilates" absorbe reformer y mat. Esto NO sobra despues de correr la
+ * migracion: el codigo se despliega antes que ella, y sin esta equivalencia
+ * las clases de reformer desaparecerian del filtro en la ventana entre las dos
+ * cosas. Tambien cubre el caso de que alguien cargue una clase vieja mas
+ * adelante.
+ */
+const CATEGORIA_EQUIVALENTES: Record<string, string[]> = {
+  pilates: ["pilates", "reformer", "mat"],
+};
+
+function coincideCategoria(slugsDeLaClase: string[], filtro: string): boolean {
+  if (filtro === "all") return true;
+  const aceptados = CATEGORIA_EQUIVALENTES[filtro] ?? [filtro];
+  return slugsDeLaClase.some((s) => aceptados.includes(s));
+}
+
+// ── Los cuatro filtros ───────────────────────────────────────────────────────
+// Todos salen de datos que ya existen: ninguno necesita capturar nada nuevo.
+
+const NIVELES = ["principiante", "intermedio", "avanzado", "profesional", "maestro"] as const;
+const NIVEL_ORDEN = new Map(NIVELES.map((n, i) => [n as string, i]));
+
+const OPCIONES_NIVEL = [
+  { key: "",              label: "Todos los niveles" },
+  { key: "principiante",  label: "Principiante" },
+  { key: "intermedio",    label: "Intermedio" },
+  { key: "avanzado",      label: "Avanzado" },
+  { key: "profesional",   label: "Profesional" },
+  { key: "maestro",       label: "Maestro" },
+];
+
+const OPCIONES_DURACION = [
+  { key: "",      label: "Cualquier duración" },
+  { key: "corta", label: "Hasta 20 min" },
+  { key: "media", label: "20 a 45 min" },
+  { key: "larga", label: "Más de 45 min" },
+];
+
+const OPCIONES_PLAN = [
+  { key: "",                label: "Todos los planes" },
+  { key: "none",            label: "Sin plan" },
+  { key: "corps_de_ballet", label: "Corps de ballet" },
+  { key: "solista",         label: "Solista" },
+  { key: "principal",       label: "Principal" },
+];
+
+const OPCIONES_ESTADO = [
+  { key: "",           label: "Cualquier estado" },
+  { key: "sin_empezar", label: "Sin empezar" },
+  { key: "empezadas",   label: "Empezadas" },
+  { key: "completadas", label: "Completadas" },
+];
+
+/**
+ * Una clase cae dentro de un nivel si ese nivel esta en su rango recomendado.
+ * No es igualdad: una clase marcada de principiante a avanzado tiene que
+ * aparecer cuando alguien filtra por "intermedio", que es justo lo que la
+ * profesora quiso decir al poner un rango.
+ *
+ * Los limites sin definir se tratan como abiertos: sin esto, una clase a la
+ * que nadie le cargo el rango desaparece de todos los filtros de nivel.
+ */
+function coincideNivel(min: string | null, max: string | null, nivel: string): boolean {
+  if (!nivel) return true;
+  const buscado = NIVEL_ORDEN.get(nivel);
+  if (buscado === undefined) return true;
+  const desde = min ? NIVEL_ORDEN.get(min) ?? 0 : 0;
+  const hasta = max ? NIVEL_ORDEN.get(max) ?? NIVELES.length - 1 : NIVELES.length - 1;
+  return buscado >= desde && buscado <= hasta;
+}
+
+function coincideDuracion(segundos: number, rango: string): boolean {
+  if (!rango) return true;
+  const min = segundos / 60;
+  if (rango === "corta") return min <= 20;
+  if (rango === "media") return min > 20 && min <= 45;
+  if (rango === "larga") return min > 45;
+  return true;
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -143,6 +231,18 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const params = (await searchParams) ?? {};
   const activeCategory = typeof params.category === "string" ? params.category : "all";
   const busqueda = (typeof params.q === "string" ? params.q : "").trim();
+
+  // Los cuatro filtros. Se validan contra sus listas en vez de confiar en la
+  // URL: un ?nivel=<script> tiene que quedar en "todos", no viajar al render.
+  const uno = (k: string, permitidos: string[]) => {
+    const v = typeof params[k] === "string" ? (params[k] as string) : "";
+    return permitidos.includes(v) ? v : "";
+  };
+  const fNivel    = uno("nivel",  OPCIONES_NIVEL.map((o) => o.key));
+  const fDuracion = uno("dur",    OPCIONES_DURACION.map((o) => o.key));
+  const fPlan     = uno("plan",   OPCIONES_PLAN.map((o) => o.key));
+  const fEstado   = uno("estado", OPCIONES_ESTADO.map((o) => o.key));
+  const hayFiltros = Boolean(fNivel || fDuracion || fPlan || fEstado);
 
   const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
@@ -198,22 +298,41 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     ...dbCats.filter((c) => !FIXED_FILTERS.some((f) => f.key === c)).map((c) => ({ key: c, label: c })),
   ];
 
-  const porCategoria = activeCategory === "all"
-    ? videos
-    : videos.filter((v) => v.category_slugs.includes(activeCategory));
+  const porCategoria = videos.filter((v) => coincideCategoria(v.category_slugs, activeCategory));
 
   // Busqueda por titulo, descripcion y categoria. Sin acentos ni mayusculas,
   // para que "tecnica" encuentre "Tecnica clasica".
   const normalizar = (t: string) =>
     t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const termino = normalizar(busqueda);
-  const visible = termino
+  const porTexto = termino
     ? porCategoria.filter((v) =>
         normalizar(
           [resolveI18nText(v.title_i18n), resolveI18nText(v.description_i18n), ...v.category_slugs].join(" ")
         ).includes(termino)
       )
     : porCategoria;
+
+  // Los cuatro filtros, al final de la cadena. El estado personal se resuelve
+  // con el progreso que ya vino memoizado del layout: no agrega ningun viaje.
+  const visible = porTexto.filter((v) => {
+    if (!coincideNivel(v.recommended_min_level, v.recommended_max_level, fNivel)) return false;
+    if (!coincideDuracion(v.duration_seconds, fDuracion)) return false;
+    if (fPlan && v.membership_tier_required !== fPlan) return false;
+
+    if (fEstado) {
+      const p = progressMap.get(v.id);
+      // "Completada" usa el mismo umbral que el reproductor para marcarla
+      // (completion_percent >= 90). Si aca fuera 100, una clase que la alumna
+      // ve como terminada no aparceria en su propio filtro de completadas.
+      const completada = Boolean(p?.is_completed) || (p?.completion_percent ?? 0) >= 90;
+      const empezada = Boolean(p) && !completada;
+      if (fEstado === "completadas" && !completada) return false;
+      if (fEstado === "empezadas" && !empezada) return false;
+      if (fEstado === "sin_empezar" && p) return false;
+    }
+    return true;
+  });
 
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
@@ -274,6 +393,73 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               </button>
             </form>
           </div>
+
+          {/* Los cuatro filtros. Van DENTRO de un form GET propio y con
+              autoSubmit por onChange deshabilitado a proposito: sin JavaScript
+              igual funcionan con el boton, y con el teclado se recorren en
+              orden. Conservan la busqueda y la categoria activa. */}
+          <form
+            method="get"
+            action="/dashboard/library"
+            style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap", alignItems: "center" }}
+          >
+            {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
+            {busqueda && <input type="hidden" name="q" value={busqueda} />}
+
+            {([
+              { name: "nivel",  valor: fNivel,    ops: OPCIONES_NIVEL,    etiqueta: "Nivel" },
+              { name: "dur",    valor: fDuracion, ops: OPCIONES_DURACION, etiqueta: "Duración" },
+              { name: "plan",   valor: fPlan,     ops: OPCIONES_PLAN,     etiqueta: "Plan" },
+              { name: "estado", valor: fEstado,   ops: OPCIONES_ESTADO,   etiqueta: "Estado" },
+            ] as const).map((f) => (
+              <select
+                key={f.name}
+                name={f.name}
+                defaultValue={f.valor}
+                aria-label={f.etiqueta}
+                style={{
+                  minHeight: 40, padding: "9px 14px", borderRadius: 999,
+                  border: `1px solid ${f.valor ? "var(--pink)" : "#F1E9E7"}`,
+                  background: f.valor ? "var(--pink-wash)" : "#fff",
+                  color: f.valor ? "var(--pink-deep)" : "var(--muted)",
+                  fontSize: 12.5, fontWeight: f.valor ? 700 : 500,
+                  fontFamily: "inherit", cursor: "pointer", outline: "none",
+                }}
+              >
+                {f.ops.map((o) => (
+                  <option key={o.key} value={o.key}>{o.label}</option>
+                ))}
+              </select>
+            ))}
+
+            <button type="submit" style={{
+              minHeight: 40, padding: "9px 18px", borderRadius: 999, cursor: "pointer",
+              background: "var(--pink)", color: "#fff", border: "none",
+              fontSize: 12.5, fontWeight: 700, fontFamily: "inherit",
+            }}>
+              Aplicar
+            </button>
+
+            {hayFiltros && (
+              <a
+                href={`/dashboard/library${
+                  activeCategory !== "all" || busqueda
+                    ? `?${[
+                        activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
+                        busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
+                      ].filter(Boolean).join("&")}`
+                    : ""
+                }` as never}
+                style={{
+                  minHeight: 40, display: "inline-flex", alignItems: "center",
+                  padding: "9px 16px", borderRadius: 999, textDecoration: "none",
+                  color: "var(--pink-deep)", fontSize: 12.5, fontWeight: 700,
+                }}
+              >
+                Quitar filtros
+              </a>
+            )}
+          </form>
           {isAdmin && (
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
               <a
@@ -333,11 +519,21 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           {filters.map((f) => (
             <Link
               key={f.key}
+              // Conserva la busqueda Y los cuatro filtros. Antes solo llevaba
+              // `q`: cambiar de categoria con un filtro puesto lo borraba en
+              // silencio y la lista cambiaba por dos motivos a la vez.
               href={
-                ((f.key === "all"
-                  ? "/dashboard/library"
-                  : `/dashboard/library?category=${encodeURIComponent(f.key)}`) +
-                  (busqueda ? `${f.key === "all" ? "?" : "&"}q=${encodeURIComponent(busqueda)}` : "")) as never
+                (() => {
+                  const qs = [
+                    f.key !== "all" ? `category=${encodeURIComponent(f.key)}` : "",
+                    busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
+                    fNivel ? `nivel=${fNivel}` : "",
+                    fDuracion ? `dur=${fDuracion}` : "",
+                    fPlan ? `plan=${fPlan}` : "",
+                    fEstado ? `estado=${fEstado}` : "",
+                  ].filter(Boolean).join("&");
+                  return `/dashboard/library${qs ? `?${qs}` : ""}`;
+                })() as never
               }
               style={{
                 padding: "7px 18px", textDecoration: "none", borderRadius: 99,

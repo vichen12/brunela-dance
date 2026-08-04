@@ -96,6 +96,25 @@ export default async function OnboardingPage({ searchParams }: Props) {
             </div>
           </fieldset>
 
+          {/* Consentimiento de marketing.
+              SIN defaultChecked, y es lo unico que importa de este bloque: un
+              consentimiento premarcado no es consentimiento. Tampoco es
+              obligatorio -- no lleva `required` -- porque condicionar el alta a
+              aceptar publicidad lo invalida. */}
+          <fieldset className="onb-group">
+            <legend className="onb-legend">Avisos</legend>
+            <label className="onb-consent">
+              <input type="checkbox" name="marketingOptIn" value="si" />
+              <span>
+                <strong>Quiero enterarme de las clases nuevas.</strong>
+                <small>
+                  Brunela te escribe cuando sube una clase. Podés darte de baja
+                  desde cualquier correo, con un clic y sin iniciar sesión.
+                </small>
+              </span>
+            </label>
+          </fieldset>
+
           <button type="submit" className="onb-submit">
             {plan ? "Continuar al pago" : "Entrar al estudio"}
           </button>
@@ -173,6 +192,20 @@ export default async function OnboardingPage({ searchParams }: Props) {
           border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep);
         }
         .onb-obj input { accent-color: var(--pink); width: 15px; height: 15px; }
+
+        .onb-consent {
+          display: flex; align-items: flex-start; gap: 12px;
+          padding: 14px 15px; border-radius: 15px;
+          border: 1.5px solid var(--pink-line); background: #fff;
+          cursor: pointer; min-height: 48px;
+        }
+        .onb-consent:has(input:checked) {
+          border-color: var(--pink); background: var(--pink-wash);
+        }
+        .onb-consent input { margin-top: 3px; accent-color: var(--pink); width: 16px; height: 16px; }
+        .onb-consent span { display: flex; flex-direction: column; gap: 3px; }
+        .onb-consent strong { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+        .onb-consent small { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
         .onb-submit {
           width: 100%; min-height: 52px; border: 0; border-radius: 999px;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Great_Vibes, Montserrat, Roboto } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { PublicLanguageProvider } from "@/components/language-provider";
 import "./globals.css";
 
@@ -23,6 +24,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PublicLanguageProvider>
           {children}
         </PublicLanguageProvider>
+        {/* Visitas y pais, que es lo que falta para el embudo
+            visitas -> registros -> pagos. Va aca y no en un layout mas adentro
+            porque el embudo arranca en la landing publica.
+
+            Sin cookies ni identificadores por persona: no hace falta banner de
+            consentimiento, y es la razon por la que se eligio esto en vez de
+            preguntarle el pais a la alumna en el alta. Cada pregunta de mas en
+            el registro es gente que lo abandona.
+
+            El panel vive en Vercel > Analytics. Hay que ACTIVARLO ahi una vez;
+            este componente solo no alcanza. */}
+        <Analytics />
       </body>
     </html>
   );

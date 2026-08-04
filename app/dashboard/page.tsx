@@ -66,18 +66,25 @@ const TIER_COLOR: Record<MembershipTier, { bg: string; color: string }> = {
 };
 
 const CLASS_CATS = [
-  { key: "ballet",     label: "Ballet",           sub: "Tecnica clasica",   grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
-  { key: "reformer",   label: "Pilates Reformer",  sub: "Fuerza funcional",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
-  { key: "mat",        label: "Pilates Mat",       sub: "Control de centro", grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
-  { key: "stretching", label: "Stretching",        sub: "Movilidad activa",  grad: "linear-gradient(145deg, var(--pink-wash), #a855f7)" },
-  { key: "pbt",        label: "PBT",               sub: "PBT Certificado",   grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
-  { key: "pct",        label: "PCT",               sub: "PCT Certificado",   grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
+  { key: "ballet",     label: "Ballet",     sub: "Tecnica clasica",  grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
+  { key: "pilates",    label: "Pilates",    sub: "Suelo y reformer", grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
+  { key: "stretching", label: "Stretching", sub: "Movilidad activa", grad: "linear-gradient(145deg, var(--pink-wash), #a855f7)" },
+  { key: "pbt",        label: "PBT",        sub: "PBT Certificado",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
+  { key: "pct",        label: "PCT",        sub: "PCT Certificado",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
 ];
 
-/** Etiqueta legible de cada categoria, para no mostrar el slug crudo. */
-const CAT_LABEL: Record<string, string> = Object.fromEntries(
-  CLASS_CATS.map((c) => [c.key, c.label])
-);
+/**
+ * Etiqueta legible de cada categoria, para no mostrar el slug crudo.
+ *
+ * Los dos slugs viejos siguen mapeados: hasta que se corra
+ * 20260803_unify_pilates_categories.sql puede haber clases con category_slugs
+ * = 'reformer', y sin esto la tarjeta mostraria "reformer" en minuscula.
+ */
+const CAT_LABEL: Record<string, string> = {
+  ...Object.fromEntries(CLASS_CATS.map((c) => [c.key, c.label])),
+  reformer: "Pilates",
+  mat: "Pilates",
+};
 
 const QUICK_LINKS = [
   { href: "/dashboard/library"   as const, label: "Biblioteca",  sub: "Explorá todas las clases",
