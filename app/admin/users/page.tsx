@@ -164,6 +164,14 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 1 }}>{profile.email}</p>
                     <p style={{ fontSize: 10, color: "#c4b5af", marginTop: 1 }}>Ingreso: {joinDate}</p>
 
+                    {/* La ficha completa: progreso, plan, reservas y mensajes.
+                        Es la pantalla desde la que se puede ACTUAR, asi que se
+                        entra desde aca y no solo desde las analiticas. */}
+                    <a href={`/admin/users/${profile.id}`} style={{
+                      display: "inline-block", marginTop: 5, fontSize: 10.5,
+                      fontWeight: 700, color: "var(--pink-deep)", textDecoration: "none",
+                    }}>Ver ficha completa →</a>
+
                     {/* Que busca mejorar. Lo eligio ella en el onboarding. */}
                     {profile.training_goals && profile.training_goals.length > 0 && (
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>

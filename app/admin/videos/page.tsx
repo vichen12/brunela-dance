@@ -407,6 +407,26 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const published = videos.filter((v) => v.status === "published").length;
   const drafts = videos.filter((v) => v.status === "draft").length;
 
+  // Cuantas alumnas EMPEZARON cada clase.
+  //
+  // No es "vistas" y no se llama asi: hoy lo unico contable es cuantas alumnas
+  // tienen una fila de progreso. Ver el encabezado de
+  // src/features/admin/analitica/queries.ts -- ponerle "vistas" haria que el
+  // numero cambiara de significado solo cuando lleguen los eventos.
+  const { data: progresoData } = await supabase
+    .from("user_progress")
+    .select("user_id, video_id");
+
+  const alumnasPorClase = new Map<string, Set<string>>();
+  for (const g of progresoData ?? []) {
+    if (!alumnasPorClase.has(g.video_id)) alumnasPorClase.set(g.video_id, new Set());
+    alumnasPorClase.get(g.video_id)!.add(g.user_id);
+  }
+  // Con muy pocas alumnas, "sin uso" no dice nada del contenido: dice que el
+  // estudio recien arranca. Mismo umbral que el panel.
+  const totalAlumnas = new Set((progresoData ?? []).map((g) => g.user_id)).size;
+  const mostrarUso = totalAlumnas >= 5;
+
   // Newest job per video. A class can be re-queued after a failure, and only the
   // current attempt is worth showing.
   const latestJob = new Map<string, MuxJob>();
@@ -550,6 +570,18 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         {allLocales.length > 0 && (
                           <span style={{ color: "#7c3aed", fontWeight: 600 }}>Audio: {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
                         )}
+                        {/* Solo en clases PUBLICADAS: una en borrador no tiene
+                            por que tener uso, y marcarla seria ruido. */}
+                        {mostrarUso && video.status === "published" && (() => {
+                          const n = alumnasPorClase.get(video.id)?.size ?? 0;
+                          return n === 0 ? (
+                            <span style={{ color: "var(--pink-deep)", fontWeight: 700 }}>
+                              No la empezó nadie
+                            </span>
+                          ) : (
+                            <span>La empezaron {n}</span>
+                          );
+                        })()}
                       </div>
                     </div>
 

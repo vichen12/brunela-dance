@@ -496,6 +496,22 @@ policies para select/insert/update/delete. Las 20 tablas viejas están bien.
 - [ ] **Plan de escalabilidad A–E**, aprobado y postergado: filtrado de la
       biblioteca en SQL, los `count exact` de `/admin`, rate limiting,
       degradación con gracia.
+
+- [ ] **Agregación en TypeScript: el techo son ~500 alumnas.** `/admin` usa
+      `count exact` por métrica, y `/admin/analiticas` trae las filas crudas y
+      agrega en memoria. Con ~30 ms de ida y vuelta a Fráncfort, **quince
+      consultas son ~450 ms por carga**, y el panel de analíticas hace seis en
+      paralelo más el progreso completo.
+
+      Con menos de 500 alumnas traer las filas es **más rápido** que contar en
+      SQL, y no necesita migración: por eso se hizo así. Por encima de eso hay
+      que pasarlo a **funciones SQL** (`SECURITY DEFINER`, una por bloque) que
+      devuelvan el resultado agregado. Eso **sí** es una migración.
+
+      El cambio está acotado a propósito: toda la lectura vive en
+      `src/features/admin/analitica/`, así que cambiar la fuente no toca
+      ninguna pantalla. Ese aislamiento es también lo que permite que las
+      métricas mejoren solas cuando `activity_events` acumule historia.
 - [ ] **`videos.stream_asset_id` es una COLUMNA MUERTA.** Quedo de la epoca de
       Mux.com. Cero filas la usan, nadie la escribe ni la lee. Se saco de la
       interfaz el 2026-08-03 pero la columna sigue en la base a proposito: una

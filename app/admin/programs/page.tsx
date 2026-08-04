@@ -107,6 +107,40 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
     supabase.from("videos").select("id, slug, title_i18n").order("title_i18n->>es", { ascending: true })
   ]);
 
+  // Cuantas alumnas empezaron y terminaron cada programa.
+  //
+  // Va aca y no solo en /admin/analiticas a proposito: una metrica sirve donde
+  // se puede ACTUAR sobre ella. Si Brunela ve que un programa se abandona el
+  // dia 4, quiere poder mirar el dia 4 sin cambiar de pantalla.
+  const { data: progresoData } = await supabase
+    .from("user_progress")
+    .select("user_id, program_id, program_day_number")
+    .not("program_id", "is", null);
+
+  const usoPorPrograma = new Map<string, { empezaron: number; terminaron: number }>();
+  {
+    const llegoHasta = new Map<string, Map<string, number>>();
+    for (const g of progresoData ?? []) {
+      const pid = g.program_id as string;
+      if (!llegoHasta.has(pid)) llegoHasta.set(pid, new Map());
+      const m = llegoHasta.get(pid)!;
+      const dia = g.program_day_number ?? 0;
+      m.set(g.user_id, Math.max(m.get(g.user_id) ?? 0, dia));
+    }
+    for (const [pid, m] of llegoHasta) {
+      const totalDias = Math.max(
+        0,
+        ...(programDaysData ?? []).filter((d) => d.program_id === pid).map((d) => d.day_number)
+      );
+      usoPorPrograma.set(pid, {
+        empezaron: m.size,
+        terminaron: totalDias > 0
+          ? Array.from(m.values()).filter((d) => d >= totalDias).length
+          : 0,
+      });
+    }
+  }
+
   const programs = (programsData ?? []) as ProgramRecord[];
   const programDays = (programDaysData ?? []) as ProgramDayRecord[];
   const videos = (videosData ?? []) as VideoLookup[];
@@ -188,6 +222,17 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                   </p>
                   <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>
                     {days.length} de {program.duration_days} días cargados
+                    {(() => {
+                      const uso = usoPorPrograma.get(program.id);
+                      if (!uso || uso.empezaron === 0) return null;
+                      // "Lo empezaron", no "vistas": lo unico que se puede
+                      // contar hoy es cuantas alumnas tienen progreso en el.
+                      return (
+                        <span style={{ color: "var(--pink-deep)", fontWeight: 700 }}>
+                          {" · "}lo empezaron {uso.empezaron}, lo terminaron {uso.terminaron}
+                        </span>
+                      );
+                    })()}
                   </p>
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: tier.bg, color: tier.color }}>

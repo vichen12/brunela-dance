@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { signOutAction } from "@/src/features/auth/actions";
 import type { Route } from "next";
 import {
+  ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
   MessageSquare, Megaphone, Settings, Eye, LogOut,
 } from "lucide-react";
@@ -31,7 +32,10 @@ type NavItem = { href: string; exact?: boolean; label: string; Icon: typeof Layo
 const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "Estudio",
-    items: [{ href: "/admin", exact: true, label: "Resumen", Icon: LayoutGrid }],
+    items: [
+      { href: "/admin", exact: true, label: "Resumen", Icon: LayoutGrid },
+      { href: "/admin/analiticas", label: "Analíticas", Icon: ChartColumn },
+    ],
   },
   {
     label: "Contenido",
