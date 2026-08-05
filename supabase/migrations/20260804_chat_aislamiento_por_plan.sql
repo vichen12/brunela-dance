@@ -65,25 +65,16 @@ begin;
 -- ---------------------------------------------------------------------------
 -- 0. Que el cast no pueda fallar nunca
 -- ---------------------------------------------------------------------------
--- Se valida ANTES de crear el constraint: si hubiera una fila invalida, esto
--- corta la migracion con un mensaje claro en vez de dejarla a medias.
-
-do $$
-declare
-  invalidas integer;
-begin
-  select count(*) into invalidas
-  from public.chat_rooms
-  where tier_required not in ('none', 'corps_de_ballet', 'solista', 'principal');
-
-  if invalidas > 0 then
-    raise exception
-      'Hay % sala(s) con tier_required fuera del enum. Corregirlas antes de '
-      'seguir: select id, name, tier_required from public.chat_rooms where '
-      'tier_required not in (''none'',''corps_de_ballet'',''solista'',''principal'');',
-      invalidas;
-  end if;
-end $$;
+-- `add constraint` YA valida las filas existentes: si alguna no cumple, falla
+-- toda la transaccion y no se aplica nada. No hace falta comprobarlo aparte --
+-- la primera version de esta migracion traia un bloque plpgsql que hacia a mano
+-- lo que Postgres hace solo, y encima el editor de Supabase lo cortaba mal.
+--
+-- SI ESTO FALLA con "violates check constraint", hay salas con un valor
+-- invalido. Para verlas:
+--
+--   select id, name, tier_required from public.chat_rooms
+--    where tier_required not in ('none','corps_de_ballet','solista','principal');
 
 alter table public.chat_rooms
   drop constraint if exists chat_rooms_tier_required_valido;
