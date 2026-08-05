@@ -1,3 +1,4 @@
+import { AdminBuscador } from "@/components/admin-buscador";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -40,9 +41,17 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
   const success = typeof params.success === "string" ? params.success : null;
   const error = typeof params.error === "string" ? params.error : null;
 
+  // Buscador. Sin filtros: son pocas categorias y agregar selectores por
+  // agregar seria ruido.
+  const q = (typeof params.q === "string" ? params.q : "").trim();
+
+  const { count: totalCategorias } = await supabase
+    .from("categories").select("*", { count: "exact", head: true });
+
   const { data } = await supabase
     .from("categories")
     .select("id, slug, name_i18n, description_i18n, membership_tier_required, cover_image_url, sort_order, is_active")
+    .or(q ? `slug.ilike.%${q}%,name_i18n->>es.ilike.%${q}%` : "id.not.is.null")
     .order("sort_order", { ascending: true });
 
   const categories = (data ?? []) as CategoryRecord[];
@@ -126,6 +135,13 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           </p>
         ) : (
           <div className="space-y-4">
+        <AdminBuscador
+          action="/admin/categories"
+          q={q}
+          placeholder="Buscar categoría…"
+          total={totalCategorias ?? categories.length}
+          mostrando={categories.length}
+        />
             {categories.map((cat) => (
               <div key={cat.id} style={{
                 borderRadius: 20, border: "1px solid var(--pink-soft)",

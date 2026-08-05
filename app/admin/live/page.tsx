@@ -10,10 +10,19 @@ import {
 } from "@/src/features/admin/live-actions";
 import { HoraSesion } from "@/components/hora-sesion";
 import { EditarSesion, LiveForm } from "@/components/admin-live-drawer";
+import { AdminBuscador } from "@/components/admin-buscador";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const ESTADOS_LIVE = [
+  { key: "", label: "Cualquier estado" },
+  { key: "scheduled", label: "Programadas" },
+  { key: "draft", label: "Borradores" },
+  { key: "completed", label: "Terminadas" },
+  { key: "canceled", label: "Canceladas" },
+];
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -119,11 +128,26 @@ export default async function AdminLivePage({
 
   // Las tres son independientes: encadenadas costaban tres viajes seguidos a
   // Supabase (~250 ms cada uno). En paralelo cuestan uno.
+  // Buscador y filtro, del lado del SERVIDOR. Filtrar en memoria mentiria en el
+  // contador -- diria "2 programadas" contando solo las de la pagina -- y con
+  // paginacion seria directamente incorrecto.
+  const q = (typeof params.q === "string" ? params.q : "").trim();
+  const fEstado = ESTADOS_LIVE.some((e) => e.key === params.estado) ? (params.estado as string) : "";
+
+  let consultaSesiones = supabase
+    .from("live_sessions")
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at");
+  if (fEstado) consultaSesiones = consultaSesiones.eq("status", fEstado);
+  if (q) {
+    const t = q.replace(/[,()]/g, " ");
+    consultaSesiones = consultaSesiones.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
+  }
+
+  const { count: totalSesiones } = await supabase
+    .from("live_sessions").select("*", { count: "exact", head: true });
+
   const [{ data: sessionsData }, { data: bookingsData }, { data: accessLinksData }] = await Promise.all([
-    supabase
-      .from("live_sessions")
-      .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at")
-      .order("starts_at", { ascending: false }),
+    consultaSesiones.order("starts_at", { ascending: false }),
     supabase
       .from("live_session_bookings")
       .select("live_session_id, status")
@@ -215,12 +239,22 @@ export default async function AdminLivePage({
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
           Sesiones — {total}
         </p>
+        <AdminBuscador
+          action="/admin/live"
+          q={q}
+          placeholder="Buscar por título o dirección…"
+          filtros={[{ name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS_LIVE }]}
+          total={totalSesiones ?? sessions.length}
+          mostrando={sessions.length}
+        />
         {sessions.length === 0 ? (
           <div style={{
             background: "#fff", border: "1.5px dashed #f0eeec", borderRadius: 16,
             padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13,
           }}>
-            No hay sesiones todavia. Crea la primera arriba.
+            {q || fEstado
+              ? "Ninguna sesión coincide con la búsqueda."
+              : "No hay sesiones todavía. Creá la primera arriba."}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

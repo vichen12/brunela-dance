@@ -1,4 +1,6 @@
 import { BotonEnviar } from "@/components/boton-enviar";
+import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
+import { AdminBuscador } from "@/components/admin-buscador";
 import {
   deleteProgramAction,
   deleteProgramDayAction,
@@ -9,6 +11,13 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const ESTADOS_PROG = [
+  { key: "", label: "Cualquier estado" },
+  { key: "published", label: "Publicados" },
+  { key: "draft", label: "Borradores" },
+  { key: "archived", label: "Archivados" },
+];
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -97,11 +106,25 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   const success = typeof params.success === "string" ? params.success : null;
   const error = typeof params.error === "string" ? params.error : null;
 
+  // Buscador del lado del servidor, mismo criterio que clases y sesiones.
+  const q = (typeof params.q === "string" ? params.q : "").trim();
+  const fEstadoProg = ESTADOS_PROG.some((e) => e.key === params.estado) ? (params.estado as string) : "";
+
+  const { count: totalProgramas } = await supabase
+    .from("programs").select("*", { count: "exact", head: true });
+
   const [{ data: programsData }, { data: programDaysData }, { data: videosData }] = await Promise.all([
-    supabase
-      .from("programs")
-      .select("id, slug, title_i18n, description_i18n, membership_tier_required, status, duration_days, cover_image_url, is_featured")
-      .order("created_at", { ascending: false }),
+    (() => {
+      let c = supabase
+        .from("programs")
+        .select("id, slug, title_i18n, description_i18n, membership_tier_required, status, duration_days, cover_image_url, is_featured");
+      if (fEstadoProg) c = c.eq("status", fEstadoProg);
+      if (q) {
+        const t = q.replace(/[,()]/g, " ");
+        c = c.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
+      }
+      return c.order("created_at", { ascending: false });
+    })(),
     supabase.from("program_days").select("id, program_id, day_number, video_id").order("day_number", { ascending: true }),
     // title_i18n hace falta para que el selector de clases muestre titulos y no
     // slugs. Se ordena por titulo para que la lista se pueda recorrer con la vista.
@@ -206,14 +229,22 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
           </div>
         )}
 
+        <AdminBuscador
+          action="/admin/programs"
+          q={q}
+          placeholder="Buscar por título o dirección…"
+          filtros={[{ name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG }]}
+          total={totalProgramas ?? programs.length}
+          mostrando={programs.length}
+        />
         {programs.map((program) => {
           const days = programDays.filter((d) => d.program_id === program.id);
           const st = STATUS_STYLE[program.status] ?? STATUS_STYLE.draft;
           const tier = TIER_STYLE[program.membership_tier_required] ?? TIER_STYLE.solista;
 
           return (
-            <details key={program.id} style={{ ...tarjeta, overflow: "hidden" }}>
-              <summary style={{
+            <div key={program.id} style={{ ...tarjeta, overflow: "hidden" }}>
+              <div style={{
                 listStyle: "none", cursor: "pointer", userSelect: "none",
                 display: "flex", alignItems: "center", gap: 14, padding: "14px 20px",
               }}>
@@ -247,73 +278,19 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                     Destacado
                   </span>
                 )}
-              </summary>
-
-              <div style={{ borderTop: "1px solid #f0eeec", padding: "22px" }}>
-                <ProgramForm actionLabel="GUARDAR CAMBIOS" program={program} />
-
-                {/* Días */}
-                <div style={{ marginTop: 26, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
-                  <Lbl>Días del programa</Lbl>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
-                    {days.length === 0 && (
-                      <p style={{ fontSize: 12.5, color: "#a8a29e" }}>
-                        Todavía no hay días. Agregá el primero abajo.
-                      </p>
-                    )}
-                    {days.map((day) => (
-                      <div key={day.id} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        gap: 14, borderRadius: 12, border: "1px solid #f0eeec",
-                        background: "#fafaf9", padding: "10px 14px",
-                      }}>
-                        <span style={{ fontSize: 13, color: "#1c1917" }}>
-                          <strong style={{ fontWeight: 700 }}>Día {day.day_number}</strong>
-                          {/* El titulo, no el slug: Brunela no tiene por que saber
-                              que "demo-barra-suelo-i" es "Barra de suelo I". */}
-                          <span style={{ color: "#78716c" }}> — {tituloDe(videoById.get(day.video_id), day.video_id)}</span>
-                        </span>
-                        <form action={deleteProgramDayAction}>
-                          <input name="id" type="hidden" value={day.id} />
-                          <BotonEnviar style={{
-                            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-                            borderRadius: 99, padding: "5px 14px", fontSize: 10, fontWeight: 700,
-                            letterSpacing: "0.08em", cursor: "pointer",
-                          }}>QUITAR</BotonEnviar>
-                        </form>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form action={upsertProgramDayAction} style={{
-                    display: "grid", gridTemplateColumns: "120px 1fr auto",
-                    gap: 12, alignItems: "end", marginTop: 14,
-                  }}>
-                    <input name="programId" type="hidden" value={program.id} />
-                    <F label="Día número">
-                      <input style={inp} min={1} max={program.duration_days} name="dayNumber" required type="number" />
-                    </F>
-                    <F label="Clase de ese día">
-                      {/* Antes era un input donde habia que escribir el slug de
-                          memoria. El datalist autocompletaba, pero listaba slugs:
-                          en la practica, memorizar codigos. */}
-                      <select style={sel} name="videoSlug" required defaultValue="">
-                        <option value="" disabled>Elegí una clase…</option>
-                        {videos.map((v) => (
-                          <option key={v.id} value={v.slug}>{tituloDe(v, v.slug)}</option>
-                        ))}
-                      </select>
-                    </F>
-                    <BotonEnviar style={{
-                      background: "var(--pink)", color: "#fff", border: "none", borderRadius: 99,
-                      padding: "9px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-                      cursor: "pointer", whiteSpace: "nowrap",
-                    }}>AGREGAR DÍA</BotonEnviar>
-                  </form>
-                </div>
               </div>
-            </details>
+                <div style={{
+                  borderTop: "1px solid #f0eeec", padding: "12px 20px",
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <EditarPrograma
+                    program={program}
+                    days={days}
+                    videos={videos}
+                    videoById={videoById}
+                  />
+                </div>
+            </div>
           );
         })}
       </div>
@@ -323,90 +300,3 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
 
 // ── Formulario ────────────────────────────────────────────────────────────────
 
-function ProgramForm({ actionLabel, program }: { actionLabel: string; program?: ProgramRecord }) {
-  const esNuevo = !program;
-
-  return (
-    <form action={upsertProgramAction}>
-      <input name="id" type="hidden" value={program?.id ?? ""} />
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label={esNuevo ? "Dirección del programa" : "Dirección"}>
-          {/* Al editar es solo lectura: cambiarla rompe cualquier enlace ya
-              compartido. Al crear hace falta, porque todavia no existe. */}
-          <input
-            style={esNuevo ? inp : { ...inp, background: "#fafaf9", color: "#78716c" }}
-            defaultValue={program?.slug ?? ""}
-            name="slug"
-            required
-            readOnly={!esNuevo}
-            placeholder="fundamentos-7-dias"
-          />
-        </F>
-
-        <F label="Cuántos días dura">
-          <input style={inp} defaultValue={program?.duration_days ?? 14} min={1} name="durationDays" required type="number" />
-        </F>
-
-        <F label="Título en español">
-          <input style={inp} defaultValue={program?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Fundamentos en 7 días" />
-        </F>
-
-        <F label="Título en inglés">
-          <input style={inp} defaultValue={program?.title_i18n?.en ?? ""} name="titleEn" placeholder="Fundamentals in 7 days" />
-        </F>
-
-        <F label="Plan que lo puede ver">
-          <select style={sel} defaultValue={program?.membership_tier_required ?? "solista"} name="membershipTierRequired">
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
-        </F>
-
-        <F label="Estado">
-          <select style={sel} defaultValue={program?.status ?? "draft"} name="status">
-            <option value="draft">Borrador</option>
-            <option value="published">Publicado</option>
-            <option value="archived">Archivado</option>
-          </select>
-        </F>
-
-        <F label="Imagen de portada">
-          <input style={inp} defaultValue={program?.cover_image_url ?? ""} name="coverImageUrl" placeholder="https://..." />
-        </F>
-
-        <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={program?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink)" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este programa</span>
-          </label>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Qué trabaja este programa…" />
-        </F>
-        <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.en ?? ""} name="descriptionEn" />
-        </F>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-        <button type="submit" style={{
-          background: esNuevo ? "var(--pink)" : "#1c1917", color: "#fff", border: "none",
-          borderRadius: 99, padding: "10px 24px", fontSize: 11, fontWeight: 700,
-          letterSpacing: "0.1em", cursor: "pointer",
-        }}>{actionLabel}</button>
-
-        {!esNuevo && (
-          <BotonEnviar pendingLabel="Borrando…" formAction={deleteProgramAction} style={{
-            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</BotonEnviar>
-        )}
-      </div>
-    </form>
-  );
-}
