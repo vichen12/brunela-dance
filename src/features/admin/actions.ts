@@ -22,8 +22,7 @@ const videoSchema = z.object({
   categories: z.string().optional(),
   equipment: z.string().optional(),
   thumbnailUrl: z.string().optional(),
-  streamPlaybackId: z.string().optional(),
-  streamAssetId: z.string().optional(),
+  // streamPlaybackId y streamAssetId NO estan aca a proposito: ver el payload.
   // NOTE: audio_tracks is deliberately absent. It is written by the mux worker
   // (worker/index.mjs) once a language is verified inside the encoded video.
   // The old manual "Mux Audio Track ID" fields wrote it from this form, which
@@ -86,6 +85,46 @@ function checkboxValue(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+/**
+ * Convierte los errores de zod en algo accionable.
+ *
+ * Antes todas las validaciones fallaban con "Datos de video invalidos.", que no
+ * le dice nada a nadie: Brunela ve un cartel rojo y no sabe que corregir, y
+ * quien programa tampoco. Ahora dice el campo y el motivo.
+ *
+ * Los nombres van en castellano: `membershipTierRequired` no significa nada
+ * fuera del codigo.
+ */
+const CAMPO_LEGIBLE: Record<string, string> = {
+  slug: "dirección",
+  titleEs: "título en español",
+  titleEn: "título en inglés",
+  descriptionEs: "descripción en español",
+  descriptionEn: "descripción en inglés",
+  membershipTierRequired: "plan requerido",
+  status: "estado",
+  durationMinutes: "duración",
+  categories: "categorías",
+  equipment: "material",
+  thumbnailUrl: "portada",
+  isFeatured: "destacado",
+  title: "título",
+  dayNumber: "día",
+  videoSlug: "clase",
+  startsAt: "fecha de inicio",
+  capacity: "cupo",
+};
+
+function detalleZod(error: { issues: { path: (string | number)[]; message: string }[] }): string {
+  const partes = error.issues.slice(0, 4).map((i) => {
+    const clave = String(i.path[0] ?? "");
+    const nombre = CAMPO_LEGIBLE[clave] ?? clave;
+    return `${nombre} (${i.message})`;
+  });
+  const resto = error.issues.length > 4 ? ` y ${error.issues.length - 4} más` : "";
+  return partes.join(", ") + resto;
+}
+
 function redirectWithMessage(path: string, kind: "success" | "error", message: string): never {
   redirect(`${path}?${kind}=${encodeURIComponent(message)}` as never);
 }
@@ -135,13 +174,11 @@ export async function upsertVideoAction(formData: FormData) {
     categories: formData.get("categories"),
     equipment: formData.get("equipment"),
     thumbnailUrl: formData.get("thumbnailUrl"),
-    streamPlaybackId: formData.get("streamPlaybackId"),
-    streamAssetId: formData.get("streamAssetId"),
     isFeatured: checkboxValue(formData, "isFeatured")
   });
 
   if (!parsed.success) {
-    redirectWithMessage("/admin/videos", "error", "Datos de video invalidos.");
+    redirectWithMessage("/admin/videos", "error", `Revisá: ${detalleZod(parsed.error)}`);
   }
 
   const payload = {
@@ -154,8 +191,24 @@ export async function upsertVideoAction(formData: FormData) {
     category_slugs: parseCsv(parsed.data.categories),
     equipment: parseCsv(parsed.data.equipment),
     thumbnail_url: parsed.data.thumbnailUrl?.trim() || null,
-    stream_playback_id: parsed.data.streamPlaybackId?.trim() || null,
-    stream_asset_id: parsed.data.streamAssetId?.trim() || null,
+
+    // 🔴 stream_playback_id y stream_asset_id NO se escriben desde aca.
+    //
+    //   Estaban en el payload como `parsed.data.streamPlaybackId?.trim() || null`
+    //   pero sus campos ya no existen en el formulario: se sacaron de la
+    //   interfaz el 2026-08-03. formData.get() devolvia null, y como
+    //   z.string().optional() acepta undefined pero NO null, la validacion
+    //   fallaba con "Datos de video invalidos" en cada guardado.
+    //
+    //   Ese fallo estaba TAPANDO algo peor: si se hubiera arreglado aceptando
+    //   null, cada guardado habria escrito stream_playback_id = null. Esa
+    //   columna esta VIVA -- Bunny guarda ahi la URL del HLS y el proxy de
+    //   video la usa como respaldo para las clases viejas (ver CLAUDE.md). O
+    //   sea que "arreglar la validacion" habria roto la reproduccion de las
+    //   clases viejas, en silencio y de a una por cada edicion.
+    //
+    //   Omitirlas del update las deja intactas. En un insert quedan en null,
+    //   que es lo correcto: las escribe la subida a Bunny, no este formulario.
     is_featured: parsed.data.isFeatured,
     published_at: parsed.data.status === "published" ? new Date().toISOString() : null,
     updated_by: user.id
@@ -272,7 +325,7 @@ export async function upsertProgramAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectWithMessage("/admin/programs", "error", "Datos de programa invalidos.");
+    redirectWithMessage("/admin/programs", "error", `Revisá: ${detalleZod(parsed.error)}`);
   }
 
   const payload = {
@@ -325,7 +378,7 @@ export async function upsertProgramDayAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectWithMessage("/admin/programs", "error", "Dia de programa invalido.");
+    redirectWithMessage("/admin/programs", "error", `Revisá: ${detalleZod(parsed.error)}`);
   }
 
   const { data: video, error: videoError } = await supabase
