@@ -7,11 +7,12 @@ type Props = {
   error?: string | null;
   plan?: string | null;
   interval?: string | null;
+  pack?: string | null;
   /** Se devuelve prellenado cuando el alta falla, para no hacerla tipear de nuevo. */
   email?: string | null;
 };
 
-export function RegistroForm({ error, plan, interval, email }: Props) {
+export function RegistroForm({ error, plan, interval, pack, email }: Props) {
   const [enviando, setEnviando] = useState(false);
   const [verClave, setVerClave] = useState(false);
 
@@ -21,6 +22,8 @@ export function RegistroForm({ error, plan, interval, email }: Props) {
           signUpAction, que los guarda en user_metadata. */}
       {plan && <input type="hidden" name="plan" value={plan} />}
       {interval && <input type="hidden" name="interval" value={interval} />}
+      {/* Un pack se compra sin plan: viaja solo, por su cuenta. */}
+      {pack && <input type="hidden" name="pack" value={pack} />}
 
       {error && (
         <p className="auth-alert error" role="alert">

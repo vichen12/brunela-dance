@@ -249,10 +249,113 @@ export async function limpiarResiduos() {
     await a.from("live_sessions").delete().eq("id", s.id);
   }
 
+  const { data: packs } = await a.from("packs").select("id").like("slug", `${PREFIJO}%`);
+  for (const p of packs ?? []) {
+    // Las compras van PRIMERO: pack_purchases.pack_id es `on delete restrict`,
+    // asi que con una compra viva el pack no se deja borrar.
+    await a.from("pack_purchases").delete().eq("pack_id", p.id);
+    await a.from("packs").delete().eq("id", p.id);
+  }
+
+  const { data: clases } = await a.from("videos").select("id").like("slug", `${PREFIJO}%`);
+  for (const c of clases ?? []) {
+    await a.from("videos").delete().eq("id", c.id);
+  }
+
   const { data: perfiles } = await a.from("profiles").select("id").like("email", `${PREFIJO}%`);
   for (const p of perfiles ?? []) {
     await a.from("chat_bans").delete().eq("user_id", p.id);
     await a.from("chat_mutes").delete().eq("user_id", p.id);
     await a.auth.admin.deleteUser(p.id);
   }
+}
+
+// ── Packs ───────────────────────────────────────────────────────────────────
+
+/** Falla ruidosamente si la migracion de packs no esta puesta. */
+export async function exigirMigracionDePacks() {
+  const a = admin();
+
+  const tabla = await a.from("packs").select("id").limit(1);
+  if (tabla.error) {
+    throw new Error(
+      `FALTA LA MIGRACION DE PACKS.\n\n` +
+        `  ${tabla.error.code ?? "?"}: ${tabla.error.message}\n\n` +
+        `  1. Correr supabase/migrations/20260805_packs_de_clases.sql\n` +
+        `     (PEGAR SIN el begin;/commit; -- trampa 7 de CLAUDE.md)\n\n` +
+        `  2. Si la tabla YA existe, es la cache de esquema de PostgREST:\n\n` +
+        `       select to_regclass('public.packs');\n` +
+        `       notify pgrst, 'reload schema';\n`
+    );
+  }
+
+  const fn = await a.rpc("current_user_has_purchased_video", {
+    target_video_id: "00000000-0000-0000-0000-000000000000",
+  });
+  if (fn.error) {
+    throw new Error(
+      `Las tablas estan pero las FUNCIONES no.\n\n` +
+        `  ${fn.error.code ?? "?"}: ${fn.error.message}\n\n` +
+        `  La migracion entro a medias. Volver a correrla entera.\n`
+    );
+  }
+}
+
+/** Una clase publicada que exige `tier`. Es lo que un pack va a desbloquear. */
+export async function crearClase(tier: Exclude<Tier, "none">): Promise<{ id: string }> {
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const { data, error } = await admin()
+    .from("videos")
+    .insert({
+      slug: `${PREFIJO}clase-${marca}`,
+      title_i18n: { es: `${PREFIJO}clase ${marca}` },
+      status: "published",
+      membership_tier_required: tier,
+      duration_seconds: 60,
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear la clase: ${error?.message}`);
+  return data;
+}
+
+export async function crearPack(videoIds: string[]): Promise<{ id: string }> {
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const { data, error } = await admin()
+    .from("packs")
+    .insert({
+      slug: `${PREFIJO}pack-${marca}`,
+      name_i18n: { es: `${PREFIJO}pack ${marca}` },
+      price_cents: 1000,
+      is_published: true,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear el pack: ${error?.message}`);
+
+  if (videoIds.length > 0) {
+    const { error: e2 } = await admin()
+      .from("pack_videos")
+      .insert(videoIds.map((v) => ({ pack_id: data.id, video_id: v })));
+    if (e2) throw new Error(`No se pudieron agregar clases al pack: ${e2.message}`);
+  }
+  return data;
+}
+
+/** Simula lo que escribe el webhook al cobrarse un pack. */
+export async function comprarPack(
+  packId: string,
+  userId: string,
+  opts: { vencida?: boolean } = {}
+) {
+  const { error } = await admin().from("pack_purchases").insert({
+    user_id: userId,
+    pack_id: packId,
+    stripe_checkout_session_id: `${PREFIJO}cs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    amount_total_cents: 1000,
+    currency: "eur",
+    expires_at: opts.vencida ? new Date(Date.now() - 86_400_000).toISOString() : null,
+  });
+  if (error) throw new Error(`No se pudo registrar la compra: ${error.message}`);
 }

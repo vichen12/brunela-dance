@@ -5,6 +5,9 @@ import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
 import { BrunelaFooter } from "@/components/ui/hover-footer";
 import { InteractiveSelector } from "@/components/ui/interactive-selector";
 import { PricingPlans } from "@/components/pricing-plans";
+import { PacksPublicos, type PackPublico } from "@/components/packs-publicos";
+import { getSubscriptionCatalog } from "@/src/lib/stripe/catalog";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { VideoShowcase } from "@/components/video-showcase";
 import { T } from "@/components/language-provider";
 import type { PublicMessageKey } from "@/src/i18n/public";
@@ -275,7 +278,63 @@ function InfinitePhotoCarousel() {
   );
 }
 
-export default function HomePage() {
+/**
+ * Los precios salen de la base; el texto de venta sigue aca.
+ *
+ * ⚠️ ESTA ES LA PRIMERA VEZ QUE LA LANDING LEE LA BASE. Hasta hoy era 100%
+ *    estatica y `HomePage` no era async.
+ *
+ * POR QUE SE MEZCLA Y NO SE TRAE TODO
+ *   El importe es lo que Brunela cambia desde /admin/precios, y si la portada
+ *   no lo refleja el panel no sirve para nada. El resto -- el nombre, la frase,
+ *   la lista de lo que incluye -- es texto de venta, se traduce a cuatro idiomas
+ *   y todavia no es editable. Cuando lo sea (ver el pendiente de la landing en
+ *   CLAUDE.md) tambien saldra de aca.
+ *
+ * ⚠️ SI LA BASE NO CONTESTA, SE USAN LOS IMPORTES DE ABAJO. Una portada que
+ *    muestra un precio viejo es un problema; una portada caida es peor.
+ */
+async function preciosDeLaBase(): Promise<Record<string, { mes: string; anual: string }>> {
+  try {
+    const catalogo = await getSubscriptionCatalog();
+    if (!catalogo) return {};
+    return Object.fromEntries(
+      catalogo.tiers.map((t) => [t.tier, { mes: String(t.amount_monthly), anual: String(t.amount_yearly) }])
+    );
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Los packs de la portada.
+ *
+ * ⚠️ LEE LA VISTA `packs_publicos`, NUNCA la tabla. La vista no tiene ids de
+ *    video ni price ids de Stripe: la restriccion la impone Postgres y no un
+ *    comentario. Esta pagina es publica, asi que el radio de un error es
+ *    internet entero.
+ */
+async function packsDeLaPortada(): Promise<PackPublico[]> {
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data } = await supabase
+      .from("packs_publicos")
+      .select("slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, cantidad_clases")
+      .order("display_order");
+    return (data ?? []) as PackPublico[];
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const [precios, packs] = await Promise.all([preciosDeLaBase(), packsDeLaPortada()]);
+
+  const plansConPrecio = plans.map((p) => {
+    const dePanel = precios[p.tier];
+    return dePanel ? { ...p, price: dePanel.mes, annual: dePanel.anual } : p;
+  });
+
   return (
     <>
       <Navbar />
@@ -426,7 +485,11 @@ export default function HomePage() {
           </p>
         </div>
 
-        <PricingPlans plans={plans} />
+        <PricingPlans plans={plansConPrecio} />
+
+        {/* Los packs sólo aparecen si Brunela marcó alguno para la portada. Sin
+            packs no queda un hueco ni un título huérfano. */}
+        {packs.length > 0 && <PacksPublicos packs={packs} />}
       </section>
 
       <div style={{ position: "relative", zIndex: 1 }}>

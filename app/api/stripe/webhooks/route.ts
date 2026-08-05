@@ -166,6 +166,84 @@ async function syncSubscription(event: Stripe.Event): Promise<SyncOutcome> {
 }
 
 /**
+ * Registra la compra de un pack (pago unico).
+ *
+ * ⚠️ ES ADITIVO: no toca `syncSubscription` ni nada de lo que ya andaba. Los dos
+ *    caminos miran tipos de evento distintos y ninguno puede pisar al otro.
+ *
+ * ⚠️ LA METADATA ESTA EN OTRO LADO. Una suscripcion trae `metadata.user_id` en
+ *    el objeto suscripcion; en un pago unico NO HAY objeto suscripcion, y viaja
+ *    en `session.metadata`. Es la trampa 1 con otro disfraz.
+ *
+ * ⚠️ IDEMPOTENCIA. Sincronizar una suscripcion es naturalmente idempotente:
+ *    escribe el estado actual. Esto es un INSERT, y Stripe REINTENTA ante
+ *    cualquier duda. El `unique` sobre stripe_checkout_session_id es lo que
+ *    impide dos packs por un pago; aca se trata el 23505 como exito, porque el
+ *    estado deseado ya esta.
+ */
+async function registrarCompraDePack(event: Stripe.Event): Promise<SyncOutcome> {
+  if (event.type !== "checkout.session.completed") {
+    return { applied: false, reason: `evento ${event.type} no es una compra de pack` };
+  }
+
+  const session = event.data.object as Stripe.Checkout.Session;
+
+  // El mismo evento lo dispara tambien el checkout de suscripciones. Ese camino
+  // lo resuelve customer.subscription.*, asi que aca se ignora.
+  if (session.mode !== "payment") {
+    return { applied: false, reason: `la sesion ${session.id} no es un pago unico` };
+  }
+
+  if (session.payment_status !== "paid") {
+    return { applied: false, reason: `la sesion ${session.id} todavia no esta pagada` };
+  }
+
+  const userId = session.metadata?.user_id;
+  const packId = session.metadata?.pack_id;
+
+  // Se separan a proposito: tienen arreglos distintos y con un solo mensaje eran
+  // imposibles de distinguir desde el panel de Stripe.
+  if (!userId) {
+    throw new Error(
+      `La sesion de pago ${session.id} no trae metadata.user_id. Solo las creadas desde ` +
+        `/api/stripe/checkout-pack lo llevan; si se creo a mano, hay que asignar el pack a mano.`
+    );
+  }
+  if (!packId) {
+    throw new Error(
+      `La sesion de pago ${session.id} no trae metadata.pack_id, asi que no se puede saber ` +
+        `que pack se compro. Revisar /api/stripe/checkout-pack.`
+    );
+  }
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase.from("pack_purchases").insert({
+    user_id: userId,
+    pack_id: packId,
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id:
+      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null,
+    // Lo que se cobro DE VERDAD, ya con el cupon aplicado. El precio del pack
+    // puede cambiar manana; lo que ella pago, no.
+    amount_total_cents: session.amount_total,
+    currency: session.currency,
+    // null = para siempre. Es la decision tomada para los packs.
+    expires_at: null,
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      return { applied: false, reason: `la compra de la sesion ${session.id} ya estaba registrada` };
+    }
+    // Se lanza para devolver 500 y que Stripe reintente: alguien pago y todavia
+    // no tiene su pack.
+    throw new Error(`No se pudo registrar la compra de la sesion ${session.id}: ${error.message}`);
+  }
+
+  return { applied: true };
+}
+
+/**
  * Receives Stripe webhooks, stores an audit trail and keeps subscriptions synchronized.
  */
 export async function POST(request: Request) {
@@ -189,7 +267,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const outcome = await syncSubscription(event);
+    // Los dos caminos, en serie y no en paralelo: cada uno ignora los eventos
+    // del otro devolviendo un motivo, asi que a lo sumo uno hace algo. Si el de
+    // packs lanza, no se llega a auditar como exito -- que es lo correcto.
+    const suscripcion = await syncSubscription(event);
+    const pack = await registrarCompraDePack(event);
+    const outcome: SyncOutcome = suscripcion.applied
+      ? suscripcion
+      : pack.applied
+        ? pack
+        : { applied: false, reason: suscripcion.reason };
+
     await persistWebhookAudit(event, null);
 
     // A skip is a correct outcome, not an error, so it is audited as processed.

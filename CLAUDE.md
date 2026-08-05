@@ -10,13 +10,14 @@
 
 1. **En qué punto está**: producción corre el código de **mayo**; el rediseño de
    tres meses está en `feat/rediseno-completo` y **sin desplegar**. La base sí
-   está al día: las 27 migraciones aplicadas.
-2. **Qué se está haciendo ahora**: packs de videos sueltos. Todo decidido, ver
-   *🔴 EN CURSO* en Pendientes.
+   está al día: las 28 migraciones aplicadas.
+2. **Qué se está haciendo ahora**: nada a medias. Packs, invitaciones y panel
+   de precios están terminados y verificados. Lo siguiente es el **rediseño de
+   la landing** y, después, hacerla editable — ver *ÚLTIMO PASO* en Pendientes.
 3. **Antes de tocar SQL**, leer *Trampas que ya costaron caro* (son ocho, todas
    fallan en silencio) y el orden de migraciones en `SETUP.md` § 1.1, que **no es
    alfabético**.
-4. **Después de tocar cualquier policy**: `npm run test:aislamiento` (34 pruebas
+4. **Después de tocar cualquier policy**: `npm run test:aislamiento` (51 pruebas
    contra Supabase real). No alcanza con mirar `pg_policies` — ver trampa 7.
 5. **Reglas de trabajo de este proyecto**: las migraciones se muestran antes de
    correrlas y las corre el dueño del proyecto en Supabase; se verifica contra la
@@ -71,21 +72,18 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **27 migraciones**, todas aplicadas y verificadas (las 18 de la mudanza + 4 del
-  2026-08-03, 4 del 08-04 y la de invitaciones del 08-05). ⚠️ **El orden NO es
-  alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
-  `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
-- **22 tablas creadas por las migraciones**, RLS activa en todas.
+- **28 migraciones**, todas aplicadas y verificadas (las 18 de la mudanza + 4 del
+  2026-08-03, 4 del 08-04 y 2 del 08-05: invitaciones y packs). ⚠️ **El orden NO
+  es alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS
+  de `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
+- **25 tablas**, RLS activa en todas. Verificado el 2026-08-05 contra la base:
+  las migraciones crean 25 y la base tiene 25, **cuadra exacto**.
 
-  ⚠️ **Pero en la base había UNA MÁS que ninguna migración crea**, y quedó sin
-  resolver. Se detectó porque el conteo no cerraba: 22 en `public` cuando las
-  migraciones creaban 21. No tiene ninguna policy (el conteo de policies cuadra
-  exacto sin ella) y ningún archivo del código la nombra. **Si además tiene RLS
-  apagada, está expuesta por el Data API sin filtro.**
-
-  El diagnóstico está escrito y no modifica nada: `scripts/diagnostico-tabla-de-mas.sql`.
-  Correr las consultas 1 y 2 y decidir. Suele salir de una tabla creada a mano
-  desde el Table Editor o de basura de la migración desde Oregón.
+  > Hubo un período en que no cuadraba —había una tabla en `public` que ninguna
+  > migración creaba— y quedó anotado como pendiente. Al recontar el 2026-08-05
+  > los números coinciden y no hay ninguna tabla sin RLS, así que **está
+  > cerrado**. El diagnóstico sigue en `scripts/diagnostico-tabla-de-mas.sql` por
+  > si el conteo vuelve a desviarse.
 - **Permisos acotados** (migraciones 17 y 18): `anon` sin ningún privilegio de
   tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en casi todas.
   Si aparece un `42501 permission denied`, es esto: se otorga la operación
@@ -311,9 +309,12 @@ Spanish is the primary language. The public landing and sign-in surfaces have a 
 - `/dashboard/chat` DM con la profesora
 - `/dashboard/community` salas de chat por plan
 - `/dashboard/documents` documentos del estudio
-- `/dashboard/plan` planes y checkout
+- `/dashboard/plan` planes, packs y checkout
+- `/admin/packs` packs de clases: crear, elegir clases, publicar
+- `/admin/precios` importes y price ids de planes y packs, con aviso de Stripe
 - `/api/video/[videoId]/[...path]` proxy de manifests HLS con control por RLS
-- `/api/stripe/checkout`, `/api/stripe/portal`, `/api/stripe/webhooks`
+- `/api/stripe/checkout`, `/api/stripe/checkout-pack`, `/api/stripe/portal`,
+  `/api/stripe/webhooks`
 - `/api/progress` guardado de progreso
 - `/api/admin/videos/*` subida de video y audio a Bunny
 
@@ -360,9 +361,10 @@ Core tables used by the app:
 - `live_session_invitations`
 - `categories`, `documents`, `studio_announcements`
 - `chat_rooms`, `chat_messages`, `chat_bans`, `chat_mutes`
+- `packs`, `pack_videos`, `pack_purchases`
 - `video_mux_jobs`, `reward_claims`, `subscription_webhook_events`
 
-Son 22 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
+Son 25 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
 `live_session_bookings`, `chat_messages`, `chat_mutes`, `chat_rooms` y
 `profiles`. En el resto `authenticated` tiene solo lectura (migracion 18).
 
@@ -374,6 +376,15 @@ reservarla, ver el Zoom), y la regla vive en dos funciones:
 exponer la de dos argumentos dejaria enumerar quien esta invitada a que, porque
 una funcion con EXECUTE para `authenticated` es un endpoint RPC publico.
 Cubierta por `tests/aislamiento/sesiones.test.ts`.
+
+**`pack_purchases` es la SEGUNDA**, y la mas amplia: un pack comprado abre clases
+sueltas sin mirar el plan. Toca una sola policy —`videos_select_allowed_by_tier`,
+la que protege el catalogo entero— y la regla vive en el mismo par de funciones:
+`current_user_has_purchased_video(video)` para `authenticated`, y
+`has_purchased_video(video, alumna)` **solo para `service_role`**.
+El reproductor no necesito ni un cambio: `app/api/video/[videoId]/[...path]`
+busca con el cliente de la alumna, asi que decide RLS.
+Cubierta por `tests/aislamiento/packs.test.ts`.
 
 Membership tiers:
 
@@ -549,10 +560,7 @@ Ordenados por lo que bloquea a lo que puede esperar.
   ⚠️ **Los cupones son por modo**: los de prueba no existen en producción.
 - **Invitaciones puntuales a sesiones.** Ver la sección del modelo de datos.
 
-### 🔵 EN CURSO — packs de videos sueltos
-
-Lo único que queda de lo que pidió Brunela. **Todas las decisiones ya están
-tomadas**; lo que sigue es implementación.
+### ✅ Packs de clases sueltas — hecho y verificado (2026-08-05)
 
 **Qué es:** vender un pack de clases (ej. 5) con **pago único, sin suscripción**
 y **acceso permanente**. Cambia la pregunta del sistema de *"¿qué plan tiene?"*
@@ -605,17 +613,36 @@ policy quede legible y haya un solo lugar que cambiar.
 El webhook actual **no se rompe**: ignora lo que no es suscripción devolviendo un
 motivo, así que agregar `checkout.session.completed` es aditivo.
 
-**Estado al 2026-08-05:**
+**Todo entregado y verificado — 51/51 en `npm run test:aislamiento`:**
 
-| | |
+| Pieza | Dónde |
 |---|---|
-| Migración `20260805_packs_de_clases.sql` | escrita, **la corre Vincenzo** |
-| `/admin/precios` — planes y packs, con aviso de Stripe | **hecho** |
-| CRUD de packs (crear, editar, elegir clases) | pendiente |
-| Landing leyendo precios y packs de la base | pendiente |
-| Checkout `?pack=<slug>` con `mode: "payment"` | pendiente |
-| Webhook `checkout.session.completed` | pendiente |
-| `tests/aislamiento/packs.test.ts` | pendiente |
+| Migración | `20260805_packs_de_clases.sql` |
+| CRUD de packs | `/admin/packs` + `components/admin-pack-drawer.tsx` |
+| Precios con aviso de Stripe | `/admin/precios` |
+| Vitrina pública | `components/packs-publicos.tsx`, desde la vista `packs_publicos` |
+| Checkout | `app/api/stripe/checkout-pack/route.ts` (**ruta aparte**) |
+| Webhook | `registrarCompraDePack()` en `app/api/stripe/webhooks/route.ts` |
+| Pruebas | `tests/aislamiento/packs.test.ts` (17) |
+
+**Decisiones de implementación que conviene no deshacer:**
+
+- **El checkout de packs es una RUTA APARTE**, no un `if` dentro del de
+  suscripciones. Ese cobra y funciona; meterle una rama que cambie `mode`, el
+  árbol de precios, la metadata y el destino de vuelta es tocar el único camino
+  de cobro que hoy anda para agregar uno que todavía no.
+- **Un pack nace SIN publicar.** Y no se puede publicar sin al menos una clase y
+  sin identificador de Stripe del modo activo: es la única validación que
+  *bloquea*, porque el fallo lo sufre la alumna en el checkout.
+- **Un pack vendido no se borra.** `pack_purchases.pack_id` es `on delete
+  restrict`; la acción lo frena antes con un mensaje legible, porque el error de
+  clave foránea en crudo no le dice nada a Brunela. Se despublica.
+- **El acceso se calcula en vivo contra `pack_videos`, no se congela al comprar.**
+  Sacar una clase de un pack se la saca también a quien ya lo pagó. Es correcto
+  para arreglar un error de armado, y el panel lo avisa cuando hay compras.
+- **En el cruce plan/pack, el pack va PRIMERO** (en el onboarding y en el
+  arranque automático). Quien llegó por un pack no eligió plan, y cobrarle una
+  suscripción que no pidió es el peor error posible ahí.
 
 ### 🔵 `/admin/precios` — cómo funciona el aviso
 

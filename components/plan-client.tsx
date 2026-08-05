@@ -121,6 +121,35 @@ export function PlanClient({
     }
   }
 
+  /**
+   * Compra de un pack: pago unico, ruta aparte.
+   *
+   * Del navegador sale un SLUG y nada mas. El importe y el price id los resuelve
+   * el servidor contra la base, asi que forzar ?pack=el-caro cobra el caro: no
+   * hay forma de pagar un precio por otro.
+   */
+  async function startPackCheckout(slug: string) {
+    setError(null);
+    setLoadingTier('pack');
+    try {
+      const res = await fetch('/api/stripe/checkout-pack', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pack: slug }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error ?? 'No pudimos iniciar el pago.');
+        setLoadingTier(null);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError('No pudimos iniciar el pago.');
+      setLoadingTier(null);
+    }
+  }
+
   // ── Arranque automatico despues del onboarding ───────────────────────────
   //
   // La alumna ya eligio su plan en la landing: no se le vuelve a pedir. El
@@ -133,10 +162,24 @@ export function PlanClient({
   // al endpoint y para no dejar un boton cargando por un valor inexistente.
   const [autoIntentado, setAutoIntentado] = useState(false);
   useEffect(() => {
-    if (autoIntentado || hasActiveSub || !catalog) return;
+    // ⚠️ `!catalog` NO frena el camino del pack: un pack no sale del catalogo de
+    //    suscripciones. Por eso la comprobacion del pack va antes.
+    if (autoIntentado || hasActiveSub) return;
 
     const q = new URLSearchParams(window.location.search);
     if (q.get('iniciar') !== '1') return;
+
+    // El pack va PRIMERO. Quien llego por un pack no eligio plan, y cobrarle una
+    // suscripcion que no pidio es el peor error posible en este cruce.
+    const packPedido = q.get('pack');
+    if (packPedido) {
+      setAutoIntentado(true);
+      window.history.replaceState({}, '', '/dashboard/plan');
+      void startPackCheckout(packPedido);
+      return;
+    }
+
+    if (!catalog) return;
 
     const pedido = q.get('plan');
     const valido = orderedTiers.find((t) => t.tier === pedido);

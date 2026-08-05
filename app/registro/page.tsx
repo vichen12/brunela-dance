@@ -27,6 +27,10 @@ export default async function RegistroPage({ searchParams }: Props) {
   const interval = str("interval") === "yearly" ? "yearly" : str("interval") === "monthly" ? "monthly" : null;
   const error = str("error");
   const email = str("email");
+  // El slug del pack NO se valida aca contra la base: se valida en el checkout,
+  // que es quien resuelve el precio. Aca solo se acota el largo.
+  const packCrudo = str("pack");
+  const pack = packCrudo && packCrudo.length <= 120 ? packCrudo : null;
 
   // Ya logueada: no tiene sentido mostrarle un alta. La compuerta del layout de
   // /dashboard la manda al onboarding si le falta.
@@ -41,7 +45,11 @@ export default async function RegistroPage({ searchParams }: Props) {
 
   // El plan viaja tambien por el camino de Google, donde no hay signUp en el
   // que meter metadata: se pasa por la URL de vuelta del callback.
-  const destinoGoogle = `/registro/onboarding${plan ? `?plan=${plan}${interval ? `&interval=${interval}` : ""}` : ""}`;
+  const partesGoogle = new URLSearchParams();
+  if (plan) partesGoogle.set("plan", plan);
+  if (interval) partesGoogle.set("interval", interval);
+  if (pack) partesGoogle.set("pack", pack);
+  const destinoGoogle = `/registro/onboarding${partesGoogle.size > 0 ? `?${partesGoogle.toString()}` : ""}`;
 
   return (
     <main className="reg-page">
@@ -72,7 +80,7 @@ export default async function RegistroPage({ searchParams }: Props) {
           </p>
         )}
 
-        <RegistroForm error={error} plan={plan} interval={interval} email={email} />
+        <RegistroForm error={error} plan={plan} interval={interval} pack={pack} email={email} />
 
         <div className="reg-divider"><div /><span>o</span><div /></div>
 

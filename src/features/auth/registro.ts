@@ -41,6 +41,10 @@ const esquemaAlta = z.object({
   password: z.string().min(8, "La contraseña necesita al menos 8 caracteres."),
   plan: z.enum(TIERS).optional(),
   interval: z.enum(INTERVALOS).optional(),
+  // El pack viaja como SLUG. No se valida contra la base aca -- eso costaria un
+  // viaje mas en el alta -- sino en /api/stripe/checkout-pack, que ademas es
+  // donde importa: es el que resuelve el precio.
+  pack: z.string().min(1).max(120).optional(),
 });
 
 /** Vuelve al formulario sin perder lo que ya eligio ni lo que ya escribio. */
@@ -85,6 +89,7 @@ export async function signUpAction(formData: FormData) {
         full_name: parsed.data.fullName,
         pending_tier: parsed.data.plan ?? null,
         pending_interval: parsed.data.interval ?? null,
+        pending_pack: parsed.data.pack ?? null,
       },
     },
   });
@@ -129,6 +134,7 @@ const esquemaOnboarding = z.object({
   ])).min(1, "Elegí al menos un objetivo."),
   plan: z.enum(TIERS).optional(),
   interval: z.enum(INTERVALOS).optional(),
+  pack: z.string().min(1).max(120).optional(),
   // Una casilla sin marcar no llega en el FormData, asi que la ausencia ES el
   // "no". Por eso el default es false y no hay forma de que un formulario
   // manipulado active el consentimiento por omision.
@@ -199,9 +205,22 @@ export async function completarOnboardingAction(formData: FormData) {
 
   // El plan puede venir por URL (camino Google) o de la metadata (camino
   // correo). Se prefiere el de la URL porque es el que la alumna acaba de ver.
-  const meta = user.user_metadata as { pending_tier?: string | null; pending_interval?: string | null } | undefined;
+  const meta = user.user_metadata as {
+    pending_tier?: string | null;
+    pending_interval?: string | null;
+    pending_pack?: string | null;
+  } | undefined;
   const tierFinal = parsed.data.plan ?? (meta?.pending_tier ?? undefined);
   const intervaloFinal = parsed.data.interval ?? (meta?.pending_interval ?? undefined);
+  const packFinal = parsed.data.pack ?? (meta?.pending_pack ?? undefined);
+
+  // El pack va PRIMERO: quien entro por un pack no eligio plan, y si eligio las
+  // dos cosas lo ultimo que toco fue el pack. Cobrarle una suscripcion que no
+  // pidio es el peor error posible en este cruce.
+  if (packFinal) {
+    const q = new URLSearchParams({ pack: packFinal, iniciar: "1" });
+    redirect(`/dashboard/plan?${q.toString()}` as never);
+  }
 
   if (tierFinal && (TIERS as readonly string[]).includes(tierFinal)) {
     const q = new URLSearchParams({ plan: tierFinal, iniciar: "1" });

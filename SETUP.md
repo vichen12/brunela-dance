@@ -55,8 +55,13 @@ no es el que devuelve `ls`:
 25. 20260804_guardar_progreso_rpc.sql        |  independientes entre si
 26. 20260804_chat_aislamiento_por_plan.sql  /
 27. 20260805_invitaciones_a_sesiones.sql    <-- DESPUES de phase_b y phase_b1
+28. 20260805_packs_de_clases.sql           <-- DESPUES de phase_a y de la 20260728
 ```
 
+> **La 28 hace lo mismo con `videos_select_allowed_by_tier`**, que nace en
+> phase_a y se reescribe en la 20260728. Corrida antes de esas, los packs dejan
+> de dar acceso sin ningun error: la alumna paga y no ve sus clases.
+>
 > **La 27 reemplaza cuerpos que vienen de phase_b y phase_b1** (el trigger de
 > reservas y la funcion del enlace de Zoom). Correrla ANTES de ellas la deja
 > pisada, y sin ningun error: el `create or replace` de phase_b ganaria, las
@@ -520,7 +525,7 @@ service role key.
 
 #### Paso 2 — Esquema
 
-**a)** Las 27 migraciones **en el orden de § 1.1** — que no es el alfabético.
+**a)** Las 28 migraciones **en el orden de § 1.1** — que no es el alfabético.
 Las **17 y 18 van al final sin excepción**: usan `grant ... on all tables in
 schema public`, que sólo alcanza a las tablas que ya existen, y la 18 refina lo
 que otorga la 17.

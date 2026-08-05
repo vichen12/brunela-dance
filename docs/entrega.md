@@ -20,6 +20,7 @@ recorrido hasta el pago.
 - Chat con la profesora y salas por plan, en tiempo real
 - Documentos del estudio, con descarga firmada
 - Planes y pago con Stripe, con portal de facturación
+- **Packs de clases** con pago único y acceso permanente, sin suscripción
 
 **Panel de administración**
 - Clases, categorías, programas, sesiones, documentos y anuncios
@@ -27,12 +28,14 @@ recorrido hasta el pago.
 - Moderación del chat: borrar, silenciar y bloquear
 - Analíticas con las métricas que ya tienen datos
 - Exportación de alumnas a CSV
+- **Precios de planes y packs**, con aviso si no coinciden con Stripe
+- **Packs**: crear, elegir qué clases traen, publicar y mostrar en la portada
 
 **Infraestructura**
 - Base y funciones en **Fráncfort**, por residencia de datos de la UE
-- 27 migraciones versionadas — el esquema se reconstruye desde el repo
+- 28 migraciones versionadas — el esquema se reconstruye desde el repo
 - RLS en todas las tablas
-- Banco de pruebas de aislamiento: 34 pruebas contra Supabase real (chat y sesiones)
+- Banco de pruebas de aislamiento: 51 pruebas contra Supabase real (chat, sesiones y packs)
 
 ---
 

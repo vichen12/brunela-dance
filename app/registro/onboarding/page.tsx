@@ -38,9 +38,14 @@ export default async function OnboardingPage({ searchParams }: Props) {
   if (profile?.onboarding_completed) redirect("/dashboard" as never);
 
   // El plan puede venir por URL (Google) o de la metadata del alta (correo).
-  const meta = user.user_metadata as { pending_tier?: string | null; pending_interval?: string | null } | undefined;
+  const meta = user.user_metadata as {
+    pending_tier?: string | null;
+    pending_interval?: string | null;
+    pending_pack?: string | null;
+  } | undefined;
   const plan = str("plan") ?? meta?.pending_tier ?? null;
   const interval = str("interval") ?? meta?.pending_interval ?? null;
+  const pack = str("pack") ?? meta?.pending_pack ?? null;
   const error = str("error");
 
   const nombre = profile?.full_name?.split(" ")[0] ?? null;
@@ -62,6 +67,7 @@ export default async function OnboardingPage({ searchParams }: Props) {
         <form action={completarOnboardingAction} className="onb-form">
           {plan && <input type="hidden" name="plan" value={plan} />}
           {interval && <input type="hidden" name="interval" value={interval} />}
+          {pack && <input type="hidden" name="pack" value={pack} />}
 
           <fieldset className="onb-group">
             <legend className="onb-legend">Tu nivel</legend>
@@ -116,7 +122,7 @@ export default async function OnboardingPage({ searchParams }: Props) {
           </fieldset>
 
           <button type="submit" className="onb-submit">
-            {plan ? "Continuar al pago" : "Entrar al estudio"}
+            {plan || pack ? "Continuar al pago" : "Entrar al estudio"}
           </button>
         </form>
       </section>
