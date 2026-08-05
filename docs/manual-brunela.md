@@ -143,6 +143,20 @@ algo.
 | Si la ventana de reservas cerró | **Entra igual** — la invitación pasa por encima |
 | Ella lo ve como | Un cartel *"Invitada por Brunela"* en la clase |
 
+### ¿Se entera ella?
+
+**Sí, pero dentro de la página** — todavía no por correo, porque falta el
+dominio y el envío.
+
+Al entrar le aparece arriba de todo un cartel: *"Brunela te invitó a una clase
+en vivo"*, con el nombre y la hora en **su** zona horaria, y un recordatorio de
+que tiene que reservar. También ve la clase marcada como *Invitada por Brunela*
+en Sesiones en vivo.
+
+> **Mientras no haya correo, si es algo urgente conviene avisarle vos.** Ella lo
+> ve la próxima vez que entre, no en el momento. Cuando esté el correo del
+> estudio, el aviso se manda solo.
+
 **Si hay dos alumnas con el mismo nombre**, el sistema no elige una: te dice
 cuáles son y te pide el correo exacto. Es a propósito — invitar a la persona
 equivocada no se notaría hasta que la otra reclame.

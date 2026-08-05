@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HoraSesion } from "@/components/hora-sesion";
 import { Users, Play, CalendarDays, Megaphone } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -168,6 +169,7 @@ export default async function DashboardPage() {
     { data: liveData },
     { data: announcementsData },
     { data: paraHoy },
+    { data: invitacionesData },
   ] = await Promise.all([
     // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
     // veces y el layout una tercera. Ahora es una sola consulta por request.
@@ -188,6 +190,16 @@ export default async function DashboardPage() {
       .order("published_at", { ascending: false })
       .limit(10)
       .returns<ClaseSugerida[]>(),
+    // Invitaciones puntuales de Brunela.
+    //
+    // ⚠️ Mientras no haya correo, ESTA es la unica forma en que la alumna se
+    //    entera. Sin esto, Brunela la invita y del otro lado no pasa nada
+    //    visible: aparece una clase de un plan que no tiene, sin explicacion.
+    //
+    //    La policy ya devuelve solo las propias, asi que no se filtra por
+    //    user_id: hacerlo sugeriria que la seguridad esta aca, y esta en la base.
+    supabase.from("live_session_invitations")
+      .select("live_session_id, live_sessions(id, slug, title_i18n, starts_at, status, session_timezone)"),
   ]);
 
   // Admin-only queries — only run when the user is an admin and the admin client is available
@@ -279,6 +291,23 @@ export default async function DashboardPage() {
   const canAccessLive = liveData ? TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required] : false;
   const tierStyle = TIER_COLOR[tier];
   const announcements = (announcementsData ?? []) as Announcement[];
+
+  // Solo las que todavia no pasaron y siguen publicadas. Se filtra y ordena en
+  // TypeScript y no en la consulta a proposito: una alumna tiene un punado de
+  // invitaciones, y filtrar sobre una tabla embebida en PostgREST es de las
+  // cosas que se escriben mal en silencio.
+  type FilaInvitacion = {
+    live_session_id: string;
+    live_sessions:
+      | { id: string; slug: string; title_i18n: Record<string, string>; starts_at: string; status: string; session_timezone: string }
+      | { id: string; slug: string; title_i18n: Record<string, string>; starts_at: string; status: string; session_timezone: string }[]
+      | null;
+  };
+  const invitaciones = ((invitacionesData ?? []) as FilaInvitacion[])
+    .map((i) => (Array.isArray(i.live_sessions) ? i.live_sessions[0] : i.live_sessions))
+    .filter((s): s is NonNullable<typeof s> => !!s && s.status === "scheduled" && s.starts_at >= now)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
   const recentUsers = (recentUsersRaw ?? []) as RecentUser[];
   const paidUsers = (corpsCount ?? 0) + (solistaCount ?? 0) + (principalCount ?? 0);
   const hour = new Date().getHours();
@@ -461,6 +490,49 @@ export default async function DashboardPage() {
         )}
 
         {/* ── PERSONAL SECTION ── */}
+
+        {/* Invitaciones de Brunela. Van ARRIBA de los anuncios: un anuncio es
+            para todas, esto es para ella sola y ademas tiene fecha. */}
+        {invitaciones.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {invitaciones.map((s) => (
+              <Link
+                key={s.id}
+                href="/dashboard/live"
+                style={{
+                  display: "flex", gap: 12, alignItems: "flex-start", textDecoration: "none",
+                  background: "#fff", border: "1px solid var(--pink-line)",
+                  borderLeft: "3px solid var(--pink-mid)", borderRadius: 16, padding: "14px 20px",
+                }}
+              >
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, background: "var(--pink-mid)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, marginTop: 1,
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M2 4.5h12v8H2v-8z" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M2 5l6 4 6-4" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink-deep)", marginBottom: 3 }}>
+                    Brunela te invitó a una clase en vivo
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.5 }}>
+                    <strong>{s.title_i18n?.es ?? s.slug}</strong>
+                    {" — "}
+                    <HoraSesion iso={s.starts_at} zonaEstudio={s.session_timezone} />
+                  </p>
+                  {/* Lo mas importante del cartel: sin reservar no entra. */}
+                  <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 4 }}>
+                    Entrás aunque no tengas ese plan, pero tenés que reservar tu lugar.
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Announcements */}
         {announcements.length > 0 && (

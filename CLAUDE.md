@@ -2,9 +2,33 @@
 
 ---
 
-# ESTADO ACTUAL — 2026-08-01
+# ESTADO ACTUAL — 2026-08-05
 
 **Leer esto primero.** Es lo que hace falta para retomar sin contexto previo.
+
+### Cómo retomar en cinco minutos
+
+1. **En qué punto está**: producción corre el código de **mayo**; el rediseño de
+   tres meses está en `feat/rediseno-completo` y **sin desplegar**. La base sí
+   está al día: las 27 migraciones aplicadas.
+2. **Qué se está haciendo ahora**: packs de videos sueltos. Todo decidido, ver
+   *🔴 EN CURSO* en Pendientes.
+3. **Antes de tocar SQL**, leer *Trampas que ya costaron caro* (son ocho, todas
+   fallan en silencio) y el orden de migraciones en `SETUP.md` § 1.1, que **no es
+   alfabético**.
+4. **Después de tocar cualquier policy**: `npm run test:aislamiento` (34 pruebas
+   contra Supabase real). No alcanza con mirar `pg_policies` — ver trampa 7.
+5. **Reglas de trabajo de este proyecto**: las migraciones se muestran antes de
+   correrlas y las corre el dueño del proyecto en Supabase; se verifica contra la
+   base real, no se asume; primero se diagnostica y se reporta, después se
+   implementa.
+
+| Si vas a… | Leé |
+|---|---|
+| Poner el proyecto en marcha | `SETUP.md` |
+| Explicarle algo a Brunela | `docs/manual-brunela.md` |
+| Saber qué se entregó y qué no | `docs/entrega.md` |
+| Entender los límites de escala | `docs/escalabilidad.md` |
 
 ## Infraestructura
 
@@ -51,7 +75,17 @@ y 5.744 líneas.
   2026-08-03, 4 del 08-04 y la de invitaciones del 08-05). ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
-- **21 tablas**, RLS activa en todas.
+- **22 tablas creadas por las migraciones**, RLS activa en todas.
+
+  ⚠️ **Pero en la base había UNA MÁS que ninguna migración crea**, y quedó sin
+  resolver. Se detectó porque el conteo no cerraba: 22 en `public` cuando las
+  migraciones creaban 21. No tiene ninguna policy (el conteo de policies cuadra
+  exacto sin ella) y ningún archivo del código la nombra. **Si además tiene RLS
+  apagada, está expuesta por el Data API sin filtro.**
+
+  El diagnóstico está escrito y no modifica nada: `scripts/diagnostico-tabla-de-mas.sql`.
+  Correr las consultas 1 y 2 y decidir. Suele salir de una tabla creada a mano
+  desde el Table Editor o de basura de la migración desde Oregón.
 - **Permisos acotados** (migraciones 17 y 18): `anon` sin ningún privilegio de
   tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en casi todas.
   Si aparece un `42501 permission denied`, es esto: se otorga la operación
@@ -81,7 +115,7 @@ antigua" si no hay ninguna.
 
 ## Trampas que ya costaron caro
 
-Siete cosas que fallan **en silencio**. Ninguna da error.
+Ocho cosas que fallan **en silencio**. Ninguna da error.
 
 1. **`protect_profile_admin_fields()` está definida TRES veces** en las
    migraciones (phase_a, phase_b, y la 16). La buena es la que lleva
@@ -123,6 +157,25 @@ Siete cosas que fallan **en silencio**. Ninguna da error.
    `pg_policies`: los metadatos tambien pueden enganar si la consulta esta mal
    escrita, como paso con `'%tier_required%'`, que es substring de
    `membership_tier_required`.
+
+8. **`create or replace function` reemplaza el cuerpo ENTERO, y el orden de las
+   migraciones decide quien gana.** Varias migraciones tardias redefinen
+   funciones nacidas en `phase_a` / `phase_b`. Correrlas fuera de orden no da
+   ningun error: la version vieja pisa a la nueva y las comprobaciones agregadas
+   desaparecen.
+   Pasa hoy con `20260805_invitaciones_a_sesiones.sql`, que redefine el trigger
+   de reservas y la funcion del enlace de Zoom. Corrida antes de `phase_b`, el
+   unico sintoma seria una alumna invitada que no puede anotarse.
+   De ahi tambien la regla al escribirlas: **copiar la funcion entera** desde la
+   version vigente y marcar lo que cambia. Copiar de menos no rompe la
+   migracion, borra comprobaciones en silencio.
+
+   > Corolario, del mismo dia: **una prueba puede pasar por el motivo
+   > equivocado**. Dos pruebas de invitaciones daban verde porque la tabla no
+   > existia — `expect(error).not.toBeNull()` se satisface con "tabla no
+   > encontrada". Por eso `tests/aislamiento/` exige el **codigo de error exacto**
+   > (`42501`), lleva **control positivo** por `service_role`, y tiene una guarda
+   > en `beforeAll` que tira el archivo entero si falta la migracion.
 
 ## Decisiones conscientes (no son descuidos)
 
@@ -309,7 +362,7 @@ Core tables used by the app:
 - `chat_rooms`, `chat_messages`, `chat_bans`, `chat_mutes`
 - `video_mux_jobs`, `reward_claims`, `subscription_webhook_events`
 
-Son 21 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
+Son 22 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
 `live_session_bookings`, `chat_messages`, `chat_mutes`, `chat_rooms` y
 `profiles`. En el resto `authenticated` tiene solo lectura (migracion 18).
 
@@ -447,7 +500,7 @@ pestana Red. Buscar respuestas **403** contra `*.b-cdn.net`. Si las hay, el
 problema es el token en los segmentos. Si no hay 403 y el video igual no se ve,
 el problema es de codecs o del motor, no de acceso.
 
-## PENDIENTES — 2026-08-01
+## PENDIENTES — 2026-08-05
 
 Ordenados por lo que bloquea a lo que puede esperar.
 
@@ -475,9 +528,61 @@ Ordenados por lo que bloquea a lo que puede esperar.
   ⚠️ **Los cupones son por modo**: los de prueba no existen en producción.
 - **Invitaciones puntuales a sesiones.** Ver la sección del modelo de datos.
 
-Queda de esa lista: **packs de videos sueltos** (acceso permanente, visibles en
-la landing configurados desde el panel). Diagnóstico y decisiones tomadas en la
-conversación; lo que falta definir está al final de este archivo.
+### 🔵 EN CURSO — packs de videos sueltos
+
+Lo único que queda de lo que pidió Brunela. **Todas las decisiones ya están
+tomadas**; lo que sigue es implementación.
+
+**Qué es:** vender un pack de clases (ej. 5) con **pago único, sin suscripción**
+y **acceso permanente**. Cambia la pregunta del sistema de *"¿qué plan tiene?"*
+a *"¿qué plan tiene O qué compró?"*.
+
+**Lo que hace que sea abordable** — medido, no supuesto:
+
+- Sólo **4 policies** gobiernan contenido por plan: `videos_*`, `programs_*`,
+  `program_days_*`, `live_sessions_*`. Un pack de clases sueltas toca **una**:
+  `videos_select_allowed_by_tier`.
+- El proxy de video (`app/api/video/[videoId]/[...path]/route.ts`) hace su
+  búsqueda con el cliente **de la alumna**, así que **RLS decide**. Si la policy
+  dice que sí, el reproductor dice que sí: **cero cambios en el reproductor**.
+
+**Tablas nuevas:** `packs`, `pack_videos`, `pack_compras`, más una vista
+`packs_publicos` y una función `user_has_purchased_video(video_id)` para que la
+policy quede legible y haya un solo lugar que cambiar.
+
+**Decisiones tomadas:**
+
+| | |
+|---|---|
+| Acceso | **Permanente**. `vence_el` queda en la tabla por si algún día se vende algo temporal, pero se escribe `null` |
+| Vitrina en la landing | `service_role` leyendo la **vista** `packs_publicos` — NO se le da `SELECT` a `anon` |
+| Por qué la vista | La lista de columnas la impone Postgres, no un comentario en TypeScript. Es una página **pública**: el radio de daño es todo internet |
+| Qué expone | slug, nombre, descripción, precio, cuántas clases, portada, orden, destacado |
+| Qué NO expone | ❌ `bunny_video_id`, `stream_playback_id`, ids de `pack_videos`, `stripe_price_id` |
+| Flujo de compra | Se reusa el camino de los planes con un parámetro hermano `?pack=<slug>`, **validado contra la tabla**. El precio sale de la base, nunca de la URL |
+| Configuración | Brunela decide desde `/admin` qué packs salen en la landing, en qué orden y cuáles destaca. Nada hardcodeado |
+
+**🔴 Los dos `unique` que NO son opcionales — y son distintos:**
+
+1. `pack_compras.stripe_checkout_session_id UNIQUE` — **Stripe reintenta los
+   webhooks.** Sin esto, un reintento da dos packs por un pago.
+2. `packs.stripe_price_id UNIQUE` — si dos packs comparten price id, el webhook
+   pregunta "¿qué pack compró?" y **resuelve el primero que encuentra**. La
+   alumna paga el Pack A y recibe el B. El error tiene que nombrar el pack en
+   conflicto: un `23505` pelado dice el constraint, no cuál es el otro pack.
+
+**Las dos trampas de Stripe:**
+
+- `mode: "subscription"` está fijo en `app/api/stripe/checkout/route.ts`. Un pack
+  necesita `mode: "payment"`. Es una rama, no una reescritura.
+- **La metadata viaja por otro lado.** `customer.subscription.*` trae
+  `metadata.user_id` porque el checkout se lo pone a la suscripción. En un pago
+  único **no hay objeto suscripción**: va en la sesión de checkout y el webhook
+  la lee de otro sitio. Equivocarse ahí = pack pagado sin acceso, que es la
+  trampa 1 con otro disfraz.
+
+El webhook actual **no se rompe**: ignora lo que no es suscripción devolviendo un
+motivo, así que agregar `checkout.session.completed` es aditivo.
 
 ### 🔴 ANTES DE ABRIR AL PÚBLICO — borrar los datos de prueba
 
@@ -493,7 +598,7 @@ Una alumna real vería un catálogo entero que no existe:
 
 Se borran cuando esté todo cerrado, justo antes del pase a producción.
 
-### Bloqueantes para dar por cerrada la migración### Bloqueantes para dar por cerrada la migración
+### Bloqueantes para dar por cerrada la migración
 
 - [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,
       el worker de mux y el proxy de manifests de punta a punta. Es lo único de
