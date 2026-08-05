@@ -80,7 +80,7 @@ antigua" si no hay ninguna.
 
 ## Trampas que ya costaron caro
 
-Cinco cosas que fallan **en silencio**. Ninguna da error.
+Siete cosas que fallan **en silencio**. Ninguna da error.
 
 1. **`protect_profile_admin_fields()` está definida TRES veces** en las
    migraciones (phase_a, phase_b, y la 16). La buena es la que lleva
@@ -111,6 +111,17 @@ Cinco cosas que fallan **en silencio**. Ninguna da error.
    Por la frontera va una **cadena**, y el mapa de íconos vive del lado del
    cliente (`components/admin-overview-client.tsx`). Renderizar el ícono dentro
    del mismo server component sí es válido — lo que no se puede es pasarlo.
+
+7. **`begin;`/`commit;` propios en el SQL Editor de Supabase.** El editor ya
+   envuelve lo pegado en su transaccion; un `commit;` propio la cierra antes de
+   tiempo y **lo que sigue se ejecuta sin error visible y no persiste**. El
+   editor dice "Success" y la base queda igual.
+   Se descubrio con `20260804_chat_aislamiento_por_plan.sql`: el bloque pegado
+   suelto entraba, el mismo SQL con `begin/commit` no. **Pegar solo el SQL.**
+   Y verificar siempre por COMPORTAMIENTO (`npm run test:aislamiento`), no por
+   `pg_policies`: los metadatos tambien pueden enganar si la consulta esta mal
+   escrita, como paso con `'%tier_required%'`, que es substring de
+   `membership_tier_required`.
 
 ## Decisiones conscientes (no son descuidos)
 

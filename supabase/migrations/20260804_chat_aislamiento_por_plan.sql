@@ -1,6 +1,20 @@
 -- Brunela Dance Trainer
 -- 2026-08-04: el chat empieza a comprobar el plan. Hasta ahora no lo hacia.
--- Target: Supabase Postgres. Correr en el SQL Editor.
+-- Target: Supabase Postgres.
+--
+-- ⚠️ COMO CORRERLA EN EL SQL EDITOR DE SUPABASE
+--   PEGAR SOLO EL SQL, SIN el `begin;` ni el `commit;` de abajo.
+--
+--   El editor ya envuelve lo que se pega en su propia transaccion. Un `commit;`
+--   propio la cierra antes de tiempo y lo que sigue queda huerfano: se ejecuta
+--   sin error visible y no persiste nada.
+--
+--   Costo cuatro intentos descubrirlo. La pista estaba en que el bloque del
+--   constraint -- pegado suelto, sin transaccion -- si habia entrado, y los que
+--   llevaban begin/commit no.
+--
+--   El begin/commit se conservan en el archivo porque son correctos para psql y
+--   para cualquier herramienta de migraciones. Solo estorban en ESE editor.
 --
 -- ⚠️ ESTO CIERRA UN AGUJERO REAL, NO ES UNA MEJORA
 --
