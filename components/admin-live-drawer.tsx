@@ -148,14 +148,10 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
         </F>
       </div>
 
-      <div style={{ borderRadius: 12, border: "1px solid #f0eeec", padding: "16px 18px", background: "#fafaf9" }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 12 }}>
-          Enlace de acceso (Zoom)
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        </div>
-      </div>
-
+      {/* Aca habia un recuadro titulado "Enlace de acceso (Zoom)" con la grilla
+          VACIA adentro: los campos se mudaron al bloque plegable "Enlace de
+          Zoom" de mas abajo y el encabezado quedo huerfano. Brunela veia dos
+          cosas casi homonimas y la primera no tenia nada. */}
 
         <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>
         <F label="Título en inglés">

@@ -279,6 +279,22 @@ function InfinitePhotoCarousel() {
 }
 
 /**
+ * ⚠️ LA PORTADA SE REGENERA CADA 5 MINUTOS, NO EN CADA VISITA.
+ *
+ *   Cuando empezo a leer la base dejo de ser estatica sin que nada lo dijera:
+ *   la consulta a Supabase vuelve dinamica la ruta, asi que cada visitante
+ *   pasaba a pagar un viaje a Frankfurt mas el render. Es la pagina de mas
+ *   trafico, la que decide conversion y la que mide Google.
+ *
+ *   Con esto vuelve a servirse desde el CDN. Y NO introduce demora para
+ *   Brunela: las acciones de /admin/precios y /admin/packs llaman a
+ *   `revalidatePath("/")`, asi que un cambio de precio se ve al instante. Los
+ *   5 minutos son solo la red de seguridad por si alguna escritura futura se
+ *   olvida de revalidar.
+ */
+export const revalidate = 300;
+
+/**
  * Los precios salen de la base; el texto de venta sigue aca.
  *
  * ⚠️ ESTA ES LA PRIMERA VEZ QUE LA LANDING LEE LA BASE. Hasta hoy era 100%

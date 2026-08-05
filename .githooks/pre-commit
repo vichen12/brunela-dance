@@ -1,0 +1,18 @@
+#!/bin/sh
+# Guardas del sistema, antes de cada commit.
+#
+# Comprueba que ninguna tabla quede sin RLS/policy/grant y que ninguna server
+# action ni ruta de API quede sin guarda. Corre en ~1s y no necesita
+# credenciales ni red.
+#
+# Para saltearlo en una emergencia: git commit --no-verify
+# (pero entonces corré `npm run verificar` a mano antes de pushear).
+
+npm run --silent verificar || {
+  echo ""
+  echo "  Commit frenado: hay algo sin proteger."
+  echo "  Arreglalo, o declara la excepcion CON SU MOTIVO en"
+  echo "  scripts/verificar-guardas.mjs."
+  echo ""
+  exit 1
+}

@@ -17,8 +17,19 @@
 3. **Antes de tocar SQL**, leer *Trampas que ya costaron caro* (son ocho, todas
    fallan en silencio) y el orden de migraciones en `SETUP.md` § 1.1, que **no es
    alfabético**.
-4. **Después de tocar cualquier policy**: `npm run test:aislamiento` (51 pruebas
-   contra Supabase real). No alcanza con mirar `pg_policies` — ver trampa 7.
+4. **Los tres comandos de verificación**, del más rápido al más lento:
+
+   | Comando | Qué mira | Cuándo |
+   |---|---|---|
+   | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
+   | `npm run test:sistema` | Interfaz, rutas y caché. **~0,2 s, sin base** | Al tocar pantallas o navegación |
+   | `npm run test:aislamiento` | RLS contra Supabase real. **~100 s** | Al tocar cualquier policy |
+
+   ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
+   rojo. Una verificación que no puede fallar no es verificación — ver trampa 7.
+
+   El hook de pre-commit se instala solo con `npm install` (`prepare` →
+   `core.hooksPath`). Para saltearlo en una emergencia: `git commit --no-verify`.
 5. **Reglas de trabajo de este proyecto**: las migraciones se muestran antes de
    correrlas y las corre el dueño del proyecto en Supabase; se verifica contra la
    base real, no se asume; primero se diagnostica y se reporta, después se

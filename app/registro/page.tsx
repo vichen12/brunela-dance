@@ -34,10 +34,29 @@ export default async function RegistroPage({ searchParams }: Props) {
 
   // Ya logueada: no tiene sentido mostrarle un alta. La compuerta del layout de
   // /dashboard la manda al onboarding si le falta.
+  // ⚠️ NO SE PIERDE LO QUE VENIA ELIGIENDO.
+  //
+  //    Antes esto era `redirect("/dashboard")` a secas, y ahi moria la intencion:
+  //    una alumna con sesion que tocaba "llevar este pack" en la portada
+  //    aterrizaba en su dashboard sin compra y sin explicacion. Como no habia
+  //    ningun otro camino, los packs directamente NO EXISTIAN para quien ya
+  //    tenia cuenta -- que despues del lanzamiento son todas.
   if (hasSupabaseAuthEnv()) {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) redirect("/dashboard" as never);
+    if (user) {
+      const q = new URLSearchParams();
+      if (pack) q.set("pack", pack);
+      else if (plan) {
+        q.set("plan", plan);
+        if (interval) q.set("interval", interval);
+      }
+      if (q.size > 0) {
+        q.set("iniciar", "1");
+        redirect(`/dashboard/plan?${q.toString()}` as never);
+      }
+      redirect("/dashboard" as never);
+    }
   }
 
   const elegido = plan ? PLAN_LABEL[plan] : null;

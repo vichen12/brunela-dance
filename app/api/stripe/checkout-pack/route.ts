@@ -131,7 +131,12 @@ export async function POST(request: Request) {
       pack_id: pack.id,
       pack_slug: pack.slug,
     },
-    success_url: `${appUrl}/dashboard/library?success=${encodeURIComponent("Pack comprado, ya podés ver tus clases")}`,
+    // El texto reconoce la demora a proposito: Stripe redirige al instante y
+    // el webhook puede tardar unos segundos en llegar. Prometer que ya estan
+    // desbloqueadas y que no aparezcan es peor que avisar.
+    success_url: `${appUrl}/dashboard/library?success=${encodeURIComponent(
+      "¡Listo! Ya es tuyo. Si no ves las clases nuevas todavía, recargá en unos segundos."
+    )}`,
     cancel_url: `${appUrl}/dashboard/plan?error=${encodeURIComponent("Compra cancelada")}`,
     allow_promotion_codes: true,
   });

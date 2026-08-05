@@ -74,16 +74,37 @@ function formatEur(amount: number) {
   })}€`;
 }
 
+/**
+ * Un pack, como lo ve la alumna.
+ *
+ * `compradoEl` es la fecha de compra o null. Es lo unico que distingue "podés
+ * llevarlo" de "ya es tuyo", y sin eso la alumna que pagó no tenía ninguna señal
+ * dentro del sistema de que la compra entró.
+ */
+export type PackDeAlumna = {
+  slug: string;
+  nombre: string;
+  descripcion: string;
+  precioCentimos: number;
+  moneda: string;
+  portada: string | null;
+  destacado: boolean;
+  clases: number;
+  compradoEl: string | null;
+};
+
 export function PlanClient({
   currentTier,
   subscriptionStatus,
   renewsAt,
   catalog,
+  packs = [],
 }: {
   currentTier: Tier;
   subscriptionStatus: string | null;
   renewsAt: string | null;
   catalog: Catalog;
+  packs?: PackDeAlumna[];
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [interval, setInterval] = useState<Interval>('monthly');
@@ -535,6 +556,82 @@ export function PlanClient({
               </div>
             ))}
           </div>
+
+          {/* ── Packs ──────────────────────────────────────────────────────
+              Sin esto, una alumna con sesion NO TENIA NINGUNA FORMA de comprar
+              un pack: el boton de la portada la mandaba a /registro, que al
+              verla logueada la devolvia al dashboard perdiendo el pack por el
+              camino. La funcionalidad existia solo para quien no tenia cuenta. */}
+          {packs.length > 0 && (
+            <div style={{ marginTop: 34, paddingTop: 26, borderTop: '1px solid #F1E9E7' }}>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)', textAlign: 'center' }}>
+                Packs de clases
+              </h2>
+              <p style={{ fontSize: 13.5, color: 'var(--muted)', textAlign: 'center', marginTop: 6, lineHeight: 1.6 }}>
+                Un solo pago, sin renovación. Las clases quedan tuyas para siempre.
+              </p>
+
+              <div style={{
+                display: 'grid', gap: 14, marginTop: 20,
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              }}>
+                {packs.map((p) => {
+                  const comprado = p.compradoEl !== null;
+                  return (
+                    <div key={p.slug} style={{
+                      borderRadius: 18, background: '#fff', padding: '18px 20px',
+                      border: `1.5px solid ${comprado ? '#bbf7d0' : p.destacado ? 'var(--pink-mid)' : '#F1E9E7'}`,
+                      display: 'flex', flexDirection: 'column', gap: 9,
+                    }}>
+                      {comprado && (
+                        <span style={{
+                          alignSelf: 'flex-start', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+                          color: '#166534', background: '#f0fdf4', borderRadius: 99, padding: '3px 10px',
+                        }}>YA ES TUYO</span>
+                      )}
+
+                      <p style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--ink)' }}>{p.nombre}</p>
+                      {p.descripcion && (
+                        <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.55 }}>{p.descripcion}</p>
+                      )}
+                      <p style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+                        {p.clases === 1 ? '1 clase' : `${p.clases} clases`} · acceso permanente
+                      </p>
+
+                      <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', marginTop: 'auto' }}>
+                        {(p.precioCentimos / 100).toLocaleString('es-ES', {
+                          minimumFractionDigits: p.precioCentimos % 100 === 0 ? 0 : 2,
+                        })}{' '}
+                        {p.moneda.toUpperCase()}
+                      </p>
+
+                      {comprado ? (
+                        /* Comprado: el boton lleva a las clases, no a pagar de nuevo. */
+                        <Link href="/dashboard/library" style={{
+                          display: 'block', textAlign: 'center', textDecoration: 'none',
+                          border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#166534',
+                          borderRadius: 99, padding: '10px 18px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
+                        }}>VER MIS CLASES</Link>
+                      ) : (
+                        <button
+                          onClick={() => void startPackCheckout(p.slug)}
+                          disabled={loadingTier !== null}
+                          style={{
+                            border: 'none', borderRadius: 99, padding: '11px 18px', cursor: 'pointer',
+                            background: 'var(--pink-mid)', color: '#fff', fontFamily: 'inherit',
+                            fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
+                            opacity: loadingTier !== null ? 0.6 : 1,
+                          }}
+                        >
+                          {loadingTier === 'pack' ? 'ABRIENDO…' : 'LLEVAR ESTE PACK'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div style={{
             marginTop: 24, paddingTop: 20, borderTop: '1px solid #F1E9E7',

@@ -242,6 +242,10 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
+  // ⚠️ El checkout de packs vuelve aca con ?success=. Antes nadie lo leia: la
+  //    alumna pagaba y aterrizaba en la biblioteca SIN NINGUNA confirmacion,
+  //    con un parametro en la URL que no dibujaba nada.
+  const avisoCompra = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
   const activeCategory = typeof params.category === "string" ? params.category : "all";
   const busqueda = (typeof params.q === "string" ? params.q : "").trim();
 
@@ -397,6 +401,20 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">
       <section className="page-shell space-y-6">
+        {/* ⚠️ El texto NO promete que ya esten desbloqueadas. Stripe redirige al
+            instante y el webhook puede tardar unos segundos: decirle "ya podés
+            verlas" y que no aparezcan es peor que avisarle de la demora. */}
+        {avisoCompra && (
+          <div
+            role="status"
+            style={{
+              borderRadius: 16, padding: "13px 18px", fontSize: 13.5, lineHeight: 1.55,
+              background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0",
+            }}
+          >
+            {avisoCompra}
+          </div>
+        )}
 
         {/* Header */}
         <header className="hero-stage" style={{ position: "relative" }}>
