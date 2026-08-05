@@ -7,6 +7,8 @@ import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
 import {
   createLiveSessionAction,
   deleteLiveSessionAction,
+  inviteToLiveSessionAction,
+  uninviteFromLiveSessionAction,
   updateLiveSessionAction,
 } from "@/src/features/admin/live-actions";
 
@@ -34,6 +36,8 @@ export type LiveSession = {
   booking_closes_at: string | null;
   bookings_count: number;
   access_link: { join_url: string; passcode: string | null } | null;
+  /** Alumnas invitadas a mano, que entran aunque su plan no les alcance. */
+  invitations: { user_id: string; full_name: string | null; email: string; note: string | null }[];
 };
 
 const inp: React.CSSProperties = {
@@ -215,6 +219,75 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
 }
 
 
+/**
+ * Invitaciones puntuales.
+ *
+ * ⚠️ VA FUERA DE <LiveForm>, NO ADENTRO. Un <form> dentro de otro <form> lo
+ *    descarta el parser de HTML, y en este mismo archivo ya paso: el boton
+ *    ELIMINAR terminaba llamando a updateLiveSessionAction. Cada invitacion es
+ *    su propio formulario, asi que van todos como hermanos del principal.
+ */
+function Invitaciones({ session }: { session: LiveSession }) {
+  const hay = session.invitations.length;
+
+  return (
+    <section style={{ marginTop: 22, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
+      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 6 }}>
+        Invitar a alguien en particular
+      </p>
+      <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.5, marginBottom: 14 }}>
+        Quien invites entra a <strong>esta</strong> clase aunque su plan no le alcance.
+        Sigue teniendo que reservar, y si el cupo está lleno queda en lista de espera.
+      </p>
+
+      <form
+        action={inviteToLiveSessionAction}
+        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginBottom: hay ? 16 : 0 }}
+      >
+        <input type="hidden" name="liveSessionId" value={session.id} />
+        <F label="Correo o nombre de la alumna">
+          <input style={inp} name="alumna" required placeholder="ana@ejemplo.com" autoComplete="off" />
+        </F>
+        <BotonEnviar pendingLabel="Invitando…" style={{
+          background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,
+          padding: "10px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+          cursor: "pointer", whiteSpace: "nowrap",
+        }}>INVITAR</BotonEnviar>
+      </form>
+
+      {hay > 0 && (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+          {session.invitations.map((i) => (
+            <li
+              key={i.user_id}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                background: "#fafaf9", border: "1px solid #f0eeec", borderRadius: 10, padding: "8px 12px",
+              }}
+            >
+              <span style={{ fontSize: 12.5, color: "#1c1917", minWidth: 0 }}>
+                <strong style={{ fontWeight: 700 }}>{i.full_name || i.email}</strong>
+                {i.full_name && (
+                  <span style={{ color: "#a8a29e", marginLeft: 8, fontSize: 11.5 }}>{i.email}</span>
+                )}
+              </span>
+              <form action={uninviteFromLiveSessionAction}>
+                <input type="hidden" name="liveSessionId" value={session.id} />
+                <input type="hidden" name="userId" value={i.user_id} />
+                <BotonEnviar pendingLabel="…" style={{
+                  background: "transparent", border: "none", color: "#a8a29e",
+                  fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  padding: "4px 6px",
+                }}>Quitar</BotonEnviar>
+              </form>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** El boton de la fila y su panel. */
 export function EditarSesion({ session }: { session: LiveSession }) {
   const [abierto, setAbierto] = useState(false);
@@ -255,6 +328,7 @@ export function EditarSesion({ session }: { session: LiveSession }) {
           session={session}
           onGuardado={() => { setAbierto(false); setGuardado(true); }}
         />
+        <Invitaciones session={session} />
       </AdminDrawer>
     </>
   );

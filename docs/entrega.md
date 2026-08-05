@@ -30,9 +30,9 @@ recorrido hasta el pago.
 
 **Infraestructura**
 - Base y funciones en **Fráncfort**, por residencia de datos de la UE
-- 24 migraciones versionadas — el esquema se reconstruye desde el repo
+- 27 migraciones versionadas — el esquema se reconstruye desde el repo
 - RLS en todas las tablas
-- Banco de pruebas de aislamiento del chat
+- Banco de pruebas de aislamiento: 34 pruebas contra Supabase real (chat y sesiones)
 
 ---
 

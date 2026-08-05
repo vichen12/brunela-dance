@@ -18,7 +18,8 @@ cualquier sección. Todo lo tuyo está bajo el mismo menú.
 6. [Moderar el chat](#6-moderar-el-chat)
 7. [Las analíticas](#7-las-analíticas)
 8. [Quién puede escribirte](#8-quién-puede-escribirte)
-9. [Lo que no conviene tocar](#9-lo-que-no-conviene-tocar)
+9. [Códigos de descuento](#9-códigos-de-descuento)
+10. [Lo que no conviene tocar](#10-lo-que-no-conviene-tocar)
 
 ---
 
@@ -124,6 +125,34 @@ listado público.
 
 En el bloque **Reservas** podés poner desde cuándo y hasta cuándo se puede
 anotar. Si lo dejás vacío, se puede reservar hasta que empiece.
+
+### Invitar a alguien que no tiene el plan
+
+Abajo del todo del panel hay **Invitar a alguien en particular**. Escribís su
+correo (o su nombre) y tocás *Invitar*.
+
+Quien invites entra a **esa** clase aunque su plan no le alcance. Sirve para
+regalar una clase suelta, para una prueba, o para alguien a quien le prometiste
+algo.
+
+| | |
+|---|---|
+| Vale para | **Una sola clase**, la que estás editando |
+| Ella tiene que | **Reservar igual**, como todas |
+| Si el cupo está lleno | Queda **en lista de espera**, no desplaza a nadie |
+| Si la ventana de reservas cerró | **Entra igual** — la invitación pasa por encima |
+| Ella lo ve como | Un cartel *"Invitada por Brunela"* en la clase |
+
+**Si hay dos alumnas con el mismo nombre**, el sistema no elige una: te dice
+cuáles son y te pide el correo exacto. Es a propósito — invitar a la persona
+equivocada no se notaría hasta que la otra reclame.
+
+**Para sacar una invitación**, tocá *Quitar* al lado del nombre. Ojo: si ella ya
+reservó, **la reserva no se cancela sola**. Quitarle la invitación le saca el
+derecho a volver a anotarse; si además querés sacarla de la clase, hay que
+cancelar la reserva aparte.
+
+En el listado, cada clase te muestra cuántas invitadas tiene.
 
 ---
 
@@ -236,7 +265,47 @@ pueden escribirte en privado.
 
 ---
 
-## 9. Lo que no conviene tocar
+## 9. Códigos de descuento
+
+**Dónde:** no están en tu panel — se crean **en Stripe**, y aparecen solos en el
+pago. El campo *"¿Tenés un código promocional?"* ya está activo en el checkout.
+
+### Crear "FOUNDERS" (50 % de descuento)
+
+1. Entrá a Stripe → menú **Productos** → **Cupones** → *Crear cupón*.
+2. Elegí **Porcentaje**, poné `50`.
+3. **Duración** — es lo más importante, y no se puede cambiar después:
+
+   | Opción | Qué pasa |
+   |---|---|
+   | *Una vez* | Solo el primer mes sale a mitad de precio |
+   | *Durante N meses* | Los primeros N meses |
+   | *Para siempre* | Paga la mitad **mientras siga suscripta** |
+
+4. Guardá. Ahora tocá **Códigos promocionales** → *Crear*, elegí ese cupón y
+   escribí `FOUNDERS`.
+5. Ahí ponés los límites: **cuántas veces se puede usar** (para "las primeras
+   50", poné 50), hasta qué fecha, y si es solo para clientes nuevos.
+
+### Dos cosas que conviene saber
+
+**"Las primeras" se controla con el límite de usos.** Stripe no sabe quién se
+registró primero; lo que cuenta es cuántas veces se canjeó el código. Para lo
+que querés es lo mismo, pero es bueno saber qué está midiendo.
+
+**🔴 Los cupones son por modo.** El que crees mientras el sistema está en modo
+prueba **no existe** cuando pase a cobrar de verdad. Hay que volver a crearlo.
+Es la misma trampa que la configuración del portal de facturación.
+
+### Dónde se ve el descuento
+
+En el pago y en la factura. **En las pantallas de planes del sistema se sigue
+viendo el precio entero** — el descuento aparece recién al pagar. Si querés que
+se vea antes, avisá: es una pantalla, no es difícil.
+
+---
+
+## 10. Lo que no conviene tocar
 
 Cosas que se pueden romper sin que se note:
 

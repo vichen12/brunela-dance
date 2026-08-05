@@ -120,6 +120,117 @@ export async function deleteLiveSessionAction(fd: FormData) {
   redirect("/admin/live?success=Sesión+eliminada" as never);
 }
 
+/**
+ * Invitaciones puntuales.
+ *
+ * Una invitacion deja entrar a UNA sesion a UNA alumna aunque su plan no le
+ * alcance. Es lo unico del sistema que da acceso sin mirar el plan, asi que la
+ * regla de verdad NO esta aca: esta en la base
+ * (20260805_invitaciones_a_sesiones.sql), en los tres lugares que la comprueban.
+ * Esto es solo la pantalla para crearla.
+ *
+ * ⚠️ NO REDIRIGEN AL SALIR BIEN
+ *   Brunela suele invitar a varias seguidas. Un redirect cerraria el panel
+ *   despues de cada una y habria que volver a abrirlo. El error SI redirige,
+ *   porque necesita un lugar donde mostrarse.
+ */
+
+/** Busca a la alumna por correo o por nombre y devuelve un error legible. */
+async function resolverAlumna(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  criterio: string
+): Promise<{ id: string } | { fallo: string }> {
+  const texto = criterio.trim();
+  if (!texto) return { fallo: "Escribí el correo o el nombre de la alumna." };
+
+  // ⚠️ `.or()` de PostgREST separa las condiciones con comas y las agrupa con
+  //    parentesis. Un texto que los traiga no da un error de sintaxis: cambia la
+  //    consulta en silencio y puede devolver a otra persona. Ni un correo ni un
+  //    nombre los necesitan, asi que se rechazan de entrada.
+  if (/[,()]/.test(texto)) {
+    return { fallo: "El correo o el nombre no puede tener comas ni paréntesis." };
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, full_name")
+    .or(`email.ilike.${texto},full_name.ilike.${texto}`)
+    .limit(5);
+
+  if (error) return { fallo: error.message };
+
+  if (!data || data.length === 0) {
+    return { fallo: `No hay ninguna alumna con el correo o el nombre "${texto}".` };
+  }
+
+  // Dos personas pueden llamarse igual. Elegir "la primera" seria invitar a
+  // alguien al azar, y Brunela no tendria forma de notarlo.
+  if (data.length > 1) {
+    const correos = data.map((p) => p.email).join(", ");
+    return {
+      fallo:
+        `Hay ${data.length} alumnas que coinciden con "${texto}": ${correos}. ` +
+        `Usá el correo exacto para elegir cuál.`,
+    };
+  }
+
+  return { id: data[0].id };
+}
+
+export async function inviteToLiveSessionAction(fd: FormData) {
+  const { user } = await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  const sessionId = fd.get("liveSessionId") as string;
+  const alumna = await resolverAlumna(supabase, (fd.get("alumna") as string) ?? "");
+
+  if ("fallo" in alumna) {
+    redirect(`/admin/live?error=${encodeURIComponent(alumna.fallo)}` as never);
+  }
+
+  const { error } = await supabase.from("live_session_invitations").insert({
+    live_session_id: sessionId,
+    user_id: alumna.id,
+    invited_by: user.id,
+    note: ((fd.get("nota") as string) || "").trim() || null,
+  });
+
+  // 23505 es el unique (live_session_id, user_id). Ya estaba invitada: no es un
+  // fallo, es el estado que se queria.
+  if (error && error.code !== "23505") {
+    redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+  }
+
+  revalidatePath("/admin/live");
+  revalidatePath("/dashboard/live");
+}
+
+export async function uninviteFromLiveSessionAction(fd: FormData) {
+  await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  const sessionId = fd.get("liveSessionId") as string;
+  const userId = fd.get("userId") as string;
+
+  const { error } = await supabase
+    .from("live_session_invitations")
+    .delete()
+    .eq("live_session_id", sessionId)
+    .eq("user_id", userId);
+
+  if (error) {
+    redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+  }
+
+  // ⚠️ La reserva que la alumna ya hizo NO se toca. Sacarle la invitacion le
+  //    quita el derecho a reservar de nuevo, pero si ya reservo y Brunela
+  //    ademas quiere sacarla, eso es cancelar la reserva: otra accion, visible
+  //    y aparte. Borrarla en silencio aca dejaria a alguien afuera de una clase
+  //    que creia tener.
+  revalidatePath("/admin/live");
+  revalidatePath("/dashboard/live");
+}
+
 export async function updateStatusAction(fd: FormData) {
   await requireAdmin();
   const supabase = createSupabaseAdminClient();

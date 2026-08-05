@@ -87,6 +87,99 @@ export async function crearSala(opts: {
   return data;
 }
 
+/**
+ * Crea una sesion en vivo publicada.
+ *
+ * `capacity` por defecto es alto para que el cupo no interfiera: las pruebas que
+ * miden el cupo lo bajan a proposito.
+ */
+export async function crearSesion(opts: {
+  tier: Exclude<Tier, "none">;
+  capacity?: number;
+  /** Para probar que una invitacion saltea la ventana de reservas. */
+  cerradaDesdeHace?: boolean;
+}): Promise<{ id: string }> {
+  const a = admin();
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const empieza = new Date(Date.now() + 86_400_000);
+
+  const { data, error } = await a
+    .from("live_sessions")
+    .insert({
+      slug: `${PREFIJO}sesion-${marca}`,
+      title_i18n: { es: `${PREFIJO}sesion ${marca}` },
+      status: "scheduled",
+      membership_tier_required: opts.tier,
+      starts_at: empieza.toISOString(),
+      ends_at: new Date(empieza.getTime() + 3_600_000).toISOString(),
+      session_timezone: "Europe/Madrid",
+      capacity: opts.capacity ?? 50,
+      booking_closes_at: opts.cerradaDesdeHace
+        ? new Date(Date.now() - 3_600_000).toISOString()
+        : null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear la sesion: ${error?.message}`);
+  return data;
+}
+
+/**
+ * Falla RUIDOSAMENTE si la migracion de invitaciones no esta puesta.
+ *
+ * ⚠️ POR QUE EXISTE ESTO
+ *   Sin esta guarda, la ausencia de la tabla pone en VERDE a las pruebas que
+ *   solo comprueban "hubo error": autoinvitarse y la RPC de dos argumentos
+ *   pasaban porque la tabla no existia, no porque estuvieran protegidas.
+ *   Una prueba que pasa por el motivo equivocado es peor que una que falla.
+ */
+export async function exigirMigracionDeInvitaciones() {
+  const a = admin();
+
+  const tabla = await a.from("live_session_invitations").select("id").limit(1);
+  if (tabla.error) {
+    throw new Error(
+      `FALTA LA MIGRACION DE INVITACIONES.\n\n` +
+        `  ${tabla.error.code ?? "?"}: ${tabla.error.message}\n\n` +
+        `  1. Correr supabase/migrations/20260805_invitaciones_a_sesiones.sql\n` +
+        `     (PEGAR SIN el begin;/commit; -- trampa 7 de CLAUDE.md)\n\n` +
+        `  2. Si la tabla YA existe, es la cache de esquema de PostgREST, que\n` +
+        `     ya paso antes en este proyecto. Comprobar y refrescar:\n\n` +
+        `       select to_regclass('public.live_session_invitations');\n` +
+        `       notify pgrst, 'reload schema';\n`
+    );
+  }
+
+  // La tabla puede estar y las funciones no: son bloques distintos de la misma
+  // migracion, y el editor de Supabase ya corto una a la mitad una vez.
+  const fn = await a.rpc("current_user_is_invited_to_live_session", {
+    target_live_session_id: "00000000-0000-0000-0000-000000000000",
+  });
+  if (fn.error) {
+    throw new Error(
+      `La tabla esta pero las FUNCIONES no.\n\n` +
+        `  ${fn.error.code ?? "?"}: ${fn.error.message}\n\n` +
+        `  La migracion entro a medias. Volver a correrla entera.\n`
+    );
+  }
+}
+
+/** Invita a una alumna. Es lo que hace Brunela desde el panel, por service_role. */
+export async function invitar(sessionId: string, userId: string) {
+  const { error } = await admin()
+    .from("live_session_invitations")
+    .insert({ live_session_id: sessionId, user_id: userId });
+  if (error) throw new Error(`No se pudo invitar: ${error.message}`);
+}
+
+/** Carga el enlace de Zoom de una sesion. */
+export async function ponerEnlace(sessionId: string, url = "https://zoom.test/zz") {
+  const { error } = await admin()
+    .from("live_session_access_links")
+    .upsert({ live_session_id: sessionId, join_url: url });
+  if (error) throw new Error(`No se pudo poner el enlace: ${error.message}`);
+}
+
 /** Escribe un mensaje con service_role, sin pasar por las policies. */
 export async function sembrarMensaje(roomId: string, userId: string, texto: string) {
   const { error } = await admin()
@@ -146,6 +239,14 @@ export async function limpiarResiduos() {
   for (const s of salas ?? []) {
     await a.from("chat_messages").delete().eq("room_id", s.id);
     await a.from("chat_rooms").delete().eq("id", s.id);
+  }
+
+  // Las sesiones van ANTES que los perfiles: el on delete cascade de
+  // live_sessions se lleva reservas, invitaciones y enlaces, asi que borrando la
+  // sesion no queda nada colgando que impida borrar la alumna despues.
+  const { data: sesiones } = await a.from("live_sessions").select("id").like("slug", `${PREFIJO}%`);
+  for (const s of sesiones ?? []) {
+    await a.from("live_sessions").delete().eq("id", s.id);
   }
 
   const { data: perfiles } = await a.from("profiles").select("id").like("email", `${PREFIJO}%`);

@@ -93,7 +93,12 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const error = typeof params.error === "string" ? params.error : null;
   const redirectTo = "/dashboard/live";
 
-  const [{ data: sessionsData }, { data: bookingsData }, { data: linksData }] = await Promise.all([
+  const [
+    { data: sessionsData },
+    { data: bookingsData },
+    { data: linksData },
+    { data: invitationsData },
+  ] = await Promise.all([
     supabase
       .from("live_sessions")
       .select(
@@ -104,10 +109,17 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
       .from("live_session_bookings")
       .select("live_session_id, status")
       .eq("user_id", user.id),
-    supabase.from("live_session_access_links").select("live_session_id, join_url, passcode")
+    supabase.from("live_session_access_links").select("live_session_id, join_url, passcode"),
+    // Sus invitaciones. La policy ya la deja ver solo las propias, asi que no
+    // hace falta filtrar por user_id: filtrarlo igual seria sugerir que la
+    // seguridad esta aca, y esta en la base.
+    supabase.from("live_session_invitations").select("live_session_id")
   ]);
 
   const sessions = (sessionsData ?? []) as LiveSessionRecord[];
+  const invitadaA = new Set(
+    ((invitationsData ?? []) as { live_session_id: string }[]).map((i) => i.live_session_id)
+  );
   const bookings = new Map(
     ((bookingsData ?? []) as BookingRecord[]).map((booking) => [booking.live_session_id, booking])
   );
@@ -198,6 +210,18 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                         <span className="studio-chip">{membershipTierLabel(session.membership_tier_required)}</span>
                         <span className="studio-chip">{liveSessionStatusLabel(session.status)}</span>
                         {booking ? <span className="studio-chip">{bookingStatusLabel(booking.status)}</span> : null}
+                        {/* Sin esto, una alumna ve una clase marcada "Principal" con su
+                            plan de Corps y parece un error del sistema. La marca explica
+                            por que la esta viendo. Va con --pink-mid y no --pink: aca hay
+                            texto para leer, no una etiqueta que se mira de reojo. */}
+                        {invitadaA.has(session.id) && (
+                          <span
+                            className="studio-chip"
+                            style={{ background: "var(--pink-mid)", color: "#fff", borderColor: "transparent" }}
+                          >
+                            Invitada por Brunela
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="display mt-5 text-4xl">{resolveI18nText(session.title_i18n)}</h3>

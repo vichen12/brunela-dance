@@ -9,7 +9,7 @@ import {
   updateStatusAction,
 } from "@/src/features/admin/live-actions";
 import { HoraSesion } from "@/components/hora-sesion";
-import { EditarSesion, LiveForm } from "@/components/admin-live-drawer";
+import { EditarSesion, LiveForm, type LiveSession } from "@/components/admin-live-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -26,23 +26,9 @@ const ESTADOS_LIVE = [
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type LiveSession = {
-  id: string;
-  slug: string;
-  title_i18n: Record<string, string>;
-  description_i18n: Record<string, string>;
-  status: "draft" | "scheduled" | "completed" | "canceled";
-  membership_tier_required: "corps_de_ballet" | "solista" | "principal";
-  starts_at: string;
-  ends_at: string;
-  session_timezone: string;
-  capacity: number;
-  cover_image_url: string | null;
-  booking_opens_at: string | null;
-  booking_closes_at: string | null;
-  bookings_count: number;
-  access_link: { join_url: string; passcode: string | null } | null;
-};
+// El tipo vive en el drawer y se importa: estaba copiado aca palabra por
+// palabra, y una copia es una divergencia esperando. Si el formulario suma un
+// campo, esta pagina se entera al compilar en vez de dentro de unos meses.
 
 // ── Server actions ─────────────────────────────────────────────────────────────
 
@@ -146,7 +132,12 @@ export default async function AdminLivePage({
   const { count: totalSesiones } = await supabase
     .from("live_sessions").select("*", { count: "exact", head: true });
 
-  const [{ data: sessionsData }, { data: bookingsData }, { data: accessLinksData }] = await Promise.all([
+  const [
+    { data: sessionsData },
+    { data: bookingsData },
+    { data: accessLinksData },
+    { data: invitationsData },
+  ] = await Promise.all([
     consultaSesiones.order("starts_at", { ascending: false }),
     supabase
       .from("live_session_bookings")
@@ -155,6 +146,12 @@ export default async function AdminLivePage({
     supabase
       .from("live_session_access_links")
       .select("live_session_id, join_url, passcode"),
+    // Va en el mismo paralelo por el mismo motivo que las otras: un viaje mas a
+    // Frankfurt en serie son ~30 ms que se notan. El join trae el nombre para no
+    // tener que resolver los UUID despues, que seria un N+1.
+    supabase
+      .from("live_session_invitations")
+      .select("live_session_id, user_id, profiles(full_name, email)"),
   ]);
 
   const bookingsBySession = (bookingsData ?? []).reduce<Record<string, number>>((acc, b) => {
@@ -167,10 +164,35 @@ export default async function AdminLivePage({
     return acc;
   }, {});
 
-  const sessions = ((sessionsData ?? []) as Omit<LiveSession, "bookings_count" | "access_link">[]).map((s) => ({
+  type FilaInvitacion = {
+    live_session_id: string;
+    user_id: string;
+    // PostgREST devuelve el join como objeto cuando la relacion es de a uno,
+    // pero lo tipa como array. Se normaliza aca, una vez.
+    profiles: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
+  };
+
+  const invitationsBySession = ((invitationsData ?? []) as FilaInvitacion[]).reduce<
+    Record<string, LiveSession["invitations"]>
+  >((acc, i) => {
+    const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+    // Sin perfil no hay a quien mostrar. No deberia pasar (hay FK), pero
+    // dibujar "undefined" en el panel de Brunela seria peor que omitirla.
+    if (!p) return acc;
+    (acc[i.live_session_id] ??= []).push({
+      user_id: i.user_id,
+      full_name: p.full_name,
+      email: p.email,
+      note: null,
+    });
+    return acc;
+  }, {});
+
+  const sessions = ((sessionsData ?? []) as Omit<LiveSession, "bookings_count" | "access_link" | "invitations">[]).map((s) => ({
     ...s,
     bookings_count: bookingsBySession[s.id] ?? 0,
     access_link: accessLinksBySession[s.id] ?? null,
+    invitations: invitationsBySession[s.id] ?? [],
   }));
 
   const scheduled = sessions.filter((s) => s.status === "scheduled").length;
@@ -310,6 +332,13 @@ export default async function AdminLivePage({
                           <HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} perspectiva="admin" />
                         </span>
                         <span>{session.bookings_count} / {session.capacity} reservas</span>
+                        {session.invitations.length > 0 && (
+                          <span style={{ color: "var(--pink-mid)", fontWeight: 600 }}>
+                            {session.invitations.length === 1
+                              ? "1 invitada"
+                              : `${session.invitations.length} invitadas`}
+                          </span>
+                        )}
                         {session.access_link && (
                           <span style={{ color: "#059669", fontWeight: 600 }}>Zoom OK</span>
                         )}

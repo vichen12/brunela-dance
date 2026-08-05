@@ -38,7 +38,7 @@ seguridad. **El rediseño NO está desplegado.**
 
 | Rama | Contenido | Estado |
 |---|---|---|
-| `main` | código de mayo + hotfix + las 18 migraciones + `fra1` | **en producción** |
+| `main` | código de mayo + hotfix + `fra1` | **en producción** |
 | `feat/rediseno-completo` | 3 meses de trabajo: rediseño de las 7 pantallas, reproductor Bunny, worker de mux, checkout y portal de Stripe, mejoras de rendimiento | **sin desplegar**, build verificado desde git |
 
 Para desplegar el rediseño: mergear esa rama a `main`. Conviene hacerlo primero
@@ -47,12 +47,13 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **18 migraciones**, todas aplicadas. ⚠️ **El orden NO es alfabético** — está en
-  `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de `phase_b`, `phase_b0`
-  va sola, y las 17 y 18 van al final.
-- **20 tablas**, 43 policies en `public` + 1 en `storage`, RLS activa en todas.
+- **27 migraciones**, todas aplicadas y verificadas (las 18 de la mudanza + 4 del
+  2026-08-03, 4 del 08-04 y la de invitaciones del 08-05). ⚠️ **El orden NO es
+  alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
+  `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
+- **21 tablas**, RLS activa en todas.
 - **Permisos acotados** (migraciones 17 y 18): `anon` sin ningún privilegio de
-  tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en 14 de 20.
+  tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en casi todas.
   Si aparece un `42501 permission denied`, es esto: se otorga la operación
   puntual sobre esa tabla, no se vuelve al grant global.
 - **Contenido: vacío.** 0 videos, 0 categorías, 0 programas, 0 sesiones. La data
@@ -303,13 +304,23 @@ Core tables used by the app:
 - `live_sessions`
 - `live_session_bookings`
 - `live_session_access_links`
+- `live_session_invitations`
 - `categories`, `documents`, `studio_announcements`
 - `chat_rooms`, `chat_messages`, `chat_bans`, `chat_mutes`
 - `video_mux_jobs`, `reward_claims`, `subscription_webhook_events`
 
-Son 20 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
+Son 21 tablas. Las escribibles por una alumna son solo 6: `user_progress`,
 `live_session_bookings`, `chat_messages`, `chat_mutes`, `chat_rooms` y
 `profiles`. En el resto `authenticated` tiene solo lectura (migracion 18).
+
+**`live_session_invitations` es la unica cosa del sistema que da acceso sin
+mirar el plan.** Abre los tres lugares que gobiernan una sesion (verla,
+reservarla, ver el Zoom), y la regla vive en dos funciones:
+`current_user_is_invited_to_live_session(sesion)` para `authenticated`, y
+`is_invited_to_live_session(sesion, alumna)` **solo para `service_role`** —
+exponer la de dos argumentos dejaria enumerar quien esta invitada a que, porque
+una funcion con EXECUTE para `authenticated` es un endpoint RPC publico.
+Cubierta por `tests/aislamiento/sesiones.test.ts`.
 
 Membership tiers:
 
@@ -451,18 +462,22 @@ Ordenados por lo que bloquea a lo que puede esperar.
 | `20260804_chat_autor_y_rate_limit.sql` | `author_name` poblado, cero sin autor |
 | `20260804_guardar_progreso_rpc.sql` | `prosecdef=false`, `greatest()` en las dos ramas |
 | `20260804_fix_default_privileges.sql` | cero TRUNCATE/REFERENCES/TRIGGER |
+| `20260804_chat_aislamiento_por_plan.sql` | 14/14 en `test:aislamiento` |
+| `20260805_invitaciones_a_sesiones.sql` | 34/34 en `test:aislamiento` |
 
-### 🔴 SIN CORRER — una sola
+**No queda ninguna migración sin correr.**
 
-- [ ] **`20260804_chat_aislamiento_por_plan.sql`** — cierra un agujero real: el
-      chat **no comprueba el plan**. `chat_rooms.tier_required` no aparece en
-      ninguna policy; la comparación vive en JavaScript, así que filtra lo que
-      se dibuja y no lo que se puede pedir.
+### ✅ Lo que pidió Brunela — bloque A, hecho (2026-08-05)
 
-      Hoy una alumna de `corps_de_ballet` puede leer una sala de `principal`
-      con su propia sesión, por REST y por realtime.
+- **Códigos promocionales.** No hubo nada que programar: `allow_promotion_codes`
+  ya estaba en el checkout, y el webhook resuelve el plan por `price.id`, que un
+  descuento no cambia. Pasos de panel en `docs/manual-brunela.md` § 9.
+  ⚠️ **Los cupones son por modo**: los de prueba no existen en producción.
+- **Invitaciones puntuales a sesiones.** Ver la sección del modelo de datos.
 
-      **Criterio de éxito:** `npm run test:aislamiento` pasa de 4 rojos a cero.
+Queda de esa lista: **packs de videos sueltos** (acceso permanente, visibles en
+la landing configurados desde el panel). Diagnóstico y decisiones tomadas en la
+conversación; lo que falta definir está al final de este archivo.
 
 ### 🔴 ANTES DE ABRIR AL PÚBLICO — borrar los datos de prueba
 
