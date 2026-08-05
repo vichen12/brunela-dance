@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
@@ -68,6 +69,30 @@ function Lbl({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Cierra el panel cuando el guardado TERMINO BIEN.
+ *
+ * COMO SABE QUE SALIO BIEN
+ *   `pending` pasa de true a false tanto si guardo como si fallo. Lo que los
+ *   distingue es que un ERROR navega -- redirectWithMessage lleva a
+ *   /admin/videos?error=... -- y al navegar este componente se desmonta. Asi
+ *   que si `pending` volvio a false y seguimos montados, guardo.
+ *
+ * TIENE QUE ESTAR DENTRO DEL <form>: useFormStatus lee el formulario que lo
+ * contiene. Afuera devuelve pending=false para siempre y no cierra nunca.
+ */
+function CerrarAlGuardar({ onExito }: { onExito: () => void }) {
+  const { pending } = useFormStatus();
+  const estabaEnviando = useRef(false);
+
+  useEffect(() => {
+    if (estabaEnviando.current && !pending) onExito();
+    estabaEnviando.current = pending;
+  }, [pending, onExito]);
+
+  return null;
+}
+
 /** Etiqueta + campo. */
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -78,12 +103,13 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   );
 }
 
-function VideoForm({ video }: { video: VideoRecord }) {
+function VideoForm({ video, onGuardado }: { video: VideoRecord; onGuardado: () => void }) {
   // Read-only: audio_tracks is owned by the mux worker, not by this form.
   const muxedLocales = (video.audio_tracks ?? []).map((t) => t.locale);
 
   return (
     <form action={upsertVideoAction}>
+      <CerrarAlGuardar onExito={onGuardado} />
       <input name="id" type="hidden" value={video.id} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -211,6 +237,15 @@ function VideoForm({ video }: { video: VideoRecord }) {
 /** El boton de la fila y su panel. Uno por clase, pero solo uno abierto. */
 export function EditarClase({ video }: { video: VideoRecord }) {
   const [abierto, setAbierto] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  // El aviso se borra solo. Un cartel que se queda obliga a cerrarlo a mano
+  // por algo que ya salio bien.
+  useEffect(() => {
+    if (!guardado) return;
+    const t = window.setTimeout(() => setGuardado(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [guardado]);
 
   return (
     <>
@@ -223,13 +258,24 @@ export function EditarClase({ video }: { video: VideoRecord }) {
         }}
       >Editar</button>
 
+      {guardado && (
+        <span style={{
+          marginLeft: 8, fontSize: 10.5, fontWeight: 700,
+          color: "#166534", background: "#f0fdf4",
+          padding: "4px 10px", borderRadius: 99,
+        }}>Guardado</span>
+      )}
+
       <AdminDrawer
         abierto={abierto}
         titulo={video.title_i18n?.es ?? video.slug}
         subtitulo={`/${video.slug}`}
         onCerrar={() => setAbierto(false)}
       >
-        <VideoForm video={video} />
+        <VideoForm
+          video={video}
+          onGuardado={() => { setAbierto(false); setGuardado(true); }}
+        />
       </AdminDrawer>
     </>
   );
