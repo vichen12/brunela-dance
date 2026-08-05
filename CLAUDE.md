@@ -429,34 +429,45 @@ el problema es de codecs o del motor, no de acceso.
 
 Ordenados por lo que bloquea a lo que puede esperar.
 
-### 🔴 Fase 0 de analíticas — 3 migraciones escritas SIN CORRER
+### ✅ Migraciones corridas y verificadas (2026-08-04)
 
-El código ya está desplegado; la base todavía no. Detalle completo en
-`docs/fase-0-analitica.md`.
-
-| Migración | Sin correrla |
+| Migración | Verificado |
 |---|---|
-| `20260803_activity_events.sql` | No se guarda **ningún** evento. `/api/activity` devuelve 204 igual y deja el error en los logs: no se ve roto |
-| `20260803_marketing_consent.sql` | La casilla del onboarding no guarda nada (el resto del alta sí funciona: la escritura va aparte a propósito) |
-| `20260803_unify_pilates_categories.sql` | Las clases siguen con `category_slugs` viejos. El código los mapea, así que no se rompe nada visible |
+| `20260803_activity_events.sql` | tabla creada, grants exactos |
+| `20260803_marketing_consent.sql` | 4 columnas + trigger |
+| `20260803_unify_pilates_categories.sql` | cero referencias a reformer/mat |
+| `20260803_studio_documents_bucket.sql` | bucket privado |
+| `20260804_chat_autor_y_rate_limit.sql` | `author_name` poblado, cero sin autor |
+| `20260804_guardar_progreso_rpc.sql` | `prosecdef=false`, `greatest()` en las dos ramas |
+| `20260804_fix_default_privileges.sql` | cero TRUNCATE/REFERENCES/TRIGGER |
 
-Van **después de la 18** y entre ellas en cualquier orden. Además, dos pasos
-manuales fuera del repo: suscribir `invoice.paid` en Stripe y activar Web
-Analytics en Vercel.
+### 🔴 SIN CORRER — una sola
 
-**Y una cuarta, `20260804_fix_default_privileges.sql`, que corrige la 17:** su
-`alter default privileges ... grant` sobre `authenticated` es **aditivo** y
-nunca reemplazó al default de Supabase, así que toda tabla creada después de la
-18 nace con `TRUNCATE`, `REFERENCES` y `TRIGGER`. `activity_events` fue la
-primera y lo destapó. **RLS no se aplica a `TRUNCATE`** — Postgres sólo evalúa
-policies para select/insert/update/delete. Las 20 tablas viejas están bien.
+- [ ] **`20260804_chat_aislamiento_por_plan.sql`** — cierra un agujero real: el
+      chat **no comprueba el plan**. `chat_rooms.tier_required` no aparece en
+      ninguna policy; la comparación vive en JavaScript, así que filtra lo que
+      se dibuja y no lo que se puede pedir.
 
-- [ ] **Hay 22 tablas en `public` y las migraciones crean 21.** La de más no
-      tiene ninguna policy (el conteo cuadra exacto en 45). Diagnóstico sin
-      efectos secundarios en `scripts/diagnostico-tabla-de-mas.sql`. **No
-      borrarla antes de mirar si tiene datos y si tiene RLS.**
+      Hoy una alumna de `corps_de_ballet` puede leer una sala de `principal`
+      con su propia sesión, por REST y por realtime.
 
-### Bloqueantes para dar por cerrada la migración
+      **Criterio de éxito:** `npm run test:aislamiento` pasa de 4 rojos a cero.
+
+### 🔴 ANTES DE ABRIR AL PÚBLICO — borrar los datos de prueba
+
+Una alumna real vería un catálogo entero que no existe:
+
+| Tabla | Filas | De prueba |
+|---|---:|---:|
+| Clases | 19 | **19** (`demo-*`, `prueba`) |
+| Programas | 3 | **3** (`demo-*`) |
+| Salas de chat | 10 | **8** (DMs de cuentas de prueba) |
+| Perfiles | 9 | **4** (`*@brunela.test`) |
+| Categorías | 7 | 0 — **son las reales, se quedan** |
+
+Se borran cuando esté todo cerrado, justo antes del pase a producción.
+
+### Bloqueantes para dar por cerrada la migración### Bloqueantes para dar por cerrada la migración
 
 - [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,
       el worker de mux y el proxy de manifests de punta a punta. Es lo único de

@@ -220,7 +220,7 @@ export default async function CommunityPage({ searchParams }: {
               </select>
             </div>
             <div style={{ marginBottom: 10 }}>
-              <label className={lbl}>Tier mínimo</label>
+              <label className={lbl}>Plan mínimo</label>
               <select className={inp} name="tier_required" defaultValue="none">
                 <option value="none">Sin restricción</option>
                 <option value="corps_de_ballet">Corps de Ballet</option>

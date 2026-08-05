@@ -239,7 +239,7 @@ function Flash({ msg, tone }: { msg: string | null; tone: "success" | "error" })
 }
 
 const ROOM_TYPE_LABEL: Record<string, string> = {
-  community: "Comunidad", tier: "Tier", dm: "DM privado",
+  community: "Para todas", tier: "Por plan", dm: "Chat privado",
 };
 const TIER_LABEL: Record<string, string> = {
   none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
