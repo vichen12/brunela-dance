@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { celda, BOM_UTF8 } from "@/src/lib/csv";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { NIVEL_ETIQUETA, PLAN_ETIQUETA } from "@/src/features/admin/analitica/queries";
@@ -38,21 +39,6 @@ const ESTADO_ETIQUETA: Record<string, string> = {
   unpaid: "Impaga",
   paused: "En pausa",
 };
-
-/**
- * Escapa un campo para CSV.
- *
- * El prefijo con comilla simple cuando empieza por = + - @ no es capricho:
- * Excel interpreta esas celdas como FORMULA. Un nombre que empiece con "=" se
- * ejecuta al abrir el archivo. Se llama CSV injection y es la razon por la que
- * un export "solo de lectura" puede terminar corriendo algo en la maquina de
- * Brunela.
- */
-function celda(valor: unknown): string {
-  let s = valor === null || valor === undefined ? "" : String(valor);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return `"${s.replace(/"/g, '""')}"`;
-}
 
 export async function GET() {
   await requireAdmin();
@@ -120,7 +106,7 @@ export async function GET() {
 
   // BOM al principio: sin el, Excel en Windows abre el archivo en ANSI y los
   // acentos salen rotos. Es la diferencia entre "Recuperacion" y "RecuperaciÃ³n".
-  const csv = "﻿" + [cabecera.map(celda).join(","), ...filas].join("\r\n");
+  const csv = BOM_UTF8 + [cabecera.map(celda).join(","), ...filas].join("\r\n");
 
   const hoy = new Date().toISOString().slice(0, 10);
 
