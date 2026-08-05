@@ -6,7 +6,7 @@ import type { Route } from "next";
 import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
-  MessageSquare, Megaphone, Settings, Eye, LogOut,
+  MessageSquare, Megaphone, Settings, Eye, LogOut, Tag,
 } from "lucide-react";
 
 /**
@@ -57,7 +57,10 @@ const NAV: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Ajustes",
-    items: [{ href: "/admin/settings", label: "Configuración", Icon: Settings }],
+    items: [
+      { href: "/admin/precios",  label: "Precios",       Icon: Tag },
+      { href: "/admin/settings", label: "Configuración", Icon: Settings },
+    ],
   },
 ];
 

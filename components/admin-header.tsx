@@ -12,6 +12,7 @@ const ROUTES: Record<string, string> = {
   "/admin/live":          "Sesiones en vivo",
   "/admin/chat":          "Chat",
   "/admin/announcements": "Anuncios",
+  "/admin/precios":       "Precios",
   "/admin/settings":      "Configuración",
 };
 

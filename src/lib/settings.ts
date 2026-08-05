@@ -13,10 +13,15 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
  * CUIDADO CON LA INVALIDACION
  *   Un ajuste cacheado que no se invalida es peor que uno lento: Brunela cambia
  *   algo en el panel y no lo ve reflejado. Por eso TODA escritura sobre
- *   site_settings tiene que llamar a invalidarAjustes(). Hoy hay dos:
- *     - upsertSiteSettingAction (src/features/admin/actions.ts)
- *     - el toggle de DM por plan  (app/admin/chat/page.tsx)
- *   Si mañana aparece una tercera, tiene que llamarla tambien.
+ *   site_settings tiene que llamar a invalidarAjustes(). Hoy hay tres:
+ *     - upsertSiteSettingAction        (src/features/admin/actions.ts)
+ *     - el toggle de DM por plan       (app/admin/chat/page.tsx)
+ *     - guardarPreciosDePlanesAction   (src/features/admin/precios-actions.ts)
+ *   Si mañana aparece una cuarta, tiene que llamarla tambien.
+ *
+ *   La tercera es la que mas se nota si falta: son los PRECIOS, y la landing los
+ *   lee de aca. Brunela guardaria 18 EUR, veria el cartel verde, y la portada
+ *   seguiria diciendo 16 hasta que la cache venciera sola a los 5 minutos.
  */
 const TAG_AJUSTES = "site-settings";
 

@@ -112,7 +112,12 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
     reveal_link_only_to_booked_users?: boolean;
   };
   const dm = (buscar("chat.dm_access")?.value ?? {}) as Record<string, boolean>;
-  const bloqueadas = settings.filter((s) => !EDITABLES.has(s.setting_key));
+  // `subscriptions.catalog` sale de la lista de bloqueadas: desde el 2026-08-05
+  // SI se edita, en /admin/precios y con campos de verdad en vez de JSON crudo.
+  // Dejarlo aca diciendo "no se edita desde acá" seria mentirle a Brunela.
+  const bloqueadas = settings.filter(
+    (s) => !EDITABLES.has(s.setting_key) && s.setting_key !== "subscriptions.catalog"
+  );
 
   return (
     <main style={{ fontFamily: "inherit" }}>
@@ -196,10 +201,22 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           </h2>
           <p style={{ fontSize: 13, color: "var(--muted)", margin: "6px 0 4px", lineHeight: 1.6 }}>
             Esto lo cambia tu equipo técnico. Te lo mostramos para que sepas qué
-            hay configurado, pero no se edita desde acá: un error en los precios
-            deja el cobro sin funcionar, y uno en las reglas de acceso puede
-            dejar a una alumna sin sus clases.
+            hay configurado, pero no se edita desde acá: un error en las reglas
+            de acceso puede dejar a una alumna sin sus clases.
           </p>
+
+          <a href="/admin/precios" style={{
+            display: "block", marginTop: 16, textDecoration: "none",
+            borderRadius: 14, border: "1.5px solid var(--pink-line)",
+            background: "#fff", padding: "13px 16px",
+          }}>
+            <p style={{ fontSize: 13.5, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
+              Planes y precios →
+            </p>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1.5 }}>
+              Los importes y los identificadores de cobro se cambian en <strong>Precios</strong>.
+            </p>
+          </a>
 
           <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
             {bloqueadas.map((s) => {

@@ -408,6 +408,27 @@ Required for Stripe webhook work:
   el modo, y con el modo el juego de price ids: ver `src/lib/stripe/catalog.ts`)
 - `STRIPE_WEBHOOK_SECRET`
 
+Opcionales, **sólo para el aviso de precios de `/admin/precios`**:
+
+- `STRIPE_SECRET_KEY_TEST`
+- `STRIPE_SECRET_KEY_LIVE`
+
+Sirven para verificar el juego de price ids del **otro** modo. La clave ES el
+modo: con una `sk_test_` Stripe no dice "este price es de producción", dice "no
+existe" — y son dos problemas distintos. Con las dos cargadas, el panel
+distingue de verdad.
+
+**En producción se carga la de TEST** (`STRIPE_SECRET_KEY` va a ser la live). Una
+clave de prueba filtrada no cobra nada real. En local no hace falta ninguna: los
+ids de producción salen en gris como *no verificables*, nunca en verde.
+
+⚠️ Las usa **un solo archivo**, `src/lib/stripe/verificar-precio.ts`, que sólo
+hace `prices.retrieve`. No se exportan ni se instancian en ningún otro lado, para
+que no puedan terminar creando una sesión de pago. Y se comprueba el **prefijo**
+de cada una: una `sk_live_` guardada en `STRIPE_SECRET_KEY_TEST` contestaría con
+total seguridad sobre el juego equivocado, y un aviso que miente es peor que no
+tener aviso.
+
 Required for video:
 
 - `BUNNY_STREAM_API_KEY`
@@ -583,6 +604,58 @@ policy quede legible y haya un solo lugar que cambiar.
 
 El webhook actual **no se rompe**: ignora lo que no es suscripción devolviendo un
 motivo, así que agregar `checkout.session.completed` es aditivo.
+
+**Estado al 2026-08-05:**
+
+| | |
+|---|---|
+| Migración `20260805_packs_de_clases.sql` | escrita, **la corre Vincenzo** |
+| `/admin/precios` — planes y packs, con aviso de Stripe | **hecho** |
+| CRUD de packs (crear, editar, elegir clases) | pendiente |
+| Landing leyendo precios y packs de la base | pendiente |
+| Checkout `?pack=<slug>` con `mode: "payment"` | pendiente |
+| Webhook `checkout.session.completed` | pendiente |
+| `tests/aislamiento/packs.test.ts` | pendiente |
+
+### 🔵 `/admin/precios` — cómo funciona el aviso
+
+Brunela edita **el importe que se anuncia** y **el price id de Stripe**, que son
+dos datos separados que nadie ata entre sí. Al cargar la pantalla se le pregunta
+a Stripe cuánto vale cada id y se muestra al lado.
+
+**Avisa, no bloquea** — y es a propósito: hay un momento legítimo en que no
+coinciden, que es mientras se está migrando de precio. Bloquear ahí la dejaría
+trabada. Detecta importe distinto, moneda distinta, price **archivado**, price
+**de otro modo** y price inexistente.
+
+⚠️ `guardarPreciosDePlanesAction` **parte del catálogo existente** y pisa sólo los
+campos del formulario. Reconstruirlo desde cero perdería `trial_days`, `currency`
+y lo que se agregue después — en silencio, porque a un JSON al que le falta una
+clave nada lo delata hasta que algo la busca.
+
+⚠️ Y llama a `invalidarAjustes()`. Sin eso Brunela guarda, ve el cartel verde, y
+la landing sigue mostrando el precio viejo hasta que la caché vence sola a los
+5 minutos.
+
+### ⏳ ÚLTIMO PASO — landing editable desde el panel
+
+**Va DESPUÉS del rediseño de la landing**, por decisión explícita: hacerla
+editable ahora y rediseñarla después es hacer el trabajo dos veces.
+
+**Editable:**
+
+- **FAQ** — agregar, editar, ordenar y borrar preguntas
+- **Textos de presentación** — hero, «sobre mí», descripciones de sección
+- **El video del tráiler**
+- **Precios y packs** — ya en curso, ver arriba
+
+**🔴 Deliberadamente NO editable:** estructura, secciones, colores, tipografía.
+Si Brunela puede mover todo, rompe el diseño y no tiene cómo volver atrás. El
+límite es *contenido sí, forma no*.
+
+Hoy la landing tiene **todo hardcodeado** en `app/page.tsx` y `HomePage` **no es
+async**: nunca leyó la base. El primer cambio que la vuelva dinámica —el de
+precios— es el que abre ese camino; el resto se apoya en él.
 
 ### 🔴 ANTES DE ABRIR AL PÚBLICO — borrar los datos de prueba
 
