@@ -181,11 +181,24 @@ commit;
 -- VERIFICACION POST-RUN
 -- =============================================================================
 --
--- a) Las tres policies mencionan tier_required. Esperado: 3 filas.
+-- a) Las tres policies del chat comprueban el plan. Esperado: 3 filas, las tres
+--    diciendo "SI".
 --
--- select policyname from pg_policies
+--    Se filtra por NOMBRE de policy y se busca `membership_tier_rank`, no
+--    `tier_required`: esa cadena es SUBSTRING de `membership_tier_required`, y
+--    la version anterior de esta consulta devolvia las policies de videos y
+--    programas haciendo creer que el chat estaba listo cuando no lo estaba.
+--
+-- select tablename, policyname,
+--        case when coalesce(qual,'') || coalesce(with_check,'')
+--                  like '%membership_tier_rank%'
+--             then 'SI' else 'NO' end as comprueba_plan
+--   from pg_policies
 --  where schemaname = 'public'
---    and (qual like '%tier_required%' or with_check like '%tier_required%');
+--    and policyname in ('chat_rooms_select_accessible',
+--                       'chat_messages_select_room_member',
+--                       'chat_messages_insert_member')
+--  order by policyname;
 --
 -- b) El constraint quedo puesto. Esperado: una fila.
 --
