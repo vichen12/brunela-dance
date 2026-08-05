@@ -7,6 +7,23 @@ import { getBunnyStreamEnv } from "@/src/lib/env";
 import { bunnyHlsUrl, bunnyThumbnailUrl, deleteBunnyVideo } from "@/src/lib/video/bunny";
 import { audioLabel, audioObjectPath, isAudioLocale, ORIGINAL_LOCALE } from "@/src/lib/audio/config";
 
+/** Los nombres del schema no significan nada fuera del codigo. */
+const CAMPO_LEGIBLE: Record<string, string> = {
+  bunnyVideoId: "video subido",
+  audioLocales: "idiomas de audio",
+  slug: "dirección",
+  titleEs: "título en español",
+  titleEn: "título en inglés",
+  descriptionEs: "descripción en español",
+  descriptionEn: "descripción en inglés",
+  membershipTierRequired: "plan requerido",
+  status: "estado",
+  durationSeconds: "duración",
+  categories: "categorías",
+  equipment: "material",
+  isFeatured: "destacado",
+};
+
 const schema = z.object({
   bunnyVideoId: z.string().min(1),
   /** Languages whose mp3 the browser already uploaded to Supabase Storage. */
@@ -48,7 +65,16 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Datos de video invalidos.", details: parsed.error.flatten().fieldErrors },
+      {
+        // Antes decia solo "Datos de video invalidos." y mandaba `details`
+        // aparte, que la interfaz descartaba. El mensaje ya viene listo para
+        // mostrar: quien lo recibe no tiene que saber leer un error de zod.
+        error: `Revisá: ${Object.entries(parsed.error.flatten().fieldErrors)
+          .slice(0, 4)
+          .map(([campo, errores]) => `${CAMPO_LEGIBLE[campo] ?? campo} (${errores?.[0] ?? "inválido"})`)
+          .join(", ")}`,
+        details: parsed.error.flatten().fieldErrors,
+      },
       { status: 400 }
     );
   }
