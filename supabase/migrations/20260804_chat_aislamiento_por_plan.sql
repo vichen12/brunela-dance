@@ -40,8 +40,57 @@
 -- LAS SALAS 'community' SIGUEN SIENDO DE TODAS
 --   Por definicion son para todo el estudio, incluida quien no tiene plan. Solo
 --   las de tipo 'tier' pasan a exigir rango suficiente.
+--
+-- ⚠️ POR QUE HAY UN CHECK CONSTRAINT ANTES DE LAS POLICIES
+--   `chat_rooms.tier_required` es TEXT, no el enum membership_tier -- a
+--   diferencia de videos y programas, que si usan el enum. Y
+--   membership_tier_rank() recibe el enum, asi que hace falta castear.
+--
+--   Un cast dentro de una policy es peligroso: si UNA fila tuviera un valor que
+--   no existe en el enum -- 'Principal' con mayuscula, un typo, cualquier cosa
+--   escrita por service_role -- el cast lanza 22P02 y la policy FALLA. Y una
+--   policy que falla no niega el acceso: rompe la consulta. El chat entero
+--   dejaria de cargar para todas, no solo para esa sala.
+--
+--   Hoy los 10 valores existentes son convertibles (verificado: 9 'none' y 1
+--   'corps_de_ballet'), pero nada lo garantiza hacia adelante porque la columna
+--   es texto libre y no tiene ninguna restriccion.
+--
+--   El check constraint cierra eso: a partir de aca, un valor invalido falla al
+--   INSERTARSE -- donde el error es visible y de quien lo escribio -- en vez de
+--   romper la lectura de todas.
 
 begin;
+
+-- ---------------------------------------------------------------------------
+-- 0. Que el cast no pueda fallar nunca
+-- ---------------------------------------------------------------------------
+-- Se valida ANTES de crear el constraint: si hubiera una fila invalida, esto
+-- corta la migracion con un mensaje claro en vez de dejarla a medias.
+
+do $$
+declare
+  invalidas integer;
+begin
+  select count(*) into invalidas
+  from public.chat_rooms
+  where tier_required not in ('none', 'corps_de_ballet', 'solista', 'principal');
+
+  if invalidas > 0 then
+    raise exception
+      'Hay % sala(s) con tier_required fuera del enum. Corregirlas antes de '
+      'seguir: select id, name, tier_required from public.chat_rooms where '
+      'tier_required not in (''none'',''corps_de_ballet'',''solista'',''principal'');',
+      invalidas;
+  end if;
+end $$;
+
+alter table public.chat_rooms
+  drop constraint if exists chat_rooms_tier_required_valido;
+
+alter table public.chat_rooms
+  add constraint chat_rooms_tier_required_valido
+  check (tier_required in ('none', 'corps_de_ballet', 'solista', 'principal'));
 
 -- ---------------------------------------------------------------------------
 -- 1. Ver la sala
@@ -61,7 +110,7 @@ create policy "chat_rooms_select_accessible"
       and is_archived = false
       -- Lo mismo que ya hacen videos y programas desde el primer dia.
       and public.membership_tier_rank((select public.current_user_membership_tier()))
-          >= public.membership_tier_rank(tier_required)
+          >= public.membership_tier_rank(tier_required::public.membership_tier)
     )
   );
 
@@ -90,7 +139,7 @@ create policy "chat_messages_select_room_member"
             r.type = 'tier'
             and r.is_archived = false
             and public.membership_tier_rank((select public.current_user_membership_tier()))
-                >= public.membership_tier_rank(r.tier_required)
+                >= public.membership_tier_rank(r.tier_required::public.membership_tier)
           )
         )
     )
@@ -119,7 +168,7 @@ create policy "chat_messages_insert_member"
           or (
             r.type = 'tier'
             and public.membership_tier_rank((select public.current_user_membership_tier()))
-                >= public.membership_tier_rank(r.tier_required)
+                >= public.membership_tier_rank(r.tier_required::public.membership_tier)
           )
         )
     )
@@ -147,7 +196,13 @@ commit;
 --  where schemaname = 'public'
 --    and (qual like '%tier_required%' or with_check like '%tier_required%');
 --
--- b) LA PRUEBA DE VERDAD, que no es SQL:
+-- b) El constraint quedo puesto. Esperado: una fila.
+--
+-- select conname from pg_constraint
+--  where conrelid = 'public.chat_rooms'::regclass
+--    and conname = 'chat_rooms_tier_required_valido';
+--
+-- c) LA PRUEBA DE VERDAD, que no es SQL:
 --
 --      npm run test:aislamiento
 --
@@ -156,5 +211,5 @@ commit;
 --    son dos caminos de autorizacion distintos. Sin correr eso, esta migracion
 --    esta sin verificar.
 --
--- c) Que no haya roto lo que funcionaba: entrar como alumna con plan y
+-- d) Que no haya roto lo que funcionaba: entrar como alumna con plan y
 --    confirmar que sigue viendo SUS salas y puede escribir.
