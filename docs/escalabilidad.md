@@ -87,23 +87,51 @@ dependen de quién mira, así que se pueden compartir entre todas.
 
 Honestidad sobre lo que falta.
 
-### 🔴 `postgres_changes` evalúa RLS por conexión (fase B3, sin hacer)
+### ✅ DECISIÓN: no migrar a Broadcast
 
-Con `postgres_changes`, Postgres evalúa las policies **una vez por cada
-conexión suscrita** en cada cambio. Con 500 alumnas en la misma sala, un
-mensaje dispara 500 evaluaciones de RLS.
+**Decidido el 2026-08-04, con los números sobre la mesa.** No es un pendiente:
+es una decisión tomada, y acá está el criterio para reconsiderarla.
 
-La solución es **Broadcast**, que envía una vez y deja la autorización en las
+#### Qué se evaluó
+
+Con `postgres_changes`, Postgres evalúa las policies **una vez por conexión
+suscrita** en cada cambio. Broadcast envía una vez y deja la autorización en las
 policies de `realtime.messages`.
 
-**No se hizo, y el motivo es el riesgo:** mover la autorización de las policies
-de la tabla a las de realtime puede filtrar mensajes entre salas o entre planes
-si se hace mal. Verificarlo requiere levantar dos sesiones autenticadas de
-planes distintos contra Supabase real y comprobar el aislamiento, y este
-proyecto no tiene banco de pruebas para eso.
+#### Los números, que son lo que decide
 
-**Mitigante:** el costo dominante era el N+1, y ese ya no está. Broadcast
-importa a partir de salas con **cientos** de personas conectadas a la vez.
+| | Costo por mensaje |
+|---|---|
+| **El N+1, que ya se arregló** | **N consultas** — una por cada persona conectada |
+| Lo que ahorraría Broadcast | ~40 evaluaciones de RLS |
+
+Una consulta completa —ida, vuelta, red, parseo— contra una evaluación de policy
+dentro del mismo proceso de Postgres. **No son comparables.** El N+1 era el
+costo dominante por dos órdenes de magnitud, y ya no está.
+
+#### Las tres razones
+
+1. **No reduce las conexiones WebSocket**, que es el techo real del plan. Con
+   Broadcast siguen siendo una por persona.
+2. **El N+1 ya está resuelto.** Era el 98% del costo.
+3. **Cambiaría una regla robusta por una frágil.** Hoy la autorización compara
+   UUIDs contra `participant_ids`. Con Broadcast pasa a depender de **parsear el
+   nombre de un topic** y derivar de ahí a qué sala corresponde. Un error de
+   parseo no da un error: da una fuga. Y del otro lado hay conversaciones
+   privadas entre una alumna y su profesora.
+
+#### Cuándo reconsiderarlo
+
+Las tres condiciones, juntas:
+
+- El plan de Supabase soporta **miles de conexiones concurrentes** — o sea que
+  el techo dejó de ser la conexión y pasó a ser la evaluación de RLS.
+- Hay **cientos de personas en una misma sala** a la vez.
+- **Realtime Authorization tiene rodaje en producción** en más proyectos. Hoy es
+  relativamente nuevo, y la superficie de error está justo donde más duele.
+
+Mientras tanto, lo que sostiene el aislamiento son las policies de las tablas,
+que están probadas por el banco de tests de aislamiento (`tests/aislamiento`).
 
 ### ⚠️ Agregación en TypeScript — techo ~500 alumnas
 
