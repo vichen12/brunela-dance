@@ -2,7 +2,14 @@ import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
+import {
+  createLiveSessionAction,
+  deleteLiveSessionAction,
+  updateLiveSessionAction,
+  updateStatusAction,
+} from "@/src/features/admin/live-actions";
 import { HoraSesion } from "@/components/hora-sesion";
+import { EditarSesion, LiveForm } from "@/components/admin-live-drawer";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -30,124 +37,9 @@ type LiveSession = {
 
 // ── Server actions ─────────────────────────────────────────────────────────────
 
-async function createLiveSessionAction(fd: FormData) {
-  "use server";
-  const { user } = await requireAdmin();
-  const supabase = createSupabaseAdminClient();
 
-  const slug = (fd.get("slug") as string).trim();
-  const startsAt = fd.get("startsAt") as string;
-  const endsAt = fd.get("endsAt") as string;
-  const status = (fd.get("status") as string) || "draft";
 
-  const { data: session, error } = await supabase
-    .from("live_sessions")
-    .insert({
-      slug,
-      title_i18n: { es: fd.get("titleEs"), en: fd.get("titleEn") || undefined },
-      description_i18n: { es: fd.get("descriptionEs") || "", en: fd.get("descriptionEn") || "" },
-      status,
-      membership_tier_required: (fd.get("membershipTierRequired") as string) || "corps_de_ballet",
-      starts_at: new Date(startsAt).toISOString(),
-      ends_at: new Date(endsAt).toISOString(),
-      session_timezone: (fd.get("sessionTimezone") as string) || "America/Buenos_Aires",
-      capacity: parseInt(fd.get("capacity") as string) || 20,
-      cover_image_url: (fd.get("coverImageUrl") as string) || null,
-      booking_opens_at: fd.get("bookingOpensAt") ? new Date(fd.get("bookingOpensAt") as string).toISOString() : null,
-      booking_closes_at: fd.get("bookingClosesAt") ? new Date(fd.get("bookingClosesAt") as string).toISOString() : null,
-      created_by: user.id,
-      published_at: status === "scheduled" ? new Date().toISOString() : null,
-    })
-    .select("id")
-    .single();
 
-  if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
-
-  const joinUrl = (fd.get("zoomJoinUrl") as string).trim();
-  if (joinUrl && session) {
-    await supabase.from("live_session_access_links").insert({
-      live_session_id: session.id,
-      provider: "zoom",
-      join_url: joinUrl,
-      passcode: (fd.get("zoomPasscode") as string) || null,
-    });
-  }
-
-  revalidatePath("/admin/live");
-  revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Sesión+creada" as never);
-}
-
-async function updateLiveSessionAction(fd: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-
-  const id = fd.get("id") as string;
-  const status = fd.get("status") as string;
-
-  const { error } = await supabase
-    .from("live_sessions")
-    .update({
-      slug: (fd.get("slug") as string).trim(),
-      title_i18n: { es: fd.get("titleEs"), en: fd.get("titleEn") || undefined },
-      description_i18n: { es: fd.get("descriptionEs") || "", en: fd.get("descriptionEn") || "" },
-      status,
-      membership_tier_required: fd.get("membershipTierRequired") as string,
-      starts_at: new Date(fd.get("startsAt") as string).toISOString(),
-      ends_at: new Date(fd.get("endsAt") as string).toISOString(),
-      session_timezone: (fd.get("sessionTimezone") as string) || "America/Buenos_Aires",
-      capacity: parseInt(fd.get("capacity") as string) || 20,
-      cover_image_url: (fd.get("coverImageUrl") as string) || null,
-      booking_opens_at: fd.get("bookingOpensAt") ? new Date(fd.get("bookingOpensAt") as string).toISOString() : null,
-      booking_closes_at: fd.get("bookingClosesAt") ? new Date(fd.get("bookingClosesAt") as string).toISOString() : null,
-      published_at: status === "scheduled" ? new Date().toISOString() : undefined,
-    })
-    .eq("id", id);
-
-  if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
-
-  const joinUrl = (fd.get("zoomJoinUrl") as string).trim();
-  if (joinUrl) {
-    await supabase.from("live_session_access_links").upsert(
-      {
-        live_session_id: id,
-        provider: "zoom",
-        join_url: joinUrl,
-        passcode: (fd.get("zoomPasscode") as string) || null,
-      },
-      { onConflict: "live_session_id" }
-    );
-  }
-
-  revalidatePath("/admin/live");
-  revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Sesión+actualizada" as never);
-}
-
-async function deleteLiveSessionAction(fd: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = fd.get("id") as string;
-  await supabase.from("live_sessions").delete().eq("id", id);
-  revalidatePath("/admin/live");
-  redirect("/admin/live?success=Sesión+eliminada" as never);
-}
-
-async function updateStatusAction(fd: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = fd.get("id") as string;
-  const status = fd.get("status") as string;
-  const update: Record<string, unknown> = { status };
-  if (status === "scheduled") update.published_at = new Date().toISOString();
-  await supabase.from("live_sessions").update(update).eq("id", id);
-  revalidatePath("/admin/live");
-  revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Estado+actualizado" as never);
-}
 
 // ── UI helpers ─────────────────────────────────────────────────────────────────
 
@@ -211,114 +103,6 @@ function toLocalDatetime(iso: string | null) {
   return iso.slice(0, 16);
 }
 
-function LiveForm({ session }: { session?: LiveSession }) {
-  const isNew = !session;
-  const tz = session?.session_timezone ?? "America/Buenos_Aires";
-
-  return (
-    <form action={isNew ? createLiveSessionAction : updateLiveSessionAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {!isNew && <input type="hidden" name="id" value={session.id} />}
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Dirección">
-          <input style={inp} name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
-        </F>
-        <F label="Estado">
-          <select style={sel} name="status" defaultValue={session?.status ?? "draft"}>
-            <option value="draft">Borrador</option>
-            <option value="scheduled">Publicada</option>
-            <option value="completed">Completada</option>
-            <option value="canceled">Cancelada</option>
-          </select>
-        </F>
-
-        <F label="Título en español">
-          <input style={inp} name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
-        </F>
-        <F label="Título en inglés">
-          <input style={inp} name="titleEn" defaultValue={session?.title_i18n?.en ?? ""} placeholder="Ballet Class — Monday" />
-        </F>
-
-        <F label="Inicio (fecha y hora)">
-          <input style={inp} name="startsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.starts_at ?? null)} />
-        </F>
-        <F label="Fin (fecha y hora)">
-          <input style={inp} name="endsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.ends_at ?? null)} />
-        </F>
-
-        <F label="Plan que la puede ver">
-          <select style={sel} name="membershipTierRequired" defaultValue={session?.membership_tier_required ?? "corps_de_ballet"}>
-            <option value="corps_de_ballet">Corps de Ballet</option>
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
-        </F>
-        <F label="Capacidad">
-          <input style={inp} name="capacity" type="number" min={1} required defaultValue={session?.capacity ?? 20} />
-        </F>
-
-        <F label="Apertura de reservas">
-          <input style={inp} name="bookingOpensAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_opens_at ?? null)} />
-        </F>
-        <F label="Cierre de reservas">
-          <input style={inp} name="bookingClosesAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_closes_at ?? null)} />
-        </F>
-
-        <F label="URL de portada">
-          <input style={inp} name="coverImageUrl" type="url" defaultValue={session?.cover_image_url ?? ""} placeholder="https://..." />
-        </F>
-        <F label="Zona horaria">
-          <input style={inp} name="sessionTimezone" defaultValue={tz} placeholder="America/Buenos_Aires" />
-        </F>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEs" defaultValue={session?.description_i18n?.es ?? ""} placeholder="Descripción de la sesión…" />
-        </F>
-        <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEn" defaultValue={session?.description_i18n?.en ?? ""} placeholder="Session description..." />
-        </F>
-      </div>
-
-      <div style={{ borderRadius: 12, border: "1px solid #f0eeec", padding: "16px 18px", background: "#fafaf9" }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 12 }}>
-          Enlace de acceso (Zoom)
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <F label="URL de ingreso">
-            <input style={inp} name="zoomJoinUrl" type="url" defaultValue={session?.access_link?.join_url ?? ""} placeholder="https://zoom.us/j/..." />
-          </F>
-          <F label="Código de acceso">
-            <input style={inp} name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
-          </F>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-        <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#1c1917",
-          color: "#fff", border: "none", borderRadius: 99,
-          padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-          cursor: "pointer",
-        }}>
-          {isNew ? "CREAR SESION" : "GUARDAR CAMBIOS"}
-        </button>
-        {/* formAction en el boton, sin anidar formularios: ver la nota en
-            app/admin/videos/page.tsx. Anidado, el parser descartaba este form y
-            ELIMINAR terminaba llamando a updateLiveSessionAction. El id ya
-            viaja en el hidden del formulario externo. */}
-        {!isNew && (
-          <BotonEnviar pendingLabel="Borrando…" formAction={deleteLiveSessionAction} style={{
-            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</BotonEnviar>
-        )}
-      </div>
-    </form>
-  );
-}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -534,21 +318,15 @@ export default async function AdminLivePage({
                   </div>
 
                   {/* Collapsible edit form */}
-                  <details>
-                    <summary style={{
-                      listStyle: "none", cursor: "pointer",
-                      padding: "10px 20px", fontSize: 11, fontWeight: 600, color: "#78716c",
-                      userSelect: "none", display: "flex", alignItems: "center", gap: 6,
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 4.5h8M2 7.5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                      Editar sesion
-                    </summary>
-                    <div style={{ padding: "20px 22px", borderTop: "1px solid #f9f7f6" }}>
-                      <LiveForm session={session} />
-                    </div>
-                  </details>
+                  {/* Edicion en panel lateral. Antes el formulario de 17
+                      campos de CADA sesion vivia aca dentro de un <details>:
+                      oculto, pero renderizado igual. */}
+                  <div style={{
+                    padding: "10px 20px", borderTop: "1px solid #f9f7f6",
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <EditarSesion session={session} />
+                  </div>
                 </div>
               );
             })}
