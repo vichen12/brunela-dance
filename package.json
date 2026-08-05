@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:aislamiento": "node --env-file=.env.local ./node_modules/vitest/vitest.mjs run"
+    "test:aislamiento": "node --env-file=.env.local ./node_modules/vitest/vitest.mjs run",
+    "verificar": "node scripts/verificar-guardas.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
