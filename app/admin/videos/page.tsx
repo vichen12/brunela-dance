@@ -28,7 +28,6 @@ type VideoRecord = {
   equipment: string[];
   thumbnail_url: string | null;
   stream_playback_id: string | null;
-  stream_asset_id: string | null;
   bunny_video_id: string | null;
   audio_tracks: AudioTrack[];
   is_featured: boolean;
@@ -284,7 +283,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
   let consultaVideos = supabase
     .from("videos")
-    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, stream_asset_id, bunny_video_id, audio_tracks, is_featured");
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured");
 
   if (fEstado) consultaVideos = consultaVideos.eq("status", fEstado);
   if (fPlan) consultaVideos = consultaVideos.eq("membership_tier_required", fPlan);

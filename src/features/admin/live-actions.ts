@@ -192,7 +192,10 @@ export async function inviteToLiveSessionAction(fd: FormData) {
     live_session_id: sessionId,
     user_id: alumna.id,
     invited_by: user.id,
-    note: ((fd.get("nota") as string) || "").trim() || null,
+    // Sin `note`: la accion leia fd.get("nota") y ESE CAMPO NO EXISTE en el
+    // formulario, asi que escribia null siempre. La columna se conserva en la
+    // tabla por si algun dia se agrega el campo -- una migracion menos es una
+    // cosa menos que puede salir mal -- pero se deja de fingir que se usa.
   });
 
   // 23505 es el unique (live_session_id, user_id). Ya estaba invitada: no es un

@@ -42,7 +42,6 @@ export type VideoRecord = {
   equipment: string[];
   thumbnail_url: string | null;
   stream_playback_id: string | null;
-  stream_asset_id: string | null;
   bunny_video_id: string | null;
   audio_tracks: AudioTrack[];
   is_featured: boolean;

@@ -372,7 +372,7 @@ export function AdminVideoUpload() {
       } catch (err) {
         await abandonRemote();
         setPhase("error");
-        setMessage(err instanceof Error ? err.message : "Fallo la subida.");
+        setMessage(err instanceof Error ? err.message : "Falló la subida y el sistema no devolvió el motivo. Avisale a Vincenzo.");
       } finally {
         abortRef.current = null;
       }

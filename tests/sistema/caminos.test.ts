@@ -1,4 +1,5 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -184,15 +185,75 @@ describe("la portada publica no se renderiza en cada visita", () => {
 // ── Esqueletos de carga ─────────────────────────────────────────────────────
 
 describe("las pantallas lentas tienen esqueleto de carga", () => {
-  // ⚠️ PENDIENTES A PROPOSITO, no olvidados.
-  //
-  //    Son parte del hallazgo R3 de la auditoria (cinco rutas sin loading.tsx),
-  //    que quedo para despues de los cinco rojos. Van como `todo` y no como
-  //    prueba en rojo: un banco que arranca en rojo se deja de mirar, y ahi
-  //    dejan de servir tambien las que si pasan.
-  //
-  //    Al hacer R3 se convierten en `it(...)` con el existsSync de siempre.
-  it.todo("/admin/precios tiene esqueleto — es la mas lenta del panel: ~12 consultas a Stripe");
-  it.todo("/admin/packs tiene esqueleto");
-  it.todo("/admin/chat, /dashboard/chat y /dashboard/community tienen esqueleto (SkChat ya existe sin usar)");
+  /**
+   * ⚠️ NO SE ENUMERAN LAS RUTAS: SE DESCUBREN.
+   *
+   *    La primera version listaba a mano las cinco que faltaban. Esa prueba
+   *    habria quedado en verde para siempre mientras alguien agregaba una sexta
+   *    pantalla sin esqueleto -- que es exactamente como aparecieron estas
+   *    cinco. Recorriendo app/ la prueba cubre tambien lo que todavia no existe.
+   */
+  const rutasConPagina = (dir: string, acc: string[] = []): string[] => {
+    for (const e of readdirSync(dir)) {
+      if (e.startsWith("_") || e === "node_modules") continue;
+      const p = join(dir, e);
+      if (!statSync(p).isDirectory()) continue;
+      if (existsSync(join(p, "page.tsx"))) acc.push(p);
+      rutasConPagina(p, acc);
+    }
+    return acc;
+  };
+
+  it("TODA pantalla de /dashboard y /admin tiene esqueleto de carga", () => {
+    const sinEsqueleto = [...rutasConPagina("app/dashboard"), ...rutasConPagina("app/admin")]
+      .filter((d) => !existsSync(join(d, "loading.tsx")))
+      .map((d) => d.split("\\").join("/"));
+
+    expect(sinEsqueleto, `sin loading.tsx: ${sinEsqueleto.join(", ")}`).toHaveLength(0);
+  });
+
+  it("la mas lenta del panel es la que mas lo necesita", () => {
+    // /admin/precios hace hasta 12 consultas a Stripe. Se comprueba aparte
+    // porque si algun dia se saca, el mensaje tiene que decir POR QUE importa.
+    expect(
+      existsSync("app/admin/precios/loading.tsx"),
+      "/admin/precios consulta Stripe por cada identificador: sin esqueleto se ve colgada"
+    ).toBe(true);
+  });
+
+  it("el esqueleto del chat se usa de verdad", () => {
+    // SkChat existia sin que nadie lo importara: escrito y nunca conectado.
+    const usos = ["app/admin/chat/loading.tsx", "app/dashboard/chat/loading.tsx", "app/dashboard/community/loading.tsx"]
+      .filter((p) => existsSync(p) && leer(p).includes("SkChat"));
+    expect(usos).toHaveLength(3);
+  });
+});
+
+// ── Documentos: la segunda barrera, la que no depende de la migracion ────────
+
+describe("los documentos pagos no se firman para quien no los pago", () => {
+  const pagina = () => leer("app/dashboard/documents/page.tsx");
+
+  it("la pantalla FILTRA por plan antes de firmar", () => {
+    const src = pagina();
+    // Firmar es entregar el acceso: la firma usa service_role y saltea el
+    // bucket privado. Si se firma antes de filtrar, una alumna gratuita recibe
+    // un enlace de descarga que funciona. Fue asi hasta el 2026-08-06.
+    const iFiltro = src.indexOf("const accesibles");
+    const iFirma = src.indexOf("firmarDescarga(d.file_url)");
+    expect(iFiltro, "no hay filtro por plan antes de firmar").toBeGreaterThan(-1);
+    expect(iFirma).toBeGreaterThan(-1);
+    expect(iFiltro, "se firma ANTES de filtrar por plan").toBeLessThan(iFirma);
+  });
+
+  it("solo se firma lo que paso el filtro, no la consulta cruda", () => {
+    // El bug era `docs.map(firmar)`. Tiene que ser `accesibles.map(firmar)`.
+    expect(pagina()).toMatch(/accesibles\.map\(async \(d\) => \(\{[\s\S]{0,120}firmarDescarga/);
+    expect(pagina()).not.toMatch(/\(\(docs \?\? \[\]\) as Doc\[\]\)\.map\(async[\s\S]{0,120}firmarDescarga/);
+  });
+
+  it("un plan desconocido OCULTA el documento, no lo abre", () => {
+    // La columna es texto libre. Un typo tiene que fallar hacia el lado seguro.
+    expect(pagina()).toMatch(/if \(pedido === undefined\) return false;/);
+  });
 });

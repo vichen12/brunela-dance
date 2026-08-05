@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
+import { getCurrentProfile } from "@/src/features/auth/profile";
 import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { firmarDescarga } from "@/src/lib/documents/storage";
@@ -31,11 +32,18 @@ const TIER_LABELS: Record<string, string> = {
   none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
 };
 
+/** Mismo orden que `membership_tier_rank()` en la base. Un plan incluye a los de abajo. */
+const ORDEN_TIER: Record<MembershipTier, number> = {
+  none: 0, corps_de_ballet: 1, solista: 2, principal: 3,
+};
+
 export default async function DocumentsPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
+  const perfil = await getCurrentProfile(user.id);
+  const tier = (perfil?.membership_tier ?? "none") as MembershipTier;
   const params = (await searchParams) ?? {};
   const activeCategory = typeof params.cat === "string" ? params.cat : "all";
 
@@ -46,14 +54,38 @@ export default async function DocumentsPage({ searchParams }: {
     .order("sort_order")
     .order("created_at", { ascending: false });
 
-  // Los documentos nuevos guardan la RUTA dentro del bucket privado, no una
-  // URL. Se firma aca, del lado del servidor, DESPUES de que RLS ya filtro por
-  // plan: firmar es entregar el acceso, asi que no puede pasar antes.
+  // 🔴 ESTE FILTRO NO ES LA SEGURIDAD, PERO HOY ES LO QUE FRENA LA DESCARGA.
   //
+  //    Hasta el 2026-08-06 aca decia que RLS ya habia filtrado por plan. NO LO
+  //    HACIA: `documents_select_published` solo miraba `is_published`, asi que
+  //    esta consulta devolvia TODOS los documentos publicados -- incluidos los
+  //    de principal -- a cualquiera con cuenta.
+  //
+  //    Y firmar es entregar el acceso: la firma se hace con service_role, que
+  //    saltea el bucket privado. O sea que una alumna gratuita recibia un enlace
+  //    de descarga funcionando para contenido pago. Se encontro ATACANDO la base
+  //    con su sesion, no leyendo -- este mismo comentario afirmaba lo contrario
+  //    y nadie lo noto en varias revisiones.
+  //
+  //    Lo arregla de verdad 20260806_documentos_y_progreso_por_plan.sql, que
+  //    pone el plan en la policy. Este filtro se queda igual, como segunda
+  //    barrera: es lo unico que hay hasta que esa migracion corra, y despues
+  //    sigue valiendo porque lo caro no es leer el titulo, es FIRMAR.
+  const alcanza = (requerido: string) => {
+    // Un valor que no este en la escala se trata como INALCANZABLE, no como
+    // "none". La columna es texto libre: si alguna vez entra un typo, tiene que
+    // ocultar el documento, no abrirlo.
+    const pedido = ORDEN_TIER[requerido as MembershipTier];
+    if (pedido === undefined) return false;
+    return ORDEN_TIER[tier] >= pedido;
+  };
+
+  const accesibles = ((docs ?? []) as Doc[]).filter((d) => alcanza(d.membership_tier_required));
+
   // Las filas viejas guardaban una URL completa; firmarDescarga() las devuelve
   // tal cual, para que las dos formas convivan.
   const allDocs = await Promise.all(
-    ((docs ?? []) as Doc[]).map(async (d) => ({
+    accesibles.map(async (d) => ({
       ...d,
       file_url: await firmarDescarga(d.file_url),
     }))

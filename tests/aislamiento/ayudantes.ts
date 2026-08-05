@@ -257,6 +257,9 @@ export async function limpiarResiduos() {
     await a.from("packs").delete().eq("id", p.id);
   }
 
+  await a.from("documents").delete().like("title", `${PREFIJO}%`);
+  await a.from("programs").delete().like("slug", `${PREFIJO}%`);
+
   const { data: clases } = await a.from("videos").select("id").like("slug", `${PREFIJO}%`);
   for (const c of clases ?? []) {
     await a.from("videos").delete().eq("id", c.id);
@@ -358,4 +361,45 @@ export async function comprarPack(
     expires_at: opts.vencida ? new Date(Date.now() - 86_400_000).toISOString() : null,
   });
   if (error) throw new Error(`No se pudo registrar la compra: ${error.message}`);
+}
+
+// ── Sembrado para la auditoria adversarial ──────────────────────────────────
+
+export async function crearPrograma(tier: Exclude<Tier, "none">): Promise<{ id: string }> {
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const { data, error } = await admin()
+    .from("programs")
+    .insert({
+      slug: `${PREFIJO}prog-${marca}`,
+      title_i18n: { es: `${PREFIJO}prog ${marca}` },
+      status: "published",
+      membership_tier_required: tier,
+      duration_days: 7,
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear el programa: ${error?.message}`);
+  return data;
+}
+
+export async function crearDocumento(tier: Exclude<Tier, "none">): Promise<{ id: string }> {
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const { data, error } = await admin()
+    .from("documents")
+    .insert({
+      title: `${PREFIJO}doc ${marca}`,
+      file_url: `${PREFIJO}${marca}.pdf`,
+      membership_tier_required: tier,
+      is_published: true,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear el documento: ${error?.message}`);
+  return data;
+}
+
+/** Cliente ANONIMO: la clave publicable, sin ninguna sesion. */
+export function anonimo(): SupabaseClient {
+  return createClient(URL, PUB, { auth: { persistSession: false } });
 }
