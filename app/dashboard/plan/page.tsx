@@ -12,7 +12,14 @@ export default async function PlanPage() {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
 
-  const [profile, { data: subscription }, catalog, { data: packsData }, { data: comprasData }] =
+  const [
+    profile,
+    { data: subscription },
+    catalog,
+    { data: packsData },
+    { data: comprasData },
+    { data: relaciones },
+  ] =
     await Promise.all([
       getCurrentProfile(user.id),
       supabase.from("subscriptions").select("status, current_period_ends_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle<{ status: string; current_period_ends_at: string | null }>(),
@@ -26,16 +33,19 @@ export default async function PlanPage() {
         .order("display_order"),
       // Las suyas: `pack_purchases_select_own` no devuelve las de nadie mas.
       supabase.from("pack_purchases").select("pack_id, purchased_at"),
+      // ⚠️ VA EN EL MISMO PARALELO. Estaba despues del Promise.all, en serie:
+      //    un sexto viaje a Frankfurt (~30 ms) encadenado detras de los otros
+      //    cinco, en una pantalla que ya hacia cinco. No depende de ninguno, asi
+      //    que no habia motivo para esperarlos.
+      supabase.from("pack_videos").select("pack_id"),
     ]);
 
   const compradosEl = new Map(
     ((comprasData ?? []) as { pack_id: string; purchased_at: string }[]).map((c) => [c.pack_id, c.purchased_at])
   );
 
-  // Cuantas clases trae cada pack. Va en una sola consulta y se cuenta aca: son
-  // un punado de packs, y una consulta por pack seria un N+1 en una pantalla que
-  // ya hace cinco viajes.
-  const { data: relaciones } = await supabase.from("pack_videos").select("pack_id");
+  // Cuantas clases trae cada pack. Una sola consulta y se cuenta aca: una por
+  // pack seria un N+1.
   const clasesPorPack = ((relaciones ?? []) as { pack_id: string }[]).reduce<Record<string, number>>(
     (acc, r) => { acc[r.pack_id] = (acc[r.pack_id] ?? 0) + 1; return acc; },
     {}

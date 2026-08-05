@@ -17,6 +17,8 @@ recorrido hasta el pago.
 - Reproductor HLS con **audio en varios idiomas** y cambio sin recargar
 - Programas día por día, con progreso guardado
 - Sesiones en vivo con reserva y enlace de Zoom protegido
+- **Invitaciones puntuales**: Brunela puede invitar a una alumna a una clase
+  aunque su plan no le alcance. Ella lo ve al entrar
 - Chat con la profesora y salas por plan, en tiempo real
 - Documentos del estudio, con descarga firmada
 - Planes y pago con Stripe, con portal de facturación
@@ -33,9 +35,14 @@ recorrido hasta el pago.
 
 **Infraestructura**
 - Base y funciones en **Fráncfort**, por residencia de datos de la UE
-- 28 migraciones versionadas — el esquema se reconstruye desde el repo
+- 29 migraciones versionadas — el esquema se reconstruye desde el repo
 - RLS en todas las tablas
-- Banco de pruebas de aislamiento: 51 pruebas contra Supabase real (chat, sesiones y packs)
+- **168 pruebas automáticas** en tres bancos:
+  - `npm run verificar` — que nada quede sin RLS, sin policy o sin guarda (~1 s)
+  - `npm run test:sistema` — 59, de interfaz, cobro y contenido pago (~0,3 s)
+  - `npm run test:aislamiento` — 109 contra Supabase real, con **auditoría
+    adversarial**: ataca el sistema con la sesión de una alumna que quiere lo
+    que no pagó
 
 ---
 
@@ -75,6 +82,10 @@ Detalle completo en [escalabilidad.md](escalabilidad.md).
 | **Stripe** | Cobros | Sin cuota fija: ~1,5% + 0,25 € por pago europeo |
 | **Resend** | Correo | ❌ **Todavía no contratado** |
 
+Opcional, sólo para el aviso de precios del panel: `STRIPE_SECRET_KEY_TEST` en
+producción. Sirve para que `/admin/precios` pueda decir *"en Stripe este precio
+es 20 € y vos pusiste 16 €"* también sobre el juego que no está cobrando.
+
 **Los importes son órdenes de magnitud**, no un presupuesto: hay que
 confirmarlos con las tarifas del día.
 
@@ -86,6 +97,10 @@ confirmarlos con las tarifas del día.
 ## 4. Qué hay que vigilar o renovar
 
 ### 🔴 Antes de abrir al público
+
+- **Correr `20260806_documentos_y_progreso_por_plan.sql`.** Cierra que los
+  documentos de pago se leyeran sin el plan. La descarga ya está frenada desde
+  la pantalla; falta cerrarlo en la base.
 
 - **Encender la confirmación por correo.** Está apagada a propósito, porque el
   SMTP de prueba de Supabase da 2-4 correos por hora. Hoy cualquiera puede
@@ -130,6 +145,12 @@ registró sin ver la casilla no se le puede escribir después.
 No es programación: es doblaje o subtítulos, un servicio externo por minuto. El
 sistema **ya soporta** varias pistas de audio. Opciones y costos en
 [para-brunela.md](para-brunela.md).
+
+### Códigos de descuento
+Ya funcionan: el campo está activo en el pago y el descuento no toca el plan,
+porque el sistema resuelve el plan por el identificador del precio y no por el
+importe. Se crean en Stripe — pasos en `docs/manual-brunela.md` § 9.
+⚠️ **Son por modo**: los de prueba no existen en producción.
 
 ### La segunda mitad de las analíticas
 Frecuencia de uso, franjas horarias, reproducciones y tiempo de uso **necesitan

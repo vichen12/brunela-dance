@@ -10,7 +10,7 @@
 
 1. **En qué punto está**: producción corre el código de **mayo**; el rediseño de
    tres meses está en `feat/rediseno-completo` y **sin desplegar**. La base sí
-   está al día: las 28 migraciones aplicadas.
+   está al día salvo UNA migración pendiente (ver más abajo).
 2. **Qué se está haciendo ahora**: nada a medias. Packs, invitaciones y panel
    de precios están terminados y verificados. Lo siguiente es el **rediseño de
    la landing** y, después, hacerla editable — ver *ÚLTIMO PASO* en Pendientes.
@@ -22,8 +22,8 @@
    | Comando | Qué mira | Cuándo |
    |---|---|---|
    | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
-   | `npm run test:sistema` | Interfaz, rutas y caché. **~0,2 s, sin base** | Al tocar pantallas o navegación |
-   | `npm run test:aislamiento` | RLS contra Supabase real. **~100 s** | Al tocar cualquier policy |
+   | `npm run test:sistema` | **59 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,3 s, sin base** | Al tocar pantallas, cobro o acceso |
+   | `npm run test:aislamiento` | **109 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~140 s** | Al tocar cualquier policy |
 
    ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
    rojo. Una verificación que no puede fallar no es verificación — ver trampa 7.
@@ -83,10 +83,31 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **28 migraciones**, todas aplicadas y verificadas (las 18 de la mudanza + 4 del
-  2026-08-03, 4 del 08-04 y 2 del 08-05: invitaciones y packs). ⚠️ **El orden NO
-  es alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS
-  de `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
+- **29 migraciones.** 28 aplicadas y verificadas; **la 29 está escrita y SIN
+  CORRER** — cierra una filtración real, ver abajo. ⚠️ **El orden NO es
+  alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
+  `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
+
+### 🔴 SIN CORRER — `20260806_documentos_y_progreso_por_plan.sql`
+
+Encontrada **atacando la base** con la sesión de una alumna sin plan, no leyendo
+código. Cierra tres cosas:
+
+1. **Los documentos se descargaban sin pagar.** `documents_select_published`
+   sólo miraba `is_published`, y `/dashboard/documents` **firma** una URL de
+   descarga para cada documento que RLS devuelve, con `service_role`, que saltea
+   el bucket privado. Una cuenta gratuita recibía enlaces funcionando para
+   contenido de `principal`.
+   **Es la cuarta vez de la misma familia** — `categories`, chat, chat por plan,
+   documentos: la columna existe, la interfaz la respeta, la policy no.
+   > **Mitigación ya desplegada:** la pantalla ahora filtra por plan **antes** de
+   > firmar, así que la descarga ya está cerrada. La migración cierra además la
+   > fuga de metadatos por REST.
+2. **El progreso se podía escribir sobre clases inaccesibles**, lo que ensucia
+   las analíticas con las que Brunela decide qué grabar y deja fabricar logros.
+3. `current_user_membership_tier()` **contestaba a `anon`**.
+
+**Criterio de éxito:** `npm run test:aislamiento` pasa de 4 rojos a cero.
 - **25 tablas**, RLS activa en todas. Verificado el 2026-08-05 contra la base:
   las migraciones crean 25 y la base tiene 25, **cuadra exacto**.
 

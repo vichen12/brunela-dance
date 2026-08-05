@@ -375,3 +375,83 @@ describe("documentos del estudio", () => {
     expect(data ?? []).toHaveLength(0);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// SEGUNDA PASADA — superficies que la primera no ataco
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("datos de otras alumnas por caminos menos obvios", () => {
+  it("no llega al registro de eventos de Stripe de nadie", async () => {
+    // subscription_webhook_events guarda el payload COMPLETO de cada evento
+    // verificado: importes, ids de cliente, correos. Es de auditoria, no de
+    // consumo.
+    const { data, error } = await sinPlan.cliente.from("subscription_webhook_events").select("*").limit(5);
+    expect(data ?? [], `error: ${error?.code}`).toHaveLength(0);
+  });
+
+  it("no puede escribirse eventos de actividad a nombre de otra", async () => {
+    await sinPlan.cliente.from("activity_events").insert({
+      user_id: principal.id,
+      event_type: "video_start",
+      video_id: clasePrincipal.id,
+      session_id: "00000000-0000-0000-0000-000000000001",
+      position_seconds: 0,
+      occurred_at: new Date().toISOString(),
+    });
+
+    // Se comprueba contra la BASE: si la policy lo deja pasar, ensuciaria las
+    // analiticas de otra persona.
+    const { count } = await admin().from("activity_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", principal.id).eq("video_id", clasePrincipal.id);
+    expect(count, "escribio actividad a nombre de otra alumna").toBe(0);
+  });
+
+  it("no lee la actividad de otras", async () => {
+    const { data } = await sinPlan.cliente.from("activity_events").select("*").neq("user_id", sinPlan.id);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it("no lee las reservas de otras", async () => {
+    await admin().from("live_session_bookings")
+      .insert({ live_session_id: sesionPrincipal.id, user_id: principal.id, status: "reserved" });
+
+    const { data } = await sinPlan.cliente.from("live_session_bookings").select("*").neq("user_id", sinPlan.id);
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it("no lee los logros de otras", async () => {
+    const { data } = await sinPlan.cliente.from("reward_claims").select("*").neq("user_id", sinPlan.id);
+    expect(data ?? []).toHaveLength(0);
+  });
+});
+
+describe("realtime sobre las tablas nuevas", () => {
+  it("no recibe en vivo los packs que no ve", async () => {
+    // Realtime autoriza por su propio camino, aunque se apoye en las mismas
+    // policies. Probar solo REST deja la mitad sin medir -- por eso el chat se
+    // prueba por los dos lados.
+    const { data: sesion } = await sinPlan.cliente.auth.getSession();
+    if (sesion.session?.access_token) await sinPlan.cliente.realtime.setAuth(sesion.session.access_token);
+
+    const llego = await new Promise<boolean>((resolve) => {
+      let resuelto = false;
+      const listo = (v: boolean) => {
+        if (resuelto) return;
+        resuelto = true;
+        sinPlan.cliente.removeChannel(canal);
+        resolve(v);
+      };
+      const canal = sinPlan.cliente
+        .channel(`zz-test-packs-${Math.random()}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "pack_purchases" }, () => listo(true))
+        .subscribe(async (estado) => {
+          if (estado !== "SUBSCRIBED") return;
+          await comprarPack(packVendido.id, principal.id);
+          setTimeout(() => listo(false), 6000);
+        });
+    });
+
+    expect(llego, "recibio por realtime la compra de otra alumna").toBe(false);
+  });
+});
