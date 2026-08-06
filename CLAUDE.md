@@ -30,6 +30,10 @@
 
    El hook de pre-commit se instala solo con `npm install` (`prepare` →
    `core.hooksPath`). Para saltearlo en una emergencia: `git commit --no-verify`.
+
+   Y uno que no corre solo, para antes de tocar Stripe:
+   `node --env-file=.env.local scripts/verificar-precios-live.mjs` — comprueba
+   los 6 price ids contra la API de Stripe. Ya cazó un precio archivado.
 5. **Reglas de trabajo de este proyecto**: las migraciones se muestran antes de
    correrlas y las corre el dueño del proyecto en Supabase; se verifica contra la
    base real, no se asume; primero se diagnostica y se reporta, después se
@@ -770,10 +774,22 @@ Se borran cuando esté todo cerrado, justo antes del pase a producción.
 - [ ] **Verificar el reproductor en iPhone / iPad** — ver la sección de abajo. Es
       la única parte entregada sin medir, y el público de un producto de danza en
       casa usa iPhone.
-- [ ] **Pasar Stripe a producción**: cambiar `STRIPE_SECRET_KEY` a la `sk_live_`
-      y rehacer la configuración del portal de clientes (es por modo). Lista
-      completa en `SETUP.md` § 3.5. **No hay SQL que correr**: los 12 price ids
-      de los dos modos ya están cargados.
+- [ ] **Pasar Stripe a producción — TODO PREPARADO, faltan DOS variables.**
+      Sólo queda que Stripe verifique la cuenta de Brunela para poder cobrar.
+
+      El día del pase: copiar `STRIPE_SECRET_KEY_LIVE` → `STRIPE_SECRET_KEY`,
+      `STRIPE_WEBHOOK_SECRET_LIVE` → `STRIPE_WEBHOOK_SECRET`, y **un** redeploy.
+      Las dos juntas: cambiar sólo la clave deja cobros reales sin endpoint que
+      avise, o sea **cobrado sin acceso**.
+
+      Ya hecho y verificado (detalle en `SETUP.md` § 3.5): los 6 price ids de
+      live comprobados contra la API, el webhook de producción con sus eventos,
+      el portal de live, el dominio en `NEXT_PUBLIC_APP_URL` y en Supabase Auth,
+      y las dos claves `_LIVE` estacionadas en variables aparte.
+
+      ⚠️ **Recuperación de ingresos y correos NO se rehacen**: son compartidos
+      entre modos. El portal SÍ es por modo. Se confundió el 2026-08-06 y casi
+      genera trabajo de más — la tabla que lo zanja está en `SETUP.md` § 3.5.
 - [ ] **Rotar la `service_role`** por higiene (`SETUP.md`; el orden importa:
       crear la nueva, redeploy, verificar, recién ahí revocar la vieja).
 

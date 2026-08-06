@@ -265,42 +265,121 @@ Landing → `/sign-in` → `/dashboard/plan` → botón de plan → Stripe Check
 
 ### 3.5 Pase a produccion — lista de control
 
+**Estado al 2026-08-06: todo preparado salvo la verificacion de la cuenta de
+Brunela en Stripe.** El dia del pase quedan DOS variables y un redeploy.
+
 Modo test y modo produccion son **dos mundos separados** en Stripe. Cada objeto
-existe por duplicado y nada se copia solo.
+existe por duplicado y nada se copia solo -- salvo lo que dice la nota del final,
+que es la excepcion y conviene no confundirla.
 
-- [ ] **`STRIPE_SECRET_KEY`** → la de produccion (`sk_live_...`).
-      Es lo unico que decide el modo: el codigo elige el juego de price ids
-      segun esa variable (`src/lib/stripe/catalog.ts` → `stripeMode`). Los ids
-      de produccion ya estan cargados en `prices.live` desde
-      `20260730_stripe_price_ids_per_mode.sql`, asi que **no hay ningun SQL que
-      correr en el pase**.
+#### Ya hecho (no volver a tocar)
 
-- [ ] **`STRIPE_WEBHOOK_SECRET`** → el del endpoint de produccion.
-      El `whsec_` de `stripe listen` es solo para local. En produccion se crea
-      en *Desarrolladores → Webhooks → Añadir endpoint*, apuntando a
-      `https://<dominio>/api/stripe/webhooks`, con los eventos
-      `customer.subscription.created`, `.updated` y `.deleted`.
+- [x] **Los 6 price ids de produccion**, cargados en `prices.live` y
+      **verificados uno por uno contra la API**: importe, moneda, intervalo,
+      activos y del modo correcto.
 
-- [ ] **`NEXT_PUBLIC_APP_URL`** → el dominio real, porque de ahi salen las URLs
-      de retorno del checkout.
+      corps 16 / 154 · solista 31 / 299 · principal 59 / 559
 
-- [ ] **Configuracion del portal de clientes en modo produccion.**
-      Es un objeto **aparte** del de test y **arranca vacio**: con la
-      configuracion por defecto que crea Stripe, el cambio de plan viene
-      DESHABILITADO. Si no se configura, las alumnas pueden cancelar y cambiar
-      la tarjeta, pero **no pueden cambiar de plan** — y no hay ningun error
-      visible, simplemente la opcion no aparece.
-      Hay que habilitar *"Los clientes pueden cambiar de plan"* y cargar los
-      **3 productos con sus 2 precios cada uno**. Verificar despues abriendo el
-      portal y confirmando que los 6 aparecen en ambos intervalos: la API
-      **no** devuelve la lista de productos, asi que revisarla por API no
-      alcanza.
+      Se revisan cuando se quiera con:
 
-- [ ] **Verificar los 6 precios de produccion contra la API** antes de abrir al
-      publico: importe, moneda, intervalo, que esten activos y `livemode=true`.
-      Este control fue el que detecto, en test, un precio cargado como 599 en
-      vez de 559. Del lado live ese error son 40 EUR de mas por año a cada
+      ```bash
+      node --env-file=.env.local scripts/verificar-precios-live.mjs
+      ```
+
+      Sale con codigo 1 si algo no cuadra, asi sirve de compuerta. Este control
+      fue el que detecto, en TEST, un price cargado como 599 en vez de 559 y
+      ademas archivado. Del lado live ese error son 40 EUR de mas por año a cada
       suscriptora, cobrados de verdad.
+
+- [x] **Webhook de produccion** en `https://bruneladance.com/api/stripe/webhooks`.
+
+      Los 4 que el codigo procesa -- y sin estos no hay acceso despues de pagar:
+      `customer.subscription.created`, `.updated`, `.deleted` y
+      **`checkout.session.completed`** (packs).
+
+      Los otros 3 (`invoice.paid`, `invoice.payment_failed`,
+      `customer.subscription.trial_will_end`) no los lee nadie hoy: quedan de
+      rastro en `subscription_webhook_events` para las analiticas de ingresos.
+
+- [x] **Portal de clientes en produccion.** Es un objeto **aparte** del de test
+      -- comprobado por API: dos `bpc_...` distintos, uno con `livemode: false` y
+      otro con `true`, y hasta con distinto prorrateo.
+
+      Configurado con los 6 precios, prorrateo, **cancelacion `at_period_end`** y
+      codigos promocionales.
+
+      ⚠️ La `at_period_end` no es cosmetica: el webhook tiene una guarda que
+      depende de que cancelar deje `status = active` con `cancel_at_period_end`.
+      Con *immediately*, quien se arrepiente pierde el acceso que ya pago.
+
+      ⚠️ **La lista de productos NO se puede verificar por API**: el campo no
+      viene en la respuesta. Se comprueba abriendo la vista previa del portal y
+      confirmando que aparecen los planes con su importe real y no el marcador de
+      posicion.
+
+- [x] **`NEXT_PUBLIC_APP_URL`** en `https://bruneladance.com`, y **Supabase →
+      Authentication** con el dominio nuevo en *Site URL* y *Redirect URLs*. Sin
+      eso el login con Google no vuelve: usa `window.location.origin`.
+
+      Google Cloud Console **no se toca**: esa URI apunta al proyecto de
+      Supabase, no al dominio.
+
+- [x] **`STRIPE_SECRET_KEY_LIVE`** y **`STRIPE_WEBHOOK_SECRET_LIVE`** cargadas en
+      Vercel, en variables APARTE.
+
+      Con `STRIPE_SECRET_KEY` todavia en test, **el sistema no cobra nada de
+      verdad**. La primera solo la lee `src/lib/stripe/verificar-precio.ts`, que
+      unicamente hace `prices.retrieve`; a la segunda **no la lee nadie**, es un
+      estacionamiento. Hay pruebas en `tests/sistema/` que fallan si alguna
+      aparece en una ruta de cobro.
+
+      El efecto util: `/admin/precios` verifica los precios de produccion
+      **sin** estar en produccion.
+
+#### El dia del pase — dos variables y un redeploy
+
+1. `STRIPE_SECRET_KEY` ← el valor de `STRIPE_SECRET_KEY_LIVE`
+2. `STRIPE_WEBHOOK_SECRET` ← el valor de `STRIPE_WEBHOOK_SECRET_LIVE`
+3. **Un** redeploy (Vercel no aplica variables en caliente)
+
+⚠️ **Las dos juntas, en el mismo redeploy.** Es la misma regla que `vercel.json`
+y la region de Supabase. Cambiar solo la clave deja cobros reales sin endpoint
+que avise: **se cobra y no llega el acceso**. Cambiar solo el webhook rompe la
+firma de los eventos de prueba. Como Vercel no aplica nada hasta el redeploy,
+cambiar las dos y redesplegar una vez es atomico.
+
+#### Verificar despues, sin gastar plata
+
+Las tarjetas de prueba **no funcionan en produccion**. El camino gratis:
+
+1. En Stripe live, cupon del **100%** con un codigo de **un solo uso**.
+2. Suscribirse con ese codigo → total 0 EUR, se crea la suscripcion, se dispara
+   `customer.subscription.created`. Comprobar que el plan se desbloquea.
+3. Comprar un pack con el mismo codigo.
+
+   ⚠️ Con total 0, Stripe pone `payment_status = "no_payment_required"` y **no**
+   `"paid"`. El webhook acepta los dos desde el 2026-08-06; antes ese caso
+   completaba el checkout y no daba nada.
+4. Comprobar en la base:
+
+   ```sql
+   select p.email, s.membership_tier, s.status, s.provider_price_id
+     from public.subscriptions s join public.profiles p on p.id = s.user_id
+    order by s.created_at desc limit 3;
+
+   select pack_id, amount_total_cents, purchased_at
+     from public.pack_purchases order by purchased_at desc limit 3;
+   ```
+
+   `provider_price_id` tiene que ser uno de **live**. En `amount_total_cents` va
+   a haber **0**: es correcto, es el cupon.
+5. **Archivar el codigo.**
+6. Cancelar desde el portal, que de paso lo prueba.
+
+Sin tocar nada: en el endpoint de live, *Send test webhook* con
+`checkout.session.completed`. Va a contestar un motivo legible (le falta
+metadata), y eso ya confirma que **la firma valida y la URL llega**, que es lo
+que mas se rompe.
 
 > **Que NO hay que rehacer en produccion.** La *recuperacion de ingresos*
 > (reintentos de cobro y que hacer al agotarlos) y los *correos a clientes*
@@ -319,9 +398,22 @@ existe por duplicado y nada se copia solo.
 > conservaria el acceso **gratis e indefinidamente**. El corte depende de que
 > Stripe mueva el estado a `canceled` o `unpaid`, que no otorgan acceso.
 >
-> La configuracion del **portal de clientes**, en cambio, SI es por modo (es un
-> objeto de API con `livemode`) y hay que rehacerla, como dice el punto de
-> arriba.
+> ⚠️ **Esto se confundio el 2026-08-06** y estuvo a punto de meterse trabajo de
+> mas en la lista del pase. La distincion correcta, y la unica que hay que
+> recordar, es:
+>
+> | Compartido entre modos | Por modo, hay que rehacer |
+> |---|---|
+> | Recuperacion de ingresos | Productos y precios |
+> | Correos a clientes | Cupones y codigos promocionales |
+> | Marca, datos del negocio | Endpoints de webhook |
+> | | **Portal de clientes** |
+>
+> Y el test que lo zanja en diez segundos, para cualquier ajuste que se dude:
+> abrir la pantalla en modo prueba y cambiar el interruptor a produccion. Si el
+> valor cambia, es por modo. Si no se puede ni editar desde prueba, es
+> compartido.
+
 
 > **Si se cambia `access_granting_statuses` con gente ya suscripta**, el trigger
 > solo recalcula el `membership_tier` cuando la suscripcion cambia. Para
