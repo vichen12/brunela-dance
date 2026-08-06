@@ -37,10 +37,10 @@ recorrido hasta el pago.
 - Base y funciones en **Fráncfort**, por residencia de datos de la UE
 - 29 migraciones versionadas — el esquema se reconstruye desde el repo
 - RLS en todas las tablas
-- **168 pruebas automáticas** en tres bancos:
+- **171 pruebas automáticas** en tres bancos:
   - `npm run verificar` — que nada quede sin RLS, sin policy o sin guarda (~1 s)
   - `npm run test:sistema` — 59, de interfaz, cobro y contenido pago (~0,3 s)
-  - `npm run test:aislamiento` — 109 contra Supabase real, con **auditoría
+  - `npm run test:aislamiento` — 112 contra Supabase real, con **auditoría
     adversarial**: ataca el sistema con la sesión de una alumna que quiere lo
     que no pagó
 
@@ -97,10 +97,6 @@ confirmarlos con las tarifas del día.
 ## 4. Qué hay que vigilar o renovar
 
 ### 🔴 Antes de abrir al público
-
-- **Correr `20260806_documentos_y_progreso_por_plan.sql`.** Cierra que los
-  documentos de pago se leyeran sin el plan. La descarga ya está frenada desde
-  la pantalla; falta cerrarlo en la base.
 
 - **Encender la confirmación por correo.** Está apagada a propósito, porque el
   SMTP de prueba de Supabase da 2-4 correos por hora. Hoy cualquiera puede

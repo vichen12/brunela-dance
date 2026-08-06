@@ -2,7 +2,7 @@
 
 ---
 
-# ESTADO ACTUAL — 2026-08-05
+# ESTADO ACTUAL — 2026-08-06
 
 **Leer esto primero.** Es lo que hace falta para retomar sin contexto previo.
 
@@ -10,7 +10,7 @@
 
 1. **En qué punto está**: producción corre el código de **mayo**; el rediseño de
    tres meses está en `feat/rediseno-completo` y **sin desplegar**. La base sí
-   está al día salvo UNA migración pendiente (ver más abajo).
+   está al día: las **29 migraciones aplicadas y verificadas**.
 2. **Qué se está haciendo ahora**: nada a medias. Packs, invitaciones y panel
    de precios están terminados y verificados. Lo siguiente es el **rediseño de
    la landing** y, después, hacerla editable — ver *ÚLTIMO PASO* en Pendientes.
@@ -23,7 +23,7 @@
    |---|---|---|
    | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
    | `npm run test:sistema` | **59 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,3 s, sin base** | Al tocar pantallas, cobro o acceso |
-   | `npm run test:aislamiento` | **109 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~140 s** | Al tocar cualquier policy |
+   | `npm run test:aislamiento` | **112 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~150 s** | Al tocar cualquier policy |
 
    ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
    rojo. Una verificación que no puede fallar no es verificación — ver trampa 7.
@@ -83,31 +83,19 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **29 migraciones.** 28 aplicadas y verificadas; **la 29 está escrita y SIN
-  CORRER** — cierra una filtración real, ver abajo. ⚠️ **El orden NO es
+- **29 migraciones**, todas aplicadas y verificadas. ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
 
-### 🔴 SIN CORRER — `20260806_documentos_y_progreso_por_plan.sql`
-
-Encontrada **atacando la base** con la sesión de una alumna sin plan, no leyendo
-código. Cierra tres cosas:
-
-1. **Los documentos se descargaban sin pagar.** `documents_select_published`
-   sólo miraba `is_published`, y `/dashboard/documents` **firma** una URL de
-   descarga para cada documento que RLS devuelve, con `service_role`, que saltea
-   el bucket privado. Una cuenta gratuita recibía enlaces funcionando para
-   contenido de `principal`.
-   **Es la cuarta vez de la misma familia** — `categories`, chat, chat por plan,
-   documentos: la columna existe, la interfaz la respeta, la policy no.
-   > **Mitigación ya desplegada:** la pantalla ahora filtra por plan **antes** de
-   > firmar, así que la descarga ya está cerrada. La migración cierra además la
-   > fuga de metadatos por REST.
-2. **El progreso se podía escribir sobre clases inaccesibles**, lo que ensucia
-   las analíticas con las que Brunela decide qué grabar y deja fabricar logros.
-3. `current_user_membership_tier()` **contestaba a `anon`**.
-
-**Criterio de éxito:** `npm run test:aislamiento` pasa de 4 rojos a cero.
+  > **La 29 cerró una filtración real** encontrada *atacando* la base, no
+  > leyendo: `documents_select_published` sólo miraba `is_published`, y
+  > `/dashboard/documents` **firma** una URL de descarga para cada documento que
+  > RLS devuelve, con `service_role`, que saltea el bucket privado. Una cuenta
+  > gratuita recibía enlaces funcionando para contenido de `principal`.
+  > **Cuarta vez de la misma familia** —`categories`, chat, chat por plan,
+  > documentos—: la columna existe, la interfaz la respeta, la policy no.
+  > El código *afirmaba* que RLS ya filtraba por plan; ese comentario es
+  > probablemente por qué nadie lo vio leyendo.
 - **25 tablas**, RLS activa en todas. Verificado el 2026-08-05 contra la base:
   las migraciones crean 25 y la base tiene 25, **cuadra exacto**.
 
@@ -258,6 +246,42 @@ curl -s "https://howtuhfdxgyluskrlkze.supabase.co/auth/v1/settings" -H "apikey: 
 # mailer_autoconfirm: true  -> confirmacion APAGADA
 # disable_signup: false     -> altas habilitadas
 ```
+
+### Tres funciones le responden a `anon` y se decidió DEJARLAS
+
+**Decidido el 2026-08-06**, con la migración escrita y descartada.
+
+`is_admin()`, `current_user_membership_tier()` y `can_start_dm()` son
+alcanzables por RPC con la clave publicable, la que está en el HTML de la
+landing. **No filtran nada**: sin sesión `auth.uid()` es null y devuelven
+`false`, `'none'` y `false`.
+
+**Por qué no se cerraron:**
+
+1. **Beneficio cero.** No hay ningún dato que proteger; es sólo superficie.
+2. **Riesgo alto.** Cerrarlas obliga a `revoke ... from PUBLIC` — revocarle a
+   `anon` **no sirve**, porque el permiso lo hereda de PUBLIC. Y revocar de
+   PUBLIC deja sin `EXECUTE` a **todos** los roles a la vez, así que hay que
+   devolvérselo a `authenticated` en la misma transacción. `is_admin()` está en
+   **188 policies**: si ese `grant` no entra, la aplicación deja de leer entera.
+3. **El modo de fallo es el que ya nos pasó.** Ese mismo día el SQL Editor de
+   Supabase cortó una transacción en silencio y costó cuatro intentos (trampa
+   7). Es exactamente el escenario donde el `grant` no entra, el editor dice
+   *Success*, y nadie se entera hasta que una alumna no puede abrir nada.
+
+A dos días de entregar, riesgo real contra beneficio nulo.
+
+**Cómo quedó cubierto sin mentir:** `tests/aislamiento/adversario.test.ts` las
+lleva en `RESPONDEN_A_ANON` como **excepción declarada con su valor esperado**.
+La prueba sigue **descubriendo** todas las funciones —si aparece una cuarta,
+rojo— y además **comprueba que estas tres siguen devolviendo exactamente eso**.
+Si alguna cambiara y empezara a contestar otra cosa, se pone en rojo igual.
+
+> **Mejora futura, sin presión de fecha:** hacerlo con la app frenada, corriendo
+> los tres `revoke`+`grant` juntos y verificando ANTES de soltar que
+> `authenticated` conserva el `EXECUTE`. La verificación correcta es un
+> **control positivo**: comprobar sólo que `anon` quedó afuera pasaría igual con
+> el sistema caído.
 
 ### El correo va a salir de Resend, que es estadounidense
 
@@ -763,6 +787,11 @@ Se borran cuando esté todo cerrado, justo antes del pase a producción.
       `.gitignore`).
 
 ### Deuda técnica conocida
+
+- [ ] **Cerrar las tres funciones que le responden a `anon`** — `is_admin()`,
+      `current_user_membership_tier()` y `can_start_dm()`. Ver *Decisiones
+      conscientes*: se descartó a propósito el 2026-08-06 por riesgo contra
+      beneficio cero. **Hacerlo con la app frenada y sin fecha encima.**
 
 - [ ] **Migración de color**: ~304 ocurrencias de magenta hardcodeado en 24
       archivos. Unas 166 son tintes claros que ya tienen `--pink-wash`. El

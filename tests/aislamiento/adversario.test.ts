@@ -136,7 +136,31 @@ describe("sin sesion, con la clave publicable", () => {
    *    asi que `revoke ... from anon` NO alcanza -- hay que revocar de `public`
    *    y volver a otorgar a authenticated. Costo una migracion entera aprenderlo.
    */
-  it("NINGUNA funcion de public le responde a un anonimo", async () => {
+  /**
+   * ⚠️ TRES EXCEPCIONES DECLARADAS, CON SU MOTIVO Y CON SU RESPUESTA ESPERADA.
+   *
+   *    Estas tres le responden a `anon` y se decidio el 2026-08-06 NO cerrarlas.
+   *    No filtran nada -- devuelven exactamente el valor que se lista abajo -- y
+   *    cerrarlas obliga a revocar de PUBLIC, lo que deja sin permiso a TODOS los
+   *    roles a la vez. `is_admin()` esta en 188 policies: si el grant de vuelta
+   *    a `authenticated` no entra, la app deja de leer entera. Y el SQL Editor
+   *    de Supabase ya corto una transaccion en silencio ese mismo dia.
+   *
+   *    Riesgo alto contra beneficio cero, a dos dias de entregar.
+   *
+   * ⚠️ NO SE LAS SALTEA: SE LES EXIGE SEGUIR SIENDO INOFENSIVAS.
+   *    Esa es la diferencia entre una excepcion y un verde falso. Si alguna
+   *    empieza a devolver otra cosa -- por ejemplo si `is_admin()` pasara a
+   *    aceptar un uuid y contestara sobre otra persona -- esta prueba se pone en
+   *    rojo igual, porque compara la RESPUESTA y no solo el nombre.
+   */
+  const RESPONDEN_A_ANON = new Map<string, unknown>([
+    ["is_admin", false],
+    ["current_user_membership_tier", "none"],
+    ["can_start_dm", false],
+  ]);
+
+  it("ninguna funcion NUEVA le responde a un anonimo", async () => {
     const dir = "supabase/migrations";
     const sql = readdirSync(dir)
       .filter((f) => f.endsWith(".sql"))
@@ -153,19 +177,35 @@ describe("sin sesion, con la clave publicable", () => {
     // sin haber probado nada.
     expect(funciones.length, "no se encontro ninguna funcion: el barrido esta roto").toBeGreaterThan(15);
 
-    const responden: string[] = [];
+    const inesperadas: string[] = [];
     for (const f of funciones) {
+      if (RESPONDEN_A_ANON.has(f)) continue;
       const { error } = await anonimo().rpc(f, {});
       // 42883 / PGRST202: PostgREST ni la ve para ese rol. 42501: permiso denegado.
       const bloqueada = !!error && ["42883", "PGRST202", "42501"].includes(error.code ?? "");
-      if (!bloqueada) responden.push(f);
+      if (!bloqueada) inesperadas.push(f);
     }
 
     expect(
-      responden,
-      `estas funciones le contestan a cualquiera desde internet: ${responden.join(", ")}`
+      inesperadas,
+      `funciones nuevas alcanzables desde internet: ${inesperadas.join(", ")}. ` +
+        `Si son inofensivas, se agregan a RESPONDEN_A_ANON con su valor esperado y su motivo; ` +
+        `si no, hay que revocarlas de PUBLIC (no de anon: el permiso se hereda).`
     ).toHaveLength(0);
   }, 60_000);
+
+  it.each([...RESPONDEN_A_ANON.entries()])(
+    "la excepcion %s sigue siendo inofensiva para un anonimo",
+    async (fn, esperado) => {
+      const { data, error } = await anonimo().rpc(fn as string, {});
+      expect(error, `${fn} dejo de responder: sacala de RESPONDEN_A_ANON`).toBeNull();
+      expect(
+        data,
+        `${fn} le devuelve a un anonimo algo distinto de ${JSON.stringify(esperado)}: ` +
+          `la excepcion dejo de ser inofensiva y hay que cerrarla`
+      ).toBe(esperado);
+    }
+  );
 });
 
 // ════════════════════════════════════════════════════════════════════════════
