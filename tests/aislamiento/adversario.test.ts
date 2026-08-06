@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   admin,
@@ -121,12 +123,49 @@ describe("sin sesion, con la clave publicable", () => {
     expect(error).not.toBeNull();
   });
 
-  it("no puede llamar a las funciones que resuelven acceso", async () => {
-    for (const fn of ["has_purchased_video", "is_invited_to_live_session", "current_user_membership_tier"]) {
-      const { error } = await anonimo().rpc(fn, {});
-      expect(error, `la funcion ${fn} respondio a un anonimo`).not.toBeNull();
+  /**
+   * ⚠️ NO SE ENUMERAN LAS FUNCIONES: SE DESCUBREN.
+   *
+   *    La primera version listaba tres a mano y por eso solo encontro una de las
+   *    que respondian. Recorriendo las migraciones aparecen las 26, y las que se
+   *    agreguen manana entran solas.
+   *
+   *    Una funcion en `public` a la que `anon` puede hacer EXECUTE es un endpoint
+   *    RPC alcanzable desde internet con la clave que esta en el HTML de la
+   *    landing. Y ojo con la trampa: toda funcion nace con EXECUTE para PUBLIC,
+   *    asi que `revoke ... from anon` NO alcanza -- hay que revocar de `public`
+   *    y volver a otorgar a authenticated. Costo una migracion entera aprenderlo.
+   */
+  it("NINGUNA funcion de public le responde a un anonimo", async () => {
+    const dir = "supabase/migrations";
+    const sql = readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      // Se quitan los comentarios: las migraciones CITAN el SQL que explican, y
+      // una funcion nombrada en una nota contaria como existente.
+      .map((f) => readFileSync(join(dir, f), "utf8").replace(/--.*$/gm, ""))
+      .join("\n");
+
+    const funciones = [
+      ...new Set([...sql.matchAll(/create or replace function public\.(\w+)\s*\(/g)].map((m) => m[1])),
+    ].sort();
+
+    // Sin esto, un regex mal escrito daria cero funciones y la prueba pasaria
+    // sin haber probado nada.
+    expect(funciones.length, "no se encontro ninguna funcion: el barrido esta roto").toBeGreaterThan(15);
+
+    const responden: string[] = [];
+    for (const f of funciones) {
+      const { error } = await anonimo().rpc(f, {});
+      // 42883 / PGRST202: PostgREST ni la ve para ese rol. 42501: permiso denegado.
+      const bloqueada = !!error && ["42883", "PGRST202", "42501"].includes(error.code ?? "");
+      if (!bloqueada) responden.push(f);
     }
-  });
+
+    expect(
+      responden,
+      `estas funciones le contestan a cualquiera desde internet: ${responden.join(", ")}`
+    ).toHaveLength(0);
+  }, 60_000);
 });
 
 // ════════════════════════════════════════════════════════════════════════════

@@ -160,6 +160,17 @@ create policy "user_progress_update_own_or_admin"
 --    los permisos del usuario. Revocarsela a authenticated rompe el sistema
 --    entero.
 
+-- 🔴 ESTA LINEA SOLA NO ALCANZA, y se dejo escrita para que se entienda por que.
+--
+--    Toda funcion nace con EXECUTE otorgado a PUBLIC. El rol anon no lo tiene
+--    a titulo propio: lo HEREDA de ahi. Revocarselo a anon le quita algo que no
+--    tenia y el heredado queda intacto -- corrido esto, un anonimo seguia
+--    recibiendo 'none'. Lo mostro la prueba adversarial, no la lectura del SQL.
+--
+--    Lo cierra de verdad 20260806b_revocar_funciones_a_anon.sql, que revoca de
+--    PUBLIC y vuelve a otorgar a authenticated. Se hace aparte porque revocar de
+--    PUBLIC deja sin permiso a TODOS los roles, y is_admin() esta en 188
+--    policies: si el grant de vuelta falta, la app entera deja de leer.
 revoke execute on function public.current_user_membership_tier() from anon;
 
 commit;

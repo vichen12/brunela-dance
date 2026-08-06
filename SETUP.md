@@ -57,6 +57,7 @@ no es el que devuelve `ls`:
 27. 20260805_invitaciones_a_sesiones.sql    <-- DESPUES de phase_b y phase_b1
 28. 20260805_packs_de_clases.sql           <-- DESPUES de phase_a y de la 20260728
 29. 20260806_documentos_y_progreso_por_plan.sql  <-- DESPUES de 20260421 y 20260728
+30. 20260806b_revocar_funciones_a_anon.sql       <-- DESPUES de la 29
 ```
 
 > **La 28 hace lo mismo con `videos_select_allowed_by_tier`**, que nace en
@@ -526,7 +527,7 @@ service role key.
 
 #### Paso 2 — Esquema
 
-**a)** Las 29 migraciones **en el orden de § 1.1** — que no es el alfabético.
+**a)** Las 30 migraciones **en el orden de § 1.1** — que no es el alfabético.
 Las **17 y 18 van al final sin excepción**: usan `grant ... on all tables in
 schema public`, que sólo alcanza a las tablas que ya existen, y la 18 refina lo
 que otorga la 17.
