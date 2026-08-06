@@ -53,6 +53,11 @@ const ACTIONS_PUBLICAS = new Map([
 /** Rutas de API con otra forma de autenticar, explicada. */
 const RUTAS_CON_OTRA_AUTH = new Map([
   ["app/api/stripe/webhooks/route.ts", "verifica la firma de Stripe (constructEvent), no una sesion"],
+  [
+    "app/api/cron/keepalive/route.ts",
+    "la invoca el cron de Vercel, no una persona: exige Authorization: Bearer CRON_SECRET, " +
+      "y si esa variable no esta configurada responde 503 en vez de quedar abierta",
+  ],
 ]);
 
 /** Tablas sin policy a proposito. Vacio hoy: si alguna aparece, va con motivo. */

@@ -535,6 +535,15 @@ de cada una: una `sk_live_` guardada en `STRIPE_SECRET_KEY_TEST` contestaría co
 total seguridad sobre el juego equivocado, y un aviso que miente es peor que no
 tener aviso.
 
+Requerida para que el proyecto de Supabase no se pause:
+
+- `CRON_SECRET`
+
+Un valor largo y aleatorio (`openssl rand -hex 32`). Vercel lo manda solo como
+`Authorization: Bearer …` en sus invocaciones de cron. **Sin ella, la ruta
+responde 503 y el keepalive NO corre** — es a propósito: esa ruta consulta con
+`service_role` y prefiere quedarse cerrada antes que abierta.
+
 Required for video:
 
 - `BUNNY_STREAM_API_KEY`
@@ -841,6 +850,23 @@ ocupando espacio y facturando.
 - [ ] **Sacar la URI de callback vieja** de Google Cloud Console. Recién al final.
 - [ ] Borrar `_local/` (tiene hashes de contraseña de la migración; está en
       `.gitignore`).
+
+### 🔴 La base de producción está en el plan Free
+
+**El sistema cobra dinero real sobre una base sin copias de seguridad.** Eso es
+lo que hay que saber; lo demás son consecuencias.
+
+| | |
+|---|---|
+| **Sin copias** | Un borrado accidental **no se puede deshacer**. Pro trae copia diaria |
+| **Se pausa a los 7 días** sin peticiones | Un proyecto pausado no da un error legible: la aplicación entera deja de responder hasta que alguien lo reactiva a mano |
+
+Lo segundo está **parcheado** con un cron de Vercel (`/api/cron/keepalive`, todos
+los días a las 07:00 UTC) que hace una consulta mínima. **Lo primero no tiene
+parche**: o se paga Pro, o se saca un `pg_dump` a mano cada tanto.
+
+> Con 0 alumnas era una decisión razonable. Con alumnas pagando, cada día que
+> pasa sin copia es un día de datos que no se pueden recuperar.
 
 ### Deuda técnica conocida
 

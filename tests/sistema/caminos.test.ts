@@ -482,3 +482,51 @@ describe("el camino de alta no tiene callejones sin salida", () => {
     expect(leer("src/features/auth/registro.ts")).toMatch(/redirect\("\/dashboard\/plan" as never\)/);
   });
 });
+
+// ── El keepalive de Supabase ────────────────────────────────────────────────
+
+describe("el cron que evita que Supabase pause el proyecto", () => {
+  const ruta = () => leer("app/api/cron/keepalive/route.ts");
+
+  it("está declarado en vercel.json y apunta a la ruta que existe", () => {
+    const cfg = JSON.parse(leer("vercel.json"));
+    const cron = (cfg.crons ?? []).find((c: { path: string }) => c.path.includes("keepalive"));
+    expect(cron, "no hay cron de keepalive en vercel.json").toBeDefined();
+    // Un cron que apunta a una ruta inexistente falla en silencio: Vercel lo
+    // ejecuta, devuelve 404, y el proyecto se pausa igual a los 7 días.
+    expect(existsSync(`app${cron!.path}/route.ts`), `${cron!.path} no existe`).toBe(true);
+  });
+
+  it("corre al menos una vez cada 3 días", () => {
+    // Supabase pausa a los 7. Cualquier cosa más espaciada no sirve.
+    const cfg = JSON.parse(leer("vercel.json"));
+    const cron = (cfg.crons ?? []).find((c: { path: string }) => c.path.includes("keepalive"));
+    const [, , diaDelMes] = cron!.schedule.split(" ");
+    const cadaCuantosDias = diaDelMes === "*" ? 1 : Number(diaDelMes.replace("*/", "")) || 99;
+    expect(cadaCuantosDias, `corre cada ${cadaCuantosDias} días, y Supabase pausa a los 7`)
+      .toBeLessThanOrEqual(3);
+  });
+
+  it("exige el secreto, y si no está configurado se cierra", () => {
+    const src = ruta();
+    expect(src).toMatch(/Bearer \$\{esperado\}/);
+    // 🔴 Sin CRON_SECRET tiene que responder 503, NO quedar abierto: es una ruta
+    //    que consulta con service_role. Fallar hacia el lado cerrado.
+    expect(src).toMatch(/if \(!esperado\) \{[\s\S]{0,300}status: 503/);
+    expect(src).toMatch(/status: 401/);
+  });
+
+  it("la consulta es barata y no devuelve filas", () => {
+    const src = ruta();
+    expect(src).toMatch(/count: "estimated", head: true/);
+    // Sobre una tabla que no crece.
+    expect(src).toMatch(/\.from\("categories"\)/);
+  });
+
+  it("un fallo se ve, no se traga", () => {
+    // Un keepalive que falla en silencio no mantiene nada despierto, y nadie se
+    // entera hasta que el proyecto ya se pausó.
+    expect(ruta()).toMatch(/status: 500/);
+    expect(ruta()).toMatch(/export const dynamic = "force-dynamic"/);
+  });
+});
