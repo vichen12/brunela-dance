@@ -29,7 +29,7 @@ export default async function PlanPage() {
       // seguridad vive en la pantalla.
       supabase
         .from("packs")
-        .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured")
+        .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, stripe_price_id_test, stripe_price_id_live")
         .order("display_order"),
       // Las suyas: `pack_purchases_select_own` no devuelve las de nadie mas.
       supabase.from("pack_purchases").select("pack_id, purchased_at"),
@@ -60,9 +60,25 @@ export default async function PlanPage() {
     currency: string;
     cover_image_url: string | null;
     is_featured: boolean;
+    stripe_price_id_test: string | null;
+    stripe_price_id_live: string | null;
   };
 
-  const packs = ((packsData ?? []) as PackFila[]).map((p) => ({
+  /**
+   * ⚠️ NO SE OFRECE LO QUE NO SE PUEDE COBRAR.
+   *
+   *    Publicar comprueba que exista el price del modo activo, pero eso corre
+   *    UNA VEZ, al tocar Publicar. Al pasar a produccion, un pack publicado en
+   *    prueba SIGUE publicado y sin price de live: la alumna lo ve, lo toca, y
+   *    recibe un error. Una vitrina que no vende es peor que no tener vitrina.
+   *
+   *    El modo sale de la clave, igual que en el checkout: una sola fuente.
+   */
+  const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
+  const sePuedeCobrar = (p: PackFila) =>
+    (modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test) !== null;
+
+  const packs = ((packsData ?? []) as PackFila[]).filter(sePuedeCobrar).map((p) => ({
     slug: p.slug,
     nombre: p.name_i18n?.es ?? p.slug,
     descripcion: p.description_i18n?.es ?? "",

@@ -108,6 +108,9 @@ export default async function AdminPacksPage({
 
   // Los avisos se resuelven ACA, en el servidor, y bajan como objeto plano.
   // Todos en paralelo: en serie serian dos viajes a Stripe por cada pack.
+  // El modo activo sale de la clave, igual que en el checkout.
+  const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
+
   const packs: PackAdmin[] = await Promise.all(
     ((packsData ?? []) as PackCrudo[]).map(async (p) => {
       const [test, live] = await Promise.all([
@@ -196,8 +199,15 @@ export default async function AdminPacksPage({
                         {p.compras === 1 ? "1 vendido" : `${p.compras} vendidos`}
                       </span>
                     )}
-                    {!p.stripe_price_id_test && !p.stripe_price_id_live && (
-                      <span style={{ color: "#92400e", fontWeight: 600 }}>sin identificador de Stripe</span>
+                    {/* ⚠️ Se mira el price del MODO ACTIVO, no "alguno de los
+                        dos". Con solo el de prueba, en produccion la alumna ve
+                        el pack y al comprarlo recibe un error. */}
+                    {!(modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test) && (
+                      <span style={{ color: p.is_published ? "#991b1b" : "#92400e", fontWeight: 700 }}>
+                        {p.is_published
+                          ? `⚠️ publicado y SIN identificador de ${modoEsLive ? "producción" : "prueba"}: no se le muestra a nadie`
+                          : `sin identificador de ${modoEsLive ? "producción" : "prueba"}`}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -298,3 +298,30 @@ describe("un pack regalado con cupón se registra igual", () => {
     expect(fn).toMatch(/ESTADOS_BUENOS = new Set\(\["paid", "no_payment_required"\]\)/);
   });
 });
+
+// ── No se ofrece lo que no se puede cobrar ──────────────────────────────────
+
+describe("un pack sin price del modo activo no se le muestra a nadie", () => {
+  it("la pantalla de planes lo filtra", () => {
+    // Publicar comprueba el price del modo activo, pero eso corre UNA VEZ. Al
+    // pasar a producción, un pack publicado en prueba sigue publicado y sin
+    // price de live: se ve, se toca, y da error. Una vitrina que no vende es
+    // peor que no tener vitrina.
+    const src = leer("app/dashboard/plan/page.tsx");
+    expect(src).toMatch(/const sePuedeCobrar/);
+    expect(src).toMatch(/\.filter\(sePuedeCobrar\)/);
+  });
+
+  it("mira el modo ACTIVO, no «alguno de los dos»", () => {
+    const src = leer("app/dashboard/plan/page.tsx");
+    expect(src).toMatch(/modoEsLive \? p\.stripe_price_id_live : p\.stripe_price_id_test/);
+    // El modo sale de la clave, igual que en el checkout: una sola fuente.
+    expect(src).toMatch(/sk\|rk\)_live_/);
+  });
+
+  it("el panel le dice a Brunela por qué no aparece", () => {
+    const src = leer("app/admin/packs/page.tsx");
+    expect(src).toMatch(/no se le muestra a nadie/);
+    expect(src).toMatch(/modoEsLive \? p\.stripe_price_id_live : p\.stripe_price_id_test/);
+  });
+});
