@@ -92,12 +92,43 @@ export function SignInForm({ error, success, callbackUrl }: Props) {
         {error ? <div className="auth-alert error">{error}</div> : null}
 
         <SubmitButton />
-      </form>
+
+          {/* ⚠️ SIN ESTO NO HABIA FORMA DE REGISTRARSE DESDE ACA.
+              El alta solo se alcanzaba eligiendo un plan en la portada. Quien
+              llegaba directo a /sign-in -- enlace guardado, URL escrita a mano,
+              o el link que le pasaron -- se quedaba sin salida.
+
+              /registro ya funciona sin plan: muestra "podes elegir tu plan al
+              terminar" y el onboarding termina en /dashboard/plan. */}
+          <p className="auth-alt">
+            {t("auth.noAccount")}{" "}
+            <Link href="/registro" className="auth-alt-link">{t("auth.register")}</Link>
+          </p>
+        </form>
 
       <style>{`
         .auth-form-wrap {
           width: 100%;
         }
+
+          .auth-alt {
+            margin-top: 1.15rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--muted);
+          }
+
+          /* --pink-deep y no --pink: aca hay texto para leer, no una etiqueta
+             que se mira de reojo. Ver la nota de contraste en CLAUDE.md. */
+          .auth-alt-link {
+            color: var(--pink-deep);
+            font-weight: 700;
+            text-decoration: none;
+          }
+
+          .auth-alt-link:hover {
+            text-decoration: underline;
+          }
 
         .auth-divider {
           display: flex;

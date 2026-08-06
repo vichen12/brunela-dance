@@ -447,3 +447,38 @@ describe("quien compró un pack ve lo suyo, no un catálogo con candados", () =>
     expect(lib()).toMatch(/bunny_video_id: null/);
   });
 });
+
+// ── Se puede llegar a registrarse desde cualquier lado ──────────────────────
+
+describe("el camino de alta no tiene callejones sin salida", () => {
+  it("/sign-in ofrece registrarse", () => {
+    // El alta sólo se alcanzaba eligiendo un plan en la portada. Quien llegaba
+    // directo a /sign-in -- enlace guardado, URL a mano, un link que le pasaron
+    // -- se quedaba sin salida.
+    const src = leer("components/sign-in-form.tsx");
+    expect(src).toMatch(/href="\/registro"/);
+    expect(src).toMatch(/t\("auth\.noAccount"\)/);
+  });
+
+  it("/registro ofrece iniciar sesión", () => {
+    expect(leer("app/registro/page.tsx")).toMatch(/href="\/sign-in"/);
+  });
+
+  it("el texto está en los cuatro idiomas", () => {
+    // La pantalla es pública y tiene selector ES/EN/FR/IT. Una clave que falta
+    // no rompe: renderiza el nombre de la clave, que es peor.
+    const i18n = leer("src/i18n/public.ts");
+    for (const k of ["auth.noAccount", "auth.register"]) {
+      const veces = i18n.split(`"${k}"`).length - 1;
+      expect(veces, `"${k}" está en ${veces} idiomas, deberían ser 4`).toBe(4);
+    }
+  });
+
+  it("registrarse SIN plan es un camino válido, no un error", () => {
+    // No hay que exigir plan para crear la cuenta: se elige después.
+    const registro = leer("app/registro/page.tsx");
+    expect(registro).toMatch(/Podés elegir tu plan al terminar/);
+    // Y el onboarding sin plan cae en la pantalla de planes, no en el aire.
+    expect(leer("src/features/auth/registro.ts")).toMatch(/redirect\("\/dashboard\/plan" as never\)/);
+  });
+});
