@@ -268,9 +268,37 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
   const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
-  // Sin plan: RLS le devuelve CERO clases, asi que veria el estudio vacio y
-  // pareceria roto. Se le muestra el catalogo con candado -- ver `vitrina`.
-  const sinPlan = !isAdmin && (profileData?.membership_tier ?? "none") === "none";
+  /**
+   * ⚠️ TENER UN PACK NO ES "NO TENER PLAN".
+   *
+   *    Esto miraba solo `membership_tier === "none"`, y quien compra un pack
+   *    SIGUE en 'none': un pack da acceso a clases sueltas, no un plan. Asi que
+   *    a una alumna que YA HABIA PAGADO se le mostraba el catalogo entero con
+   *    candado, y cada tarjeta -- incluida la que compro -- enlazaba a
+   *    /dashboard/plan. No podia ni abrir su propia clase desde la biblioteca.
+   *
+   *    La pregunta correcta no es "¿que plan tiene?" sino "¿tiene algo?".
+   */
+  const { count: comprasPropias } = await supabase
+    .from("pack_purchases")
+    .select("id", { count: "exact", head: true });
+
+  const sinNada =
+    !isAdmin &&
+    (profileData?.membership_tier ?? "none") === "none" &&
+    (comprasPropias ?? 0) === 0;
+
+  /**
+   * "Explorar todo": ver el catalogo completo con candados aun teniendo acceso.
+   *
+   * Va como conmutador de VISTA y no como un quinto filtro porque no acota el
+   * conjunto: lo cambia. Los filtros contestan "de lo que veo, ¿cual?"; esto
+   * contesta "¿que estoy mirando?". Mezclarlos haria que "Explorar todo" con un
+   * filtro de plan puesto signifique dos cosas a la vez.
+   *
+   * Para quien no tiene nada da igual: ya esta viendo todo.
+   */
+  const modoTodo = sinNada || params.ver === "todo";
 
   // ── Fase D: lo que puede filtrar SQL, lo filtra SQL ───────────────────────
   //
@@ -321,7 +349,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   //    saltarse el pago entero. La tarjeta de la vitrina tampoco enlaza al
   //    detalle: lleva a /dashboard/plan.
   let vitrina: VideoRecord[] = [];
-  if (sinPlan) {
+  if (modoTodo) {
     const admin = createSupabaseAdminClient();
     const { data } = await admin
       .from("videos")
@@ -343,9 +371,28 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   // boton -- que seria un viaje mas en cada carga.
   const crudas = (videosData ?? []) as unknown as VideoRecord[];
   const tope = POR_PAGINA * (pagina + 1);
-  const hayMasPaginas = !sinPlan && crudas.length > tope;
+  const hayMasPaginas = !modoTodo && crudas.length > tope;
 
-  const videos = (sinPlan ? vitrina : crudas.slice(0, tope));
+  const videos = (modoTodo ? vitrina : crudas.slice(0, tope));
+
+  /**
+   * Que clases puede ver DE VERDAD, para poner el candado tarjeta por tarjeta.
+   *
+   * ⚠️ Se pregunta con el cliente DE LA ALUMNA: contesta RLS, o sea la MISMA
+   *    regla que decide si el reproductor va a servir el video. Un calculo
+   *    aparte en JavaScript podria decir que si y el proxy que no.
+   *
+   *    Solo se piden los `id`. Y solo hace falta en modo explorar teniendo
+   *    acceso: quien no tiene nada tiene todo bloqueado y no hay que preguntar.
+   */
+  const accesibles = new Set<string>();
+  if (modoTodo && !sinNada) {
+    const { data } = await supabase.from("videos").select("id");
+    for (const v of (data ?? []) as { id: string }[]) accesibles.add(v.id);
+  }
+
+  /** Con candado y sin enlace al detalle. */
+  const bloqueada = (id: string) => modoTodo && !accesibles.has(id);
   const progressMap = new Map(progressData.map((p) => [p.video_id, p]));
 
   // Los slugs se canonizan ANTES de armar los chips. Sin esto, mientras las
@@ -593,6 +640,50 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
         )}
 
         {/* Filter tabs */}
+        {/* ── Conmutador de vista ──────────────────────────────────────────
+            Solo para quien tiene algo. Quien no tiene nada ya esta viendo el
+            catalogo completo: ofrecerle "Explorar todo" seria un boton que no
+            hace nada.
+
+            Va ARRIBA de las categorias y con otra forma (recuadro, no pastilla)
+            porque no es un filtro mas: cambia QUE conjunto se mira, mientras
+            que los de abajo lo acotan. */}
+        {!sinNada && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {([
+              { key: "", label: "Mis clases", ayuda: "Lo que ya podés ver" },
+              { key: "todo", label: "Explorar todo", ayuda: "El catálogo completo" },
+            ] as const).map((v) => {
+              const activa = (v.key === "todo") === modoTodo;
+              // Conserva busqueda y filtros: cambiar de vista no puede borrar en
+              // silencio lo que la alumna venia buscando.
+              const qs = [
+                v.key ? `ver=todo` : "",
+                activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
+                busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
+                fNivel ? `nivel=${fNivel}` : "",
+                fDuracion ? `dur=${fDuracion}` : "",
+                fPlan ? `plan=${fPlan}` : "",
+                fEstado ? `estado=${fEstado}` : "",
+              ].filter(Boolean).join("&");
+              return (
+                <Link
+                  key={v.key || "mias"}
+                  href={`/dashboard/library${qs ? `?${qs}` : ""}` as never}
+                  title={v.ayuda}
+                  style={{
+                    padding: "9px 20px", textDecoration: "none", borderRadius: 12,
+                    fontSize: 13, fontWeight: 700,
+                    background: activa ? "var(--pink-mid)" : "#fff",
+                    color: activa ? "#fff" : "var(--ink)",
+                    border: activa ? "none" : "1.5px solid var(--pink-line)",
+                  }}
+                >{v.label}</Link>
+              );
+            })}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {filters.map((f) => (
             <Link
@@ -609,6 +700,9 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                     fDuracion ? `dur=${fDuracion}` : "",
                     fPlan ? `plan=${fPlan}` : "",
                     fEstado ? `estado=${fEstado}` : "",
+                  // Conserva la vista: cambiar de filtro estando en "Explorar todo" no
+                  // puede devolverla a "Mis clases" en silencio.
+                  modoTodo && !sinNada ? "ver=todo" : ""
                   ].filter(Boolean).join("&");
                   return `/dashboard/library${qs ? `?${qs}` : ""}`;
                 })() as never
@@ -624,10 +718,19 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           ))}
         </div>
 
-        {/* Count */}
+        {/* Contador.
+            ⚠️ En "Explorar todo" el numero grande es el CATALOGO, no lo que ella
+               puede ver. Decir "34 clases" a secas ahi seria mentirle sobre lo
+               que compro, que es justo la sensacion que este cambio viene a
+               arreglar. Por eso al lado va cuantas tiene abiertas. */}
         <p className="eyebrow">
           {visible.length} {visible.length === 1 ? "clase" : "clases"}
           {busqueda ? ` para “${busqueda}”` : ""}
+          {modoTodo && !sinNada
+            ? ` · ${visible.filter((v) => !bloqueada(v.id)).length} ${
+                visible.filter((v) => !bloqueada(v.id)).length === 1 ? "tuya" : "tuyas"
+              }`
+            : ""}
           {isAdmin ? ` (${visible.filter(v => v.status !== "published").length} borradores)` : ""}
         </p>
 
@@ -707,13 +810,19 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                     </div>
                   )}
 
-                  {/* Sin plan la tarjeta NO enlaza al detalle: lleva a elegir
-                      plan. El detalle es donde se firma la URL del video. */}
+                  {/* ⚠️ EL CANDADO ES POR CLASE, NO POR ALUMNA.
+                      Era una sola bandera basada en `membership_tier === none`,
+                      y quien compra un pack SIGUE en 'none'. Resultado: veia
+                      candado en TODO -- incluida la clase que acababa de pagar --
+                      y la tarjeta la mandaba a comprar un plan. Se cobro y no dio
+                      acceso, aunque RLS si se lo daba.
+                      Ahora lo decide `bloqueada()`, que sale de RLS: la misma
+                      regla que usa el reproductor. */}
                   <Link
-                    href={(sinPlan ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
+                    href={(bloqueada(video.id) ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
                     style={{ textDecoration: "none", display: "block", height: "100%", position: "relative" }}
                   >
-                    {sinPlan && (
+                    {bloqueada(video.id) && (
                       <span style={{
                         position: "absolute", top: 12, right: 12, zIndex: 3,
                         display: "inline-flex", alignItems: "center", gap: 6,
@@ -836,6 +945,9 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                   fDuracion ? `dur=${fDuracion}` : "",
                   fPlan ? `plan=${fPlan}` : "",
                   fEstado ? `estado=${fEstado}` : "",
+                  // Conserva la vista: cambiar de filtro estando en "Explorar todo" no
+                  // puede devolverla a "Mis clases" en silencio.
+                  modoTodo && !sinNada ? "ver=todo" : "",
                   `pagina=${pagina + 1}`,
                 ].filter(Boolean).join("&");
                 return `/dashboard/library?${qs}`;

@@ -385,3 +385,65 @@ describe("el identificador de Stripe se carga en el panel del pack", () => {
     }
   });
 });
+
+// ── La biblioteca de quien pagó ─────────────────────────────────────────────
+
+describe("quien compró un pack ve lo suyo, no un catálogo con candados", () => {
+  const lib = () => leer("app/dashboard/library/page.tsx");
+
+  it("el bloqueo NO se decide por membership_tier", () => {
+    // 🔴 ESTE ERA EL BUG, y costó una venta: `sinPlan = tier === "none"`, y
+    //    quien compra un pack SIGUE en 'none'. Se le mostraba el catálogo entero
+    //    con candado -- incluida la clase que acababa de pagar -- y la tarjeta
+    //    la mandaba a /dashboard/plan. Se cobró y no dio acceso.
+    expect(lib(), "volvió el bloqueo global por tier").not.toMatch(/const sinPlan\s*=/);
+    expect(lib()).toMatch(/const sinNada\s*=/);
+  });
+
+  it("las compras cuentan para decidir si tiene algo", () => {
+    expect(lib()).toContain('.from("pack_purchases")');
+    expect(lib()).toMatch(/comprasPropias \?\? 0\) === 0/);
+  });
+
+  it("el candado se decide POR CLASE y lo dice RLS", () => {
+    const src = lib();
+    // `accesibles` sale de consultar `videos` con el cliente de la alumna: la
+    // misma regla que usa el reproductor. Calcularlo aparte en JavaScript
+    // podría decir que sí donde el proxy dice que no.
+    expect(src).toMatch(/const bloqueada = \(id: string\)/);
+    expect(src).toMatch(/supabase\.from\("videos"\)\.select\("id"\)/);
+    expect(src).toMatch(/href=\{\(bloqueada\(video\.id\) \? "\/dashboard\/plan"/);
+  });
+
+  it("existe la vista de catálogo completo, y sólo para quien tiene algo", () => {
+    const src = lib();
+    expect(src).toMatch(/params\.ver === "todo"/);
+    expect(src).toMatch(/\{!sinNada && \(/);
+    expect(src).toContain("Explorar todo");
+    expect(src).toContain("Mis clases");
+  });
+
+  it("cambiar de filtro NO te saca de «Explorar todo»", () => {
+    // El propio archivo ya documenta este fallo con los otros filtros: perder
+    // el estado al navegar cambia la lista por dos motivos a la vez.
+    const src = lib();
+    const armadores = src.split('fEstado ? `estado=${fEstado}` : ""').length - 1;
+    const conservan = src.split('modoTodo && !sinNada ? "ver=todo" : ""').length - 1;
+    // Uno de los armadores es el del propio conmutador, que pone `ver` a mano.
+    expect(conservan, `${armadores} armadores de URL, ${conservan} conservan la vista`)
+      .toBe(armadores - 1);
+  });
+
+  it("el contador no miente en «Explorar todo»", () => {
+    // Ahí el número grande es el catálogo, no lo que ella puede ver. Decir
+    // "34 clases" a secas sería exactamente la sensación que esto viene a
+    // arreglar.
+    expect(lib()).toMatch(/modoTodo && !sinNada[\s\S]{0,120}!bloqueada\(v\.id\)/);
+  });
+
+  it("la vitrina sigue sin exponer nada reproducible", () => {
+    expect(lib()).toMatch(/NUNCA agregar aca bunny_video_id/);
+    expect(lib()).toMatch(/stream_playback_id: null/);
+    expect(lib()).toMatch(/bunny_video_id: null/);
+  });
+});
