@@ -257,3 +257,40 @@ describe("los documentos pagos no se firman para quien no los pago", () => {
     expect(pagina()).toMatch(/if \(pedido === undefined\) return false;/);
   });
 });
+
+// ── Los errores tienen que ser legibles ─────────────────────────────────────
+
+describe("cuando algo revienta, se entiende", () => {
+  it("hay limite de error en /admin, en /dashboard y en la raiz", () => {
+    // Sin error.tsx, Next muestra "Application error: a client-side exception
+    // has occurred" y NADA mas: ni que paso, ni si reintentar. El 2026-08-06
+    // costo dos rondas de diagnostico averiguar que era una pestaña vieja.
+    for (const p of ["app/admin/error.tsx", "app/dashboard/error.tsx", "app/global-error.tsx"]) {
+      expect(existsSync(p), `falta ${p}: los errores saldrian genericos`).toBe(true);
+    }
+  });
+
+  it("el caso de la pestaña vieja tiene texto propio", () => {
+    const src = leer("components/pantalla-error.tsx");
+    // Es el que mas va a pasar: despues de cada despliegue, una pestaña abierta
+    // manda ids de acciones que el servidor nuevo ya no conoce. No es una falla
+    // y se arregla recargando, asi que no puede decir "algo se rompio".
+    expect(src).toMatch(/UnrecognizedActionError/);
+    expect(src).toMatch(/Server Action .\*? was not found|Server Action .* was not found/);
+    expect(src).toMatch(/ChunkLoadError/);
+    expect(src).toContain("Recargá la página");
+  });
+
+  it("el detalle tecnico llega a la consola aunque en pantalla se vea amable", () => {
+    // En produccion Next oculta el mensaje real. Si no se registra, se pierde.
+    expect(leer("components/pantalla-error.tsx")).toMatch(/console\.error\(/);
+  });
+
+  it("global-error trae su propio <html> y <body>", () => {
+    // Reemplaza al layout raiz entero: sin eso no dibuja nada y el fallo del
+    // fallo queda invisible.
+    const src = leer("app/global-error.tsx");
+    expect(src).toMatch(/<html/);
+    expect(src).toMatch(/<body/);
+  });
+});
