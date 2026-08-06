@@ -453,7 +453,7 @@ base vieja) y de ahí a `fra1` con la mudanza a Europa.
 la respuesta):
 
 ```bash
-curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+curl -sI https://bruneladance.com/sign-in | grep -i x-vercel-id
 # x-vercel-id: gru1::fra1::xxxxx
 #              |      `-- región donde CORRIÓ la función  <- esto es lo que importa
 #              `--------- borde por donde ENTRÓ el request (varía según desde dónde mires)
@@ -634,7 +634,8 @@ En el panel del proyecto **nuevo**:
 - *Authentication → Providers → Google*: pegar el **mismo** Client ID y Client
   Secret que se usan hoy.
 - *Authentication → URL Configuration*: Site URL y Redirect URLs
-  (`https://brunela-dance.vercel.app/**` y `http://localhost:3000/**`).
+  (`https://bruneladance.com/**`, `https://brunela-dance.vercel.app/**` para las
+  vistas previa de Vercel, y `http://localhost:3000/**`).
 
 #### 🔴 Paso 4 — Google Cloud Console (esto es lo que rompe el login)
 
@@ -810,6 +811,6 @@ select count(*) from auth.identities;
 6. **La región**, que es el motivo de todo esto:
 
 ```bash
-curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+curl -sI https://bruneladance.com/sign-in | grep -i x-vercel-id
 # esperado: xxx1::fra1::...   <- el SEGUNDO segmento tiene que decir fra1
 ```

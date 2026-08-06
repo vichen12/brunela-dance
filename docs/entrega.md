@@ -164,27 +164,35 @@ El onboarding inicial está; cambiar los datos después, no. La policy y el
 permiso ya están puestos, así que es sólo pantalla.
 
 ### Contenido
-El sistema se entrega **con datos de demostración**, no con el catálogo real.
+El sistema se entrega **sin contenido**: las clases, los programas y las
+sesiones los carga Brunela. Los datos de demostración se borraron el 2026-08-06
+(ver § 6).
 Ver la sección siguiente.
 
 ---
 
-## 6. Antes de abrir: limpiar los datos de prueba
+## 6. La base está limpia
 
-Hoy la base tiene contenido de demostración que **una alumna real vería**:
+Los datos de demostración se borraron el **2026-08-06**. Lo que hay hoy:
 
-| Tabla | Filas | De prueba |
-|---|---:|---:|
-| Clases | 19 | **19** (`demo-*` y `prueba`) |
-| Programas | 3 | **3** (`demo-*`) |
-| Salas de chat | 10 | **8** (DMs de cuentas de prueba) |
-| Perfiles | 9 | **4** (`*@brunela.test`) |
-| Categorías | 7 | 0 — son las reales |
+| | |
+|---|---:|
+| Clases, programas, sesiones, packs | **0** |
+| Salas y mensajes de chat | **0** |
+| Reservas, enlaces de Zoom, invitaciones | **0** |
+| Cuentas | **4** — las 3 de administración + una de Vincenzo |
+| **Categorías** | **7** — las reales, conservadas |
 
-**Las categorías se quedan.** El resto hay que borrarlo antes de abrir, o el
-estudio abre con clases que no existen.
+Verificado tabla por tabla, y **sin filas huérfanas**: las cuentas de
+autenticación y los perfiles cuadran, no quedó ningún participante fantasma en
+salas de chat ni ninguna referencia colgada.
 
----
+El registro de eventos de Stripe se conserva a propósito: es el rastro de
+auditoría de los cobros y no se borra nunca.
+
+> Para volver a llenar la base con contenido de ejemplo —por ejemplo para
+> evaluar un diseño— está `scripts/seed-demo.sql`, que se puede correr las veces
+> que haga falta.
 
 ## 7. Dónde está cada cosa
 

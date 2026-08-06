@@ -66,7 +66,7 @@ funciones a un océano de la base: ~160 ms por consulta, peor que no migrar.
 Verificar en qué región corre de verdad — no confiar en el panel:
 
 ```bash
-curl -sI https://brunela-dance.vercel.app/sign-in | grep -i x-vercel-id
+curl -sI https://bruneladance.com/sign-in | grep -i x-vercel-id
 # gru1::fra1::xxxxx
 #       ^^^^ region donde CORRIO la funcion (el primero es solo el borde de entrada)
 ```
@@ -112,22 +112,53 @@ y 5.744 líneas.
   tabla, `authenticated` sin `DELETE` en ninguna y sólo-lectura en casi todas.
   Si aparece un `42501 permission denied`, es esto: se otorga la operación
   puntual sobre esa tabla, no se vuelve al grant global.
-- **Contenido: vacío.** 0 videos, 0 categorías, 0 programas, 0 sesiones. La data
-  demo del proyecto viejo no se migró a propósito. Para poblar y evaluar diseño:
-  `scripts/seed-demo.sql` (idempotente, todo con prefijo `demo-`).
+- **Contenido: vacío, y limpio.** Los datos de prueba se borraron el
+  2026-08-06, verificado tabla por tabla:
+
+  | | |
+  |---|---:|
+  | videos, programas, días, sesiones, packs | **0** |
+  | reservas, enlaces de Zoom, invitaciones | **0** |
+  | salas y mensajes de chat | **0** |
+  | trabajos de muxeo, logros, progreso | **0** |
+  | **categorías** (las reales) | **7** |
+  | **site_settings** | **7** |
+
+  **Cero huérfanos**: `auth.users` y `profiles` cuadran 4 a 4, ningún
+  participante fantasma en salas, ningún `updated_by` colgado.
+
+  `subscription_webhook_events` (16) se conserva: es el rastro de auditoría de
+  Stripe y no se borra nunca.
+
+  Para volver a poblar y evaluar diseño: `scripts/seed-demo.sql` (idempotente,
+  todo con prefijo `demo-`). El script del borrado quedó en
+  `scripts/borrar-datos-de-prueba.sql`, con las dos trampas de claves foráneas
+  que costó descubrir.
 
 ### Cuentas
+
+**Cuatro, y son todas.** Al 2026-08-06 no queda ninguna cuenta de prueba.
 
 | Correo | admin | dueña | tier |
 |---|---|---|---|
 | `brunela.dance@gmail.com` | sí | **sí** | principal |
 | `vichendallape@gmail.com` | sí | no | principal |
 | `dallapevichen12@gmail.com` | sí | no | principal |
-| `dallapevincenzo@gmail.com` | **no** | no | none |
+| `vidallape8@gmail.com` | no | no | none |
 
-Las tres primeras se importaron del proyecto viejo con sus UUID originales. La
-cuarta se creó sola al entrar con Google durante las pruebas — **decidir si se
-le da admin o se borra**.
+Las tres admin se importaron del proyecto viejo con sus UUID originales. La
+cuarta es de Vincenzo, sin plan.
+
+> **Se borraron el 2026-08-06**: las cuatro `@brunela.test`,
+> `dallapevincenzo@gmail.com` y `brunela.sssdance@gmail.com`.
+>
+> ⚠️ La última tenía una suscripción `trialing` en Stripe (modo test), y el
+> orden importó: **cancelar en Stripe, esperar el webhook, y recién después
+> borrar la cuenta.** Al revés, `subscriptions.user_id` es `on delete cascade`,
+> así que la fila desaparece y el evento siguiente intenta reescribirla contra
+> un perfil inexistente — violación de clave foránea, 500, y Stripe reintentando
+> durante días. Se hizo bien: los dos eventos de la cancelación llegaron antes
+> del borrado.
 
 **Quién es la dueña del estudio se DECLARA**, no se deduce: columna
 `profiles.is_studio_owner`, con índice único parcial y check constraint. Antes
@@ -744,19 +775,28 @@ Hoy la landing tiene **todo hardcodeado** en `app/page.tsx` y `HomePage` **no es
 async**: nunca leyó la base. El primer cambio que la vuelva dinámica —el de
 precios— es el que abre ese camino; el resto se apoya en él.
 
-### 🔴 ANTES DE ABRIR AL PÚBLICO — borrar los datos de prueba
+### ✅ Datos de prueba borrados (2026-08-06)
 
-Una alumna real vería un catálogo entero que no existe:
+La base quedó vacía de contenido inventado y **sin una sola fila huérfana**. El
+detalle está arriba, en *Base de datos*.
 
-| Tabla | Filas | De prueba |
-|---|---:|---:|
-| Clases | 19 | **19** (`demo-*`, `prueba`) |
-| Programas | 3 | **3** (`demo-*`) |
-| Salas de chat | 10 | **8** (DMs de cuentas de prueba) |
-| Perfiles | 9 | **4** (`*@brunela.test`) |
-| Categorías | 7 | 0 — **son las reales, se quedan** |
+**Tres cosas que costó descubrir y quedaron escritas en
+`scripts/borrar-datos-de-prueba.sql`:**
 
-Se borran cuando esté todo cerrado, justo antes del pase a producción.
+1. **Dos claves foráneas `RESTRICT` frenan el borrado** — `pack_purchases →
+   packs` y `program_days → videos`. Hay que borrar compras y días primero, o
+   falla a mitad de camino.
+2. **Borrar una cuenta NO borra sus DM.** `chat_rooms.participant_ids` es un
+   `uuid[]`, no una clave foránea: no hay cascada, y la sala queda con un
+   participante fantasma. Se borran por participante y no por nombre, porque los
+   nombres llevan una raya larga (—) y un `like` con ese carácter depende de
+   cómo lo pegue el editor.
+3. **Los mensajes no eran de las cuentas de prueba**, sino de las reales. Borrar
+   las cuentas no se los llevaba: había que borrar las salas.
+
+⚠️ **El video con archivo en Bunny se borra desde `/admin/videos`, no por SQL**:
+esa acción llama a `deleteBunnyVideo`. Por SQL quedaría el archivo huérfano
+ocupando espacio y facturando.
 
 ### Bloqueantes para dar por cerrada la migración
 
@@ -765,7 +805,7 @@ Se borran cuando esté todo cerrado, justo antes del pase a producción.
       las 7 pruebas de corte que quedó sin hacer.
 - [ ] **Checkout de prueba** con `4242 4242 4242 4242` contra la base nueva:
       confirmar que la suscripción se escribe y el tier se desbloquea.
-- [ ] **Decidir qué pasa con `dallapevincenzo@gmail.com`** (admin o borrarla).
+- [x] ~~Decidir qué pasa con `dallapevincenzo@gmail.com`~~ — borrada el 2026-08-06.
 
 ### Antes de abrir al público
 

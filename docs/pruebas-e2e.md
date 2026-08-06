@@ -1,7 +1,33 @@
 # Guion de pruebas end-to-end
 
-**Entorno:** `https://brunela-dance.vercel.app` (producción, Fráncfort).
+**Entorno:** `https://bruneladance.com` (producción, Fráncfort).
 **Fecha del escenario:** 2026-08-03.
+
+> ## 🔴 ESTE GUION NO SE PUEDE CORRER TAL CUAL — leer antes de empezar
+>
+> **El 2026-08-06 se borraron las cuentas de prueba y todo el contenido demo**,
+> justo antes de abrir al público. Las cinco cuentas que se nombran acá
+> —`sin-plan@`, `corps@`, `solista@`, `principal@brunela.test` y
+> `brunela.sssdance@gmail.com`— **ya no existen**, y las clases, programas y
+> sesiones tampoco.
+>
+> Los conteos que aparecen más abajo (19 clases, 8 para corps, 16 para
+> solista…) eran de esa data. **Hoy todo daría cero.**
+>
+> **Para volver a correrlo hay que rehacer el escenario:**
+>
+> 1. `scripts/seed-demo.sql` — recrea clases, programas y sesiones. Es
+>    idempotente y todo lleva prefijo `demo-`.
+> 2. Crear a mano las cuatro cuentas `@brunela.test` y asignarles su plan desde
+>    `/admin/users`.
+> 3. Para la sección de suscripción real, una cuenta propia y un checkout de
+>    prueba.
+>
+> Y al terminar, volver a limpiar: `scripts/borrar-datos-de-prueba.sql` deja el
+> orden correcto de borrado, con las dos claves foráneas que lo frenan.
+>
+> **El guion en sí sigue siendo válido**: lo que caducó son las cuentas y los
+> números, no las pruebas.
 
 Ordenado por recorrido de alumna, no por módulo: si algo falla, falla en el
 orden en que lo viviría ella.
@@ -46,7 +72,7 @@ Leelo antes de empezar, así no perseguís fantasmas.
 
 ## 0 · Antes de empezar
 
-- [ ] **0.1** Abrí `https://brunela-dance.vercel.app` sin sesión.
+- [ ] **0.1** Abrí `https://bruneladance.com` sin sesión.
       **Ver:** la landing, con la sección de video mostrando la portada.
       **Fallo:** un 404 de `/videos/brunela-trailer.mp4` en la consola (si el
       tráiler todavía no se subió, es esperado y no bloquea nada).
@@ -105,7 +131,7 @@ exista, ej. `prueba1@brunela.test`).
       **Fallo:** que te muestre los tres planes para elegir de nuevo.
 
 - [ ] **1.8 Pagá** con `4242 4242 4242 4242`.
-      **Ver:** volvés a `https://brunela-dance.vercel.app/dashboard/plan` con
+      **Ver:** volvés a `https://bruneladance.com/dashboard/plan` con
       un cartel de éxito.
       **🔴 Fallo grave:** que te mande a `localhost:3000`. Significa que
       `NEXT_PUBLIC_APP_URL` en Vercel está mal.
