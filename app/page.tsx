@@ -333,11 +333,33 @@ async function preciosDeLaBase(): Promise<Record<string, { mes: string; anual: s
 async function packsDeLaPortada(): Promise<PackPublico[]> {
   try {
     const supabase = createSupabaseAdminClient();
-    const { data } = await supabase
-      .from("packs_publicos")
-      .select("slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, cantidad_clases")
-      .order("display_order");
-    return (data ?? []) as PackPublico[];
+
+    /**
+     * ⚠️ NO SE ANUNCIA LO QUE NO SE PUEDE COBRAR.
+     *
+     *    Publicar comprueba el price del modo activo, pero corre UNA VEZ. Al
+     *    pasar a produccion, un pack publicado en prueba sigue publicado y sin
+     *    price de live: aparece en la portada, alguien lo toca y recibe un
+     *    error. En la PORTADA eso es peor que adentro -- es la primera
+     *    impresion de alguien que todavia no es clienta.
+     *
+     *    Los price ids NO se leen de la vista, que a proposito no los expone:
+     *    se piden aparte y solo para armar una lista de slugs vendibles. Nunca
+     *    llegan al render.
+     */
+    const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
+    const columna = modoEsLive ? "stripe_price_id_live" : "stripe_price_id_test";
+
+    const [{ data }, { data: vendibles }] = await Promise.all([
+      supabase
+        .from("packs_publicos")
+        .select("slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, cantidad_clases")
+        .order("display_order"),
+      supabase.from("packs").select("slug").not(columna, "is", null),
+    ]);
+
+    const sePuedeCobrar = new Set(((vendibles ?? []) as { slug: string }[]).map((p) => p.slug));
+    return ((data ?? []) as PackPublico[]).filter((p) => sePuedeCobrar.has(p.slug));
   } catch {
     return [];
   }

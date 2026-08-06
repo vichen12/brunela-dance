@@ -163,7 +163,8 @@ if ((packs ?? []).length > 0) {
     //    cobra: la alumna lo ve, lo toca y recibe un error.
     if (!id && p.is_published) {
       console.log(`  🔴 ${nombre.padEnd(34)} PUBLICADO y SIN price de ${MODO}`);
-      console.log(`     ${" ".repeat(34)} se ve en la web y al comprarlo da error`);
+      console.log(`     ${" ".repeat(34)} la guarda lo OCULTA de la portada y de`);
+      console.log(`     ${" ".repeat(34)} /dashboard/plan: figura publicado y no lo ve nadie`);
       fallos++;
       continue;
     }

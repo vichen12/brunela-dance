@@ -325,3 +325,20 @@ describe("un pack sin price del modo activo no se le muestra a nadie", () => {
     expect(src).toMatch(/modoEsLive \? p\.stripe_price_id_live : p\.stripe_price_id_test/);
   });
 });
+
+describe("la portada tampoco anuncia lo que no se puede cobrar", () => {
+  it("filtra por el price del modo activo", () => {
+    const src = leer("app/page.tsx");
+    expect(src).toMatch(/const sePuedeCobrar = new Set/);
+    expect(src).toMatch(/\.filter\(\(p\) => sePuedeCobrar\.has\(p\.slug\)\)/);
+    expect(src).toMatch(/modoEsLive \? "stripe_price_id_live" : "stripe_price_id_test"/);
+  });
+
+  it("los price ids NO llegan al render", () => {
+    // La vista no los expone a propósito. Se piden aparte y sólo para armar la
+    // lista de slugs vendibles.
+    const src = leer("app/page.tsx");
+    expect(src).toMatch(/supabase\.from\("packs"\)\.select\("slug"\)/);
+    expect(leer("components/packs-publicos.tsx")).not.toMatch(/stripe_price_id/);
+  });
+});
