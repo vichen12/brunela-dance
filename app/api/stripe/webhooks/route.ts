@@ -194,8 +194,21 @@ async function registrarCompraDePack(event: Stripe.Event): Promise<SyncOutcome> 
     return { applied: false, reason: `la sesion ${session.id} no es un pago unico` };
   }
 
-  if (session.payment_status !== "paid") {
-    return { applied: false, reason: `la sesion ${session.id} todavia no esta pagada` };
+  /**
+   * ⚠️ "no_payment_required" TAMBIEN es una compra buena.
+   *
+   *    Stripe pone ese estado -- y NO "paid" -- cuando el total es 0, que es lo
+   *    que pasa con un cupon del 100%. Exigiendo solo "paid", un pack regalado
+   *    con un cupon entraba por esta rama y NO SE REGISTRABA: la alumna
+   *    completaba el checkout y no recibia nada.
+   *
+   *    Es la misma familia que el resto de los fallos de packs: el pago
+   *    "funciona" y el acceso no llega. Se detecto preparando la verificacion
+   *    del pase a produccion, buscando como probar el cobro sin gastar plata.
+   */
+  const ESTADOS_BUENOS = new Set(["paid", "no_payment_required"]);
+  if (!ESTADOS_BUENOS.has(session.payment_status)) {
+    return { applied: false, reason: `la sesion ${session.id} esta en '${session.payment_status}', no cobrada` };
   }
 
   const userId = session.metadata?.user_id;

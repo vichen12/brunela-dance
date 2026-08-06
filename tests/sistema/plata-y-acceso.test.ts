@@ -276,3 +276,25 @@ describe("la exportacion de alumnas", () => {
     expect(src()).toContain("BOM_UTF8 + [");
   });
 });
+
+// ── Un cupón del 100% también es una compra ─────────────────────────────────
+
+describe("un pack regalado con cupón se registra igual", () => {
+  const src = () => leer("app/api/stripe/webhooks/route.ts");
+
+  it("acepta no_payment_required, no sólo paid", () => {
+    // Stripe pone ese estado -- y NO "paid" -- cuando el total es 0, o sea con
+    // un cupón del 100%. Exigiendo sólo "paid", la alumna completaba el
+    // checkout y no recibía nada: el pago "funciona" y el acceso no llega.
+    const fn = src().slice(src().indexOf("async function registrarCompraDePack"));
+    expect(fn).toContain("no_payment_required");
+    expect(fn, "vuelve a exigir solo 'paid'").not.toMatch(/payment_status !== "paid"/);
+  });
+
+  it("un estado que NO es de cobro se sigue rechazando", () => {
+    // No es "acepta cualquier cosa": 'unpaid' tiene que seguir sin dar acceso.
+    const fn = src().slice(src().indexOf("async function registrarCompraDePack"));
+    expect(fn).toMatch(/ESTADOS_BUENOS\.has\(session\.payment_status\)/);
+    expect(fn).toMatch(/ESTADOS_BUENOS = new Set\(\["paid", "no_payment_required"\]\)/);
+  });
+});
