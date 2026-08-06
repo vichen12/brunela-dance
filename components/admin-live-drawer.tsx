@@ -1,4 +1,5 @@
 "use client";
+import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -107,6 +108,8 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <F label="Dirección">
           <input style={inp} name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
+          {/* Solo al CREAR. Al editar, regenerarla romperia los enlaces compartidos. */}
+          <AutoDireccion desde="titleEs" activo={isNew} />
         </F>
         <F label="Estado">
           <select style={sel} name="status" defaultValue={session?.status ?? "draft"}>

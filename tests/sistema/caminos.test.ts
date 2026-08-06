@@ -294,3 +294,94 @@ describe("cuando algo revienta, se entiende", () => {
     expect(src).toMatch(/<body/);
   });
 });
+
+// ── La direccion se genera sola, y SOLO al crear ────────────────────────────
+
+describe("la dirección se completa sola desde el nombre", () => {
+  /** Formularios de ALTA: tienen que autogenerar. */
+  const altas: [string, string][] = [
+    ["app/admin/packs/page.tsx", "nombreEs"],
+    ["app/admin/categories/page.tsx", "nameEs"],
+    ["components/admin-video-upload.tsx", "titleEs"],
+  ];
+
+  it.each(altas)("%s la genera desde %s", (archivo, campo) => {
+    expect(leer(archivo)).toContain(`<AutoDireccion desde="${campo}"`);
+  });
+
+  const compartidos = ["components/admin-live-drawer.tsx", "components/admin-program-drawer.tsx"];
+
+  it.each(compartidos)("%s la genera SOLO al crear", (archivo) => {
+    const src = leer(archivo);
+    // 🔴 Estos formularios sirven para crear Y para editar. Si el centinela
+    //    quedara sin `activo`, corregir una tilde del titulo regeneraria la
+    //    direccion de algo ya publicado y romperia los enlaces compartidos --
+    //    sin ningun error: el enlace viejo simplemente deja de encontrar nada.
+    const m = src.match(/<AutoDireccion[^/]*\/>/);
+    expect(m, `${archivo} no monta AutoDireccion`).not.toBeNull();
+    expect(m![0], "falta activo={...}: regeneraria la dirección al editar").toMatch(/activo=\{/);
+  });
+
+  it("ningún formulario de EDICIÓN la regenera", () => {
+    // El del pack y el de categorías editan algo que ya existe y que puede estar
+    // publicado: ahí no se toca nunca.
+    for (const p of ["components/admin-pack-drawer.tsx"]) {
+      expect(leer(p), `${p} regenera la dirección al editar`).not.toContain("<AutoDireccion");
+    }
+  });
+
+  it("deja de pisarla en cuanto la tocan a mano", () => {
+    const src = leer("components/auto-direccion.tsx");
+    expect(src).toMatch(/sincronizado = false/);
+    // Y no la toca si ya venía con algo (edición disfrazada, o autocompletado
+    // del navegador).
+    expect(src).toMatch(/destino\.value\.trim\(\) === ""/);
+  });
+
+  it("busca los campos dentro de SU formulario, no en todo el documento", () => {
+    // En /admin conviven el alta y varios formularios de edición con los mismos
+    // `name`. Sin acotar, cablearía el que no es.
+    expect(leer("components/auto-direccion.tsx")).toMatch(/closest\("form"\)/);
+  });
+});
+
+// ── El price id se carga donde se crea el pack ──────────────────────────────
+
+describe("el identificador de Stripe se carga en el panel del pack", () => {
+  it("el drawer tiene los tres campos de cobro", () => {
+    const src = leer("components/admin-pack-drawer.tsx");
+    for (const campo of ["precio", "priceTest", "priceLive"]) {
+      expect(src, `falta el campo ${campo}`).toContain(`name="${campo}"`);
+    }
+  });
+
+  it("muestra lo que dice Stripe al lado de cada uno", () => {
+    const src = leer("components/admin-pack-drawer.tsx");
+    expect(src).toMatch(/pack\.avisoTest && <Aviso/);
+    expect(src).toMatch(/pack\.avisoLive && <Aviso/);
+  });
+
+  it("el aviso se resuelve en el SERVIDOR y baja como objeto plano", () => {
+    // Por la frontera servidor->cliente no cruzan funciones: pasar
+    // `verificarPrecio` en vez de su resultado es la trampa 6, que ya tiró un
+    // 500 en producción con los iconos de lucide.
+    const pagina = leer("app/admin/packs/page.tsx");
+    // Se exigen LOS DOS modos. Comprobar solo que el nombre aparezca lo cumple
+    // el `import`, aunque nadie lo llame: un control lo demostro.
+    expect(pagina).toMatch(/verificarPrecio\(p\.stripe_price_id_test, "test"\)/);
+    expect(pagina).toMatch(/verificarPrecio\(p\.stripe_price_id_live, "live"\)/);
+    expect(pagina).toMatch(/avisoTest: test \? leerVerificacion\(/);
+    expect(pagina).toMatch(/avisoLive: live \? leerVerificacion\(/);
+    expect(leer("components/admin-pack-drawer.tsx")).not.toContain("verificar-precio");
+  });
+
+  it("las dos pantallas guardan con el MISMO intérprete", () => {
+    // Dos formularios escribiendo price_cents es exactamente cómo terminan
+    // mostrando números distintos. Una sola función decide qué significan.
+    // Se exige la LLAMADA, no el nombre: el `import` solo tambien hacia pasar
+    // esta prueba con la funcion sin usar. Lo delato un control.
+    for (const p of ["src/features/admin/packs-actions.ts", "src/features/admin/precios-actions.ts"]) {
+      expect(leer(p), `${p} interpreta el precio por su cuenta`).toMatch(/leerCamposDePrecio\(fd\)/);
+    }
+  });
+});

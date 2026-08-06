@@ -6,6 +6,7 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarAjustes } from "@/src/lib/settings";
 import type { SubscriptionCatalog } from "@/src/lib/stripe/catalog";
+import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
 
 /**
  * Precios: los tres planes y los packs.
@@ -107,33 +108,22 @@ export async function guardarPrecioDePackAction(fd: FormData) {
   await requireAdmin();
   const supabase = createSupabaseAdminClient();
 
-  const id = fd.get("id") as string;
-  const euros = aNumero(fd, "precio");
-
-  if (euros === null) {
-    redirect(
-      `/admin/precios?error=${encodeURIComponent("El precio del pack tiene que ser un número, por ejemplo 24,90.")}` as never
-    );
+  // ⚠️ MISMO interprete que el panel del pack. Dos formularios escriben estas
+  //    tres columnas; una sola funcion decide que significan.
+  const precio = leerCamposDePrecio(fd);
+  if ("fallo" in precio) {
+    redirect(`/admin/precios?error=${encodeURIComponent(precio.fallo)}` as never);
   }
 
-  const { error } = await supabase
-    .from("packs")
-    .update({
-      // En centimos, como Stripe. La pantalla trabaja en euros porque es lo que
-      // Brunela tiene en la cabeza.
-      price_cents: Math.round(euros * 100),
-      stripe_price_id_test: aTexto(fd, "priceTest"),
-      stripe_price_id_live: aTexto(fd, "priceLive"),
-    })
-    .eq("id", id);
+  const { error } = await supabase.from("packs").update(precio).eq("id", fd.get("id") as string);
 
   if (error) {
-    // El trigger packs_price_id_unico levanta un 23505 con un mensaje que ya
-    // nombra al otro pack. Se pasa tal cual: es mejor que cualquier cosa que
-    // pudieramos escribir aca.
+    // El trigger packs_price_id_unico ya nombra al pack en conflicto.
     redirect(`/admin/precios?error=${encodeURIComponent(error.message)}` as never);
   }
 
   revalidatePath("/admin/precios");
+  revalidatePath("/admin/packs");
   revalidatePath("/");
 }
+

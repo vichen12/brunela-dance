@@ -14,9 +14,14 @@ import {
 /**
  * Edicion de un pack, en panel lateral.
  *
- * El precio NO esta aca: vive en /admin/precios, donde esta la comprobacion
- * contra Stripe. Dos pantallas escribiendo price_cents terminan mostrando
- * numeros distintos.
+ * El precio y los identificadores de Stripe SI estan aca, junto al resto:
+ * obligar a crear el pack en una pantalla y cargarle el identificador en otra
+ * era un ida y vuelta sin motivo. En /admin/precios siguen viendose todos
+ * juntos para revisar de un vistazo.
+ *
+ * Las dos pantallas guardan con el MISMO interprete
+ * (src/features/admin/precio-de-pack.ts), asi que no pueden mostrar numeros
+ * distintos -- que era el riesgo real de tener dos formularios.
  */
 
 export type PackAdmin = {
@@ -35,6 +40,15 @@ export type PackAdmin = {
   stripe_price_id_live: string | null;
   clases: { id: string; titulo: string }[];
   compras: number;
+  /**
+   * Lo que dice Stripe de cada identificador, YA RESUELTO en el servidor.
+   *
+   * ⚠️ Viaja como objeto plano `{tono, texto}` y no como funcion: por la
+   *    frontera servidor->cliente no cruzan funciones, y eso ya reventó una vez
+   *    en produccion con los iconos de lucide (trampa 6).
+   */
+  avisoTest: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
+  avisoLive: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
 };
 
 export type ClaseElegible = { id: string; titulo: string };
@@ -64,6 +78,21 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
       <Lbl>{label}</Lbl>
       {children}
     </label>
+  );
+}
+
+/** El aviso de Stripe debajo de un identificador. */
+function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
+  const c =
+    tono === "ok" ? { fg: "#166534", bg: "#f0fdf4", bd: "#bbf7d0" }
+    : tono === "aviso" ? { fg: "#92400e", bg: "#fffbeb", bd: "#fde68a" }
+    : { fg: "#78716c", bg: "#fafaf9", bd: "#f0eeec" };
+  return (
+    <p style={{
+      marginTop: 6, fontSize: 11.5, lineHeight: 1.45, fontWeight: 600,
+      color: c.fg, background: c.bg, border: `1px solid ${c.bd}`,
+      borderRadius: 9, padding: "6px 10px",
+    }}>{texto}</p>
   );
 }
 
@@ -196,22 +225,46 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               placeholder="Qué incluye y para quién es…" />
           </F>
 
-          {/* El precio se muestra pero no se edita: se cambia en Precios, que es
-              donde se comprueba contra Stripe. */}
-          <div style={{
-            borderRadius: 12, border: "1px solid #f0eeec", padding: "12px 16px",
-            background: "#fafaf9", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
-          }}>
-            <div>
-              <Lbl>Precio</Lbl>
-              <p style={{ fontSize: 15, fontWeight: 800, color: "#1c1917" }}>
-                {(pack.price_cents / 100).toLocaleString("es-ES", { minimumFractionDigits: pack.price_cents % 100 === 0 ? 0 : 2 })}{" "}
-                {pack.currency.toUpperCase()}
-              </p>
+          {/* ── Precio y cobro ─────────────────────────────────────────
+              Antes esto era solo lectura y mandaba a /admin/precios. Crear el
+              pack en un lado y cargarle el identificador en otro era un ida y
+              vuelta sin motivo: se carga donde se crea. En /admin/precios
+              siguen viendose todos juntos para revisar de un vistazo, y las dos
+              pantallas guardan con el MISMO interprete. */}
+          <div style={{ borderRadius: 12, border: "1px solid #f0eeec", padding: "16px 18px", background: "#fafaf9" }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 4 }}>
+              Precio y cobro
+            </p>
+            <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.5, marginBottom: 14 }}>
+              El importe es lo que se anuncia. El identificador es lo que cobra
+              Stripe. Abajo de cada uno te digo cuánto vale ahí de verdad.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 1fr", gap: 14, alignItems: "start" }}>
+              <F label={`Precio (${pack.currency.toUpperCase()})`}>
+                <input style={inp} name="precio" required inputMode="decimal"
+                  defaultValue={(pack.price_cents / 100).toString()} />
+              </F>
+
+              <label style={{ display: "block" }}>
+                <Lbl>Identificador — prueba</Lbl>
+                <input style={inp} name="priceTest" defaultValue={pack.stripe_price_id_test ?? ""}
+                  placeholder="price_1AbC…" autoComplete="off" spellCheck={false} />
+                {pack.avisoTest && <Aviso {...pack.avisoTest} />}
+              </label>
+
+              <label style={{ display: "block" }}>
+                <Lbl>Identificador — producción</Lbl>
+                <input style={inp} name="priceLive" defaultValue={pack.stripe_price_id_live ?? ""}
+                  placeholder="price_1AbC…" autoComplete="off" spellCheck={false} />
+                {pack.avisoLive && <Aviso {...pack.avisoLive} />}
+              </label>
             </div>
-            <a href="/admin/precios" style={{ fontSize: 11.5, fontWeight: 700, color: "var(--pink-mid)", textDecoration: "none" }}>
-              Cambiar en Precios →
-            </a>
+
+            <p style={{ fontSize: 11.5, color: "#a8a29e", lineHeight: 1.5, marginTop: 12 }}>
+              Un identificador de Stripe no se edita: se reemplaza. Para cambiar
+              el precio, en Stripe se crea uno nuevo y se pega acá.
+            </p>
           </div>
 
           <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>

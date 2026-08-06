@@ -1,3 +1,4 @@
+import { AutoDireccion } from "@/components/auto-direccion";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -82,6 +83,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           <div>
             <label className={labelCls}>Dirección de la clase</label>
             <input className={inputCls} name="slug" required placeholder="ballet-clasico" />
+            <AutoDireccion desde="nameEs" />
           </div>
 
           <div>

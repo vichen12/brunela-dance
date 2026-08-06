@@ -1,6 +1,8 @@
+import { AutoDireccion } from "@/components/auto-direccion";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-precio";
 import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
 
@@ -98,11 +100,29 @@ export default async function AdminPacksPage({
     {}
   );
 
-  const packs: PackAdmin[] = ((packsData ?? []) as Omit<PackAdmin, "clases" | "compras">[]).map((p) => ({
-    ...p,
-    clases: clasesPorPack.get(p.id) ?? [],
-    compras: comprasPorPack[p.id] ?? 0,
-  }));
+  // ⚠️ El Omit lista TODO lo que se agrega abajo. Si faltara uno, el `as` le
+  //    afirmaria a tsc que el dato ya viene de la base y no habria error: el
+  //    aviso quedaria en undefined y simplemente no se dibujaria nunca. Un cast
+  //    de mas es una comprobacion de menos.
+  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive">;
+
+  // Los avisos se resuelven ACA, en el servidor, y bajan como objeto plano.
+  // Todos en paralelo: en serie serian dos viajes a Stripe por cada pack.
+  const packs: PackAdmin[] = await Promise.all(
+    ((packsData ?? []) as PackCrudo[]).map(async (p) => {
+      const [test, live] = await Promise.all([
+        p.stripe_price_id_test ? verificarPrecio(p.stripe_price_id_test, "test") : null,
+        p.stripe_price_id_live ? verificarPrecio(p.stripe_price_id_live, "live") : null,
+      ]);
+      return {
+        ...p,
+        clases: clasesPorPack.get(p.id) ?? [],
+        compras: comprasPorPack[p.id] ?? 0,
+        avisoTest: test ? leerVerificacion(test, p.price_cents, p.currency) : null,
+        avisoLive: live ? leerVerificacion(live, p.price_cents, p.currency) : null,
+      };
+    })
+  );
 
   return (
     <main style={{ fontFamily: "inherit" }}>
@@ -134,6 +154,7 @@ export default async function AdminPacksPage({
             <Lbl>Nombre del pack</Lbl>
             <input style={inp} name="nombreEs" required placeholder="Pack Iniciación" />
           </label>
+          <AutoDireccion desde="nombreEs" />
           <label>
             <Lbl>Dirección</Lbl>
             <input style={inp} name="slug" required placeholder="pack-iniciacion" />

@@ -4,16 +4,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
 
 /**
  * Packs de clases.
  *
  * ⚠️ Cada una es un endpoint POST publico: todas empiezan con requireAdmin().
  *
- * ⚠️ EL PRECIO NO SE EDITA ACA. Vive en /admin/precios junto al de los planes,
- *    porque es donde esta la comprobacion contra Stripe. Tener dos lugares que
- *    escriben `price_cents` termina en dos pantallas que muestran numeros
- *    distintos.
+ * ⚠️ EL PRECIO SE EDITA DESDE DOS LUGARES, y por eso lo interpreta UNO SOLO.
+ *    Se carga en el panel del pack -- donde se crea, para no obligar a un ida y
+ *    vuelta -- y se revisa en /admin/precios junto a los planes. Las dos
+ *    acciones usan `leerCamposDePrecio`, asi que no pueden divergir.
  */
 
 /** Revalida todo lo que muestra packs. La landing entra porque es su vitrina. */
@@ -76,6 +77,9 @@ export async function updatePackAction(fd: FormData) {
   const nombre = texto(fd, "nombreEs");
   if (!nombre) fallar("El pack necesita un nombre.");
 
+  const precio = leerCamposDePrecio(fd);
+  if ("fallo" in precio) fallar(precio.fallo);
+
   const { error } = await supabase
     .from("packs")
     .update({
@@ -84,10 +88,16 @@ export async function updatePackAction(fd: FormData) {
       description_i18n: { es: texto(fd, "descripcionEs"), en: texto(fd, "descripcionEn") },
       cover_image_url: texto(fd, "portada") || null,
       display_order: Number(texto(fd, "orden")) || 0,
+      ...precio,
     })
     .eq("id", id);
 
-  if (error) fallar(error.message);
+  if (error) {
+    // El trigger packs_price_id_unico levanta un 23505 cuyo mensaje YA nombra al
+    // otro pack. Se pasa tal cual: es mejor que cualquier cosa que pudieramos
+    // escribir aca.
+    fallar(error.message);
+  }
   refrescarPacks();
 }
 

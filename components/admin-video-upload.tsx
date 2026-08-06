@@ -1,4 +1,5 @@
 "use client";
+import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -397,6 +398,7 @@ export function AdminVideoUpload() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <Field label="Dirección">
           <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
+          <AutoDireccion desde="titleEs" />
         </Field>
         <Field label="Estado">
           <select style={sel} defaultValue="draft" name="status" disabled={busy}>

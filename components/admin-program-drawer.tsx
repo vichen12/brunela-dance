@@ -1,4 +1,5 @@
 "use client";
+import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -89,6 +90,7 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
             readOnly={!esNuevo}
             placeholder="fundamentos-7-dias"
           />
+            <AutoDireccion desde="titleEs" activo={esNuevo} />
         </F>
 
         <F label="Cuántos días dura">
