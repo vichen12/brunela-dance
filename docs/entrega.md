@@ -103,8 +103,9 @@ confirmarlos con las tarifas del día.
   registrarse con un correo que no es suyo.
 - **Dominio propio y SMTP.** Bloquea la confirmación de correo, los avisos de
   clase nueva y la recuperación de contraseña en volumen.
-- **Pasar Stripe a producción.** Cambiar la clave a `sk_live_` y rehacer la
-  configuración del portal, que es por modo. Detalle en `SETUP.md` § 3.5.
+- ~~Pasar Stripe a producción~~ — **hecho el 2026-08-06.** El sistema cobra de
+  verdad: cuenta verificada, webhook de producción respondiendo y los seis
+  precios comprobados contra Stripe.
 - **Verificar el reproductor en iPhone y iPad.** Es lo único entregado sin
   medir; el equipo trabaja en Windows y no tiene Safari.
 

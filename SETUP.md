@@ -263,10 +263,26 @@ Landing → `/sign-in` → `/dashboard/plan` → botón de plan → Stripe Check
 (7 días gratis) → webhook → tier desbloqueado. Para cancelar/cambiar: botón
 **"Gestionar plan"** → Stripe Billing Portal.
 
-### 3.5 Pase a produccion — lista de control
+### 3.5 Pase a produccion — HECHO el 2026-08-06
 
-**Estado al 2026-08-06: todo preparado salvo la verificacion de la cuenta de
-Brunela en Stripe.** El dia del pase quedan DOS variables y un redeploy.
+**El sistema cobra de verdad desde el 2026-08-06.** Esta seccion se conserva
+como registro de lo que se hizo y como guia si alguna vez hay que rehacerlo --
+por ejemplo, en un proyecto de Stripe nuevo.
+
+Lo que quedo verificado contra la API el dia del pase:
+
+| | |
+|---|---|
+| Cuenta `acct_1TO02CEMUQC9adJ0` (ES, EUR) | `charges_enabled` ✓ `payouts_enabled` ✓ |
+| Requisitos pendientes | `currently_due`, `past_due` y `eventually_due` **vacios** |
+| Webhook `bruneladance.com/api/stripe/webhooks` | **enabled**, `livemode: true`, los 4 obligatorios |
+| Los 6 precios de produccion | 16/154 · 31/299 · 59/559, ninguno archivado |
+
+⚠️ **`.env.local` sigue en TEST, y tiene que quedarse asi.** Solo Vercel paso a
+produccion. Poner la clave `sk_live_` en local haria que `npm run dev` cobrase
+de verdad -- y es facil no darse cuenta, porque la aplicacion se ve igual.
+
+⚠️ **Las variables `_LIVE` quedaron redundantes.** Ver la nota al final.
 
 Modo test y modo produccion son **dos mundos separados** en Stripe. Cada objeto
 existe por duplicado y nada se copia solo -- salvo lo que dice la nota del final,
@@ -335,6 +351,23 @@ que es la excepcion y conviene no confundirla.
 
       El efecto util: `/admin/precios` verifica los precios de produccion
       **sin** estar en produccion.
+
+#### Que hacer con las variables `_LIVE` ahora
+
+Una vez que `STRIPE_SECRET_KEY` ES la de produccion, las dos que servian de
+estacionamiento **dejan de hacer falta**:
+
+- `STRIPE_SECRET_KEY_LIVE` — `claveParaModo()` prueba PRIMERO la principal, y
+  ahora esa ya es de live. La extra no se llega a mirar nunca.
+- `STRIPE_WEBHOOK_SECRET_LIVE` — no la lee ningun archivo. Nunca la leyo.
+
+**Conviene borrarlas de Vercel.** Una clave de produccion guardada en dos
+variables es una clave que puede filtrarse desde dos lugares, y una variable que
+no lee nadie invita a preguntarse cual es la buena.
+
+**`STRIPE_SECRET_KEY_TEST` SE QUEDA**: es la que le permite a `/admin/precios`
+avisar sobre el juego que NO esta cobrando. Sin ella, la columna de prueba pasa
+a "no verificable".
 
 #### El dia del pase — dos variables y un redeploy
 

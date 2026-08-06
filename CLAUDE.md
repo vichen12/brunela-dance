@@ -8,9 +8,13 @@
 
 ### Cómo retomar en cinco minutos
 
-1. **En qué punto está**: producción corre el código de **mayo**; el rediseño de
-   tres meses está en `feat/rediseno-completo` y **sin desplegar**. La base sí
-   está al día: las **29 migraciones aplicadas y verificadas**.
+1. **En qué punto está**: **desplegado y cobrando de verdad.** El rediseño ya
+   está en `main` y en producción, en `bruneladance.com`. Stripe pasó a modo
+   producción el 2026-08-06. Las 29 migraciones aplicadas y verificadas, y la
+   base **sin datos de prueba**.
+
+   **Lo que falta para abrir no es técnico: es contenido.** La base está vacía
+   — sin clases, alguien puede pagar y entrar a un estudio sin nada.
 2. **Qué se está haciendo ahora**: nada a medias. Packs, invitaciones y panel
    de precios están terminados y verificados. Lo siguiente es el **rediseño de
    la landing** y, después, hacerla editable — ver *ÚLTIMO PASO* en Pendientes.
@@ -814,22 +818,18 @@ ocupando espacio y facturando.
 - [ ] **Verificar el reproductor en iPhone / iPad** — ver la sección de abajo. Es
       la única parte entregada sin medir, y el público de un producto de danza en
       casa usa iPhone.
-- [ ] **Pasar Stripe a producción — TODO PREPARADO, faltan DOS variables.**
-      Sólo queda que Stripe verifique la cuenta de Brunela para poder cobrar.
+- [x] ~~Pasar Stripe a producción~~ — **HECHO el 2026-08-06.**
 
-      El día del pase: copiar `STRIPE_SECRET_KEY_LIVE` → `STRIPE_SECRET_KEY`,
-      `STRIPE_WEBHOOK_SECRET_LIVE` → `STRIPE_WEBHOOK_SECRET`, y **un** redeploy.
-      Las dos juntas: cambiar sólo la clave deja cobros reales sin endpoint que
-      avise, o sea **cobrado sin acceso**.
+      El sistema **cobra de verdad**. La cuenta quedó verificada
+      (`charges_enabled` y `payouts_enabled` en true, sin requisitos
+      pendientes), el webhook de live responde en
+      `bruneladance.com/api/stripe/webhooks` con los 4 eventos que el código
+      procesa, y los 6 price ids de producción cuadran con lo que se anuncia:
+      16/154, 31/299, 59/559.
 
-      Ya hecho y verificado (detalle en `SETUP.md` § 3.5): los 6 price ids de
-      live comprobados contra la API, el webhook de producción con sus eventos,
-      el portal de live, el dominio en `NEXT_PUBLIC_APP_URL` y en Supabase Auth,
-      y las dos claves `_LIVE` estacionadas en variables aparte.
-
-      ⚠️ **Recuperación de ingresos y correos NO se rehacen**: son compartidos
-      entre modos. El portal SÍ es por modo. Se confundió el 2026-08-06 y casi
-      genera trabajo de más — la tabla que lo zanja está en `SETUP.md` § 3.5.
+      ⚠️ **`.env.local` sigue en TEST y tiene que quedarse así.** Sólo Vercel
+      pasó a live. Poner la clave de producción en local haría que
+      `npm run dev` cobrase de verdad.
 - [ ] **Rotar la `service_role`** por higiene (`SETUP.md`; el orden importa:
       crear la nueva, redeploy, verificar, recién ahí revocar la vieja).
 
