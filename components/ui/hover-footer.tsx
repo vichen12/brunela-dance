@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import Image from "next/image";
-import { Sparkle } from "lucide-react";
+import { Mail, Sparkle } from "lucide-react";
 import {
   FaFacebookF,
   FaInstagram,
@@ -13,11 +13,24 @@ import {
 import { usePublicI18n } from "@/components/language-provider";
 import type { PublicMessageKey } from "@/src/i18n/public";
 
+/**
+ * Correo de contacto del estudio.
+ *
+ * ⚠️ EN UN SOLO SITIO A PROPOSITO. Lo usan el enlace "Contacto" del menu y el
+ *    correo visible de abajo. Escritos por separado, el dia que cambie uno se
+ *    queda el otro y nadie se entera: un mailto roto no da error, simplemente
+ *    abre el cliente de correo con una direccion a la que no llega nada.
+ *
+ * Hasta el 2026-08-07 decia `hola@brunela.com` -- un dominio que no es del
+ * estudio (el suyo es bruneladance.com), asi que ese correo no llegaba a nadie.
+ */
+const EMAIL = "info@bruneladance.com";
+
 const navLinks = [
   { label: "footer.nav.home", href: "/" },
   { label: "footer.nav.classes", href: "/#clases" },
   { label: "footer.nav.studio", href: "/#planes" },
-  { label: "footer.nav.contact", href: "mailto:hola@brunela.com" },
+  { label: "footer.nav.contact", href: `mailto:${EMAIL}` },
 ] as const;
 
 const socialLinks = [
@@ -95,6 +108,14 @@ export function BrunelaFooter() {
           <Sparkle size={13} strokeWidth={0} fill="currentColor" />
           <span className="footer-regla-linea" />
         </div>
+
+        {/* El correo, VISIBLE y no solo detras del enlace "Contacto": alguien
+            que quiere escribir desde el movil suele copiarlo, no pulsar un
+            mailto. Va antes de las redes porque es el canal directo. */}
+        <a className="footer-mail" href={`mailto:${EMAIL}`}>
+          <Mail size={15} strokeWidth={1.9} aria-hidden />
+          {EMAIL}
+        </a>
 
         <div className="footer-socials">
           {socialLinks.map(({ label, href, icon: Icon }) => (
@@ -238,6 +259,39 @@ export function BrunelaFooter() {
         }
 
         /* ── Socials ── */
+        .footer-mail {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 1.5rem;
+          border: 1px solid rgba(230, 79, 85, 0.24);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.6);
+          padding: 0.5rem 1.05rem;
+          /* --pink-deep sobre el rosa del footer: 5.66:1. --pink se quedaba en
+             3.47:1 y esto son 13.6px, texto normal. */
+          color: var(--pink-deep);
+          font-size: 0.85rem;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          text-decoration: none;
+          transition: background 200ms ease, border-color 200ms ease;
+        }
+
+        .footer-mail:hover {
+          border-color: var(--pink);
+          background: #fff;
+        }
+
+        .footer-mail:focus-visible {
+          outline: 2px solid var(--pink-deep);
+          outline-offset: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .footer-mail { transition: none; }
+        }
+
         /* Separadores verticales entre iconos, como en la maqueta. */
         .footer-socials a + a::before {
           content: "";
