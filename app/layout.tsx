@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Great_Vibes, Montserrat, Roboto } from "next/font/google";
+import { Bodoni_Moda, Great_Vibes, Montserrat, Roboto } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { PublicLanguageProvider } from "@/components/language-provider";
 import "./globals.css";
@@ -7,6 +7,35 @@ import "./globals.css";
 const bodyFont = Roboto({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "700", "900"] });
 const displayFont = Montserrat({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700", "800", "900"] });
 const scriptFont = Great_Vibes({ subsets: ["latin"], variable: "--font-script", weight: "400" });
+
+/**
+ * Serif de titulares.
+ *
+ * POR QUE SE AGREGA
+ *   Las maquetas de la landing (hero y metodo) piden un serif de alto contraste
+ *   para los titulares. El proyecto solo tenia Montserrat, que es una sans, asi
+ *   que ese registro no se podia representar.
+ *
+ * POR QUE BODONI MODA Y NO PLAYFAIR DISPLAY
+ *   Playfair es el serif por defecto de medio internet: da exactamente el mismo
+ *   registro pero se reconoce al instante como "la fuente elegante gratis".
+ *   Bodoni Moda es un didone de verdad -- el mismo linaje de los programas de
+ *   ballet y los carteles de teatro-- con italica real y eje de peso variable.
+ *
+ *   Va emparejado con Montserrat por CONTRASTE (didone + geometrica), que es lo
+ *   que funciona. Dos sans parecidas entre si, no.
+ *
+ * ⚠️ Solo se cargan los pesos que se usan. Cada peso y cada estilo es un archivo
+ *    mas que descarga la visitante; la italica hace falta porque el acento de
+ *    los titulares ("tecnica.") va en cursiva.
+ */
+const serifFont = Bodoni_Moda({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  weight: ["400", "500", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Brunela Dance Trainer",
@@ -20,7 +49,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable}`} suppressHydrationWarning>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable} ${serifFont.variable}`} suppressHydrationWarning>
         <PublicLanguageProvider>
           {children}
         </PublicLanguageProvider>

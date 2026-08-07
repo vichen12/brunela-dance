@@ -48,6 +48,10 @@ iframe[id^="supabase"] {
   --white:     #ffffff;
   --font-display: "Montserrat", sans-serif;
   --font-body:    "Roboto", sans-serif;
+  /* Didone de titulares. Se carga en app/layout.tsx, donde esta explicado por
+     que Bodoni Moda y no Playfair. Ojo: el fallback SI es serif, a diferencia
+     de --font-display, que dice "sans-serif" porque Montserrat lo es. */
+  --font-serif:   "Bodoni Moda", Georgia, serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -625,33 +629,102 @@ input:focus, textarea:focus, select:focus {
 textarea { resize: vertical; }
 ::placeholder { color: rgba(120,113,108,0.5); }
 
-.button-primary {
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 999px; padding: 0.8rem 1.4rem; border: none;
-  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.14em;
-  text-transform: uppercase; background: var(--pink); color: #fff;
-  box-shadow: 0 8px 20px rgba(230, 79, 85,0.25);
-  transition: background 180ms, transform 180ms;
+/* ════════════════════════════════════════════════════════════════════════
+   SISTEMA UNICO DE BOTONES
+   ────────────────────────────────────────────────────────────────────────
+   POR QUE EXISTE
+     La landing tenia ONCE clases de boton distintas, cada una con su propia
+     geometria. No se parecian entre si porque literalmente no compartian un
+     solo valor:
+
+       padding    0.8rem/1.4rem  ·  0.48rem/1.05rem  ·  0.85rem/1.6rem
+       tamano     0.75rem        ·  0.68rem          ·  0.7rem
+       tracking   0.14em         ·  0.11em           ·  0.09em
+       hover      translateY(-1px)                   ·  translateY(-2px)
+       curva      180ms lineal                       ·  200ms cubic-bezier
+
+     El resultado es que cada seccion de la pagina parecia de otro producto, y
+     al pasar el raton unos botones saltaban mas que otros.
+
+   COMO SE USA
+     Estos tokens son la fuente unica. Un boton nuevo NO define su geometria:
+     consume estas variables. Si hay que cambiar el tamano de todos los botones
+     del sitio, se cambia aca y no en once archivos.
+
+   ⚠️ Los bloques <style> de los componentes se aplican DESPUES de este archivo,
+      asi que un componente que escriba su propio `padding` gana. Por eso los
+      componentes tambien consumen los tokens en vez de repetir valores.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --btn-pad-y: 0.8rem;
+  --btn-pad-x: 1.5rem;
+  --btn-size: 0.72rem;
+  --btn-weight: 800;
+  --btn-track: 0.12em;
+  --btn-radius: 999px;
+  --btn-min-h: 46px;
+  --btn-lift: -2px;
+  /* Misma curva que el hero: sale rapido y se asienta, sin rebote. */
+  --btn-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --btn-dur: 200ms;
 }
-.button-primary:hover { background: var(--pink-mid); transform: translateY(-1px); }
+
+.button-primary, .button-secondary, .button-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--btn-min-h);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-size: var(--btn-size); font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track); line-height: 1.2;
+  text-transform: uppercase; text-decoration: none;
+  transition: background var(--btn-dur) ease, border-color var(--btn-dur) ease,
+              color var(--btn-dur) ease, box-shadow var(--btn-dur) ease,
+              transform var(--btn-dur) var(--btn-ease);
+}
+
+.button-primary:hover, .button-secondary:hover, .button-ghost:hover {
+  transform: translateY(var(--btn-lift));
+}
+
+/* El foco visible faltaba en TODOS los botones del sitio: quien navega con
+   teclado no tenia forma de saber donde estaba parado. */
+.button-primary:focus-visible, .button-secondary:focus-visible,
+.button-ghost:focus-visible {
+  outline: 2px solid var(--pink-deep);
+  outline-offset: 3px;
+}
+
+.button-primary {
+  border: none;
+  background: var(--pink); color: #fff;
+  box-shadow: 0 8px 20px rgba(230, 79, 85, 0.25);
+}
+.button-primary:hover {
+  background: var(--pink-mid);
+  box-shadow: 0 14px 30px rgba(230, 79, 85, 0.32);
+}
 
 .button-secondary {
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 999px; padding: 0.8rem 1.4rem;
   border: 1.5px solid var(--pink-soft); background: #fff; color: var(--ink);
-  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.14em;
-  text-transform: uppercase; transition: border-color 180ms, color 180ms, transform 180ms;
 }
-.button-secondary:hover { border-color: var(--pink); color: var(--pink); transform: translateY(-1px); }
+.button-secondary:hover { border-color: var(--pink); color: var(--pink-deep); }
 
 .button-ghost {
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 999px; padding: 0.8rem 1.4rem;
-  border: 1.5px solid var(--pink-line); background: var(--pink-wash); color: var(--pink);
-  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.14em;
-  text-transform: uppercase; transition: background 180ms, transform 180ms;
+  border: 1.5px solid var(--pink-line);
+  background: var(--pink-wash);
+  /* Era --pink sobre --pink-wash: 3.42:1 con texto de 11.5px, o sea texto
+     normal, que exige 4.5:1. --pink-deep da 5.22:1 sobre wash (el numero esta
+     en CLAUDE.md, junto al resto de la escala coral). */
+  color: var(--pink-deep);
 }
-.button-ghost:hover { background: var(--pink-soft); transform: translateY(-1px); }
+.button-ghost:hover { background: var(--pink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .button-primary, .button-secondary, .button-ghost { transition: none; }
+  .button-primary:hover, .button-secondary:hover, .button-ghost:hover {
+    transform: none;
+  }
+}
 
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
 
@@ -733,6 +806,40 @@ textarea { resize: vertical; }
   padding: clamp(4rem, 8vw, 7rem) clamp(1.25rem, 5vw, 4.5rem);
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   REGLA DE ORO: cada seccion de la landing ocupa una pantalla.
+   ────────────────────────────────────────────────────────────────────────
+   ⚠️ `min-height` y NUNCA `height`.
+      Con `height: 100vh` el contenido que no entra se desborda, y varias de
+      estas secciones tienen `overflow: hidden`, asi que se cortaria en
+      silencio. La seccion de planes en un portatil bajo, o la de "Sobre mi"
+      con sus cuatro tarjetas, no entran en 800px de alto. Con `min-height`
+      ocupan la pantalla cuando sobra sitio y crecen cuando falta.
+
+   ⚠️ `svh` y no `vh`.
+      En un movil `100vh` cuenta la barra de direcciones como si no existiera:
+      cada seccion queda mas alta que la pantalla y se acumula un scroll de
+      mas por seccion. `svh` usa el alto visible chico, que es el real.
+
+   ⚠️ `align-content: center` es lo que hace que se sienta "una pantalla".
+      Sin eso el contenido se pega arriba y el hueco queda todo abajo.
+
+   QUE NO ENTRA AQUI, Y POR QUE
+     · El hero ya lo tiene resuelto en su propio componente.
+     · Las tiras de fotos (marquesina y carrusel) son cintas decorativas de
+       paso, no pantallas: a 100vh dejarian de leerse como transicion.
+   ════════════════════════════════════════════════════════════════════════ */
+.method-section,
+.video-showcase-section,
+.previews-section,
+.about-section,
+.ultimo-section,
+.plans-section {
+  display: grid;
+  align-content: center;
+  min-height: 100svh;
+}
+
 .photo-marquee-section {
   position: relative;
   z-index: 1;
@@ -812,7 +919,10 @@ textarea { resize: vertical; }
 .photo-marquee-card {
   position: relative;
   flex: 0 0 clamp(220px, 25vw, 370px);
-  height: clamp(128px, 14.5vw, 190px);
+  /* Se sube de 190 a 240: a 370x190 la tarjeta es casi 2:1 y de una foto de
+     cuerpo entero solo cabe una franja. Con mas alto el recorte deja de
+     comerse cabezas y pies. */
+  height: clamp(150px, 17.5vw, 240px);
   margin: 0;
   overflow: hidden;
   border-radius: clamp(20px, 2.4vw, 32px);
@@ -825,17 +935,36 @@ textarea { resize: vertical; }
   transform: scale(1.02);
 }
 
+/*
+  Ancho de la banda del video.
+  ────────────────────────────────────────────────────────────────────────
+  ⚠️ ANTES ERA `min(1220px, calc(100% - 2rem))` MAS UN `padding` PROPIO.
+
+     Esos dos se restan: en una pantalla de 1790px la tarjeta terminaba
+     midiendo ~1150px de ancho por 680px de alto, o sea una caja casi cuadrada
+     centrada con muchisimo margen a los lados. Se veia como un recuadro, no
+     como una banda de video.
+
+     Ahora la seccion NO lleva padding -- el aire de adentro ya lo pone
+     `.video-showcase-content` -- y el ancho es practicamente el de la ventana
+     con un respiro a los lados. El tope de 1800px existe para que en monitores
+     ultra anchos no se convierta en una franja desproporcionada.
+
+     El texto no se estira: `.video-showcase-content` esta capado en 540px.
+*/
 .video-showcase-section {
   position: relative;
   z-index: 1;
-  width: min(1220px, calc(100% - 2rem));
+  width: min(1800px, calc(100% - clamp(1.5rem, 3.5vw, 4rem)));
   margin: 0 auto clamp(3rem, 6vw, 5.5rem);
-  padding: clamp(1.2rem, 3vw, 2rem);
+  padding: 0;
 }
 
 .video-showcase-frame {
   position: relative;
-  min-height: clamp(420px, 52vw, 680px);
+  /* Se sube el tope de 680 a 780: con la tarjeta mas ancha, 680 la dejaba
+     achatada. Asi la proporcion queda de banda (~2.2:1) y no de recuadro. */
+  min-height: clamp(420px, 46vw, 780px);
   overflow: hidden;
   border: 1px solid rgba(255, 218, 224, 0.18);
   border-radius: clamp(28px, 4vw, 48px);
@@ -855,6 +984,18 @@ textarea { resize: vertical; }
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /*
+    ⚠️ NO se deja en `center`, que es el valor por defecto.
+
+       Esta banda es muy apaisada (~2.2:1) y el `poster` es un RETRATO (1.29:1).
+       Centrado, `cover` recorta arriba y abajo por igual y le corta la cabeza a
+       quien salga en la foto -- que es exactamente lo que pasaba.
+
+       Se ancla al 26% de la altura porque en cualquier foto de una persona la
+       cara vive en el tercio superior. Sirve igual para el video: un encuadre de
+       cuerpo entero conserva la cara, y uno ya apaisado no se recorta nada.
+  */
+  object-position: 50% 26%;
   filter: saturate(0.92) contrast(1.02);
 }
 
@@ -911,12 +1052,28 @@ textarea { resize: vertical; }
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  /* Se adopta la curva y la duracion del sistema de botones. NO se le tocan el
+     tamano, el tracking ni el degradado a proposito: esta seccion esta dada por
+     buena tal cual se ve, y el degradado es su sello. */
+  transition: transform var(--btn-dur) var(--btn-ease),
+              box-shadow var(--btn-dur) ease;
 }
 
 .video-sound-button:hover {
-  transform: translateY(-2px);
+  transform: translateY(var(--btn-lift));
   box-shadow: 0 24px 48px rgba(200, 56, 62, 0.34);
+}
+
+/* Era el ultimo boton de la landing sin foco visible. Sobre la tarjeta oscura
+   el contorno va en blanco: --pink-deep no se veria contra ese fondo. */
+.video-sound-button:focus-visible {
+  outline: 2px solid #FFF8F8;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video-sound-button { transition: none; }
+  .video-sound-button:hover { transform: none; }
 }
 
 .video-showcase-orbit {
@@ -999,13 +1156,96 @@ textarea { resize: vertical; }
   max-width: 34ch;
 }
 
+/* El alto de pantalla lo pone la regla de oro compartida (buscar "REGLA DE
+   ORO" mas arriba). Aca solo queda lo propio de esta seccion. */
 .method-section {
+  position: relative;
   overflow: hidden;
+}
+
+/* Pantallas bajas: se recorta el aire vertical para que el contenido siga
+   entrando en una pantalla sin desbordar. */
+@media (max-height: 820px) and (min-width: 1081px) {
+  .method-section { padding-block: clamp(2.5rem, 5vh, 4rem); }
+  .method-shell { gap: clamp(0.9rem, 2vw, 1.6rem); }
+  .method-grid { gap: 0.55rem; }
+  .method-card { padding: 0.85rem 1rem; }
+  .method-card-num { width: 3rem; height: 3rem; }
+}
+
+/*
+  Foto a sangre por el borde izquierdo.
+  ────────────────────────────────────────────────────────────────────────
+  Se sale de la caja de contenido a proposito: el borde izquierdo de la foto
+  toca el borde de la ventana, y su borde derecho se disuelve con una mascara
+  para que no haya un corte recto contra el fondo de la pagina.
+
+  A partir de 1080px hacia abajo desaparece: en pantallas angostas la foto le
+  robaria el ancho al texto, que es lo que la seccion tiene que comunicar.
+*/
+.method-foto {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  /*
+    El ancho NO es estetico, sale de una cuenta.
+
+    La foto es 1536x1024 y la columna es alta y angosta, asi que el recorte se
+    queda con una franja vertical. La bailarina ocupa del 19% al 55% del ancho
+    del encuadre: 36% del total. Una columna mas angosta que eso le corta la
+    pierna extendida -- con 30vw solo entraba el 32% y se le cortaba el pie.
+
+    Con 33vw la ventana muestra ~35% del ancho de la foto, que con el anclaje de
+    abajo la deja entera.
+  */
+  width: clamp(300px, 33vw, 540px);
+  pointer-events: none;
+  /* Se difumina hacia la derecha Y hacia abajo, para entregarla al fondo sin
+     borde. `-webkit-` va tambien: Safari todavia lo pide. */
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 38%, transparent 96%),
+    linear-gradient(180deg, transparent 0%, #000 14%, #000 84%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, #000 38%, transparent 96%),
+    linear-gradient(180deg, transparent 0%, #000 14%, #000 84%, transparent 100%);
+  mask-composite: intersect;
+}
+
+.method-foto-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /*
+    🔴 ESTE NUMERO DEPENDE DE LA FOTO. SI SE CAMBIA LA FOTO, HAY QUE RECALCULARLO.
+
+       La caja es alta y angosta y la foto es apaisada, asi que `cover` se queda
+       con una franja vertical: donde caiga esa franja lo decide este valor. No
+       es una preferencia estetica, es lo unico que evita cortar a la bailarina.
+
+       Historial, para que se entienda el riesgo:
+         · foto 1 (de espaldas en la barra, sujeto en 19%-55%) -> 30%
+         · foto 2 (de frente, sujeto mas a la izquierda)       -> 30% le cortaba
+           el brazo alzado y el costado. Recalculado a 22%.
+
+       Como recalcularlo: recortar la foto a la proporcion de la caja (~300x560)
+       con varios valores y quedarse con el que deje al sujeto entero. Con
+       `center` se pierde siempre, porque el sujeto nunca esta en el medio.
+  */
+  object-position: 22% center;
+  opacity: 0.94;
 }
 
 .method-shell {
   position: relative;
+  /* z-index para quedar POR ENCIMA de la foto. Sin esto el texto queda debajo
+     y no se puede seleccionar ni pulsar el boton. */
+  z-index: 1;
   width: min(1160px, 100%);
+  /* Se corre a la derecha para dejarle sitio a la foto, solo cuando hay ancho
+     de sobra. El margen automatico de la izquierda lo empuja. */
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(330px, 0.92fr) minmax(0, 1.08fr);
@@ -1013,10 +1253,38 @@ textarea { resize: vertical; }
   align-items: center;
   border: 1px solid rgba(255, 218, 218, 0.75);
   border-radius: 40px;
-  background: linear-gradient(160deg, rgba(255,253,251,0.9) 0%, rgba(255,255,255,0.7) 100%);
+  background: linear-gradient(160deg, rgba(255,253,251,0.82) 0%, rgba(255,255,255,0.62) 100%);
   padding: clamp(1.4rem, 3.5vw, 2.4rem);
   box-shadow: 0 2px 0 rgba(255,218,218,0.6), 0 32px 80px rgba(217, 52, 56, 0.08);
   backdrop-filter: blur(14px);
+}
+
+/*
+  🔴 EL HUECO DE LA FOTO ES UNA COLUMNA, NO UN margin-left.
+
+     La primera version hacia `margin-left: clamp(240px,26vw,460px)` sobre un
+     shell con `width: min(1160px, 100%)`. Eso desborda: en CSS ese `100%` se
+     resuelve contra el ancho del contenedor SIN descontar el margen propio del
+     elemento. A 1440px el shell arrancaba en 446px y media 1160 -> terminaba en
+     1606, o sea 238px fuera del area util, y el `overflow: hidden` de la
+     seccion le cortaba las tarjetas por la derecha.
+
+     Con una columna de rejilla el hueco se reserva de verdad y el `minmax(0,
+     1fr)` impide por construccion que la segunda columna se pase.
+*/
+@media (min-width: 1081px) {
+  .method-section {
+    grid-template-columns: clamp(240px, 26vw, 460px) minmax(0, 1fr);
+  }
+
+  .method-shell {
+    grid-column: 2;
+    margin: 0;
+  }
+}
+
+@media (max-width: 1080px) {
+  .method-foto { display: none; }
 }
 
 .method-shell::before {
@@ -1036,24 +1304,101 @@ textarea { resize: vertical; }
   gap: 0.95rem;
 }
 
+/*
+  Titular en el didone (ver --font-serif). Va DERECHO, no en cursiva: la cursiva
+  se reserva para el acento coral del final, que es lo que le da el golpe. Todo
+  en cursiva no acentua nada.
+
+  ⚠️ letter-spacing pasa de -0.075em a -0.02em. Un didone tiene remates finos y
+     mucho contraste entre trazos: apretandolo -0.075em los remates de una letra
+     tocan la siguiente y el titular se ve sucio. Esa cifra venia de cuando el
+     titular era Montserrat, que es geometrica y aguanta el apriete.
+*/
 .method-title {
-  max-width: 13.8ch;
+  max-width: 15ch;
   margin: 0;
-  color: #28191C;
-  font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.35rem, 4.55vw, 4.1rem);
+  color: #1E1418;
+  font-family: var(--font-serif);
+  font-size: clamp(2.3rem, 4.3vw, 3.9rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.method-title-accent {
+  color: var(--pink);
   font-style: italic;
-  font-weight: 700;
-  letter-spacing: -0.075em;
-  line-height: 0.94;
+  font-weight: 500;
 }
 
 .method-lead {
   max-width: 32rem;
   margin: 0;
-  color: #9A505D;
+  /* Era #9A505D: 4.05:1 sobre la tarjeta clara, por debajo del 4.5:1 que exige
+     un parrafo. --pink-muted da 5.36:1 sobre blanco y mantiene el tono. */
+  color: var(--pink-muted);
   font-size: clamp(0.96rem, 1.2vw, 1.05rem);
   line-height: 1.62;
+}
+
+/*
+  CTA de la seccion. Consume el sistema de botones (tokens --btn-*), con el
+  circulo del play como unico rasgo propio.
+*/
+.method-cta {
+  --btn-min-h: 50px;
+  --btn-pad-y: 0.8rem;
+  --btn-pad-x: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.7rem;
+  min-height: var(--btn-min-h);
+  margin-top: 0.5rem;
+  border-radius: var(--btn-radius);
+  background: var(--pink);
+  color: #fff;
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-size: var(--btn-size);
+  font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track);
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 12px 26px rgba(230, 79, 85, 0.26);
+  transition: background var(--btn-dur) ease,
+              box-shadow var(--btn-dur) ease,
+              transform var(--btn-dur) var(--btn-ease);
+}
+
+.method-cta:hover {
+  background: var(--pink-mid);
+  transform: translateY(var(--btn-lift));
+  box-shadow: 0 18px 34px rgba(230, 79, 85, 0.32);
+}
+
+.method-cta:focus-visible {
+  outline: 2px solid var(--pink-deep);
+  outline-offset: 3px;
+}
+
+.method-cta-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  /* Empuja el triangulo 1px a la derecha: un play centrado geometricamente se
+     ve descentrado, porque su masa esta a la izquierda. */
+  padding-left: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-cta { transition: none; }
+  .method-cta:hover { transform: none; }
 }
 
 .method-grid {
@@ -1062,19 +1407,27 @@ textarea { resize: vertical; }
   gap: 0.72rem;
 }
 
+/*
+  Tarjeta del metodo: numero · divisoria · icono · texto, en una sola fila.
+  El numero y el icono son columnas de ancho fijo para que los cuatro textos
+  arranquen exactamente en la misma vertical. Con `auto` se alinearian segun el
+  ancho de cada icono y se veria descuadrado.
+*/
 .method-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.5rem 1.1rem;
-  align-items: start;
+  grid-template-columns: 3.4rem 1px 2.6rem minmax(0, 1fr);
+  gap: clamp(0.85rem, 1.6vw, 1.25rem);
+  align-items: center;
   min-height: 0;
   border: 1px solid rgba(255, 218, 218, 0.7);
   border-radius: 22px;
   background: linear-gradient(135deg, rgba(255, 252, 250, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
-  padding: clamp(1rem, 2vw, 1.3rem);
+  padding: clamp(0.95rem, 1.9vw, 1.25rem);
   box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 24px rgba(217, 52, 56, 0.05), 0 2px 8px rgba(217, 52, 56, 0.04);
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  transition: transform var(--btn-dur) var(--btn-ease),
+              border-color var(--btn-dur) ease,
+              box-shadow var(--btn-dur) ease;
 }
 
 .method-card:hover {
@@ -1083,66 +1436,137 @@ textarea { resize: vertical; }
   box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 16px 48px rgba(217, 52, 56, 0.11), 0 4px 16px rgba(217, 52, 56, 0.07);
 }
 
-.method-card small {
-  grid-row: span 2;
+/* Numero en circulo lavado, no en cuadrado con degradado coral: el degradado
+   competia con el icono que ahora va al lado. */
+.method-card-num {
   display: inline-grid;
   place-items: center;
-  width: 2.8rem;
-  height: 2.8rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--pink) 0%, var(--pink-mid) 100%);
-  color: #fff;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  background: var(--pink-wash);
+  /* NO --pink: 16.3px en negrita NO es "texto grande" para WCAG (eso empieza en
+     14pt ≈ 18.66px), asi que exige 4.5:1 y --pink sobre wash da 3.27:1.
+     --pink-deep da 5.22:1 y a simple vista es el mismo coral. */
+  color: var(--pink-deep);
   font-family: var(--font-display), sans-serif;
-  font-size: 0.88rem;
+  font-size: 1.02rem;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  box-shadow: 0 8px 22px rgba(230, 79, 85, 0.32), inset 0 1px 0 rgba(255,255,255,0.18);
+  letter-spacing: 0.01em;
 }
 
-.method-card span {
-  color: #D93438;
-  font-family: var(--font-display), sans-serif;
-  font-size: clamp(1.2rem, 2.3vw, 1.55rem);
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  line-height: 1.02;
+.method-card-divisoria {
+  align-self: stretch;
+  width: 1px;
+  margin-block: 0.35rem;
+  background: linear-gradient(180deg, transparent, rgba(230, 79, 85, 0.22), transparent);
+}
+
+.method-card-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--pink);
+}
+
+.method-card-body {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+/* Serif tambien aca: es lo que ata las tarjetas con el titular. */
+.method-card-title {
+  color: #1E1418;
+  font-family: var(--font-serif);
+  font-size: clamp(1.08rem, 1.7vw, 1.32rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
 }
 
 .method-card p {
   margin: 0;
   color: var(--pink-muted);
   font-size: 0.94rem;
-  line-height: 1.6;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
+@media (max-width: 520px) {
+  /* La divisoria y el icono se van: con 4 columnas en un movil el texto queda
+     en una franja de tres palabras de ancho. */
+  .method-card {
+    grid-template-columns: 2.9rem minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+  .method-card-num { width: 2.9rem; height: 2.9rem; font-size: 0.92rem; }
+  .method-card-divisoria,
+  .method-card-icon { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-card { transition: none; }
+  .method-card:hover { transform: none; }
+}
+
+/*
+  Banda de cierre. Pasa de coral saturado a un lavado rosa suave y cruza las DOS
+  columnas, como una linea de cierre de la seccion y no como un cuarto bloque
+  compitiendo con las tarjetas.
+
+  El texto pasa a --pink-deep sobre --pink-wash (5.22:1). Antes era blanco sobre
+  coral: 3.78:1, que no cumple AA para texto normal. Aca importa de verdad
+  porque es una frase que se lee, no una etiqueta -- que es exactamente la regla
+  escrita en CLAUDE.md sobre cuando usar --pink y cuando el tono oscuro.
+*/
 .method-callout {
-  grid-column: 2;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 2.2vw, 1.6rem);
   margin: 0;
-  border: 0;
+  border: 1px solid rgba(230, 79, 85, 0.16);
   border-radius: 22px;
-  background: linear-gradient(140deg, var(--pink) 0%, var(--pink-mid) 65%, var(--pink-mid) 100%);
-  color: #fff;
-  font-family: var(--font-display), sans-serif;
-  font-size: clamp(1.1rem, 2.3vw, 1.65rem);
-  font-style: italic;
+  background: linear-gradient(120deg, var(--pink-wash) 0%, #FFF4F3 58%, rgba(255, 218, 218, 0.5) 100%);
+  padding: clamp(1.15rem, 2.4vw, 1.7rem) clamp(1.25rem, 2.8vw, 2rem);
+  box-shadow: 0 14px 40px rgba(217, 52, 56, 0.07);
+}
+
+.method-callout-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--pink);
+  box-shadow: 0 6px 18px rgba(217, 52, 56, 0.1);
+}
+
+.method-callout-text {
+  display: grid;
+  gap: 0.22em;
+  font-family: var(--font-serif);
+  font-size: clamp(1.02rem, 1.85vw, 1.32rem);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 1.32;
+  color: #4A2A30;
+  text-wrap: pretty;
+}
+
+.method-callout strong {
+  color: var(--pink-deep);
   font-weight: 700;
-  letter-spacing: -0.045em;
-  line-height: 1.14;
-  padding: clamp(1.1rem, 2.6vw, 1.55rem);
-  box-shadow: 0 20px 56px rgba(200, 56, 62, 0.28), inset 0 1px 0 rgba(255,255,255,0.16);
 }
 
-.method-callout span,
-.method-callout strong {
-  display: block;
-}
-
-.method-callout strong {
-  margin-top: 0.26em;
-  font-size: 1.14em;
-  font-weight: 900;
-  letter-spacing: -0.055em;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.18), 0 12px 26px rgba(105, 17, 28, 0.24);
+@media (max-width: 620px) {
+  .method-callout {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+  .method-callout-mark { width: 2.9rem; height: 2.9rem; }
 }
 
 .previews-section {
@@ -1474,10 +1898,29 @@ textarea { resize: vertical; }
   backdrop-filter: blur(10px);
 }
 
+/*
+  🔴 LA FOTO NO SE ESTIRA PARA IGUALAR LA COLUMNA DE TEXTO.
+
+     Tenia `height: 100%`. Mientras la columna de al lado era corta no se notaba,
+     pero al rediseñar "Sobre mi" (iconos, mas aire, regla bajo el titular) esa
+     columna paso a medir ~800px, y la caja de la foto se estiro con ella: 330px
+     de ancho por 800 de alto.
+
+     Con `object-fit: cover`, una caja asi de estrecha y alta obliga a escalar el
+     retrato por su ALTO y descartar dos tercios del ancho -- se veia un recorte
+     brutal de la cara. El problema no era el `object-position`, era la forma de
+     la caja.
+
+     Con un alto acotado la caja se queda en una proporcion de retrato sensata
+     (entre 0.53 y 0.79) y el recorte deja de ser extremo. `align-self: center`
+     la centra respecto del texto, que es lo que hacia el `height: 100%`.
+*/
 .about-media {
   position: relative;
+  align-self: center;
   min-height: 420px;
-  height: 100%;
+  max-height: 620px;
+  height: clamp(420px, 46vw, 620px);
 }
 
 .about-media::before {
@@ -1519,16 +1962,75 @@ textarea { resize: vertical; }
   align-content: center;
 }
 
+/*
+  Mismo criterio que el titular de Metodo: didone, DERECHO, y la cursiva coral
+  reservada para el acento. El letter-spacing baja de -0.065em a -0.015em porque
+  un didone apretado junta los remates (ver la nota en .method-title).
+*/
 .about-title {
-  max-width: 15ch;
+  max-width: 21ch;
   margin: 0;
-  color: #2A171B;
-  font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.2rem, 3.65vw, 3.35rem);
+  color: #1E1418;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 3.3vw, 3.05rem);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.about-title-accent {
+  color: var(--pink);
   font-style: italic;
-  font-weight: 700;
-  letter-spacing: -0.065em;
-  line-height: 0.92;
+  font-weight: 500;
+}
+
+/* Regla corta bajo el titular. Separa el titular de las tarjetas sin meter otro
+   bloque de texto. */
+.about-regla {
+  display: block;
+  width: 84px;
+  height: 2px;
+  margin: 0.15rem 0 0.35rem;
+  border-radius: 2px;
+  background: var(--pink);
+}
+
+/*
+  Riel vertical del borde izquierdo.
+  `writing-mode` gira el texto de verdad -- con `transform: rotate` habria que
+  compensar la caja a mano y se descoloca en cuanto cambia el largo del texto,
+  que aca pasa: en frances dice "STUDIO EN LIGNE".
+*/
+.about-riel {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: clamp(1rem, 2.6vw, 2.6rem);
+  display: grid;
+  justify-items: center;
+  gap: 1.1rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.about-riel-linea {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, var(--pink));
+}
+
+.about-riel-texto {
+  writing-mode: vertical-rl;
+  color: var(--pink-deep);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1200px) {
+  .about-riel { display: none; }
 }
 
 .about-bio-grid {
@@ -1541,47 +2043,66 @@ textarea { resize: vertical; }
 
 .about-bio-card {
   position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
   min-height: 128px;
   height: 100%;
   border: 1px solid rgba(217, 52, 56, 0.14);
   border-radius: 22px;
   background:
     linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(255,246,246,0.72) 100%);
-  padding: 0.92rem;
+  padding: 1.05rem;
   box-shadow: 0 1px 0 rgba(255,255,255,0.75) inset, 0 16px 38px rgba(124, 46, 58, 0.06);
-  overflow: hidden;
+  /* El circulo decorativo de la esquina se saco: ahora hay un icono de verdad y
+     los dos juntos eran ruido. */
 }
 
-.about-bio-card::after {
-  content: "";
-  position: absolute;
-  right: -28px;
-  bottom: -34px;
-  width: 92px;
-  height: 92px;
+.about-bio-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
   border-radius: 999px;
-  background: rgba(230, 79, 85, 0.08);
+  background: var(--pink-wash);
+  color: var(--pink-deep);
 }
 
-.about-bio-card span {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  margin-bottom: 0.4rem;
-  color: var(--pink);
-  font-size: 0.55rem;
+.about-bio-body {
+  display: grid;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.about-bio-title {
+  /*
+    ⚠️ 0.62rem son ~10px: texto chico de verdad, asi que exige 4.5:1 sin margen
+       de discusion. Estaba en --pink, que sobre esta tarjeta da 3.66:1.
+       --pink-deep da 5.96:1 y a simple vista es el mismo coral.
+  */
+  color: var(--pink-deep);
+  font-size: 0.62rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .about-bio-card p {
-  position: relative;
-  z-index: 1;
   margin: 0;
+  /* Era 0.78rem (12.5px). Subido a 0.82rem: es el cuerpo de texto mas chico de
+     la landing y aca hay sitio de sobra. */
   color: var(--pink-muted);
-  font-size: 0.78rem;
-  line-height: 1.42;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (max-width: 560px) {
+  .about-bio-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
 }
 
 .about-tags {
@@ -1714,19 +2235,22 @@ textarea { resize: vertical; }
   transform: translate(1px, -1px);
 }
 
+/* Consumen el sistema de botones (tokens --btn-* mas arriba). Se les habia
+   pasado en la unificacion: eran los dos ultimos con geometria propia. */
 .brand-button,
 .plan-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  gap: 0.65rem;
+  border-radius: var(--btn-radius);
   background: var(--pink);
   color: #fff;
-  min-height: 46px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  min-height: var(--btn-min-h);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-size: var(--btn-size);
+  font-weight: var(--btn-weight);
+  letter-spacing: var(--btn-track);
   line-height: 1.25;
   text-align: center;
   text-transform: uppercase;
@@ -1738,14 +2262,55 @@ textarea { resize: vertical; }
   justify-self: start;
 }
 
+.brand-button:hover,
+.plan-action:hover {
+  background: var(--pink-mid);
+  transform: translateY(var(--btn-lift));
+}
+
+.brand-button:focus-visible,
+.plan-action:focus-visible {
+  outline: 2px solid var(--pink-deep);
+  outline-offset: 3px;
+}
+
+/* Flecha en circulo del boton "Ver membresias". */
+.brand-button-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-button,
+  .plan-action { transition: none; }
+  .brand-button:hover,
+  .plan-action:hover { transform: none; }
+}
+
 .plans-section {
   width: min(1200px, 100%);
   margin: 0 auto;
+  /* Se recorta el aire vertical que hereda de `.landing-section` (hasta 7rem
+     arriba y abajo): es lo primero que hay que ceder para que las tres
+     tarjetas entren en una pantalla. Ver la nota "QUE ENTRE EN UNA PANTALLA"
+     en components/pricing-plans.tsx. */
+  padding-block: clamp(1.75rem, 5vh, 4rem);
+}
+
+/* El titular y la bajada tambien ceden alto en pantallas bajas: son los dos
+   bloques mas grandes despues de las tarjetas. */
+@media (max-height: 860px) {
+  .plans-head h2 { font-size: clamp(1.5rem, 3.8vh, 2.4rem); }
+  .plans-head p  { font-size: 0.92rem; }
 }
 
 .plans-head {
   max-width: 760px;
-  margin: 0 auto 2.5rem;
+  margin: 0 auto clamp(1rem, 2.6vh, 2.5rem);
   text-align: center;
   display: grid;
   gap: 0.85rem;
@@ -2068,12 +2633,15 @@ body {
     font-size: 2.7rem;
   }
 
+  /* Variante compacta: se reescriben las VARIABLES, no las propiedades, para
+     que siga dentro del sistema de botones y no vuelva a divergir. */
   .brand-button,
   .plan-action {
-    min-height: 44px;
-    padding: 0.72rem 0.9rem;
-    font-size: 0.64rem;
-    letter-spacing: 0.065em;
+    --btn-min-h: 44px;
+    --btn-pad-y: 0.72rem;
+    --btn-pad-x: 0.95rem;
+    --btn-size: 0.64rem;
+    --btn-track: 0.085em;
   }
 
   .preview-studio-panel {

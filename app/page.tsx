@@ -1,14 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  ArrowUpRight,
+  Flower2,
+  GraduationCap,
+  HandHeart,
+  PersonStanding,
+  Play,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
 import { BrunelaFooter } from "@/components/ui/hover-footer";
-import { InteractiveSelector } from "@/components/ui/interactive-selector";
 import { PricingPlans } from "@/components/pricing-plans";
 import { PacksPublicos, type PackPublico } from "@/components/packs-publicos";
 import { getSubscriptionCatalog } from "@/src/lib/stripe/catalog";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { VideoShowcase } from "@/components/video-showcase";
+import { UltimoEstudio } from "@/components/ultimo-estudio";
 import { T } from "@/components/language-provider";
 import type { PublicMessageKey } from "@/src/i18n/public";
 
@@ -135,20 +145,9 @@ function BrandGlow() {
   );
 }
 
-const heroImages = [
-  "/fotos-landing/Ballet.jpg",
-  "/fotos-landing/about-1.jpg",
-  "/fotos-landing/Stretching.jpg",
-  "/fotos-landing/Pilates Reformer.jpg",
-  "/fotos-landing/Progressing Ballet Technique.jpg",
-  "/fotos-landing/pbt.jpg",
-  "/fotos-landing/about-2.jpg",
-  "/fotos-landing/pct.jpg",
-  "/fotos-landing/stretching1.jpg",
-  "/fotos-landing/pilates.jpg",
-  "/fotos-landing/Pilates Mat.png",
-  "/fotos-landing/about-hero.jpg.jpg",
-];
+// `heroImages` se borro el 2026-08-06: el hero dejo de ser un arco de
+// miniaturas y pasó a una foto a sangre. Esas mismas fotos de disciplinas las
+// sigue mostrando `InfinitePhotoCarousel`, que va justo debajo.
 
 const galleryImages = [
   "/fotos-landing/Ballet.jpg",
@@ -165,37 +164,86 @@ const galleryImages = [
   "/fotos-landing/Progressing Contemporary Technique.jpg",
 ] as const;
 
+/**
+ * ⚠️ EL ICONO VIAJA COMO CADENA, NO COMO COMPONENTE.
+ *
+ *    Es la trampa 6 de CLAUDE.md: un icono de lucide es una funcion, y poner
+ *    `{ Icon: Play }` en un array de un server component revienta EN TIEMPO DE
+ *    EJECUCION en cuanto ese array cruza a un componente de cliente
+ *    ("Functions cannot be passed directly to Client Components"). `tsc` pasa y
+ *    `next build` pasa: ya reventó una vez /admin en produccion con un 500.
+ *
+ *    Hoy estas tarjetas se renderizan en este mismo archivo, que es servidor, y
+ *    asi seria valido. Se usa la cadena igual para que siga siendolo el dia que
+ *    alguien mueva esta seccion a un componente de cliente.
+ */
 const methodCards = [
   {
     title: "method.card1.title",
     label: "01",
     text: "method.card1.text",
+    icono: "tecnica",
   },
   {
     title: "method.card2.title",
     label: "02",
     text: "method.card2.text",
+    icono: "progresion",
   },
   {
     title: "method.card3.title",
     label: "03",
     text: "method.card3.text",
+    icono: "cuerpo",
   },
   {
     title: "method.card4.title",
     label: "04",
     text: "method.card4.text",
+    icono: "acompanamiento",
   },
 ] as const;
 
+function IconoMetodo({ nombre }: { nombre: (typeof methodCards)[number]["icono"] }) {
+  // aria-hidden en todos: el significado ya lo dice el titulo de la tarjeta que
+  // va al lado. Anunciarlos seria repetir lo mismo dos veces.
+  const props = { size: 30, strokeWidth: 1.5, "aria-hidden": true } as const;
+  switch (nombre) {
+    case "tecnica":
+      return <PersonStanding {...props} />;
+    case "progresion":
+      return <TrendingUp {...props} />;
+    case "cuerpo":
+      return <Sparkles {...props} />;
+    case "acompanamiento":
+      return <HandHeart {...props} />;
+  }
+}
+
 const aboutHighlights = ["Ballet", "Pilates", "PBT", "PCT", "RAD CPD Credits"];
 
+// El icono va como cadena por el mismo motivo que en methodCards: ver la nota
+// de la trampa 6 alla arriba.
 const aboutCards = [
-  { title: "about.card1.title", text: "about.card1.text" },
-  { title: "about.card2.title", text: "about.card2.text" },
-  { title: "about.card3.title", text: "about.card3.text" },
-  { title: "about.card4.title", text: "about.card4.text" },
+  { title: "about.card1.title", text: "about.card1.text", icono: "mirada" },
+  { title: "about.card2.title", text: "about.card2.text", icono: "formacion" },
+  { title: "about.card3.title", text: "about.card3.text", icono: "cuerpo" },
+  { title: "about.card4.title", text: "about.card4.text", icono: "movimiento" },
 ] as const;
+
+function IconoAbout({ nombre }: { nombre: (typeof aboutCards)[number]["icono"] }) {
+  const props = { size: 22, strokeWidth: 1.6, "aria-hidden": true } as const;
+  switch (nombre) {
+    case "mirada":
+      return <PersonStanding {...props} />;
+    case "formacion":
+      return <GraduationCap {...props} />;
+    case "cuerpo":
+      return <Flower2 {...props} />;
+    case "movimiento":
+      return <Sparkles {...props} />;
+  }
+}
 
 // El `tier` ata cada tarjeta al enum membership_tier de la base. Sin el, lo
 // unico que unia la landing con los planes reales era `name`, que es un texto
@@ -267,7 +315,14 @@ function InfinitePhotoCarousel() {
                   alt=""
                   fill
                   sizes="(max-width: 720px) 72vw, 360px"
-                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  /*
+                    ⚠️ Anclado arriba, NO centrado.
+                       Las tarjetas son muy apaisadas (~1.9:1) y estas fotos son
+                       de personas de cuerpo entero: `center` recorta arriba y
+                       abajo por igual y deja a varias sin cabeza. En cualquier
+                       foto de una persona la cara vive en el tercio superior.
+                  */
+                  style={{ objectFit: "cover", objectPosition: "50% 26%" }}
                 />
               </figure>
             ))}
@@ -382,62 +437,141 @@ export default async function HomePage() {
       <BrandGlow />
 
       <div style={{ position: "relative", zIndex: 1 }}>
-        <ArcGalleryHero images={heroImages} />
+        <ArcGalleryHero />
       </div>
 
       <InfinitePhotoCarousel />
 
       <VideoShowcase />
 
-      <section className="landing-section method-section">
+      {/* El id lo usa el navbar (enlace + resaltado de seccion activa). Sin el,
+          esta seccion era contenido real al que no llegaba ningun enlace. */}
+      <section id="metodo" className="landing-section method-section">
+        {/*
+          Foto a sangre por el borde izquierdo. Es decorativa (alt vacio): lo que
+          cuenta la seccion lo dicen el titular y las cuatro tarjetas, y
+          describirla obligaria a un lector de pantalla a oir algo que no aporta.
+
+          El recorte esta resuelto en `.method-foto-img`: la foto es apaisada y
+          la columna es alta, asi que el `object-position` esta calculado sobre
+          donde cae la bailarina, no en `center`.
+        */}
+        <div className="method-foto" aria-hidden>
+          {/*
+            🔴 EL `sizes` NO ES EL ANCHO DE LA CAJA. ES EL ANCHO DEL ORIGEN.
+
+               Aca la caja mide 33vw, y poner `sizes="32vw"` parecia lo correcto
+               -- pero estaba sirviendo la foto BORROSA, y por bastante.
+
+               El motivo es `object-fit: cover` en una caja alta y angosta: para
+               llenarla de arriba abajo, el navegador escala la foto por su ALTO
+               y descarta ~65% del ancho. O sea que necesita un archivo mucho mas
+               grande que la caja. Con `sizes="32vw"` Next creia que bastaba con
+               1080px de ancho y la ampliaba x2.50.
+
+               El ancho de origen que hace falta es (ancho de caja / fraccion
+               visible) = 33vw / 0.35 ≈ 94vw. Con eso Next sirve el archivo
+               entero y la ampliacion baja de x2.50 a x1.76.
+
+            ⚠️ Debajo de 1080px la foto esta oculta por CSS, pero el navegador la
+               descarga igual: el `1px` de ahi hace que se baje la variante mas
+               chica en vez de la grande.
+
+            ⚠️ quality 90 y no el 75 por defecto: el origen YA viene muy
+               comprimido (0.011 bytes por pixel), asi que volver a comprimirlo
+               al 75 encima le quita lo poco que le queda.
+          */}
+          <Image
+            src="/image.avif"
+            alt=""
+            width={1536}
+            height={1024}
+            sizes="(max-width: 1080px) 1px, 94vw"
+            quality={90}
+            className="method-foto-img"
+          />
+        </div>
+
         <div className="method-shell">
           <div className="method-copy">
             <p className="section-kicker">
               <T id="method.kicker" />
             </p>
             <h2 className="method-title">
-              <T id="method.title" />
+              <T id="method.title" />{" "}
+              <em className="method-title-accent">
+                <T id="method.titleAccent" />
+              </em>
             </h2>
             <p className="method-lead">
               <T id="method.lead" />
             </p>
+            <a className="method-cta" href="#video-trailer">
+              <span className="method-cta-play" aria-hidden>
+                <Play size={13} fill="currentColor" strokeWidth={0} />
+              </span>
+              <T id="method.cta" />
+            </a>
           </div>
 
           <div className="method-grid">
             {methodCards.map((item) => (
               <div className="method-card" key={item.title}>
-                <small>{item.label}</small>
-                <span>
-                  <T id={item.title as PublicMessageKey} />
+                <span className="method-card-num">{item.label}</span>
+                <span className="method-card-divisoria" aria-hidden />
+                <span className="method-card-icon">
+                  <IconoMetodo nombre={item.icono} />
                 </span>
-                <p>
-                  <T id={item.text as PublicMessageKey} />
-                </p>
+                <div className="method-card-body">
+                  <span className="method-card-title">
+                    <T id={item.title as PublicMessageKey} />
+                  </span>
+                  <p>
+                    <T id={item.text as PublicMessageKey} />
+                  </p>
+                </div>
               </div>
             ))}
           </div>
 
           <p className="method-callout">
-            <span>
-              <T id="method.calloutIntro" />
+            <span className="method-callout-mark" aria-hidden>
+              <Sparkles size={26} strokeWidth={1.6} />
             </span>
-            <strong>
-              <T id="method.calloutEmphasis" />
-            </strong>
+            <span className="method-callout-text">
+              <span>
+                <T id="method.calloutIntro" />
+              </span>
+              <strong>
+                <T id="method.calloutEmphasis" />
+              </strong>
+            </span>
           </p>
         </div>
       </section>
 
-      <section id="clases" className="landing-section previews-section">
-        <InteractiveSelector />
-      </section>
+      {/* La seccion `#clases` con <InteractiveSelector /> se borro el 2026-08-06:
+          hacia exactamente lo mismo que "Ultimo del estudio online", que va mas
+          abajo. Sus nueve fichas (titulos, duraciones, descripciones y vinetas)
+          se trasladaron TAL CUAL, y con ellas el id="clases", del que dependen
+          el enlace del navbar y el resaltado de seccion activa. */}
 
       <section id="sobre" className="about-section">
+        {/* Riel vertical del borde izquierdo. Es decorativo y repite el kicker
+            de la marca; se oculta por debajo de 1200px, donde no hay margen
+            lateral donde ponerlo. */}
+        <span className="about-riel" aria-hidden>
+          <span className="about-riel-linea" />
+          <span className="about-riel-texto">
+            <T id="method.kicker" />
+          </span>
+        </span>
+
         <div className="about-shell">
           <div className="about-media">
             <div className="about-photo">
               <Image
-                src="/fotos-landing/about-hero.jpg.jpg"
+                src="/image.jpg"
                 alt="Brunela"
                 fill
                 sizes="(max-width: 900px) 88vw, 470px"
@@ -451,17 +585,28 @@ export default async function HomePage() {
               <T id="about.kicker" />
             </p>
             <h2 className="about-title">
-              <T id="about.title" />
+              <T id="about.title" />{" "}
+              <em className="about-title-accent">
+                <T id="about.titleAccent" />
+              </em>{" "}
+              <T id="about.titleEnd" />
             </h2>
+            <span className="about-regla" aria-hidden />
+
             <div className="about-bio-grid">
               {aboutCards.map((card) => (
                 <article className="about-bio-card" key={card.title}>
-                  <span>
-                    <T id={card.title as PublicMessageKey} />
+                  <span className="about-bio-icon">
+                    <IconoAbout nombre={card.icono} />
                   </span>
-                  <p>
-                    <T id={card.text as PublicMessageKey} />
-                  </p>
+                  <div className="about-bio-body">
+                    <span className="about-bio-title">
+                      <T id={card.title as PublicMessageKey} />
+                    </span>
+                    <p>
+                      <T id={card.text as PublicMessageKey} />
+                    </p>
+                  </div>
                 </article>
               ))}
             </div>
@@ -487,6 +632,9 @@ export default async function HomePage() {
               </div>
               <Link className="brand-button" href="/#planes">
                 <T id="about.button" />
+                <span className="brand-button-arrow" aria-hidden>
+                  <ArrowUpRight size={15} strokeWidth={2.2} />
+                </span>
               </Link>
             </div>
 
@@ -509,6 +657,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <UltimoEstudio />
 
       <section id="planes" className="landing-section plans-section">
         <div className="plans-head">

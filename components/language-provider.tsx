@@ -131,7 +131,13 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
           border: 0;
           border-radius: 999px;
           background: transparent;
-          color: #D93438;
+          /* 0.58rem ≈ 9.3px: es el texto mas chico de toda la cabecera, asi que
+             exige 4.5:1 sin discusion. En --pink-mid daba 3.94:1 sobre la
+             cabecera apoyada en la foto del hero (medido). --pink-deep pasa.
+             El boton activo sigue en --pink a proposito: ahi el codigo de idioma
+             es superficie glanceable, no texto que alguien lee -- es la regla
+             que ya esta escrita en CLAUDE.md. */
+          color: var(--pink-deep);
           padding: 0 0.48rem;
           font-family: var(--font-body), sans-serif;
           font-size: 0.58rem;
@@ -143,6 +149,22 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
 
         .language-switcher button:hover {
           transform: translateY(-1px);
+        }
+
+        /* Faltaba: sin esto, quien navega con teclado no ve en que idioma esta
+           parado al pasar por el selector. */
+        .language-switcher button:focus-visible {
+          outline: 2px solid var(--pink-deep);
+          outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .language-switcher button {
+            transition: none;
+          }
+          .language-switcher button:hover {
+            transform: none;
+          }
         }
 
         .language-switcher button.is-active {

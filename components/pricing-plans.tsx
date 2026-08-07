@@ -2,9 +2,23 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Crown, Footprints, Lock, PersonStanding } from "lucide-react";
 import { usePublicI18n } from "@/components/language-provider";
 import type { PublicLocale, PublicMessageKey } from "@/src/i18n/public";
+
+/**
+ * Icono de cada plan.
+ *
+ * Se elige por POSICION (1, 2, 3) y no por el nombre del plan, porque el nombre
+ * es texto de presentacion y se traduce a cuatro idiomas: atarlo a "Solista"
+ * dejaria sin icono a la version inglesa el dia que alguien la retoque.
+ */
+function IconoPlan({ indice }: { indice: number }) {
+  const p = { size: 26, strokeWidth: 1.5, "aria-hidden": true } as const;
+  if (indice === 1) return <Footprints {...p} />;
+  if (indice === 2) return <PersonStanding {...p} />;
+  return <Crown {...p} />;
+}
 
 type BillingMode = "monthly" | "annual";
 
@@ -127,10 +141,22 @@ export function PricingPlans({ plans }: PricingPlansProps) {
               </div>
 
               <article className={`classic-plan-card ${plan.featured ? "is-featured" : ""}`}>
-                <div className="classic-plan-head">
-                  <h3>{plan.name}</h3>
-                  <p>{oneLine}</p>
+                <div className="classic-plan-top">
+                  {/* aria-hidden: lo que el icono dice ya lo dice el nombre del
+                      plan que va al lado. Anunciarlo seria repetirlo. */}
+                  <span className="classic-plan-icon" aria-hidden>
+                    <IconoPlan indice={planNumber} />
+                  </span>
+                  <div className="classic-plan-head">
+                    <p className="classic-plan-tagline">
+                      {t(`plan${planNumber}.tagline` as PublicMessageKey)}
+                    </p>
+                    <h3>{plan.name}</h3>
+                    <span className="classic-plan-regla" aria-hidden />
+                  </div>
                 </div>
+
+                <p className="classic-plan-oneline">{oneLine}</p>
 
                 <div className="classic-plan-price">
                   <strong>{price}</strong>
@@ -168,6 +194,11 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         })}
       </div>
 
+      <p className="classic-pricing-garantia">
+        <Lock size={14} strokeWidth={2} aria-hidden />
+        {t("pricing.guarantee")}
+      </p>
+
       <style>{`
         .classic-pricing {
           width: min(1120px, 100%);
@@ -180,7 +211,9 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           justify-content: center;
           gap: 1rem;
           width: 100%;
-          margin: 0 auto 2.5rem;
+          /* En vh: era 2.5rem fijos y en una pantalla baja ese hueco era justo
+             lo que empujaba las tarjetas fuera de la pantalla. */
+          margin: 0 auto clamp(0.9rem, 2.6vh, 2.5rem);
         }
 
         .pricing-toggle {
@@ -382,11 +415,25 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           box-shadow: 0 1px 0 rgba(255,218,218,0.55) inset, 0 32px 72px rgba(217, 52, 56, 0.13);
         }
 
+        /*
+          🔴 LA DESTACADA PASA DE CORAL SOLIDO A ROSA CLARO.
+
+             Tenia un degradado coral con TODO el texto en blanco. Dos motivos
+             para cambiarlo, y ninguno es estetico:
+
+             1. Es lo que pide la maqueta.
+             2. Blanco sobre --pink da 3.78:1. Ahi dentro hay descripcion, lista
+                de lo incluido y precio -- texto que alguien LEE, no etiquetas--,
+                y eso exige 4.5:1. Era la tarjeta que mas se mira y la unica que
+                no cumplia.
+
+             Se distingue igual: borde coral, sombra coral mas marcada y el
+             boton solido (las otras dos lo llevan perfilado).
+        */
         .classic-plan-card.is-featured {
-          background: linear-gradient(150deg, var(--pink) 0%, var(--pink-mid) 60%, var(--pink-mid) 100%);
-          border-color: transparent;
-          color: #fff;
-          box-shadow: 0 32px 90px rgba(200, 56, 62, 0.3), 0 8px 28px rgba(200, 56, 62, 0.18);
+          background: linear-gradient(150deg, #FFF4F3 0%, #FDECEC 100%);
+          border-color: rgba(230, 79, 85, 0.34);
+          box-shadow: 0 32px 90px rgba(200, 56, 62, 0.16), 0 8px 28px rgba(200, 56, 62, 0.1);
         }
 
         .classic-plan-card.is-featured:hover {
@@ -416,23 +463,87 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           white-space: nowrap;
         }
 
-        .classic-plan-head h3 {
-          margin: 0 0 0.55rem;
-          font-family: var(--font-display), sans-serif;
-          font-size: clamp(1.6rem, 3vw, 2.05rem);
-          font-weight: 900;
-          line-height: 1;
-          letter-spacing: -0.03em;
+        /* Icono + encabezado en una fila, como en la maqueta. */
+        .classic-plan-top {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+          gap: 0.9rem;
         }
 
-        .classic-plan-head p,
+        .classic-plan-icon {
+          display: inline-grid;
+          place-items: center;
+          width: 3.1rem;
+          height: 3.1rem;
+          border-radius: 999px;
+          background: var(--pink-wash);
+          color: var(--pink-deep);
+        }
+
+        .classic-plan-card.is-featured .classic-plan-icon {
+          background: rgba(255, 255, 255, 0.75);
+        }
+
+        .classic-plan-tagline {
+          margin: 0 0 0.28rem;
+          /* ~9.6px: texto chico de verdad, exige 4.5:1. --pink-deep sobre la
+             tarjeta clara da 5.96:1; --pink se quedaba en 3.66:1. */
+          color: var(--pink-deep);
+          font-family: var(--font-display), sans-serif;
+          font-size: 0.6rem;
+          font-weight: 900;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+
+        /* Serif, igual que los titulares de Metodo y Sobre mi: es lo que ata
+           esta seccion con el resto de la landing. */
+        .classic-plan-head h3 {
+          margin: 0;
+          color: #1E1418;
+          font-family: var(--font-serif);
+          font-size: clamp(1.5rem, 2.7vw, 1.9rem);
+          font-weight: 500;
+          line-height: 1.08;
+          letter-spacing: -0.015em;
+        }
+
+        .classic-plan-regla {
+          display: block;
+          width: 42px;
+          height: 2px;
+          margin-top: 0.6rem;
+          border-radius: 2px;
+          background: var(--pink);
+        }
+
+        .classic-plan-oneline,
         .classic-plan-note {
           margin: 0;
-          color: currentColor;
+          padding-bottom: 1.1rem;
+          border-bottom: 1px solid var(--pink-line);
+          color: var(--pink-muted);
           font-size: 0.92rem;
           line-height: 1.55;
-          opacity: 0.76;
         }
+
+        .classic-plan-note {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .classic-pricing-garantia {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          margin: clamp(1.6rem, 3vw, 2.4rem) 0 0;
+          color: var(--pink-muted);
+          font-size: 0.86rem;
+        }
+
+        .classic-pricing-garantia svg { color: var(--pink-deep); }
 
         .classic-plan-price {
           display: flex;
@@ -454,6 +565,11 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
         .classic-plan-price span {
           margin-top: 0.28rem;
+          /* ⚠️ Color explicito y NO currentColor. Son 13.6px -- texto normal,
+             4.5:1-- y heredando el coral de la tarjeta se quedaba en 4.09:1.
+             El numero grande de al lado si puede seguir en coral: a 54px es
+             texto grande y le basta con 3:1. */
+          color: var(--pink-deep);
           font-size: 0.85rem;
           font-weight: 900;
           letter-spacing: 0.05em;
@@ -473,38 +589,127 @@ export function PricingPlans({ plans }: PricingPlansProps) {
           grid-template-columns: auto minmax(0, 1fr);
           gap: 0.55rem;
           align-items: start;
-          font-size: 0.9rem;
-          line-height: 1.42;
+          /* Explicito por lo mismo que el "€ / mes": heredando el coral de la
+             tarjeta, esta lista se quedaba corta de contraste. */
+          color: #4A2A30;
+          font-size: 0.88rem;
+          line-height: 1.4;
         }
 
         .classic-plan-list svg {
           margin-top: 0.04rem;
-          opacity: 0.8;
+          color: var(--pink);
         }
 
+        /* ════════════════════════════════════════════════════════════════
+           QUE ENTRE EN UNA PANTALLA
+           ────────────────────────────────────────────────────────────────
+           La regla de oro da min-height: 100svh, pero esta seccion tiene
+           mucho dentro: encabezado, interruptor, tres tarjetas con lista y la
+           nota final. Con las medidas de antes ocupaba ~1100px y obligaba a
+           hacer scroll dentro de su propia pantalla.
+
+           Las medidas de abajo se expresan en vh, no en rem: asi la
+           seccion se aprieta sola en una pantalla baja y respira en una alta,
+           en vez de depender de un punto de corte fijo.
+           ════════════════════════════════════════════════════════════════ */
+        .classic-pricing {
+          --btn-min-h: clamp(42px, 5.2vh, 48px);
+        }
+
+        .classic-plan-card {
+          gap: clamp(0.6rem, 1.5vh, 1.1rem);
+          padding: clamp(0.9rem, 2vh, 1.5rem);
+        }
+
+        .classic-plan-price {
+          padding: clamp(0.5rem, 1.4vh, 1.1rem) 0;
+        }
+
+        .classic-plan-price strong {
+          font-size: clamp(2.3rem, 6vh, 3.6rem);
+        }
+
+        .classic-plan-oneline {
+          padding-bottom: clamp(0.6rem, 1.6vh, 1.1rem);
+        }
+
+        .classic-plan-list { gap: clamp(0.35rem, 1vh, 0.6rem); }
+
+        .classic-pricing-garantia {
+          margin-top: clamp(0.9rem, 2.2vh, 1.8rem);
+        }
+
+        /* Consume el sistema de botones de globals.css. Solo se reescribe el
+           alto y el padding horizontal, porque va a ancho completo dentro de la
+           tarjeta del plan. */
         .classic-plan-action {
+          --btn-min-h: 48px;
+          --btn-pad-y: 0.78rem;
+          --btn-pad-x: 1rem;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 48px;
+          min-height: var(--btn-min-h);
           margin-top: auto;
-          border-radius: 999px;
+          border-radius: var(--btn-radius);
           background: var(--pink);
           color: #fff;
-          padding: 0.78rem 1rem;
-          font-size: 0.7rem;
-          font-weight: 900;
-          letter-spacing: 0.08em;
+          padding: var(--btn-pad-y) var(--btn-pad-x);
+          font-size: var(--btn-size);
+          font-weight: var(--btn-weight);
+          letter-spacing: var(--btn-track);
           line-height: 1.2;
           text-align: center;
           text-decoration: none;
           text-transform: uppercase;
-          transition: transform 180ms ease, box-shadow 180ms ease;
+          transition: background var(--btn-dur) ease,
+                      box-shadow var(--btn-dur) ease,
+                      transform var(--btn-dur) var(--btn-ease);
+        }
+
+        .classic-plan-action:focus-visible {
+          outline: 2px solid var(--pink-deep);
+          outline-offset: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .classic-plan-action { transition: none; }
+          .classic-plan-action:hover { transform: none; }
+        }
+
+        /*
+          Los dos botones estaban invertidos respecto de la maqueta: coral
+          solido en las tres tarjetas y blanco en la destacada. Va al reves --
+          las normales perfiladas, la destacada solida-- para que el ojo caiga
+          en el plan que se quiere empujar.
+        */
+        .classic-plan-action {
+          border: 1.5px solid var(--pink-line);
+          background: #fff;
+          /* --pink-deep, no --pink: son ~11.5px en negrita, texto normal, y
+             --pink sobre blanco se queda en 3.66:1. --pink-deep da 5.96:1. */
+          color: var(--pink-deep);
+          box-shadow: none;
+        }
+
+        .classic-plan-action:hover {
+          border-color: var(--pink);
+          background: var(--pink-wash);
         }
 
         .classic-plan-card.is-featured .classic-plan-action {
-          background: #fff;
-          color: #D93438;
+          border-color: transparent;
+          /* --pink-mid y no --pink: blanco sobre --pink da 3.78:1 y esto es
+             texto normal. --pink-mid llega a 4.67:1. */
+          background: var(--pink-mid);
+          color: #fff;
+          box-shadow: 0 14px 30px rgba(217, 52, 56, 0.3);
+        }
+
+        .classic-plan-card.is-featured .classic-plan-action:hover {
+          background: var(--pink-deep);
+          border-color: transparent;
         }
 
         .classic-plan-action:hover {

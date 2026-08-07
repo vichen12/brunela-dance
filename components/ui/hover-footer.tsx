@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import Image from "next/image";
+import { Sparkle } from "lucide-react";
 import {
   FaFacebookF,
   FaInstagram,
@@ -69,8 +70,15 @@ export function BrunelaFooter() {
             style={{ objectFit: "contain" }}
           />
         </div>
-        <p className="footer-services">{t("footer.services")}</p>
-        <p className="footer-place">{t("footer.place")}</p>
+        {/* Disciplinas y lugar en una sola linea: son dos datos cortos y en dos
+            renglones separados competian con el logo que va justo encima. */}
+        <p className="footer-services">
+          {t("footer.services")}
+          <span className="footer-sep" aria-hidden>
+            ·
+          </span>
+          {t("footer.place")}
+        </p>
 
         <nav className="footer-nav" aria-label="Footer navigation">
           {navLinks.map((link) => (
@@ -79,6 +87,14 @@ export function BrunelaFooter() {
             </Link>
           ))}
         </nav>
+
+        {/* Filete con destello, como en la maqueta. Decorativo: separa la
+            navegacion de las redes sin meter otro bloque de texto. */}
+        <div className="footer-regla" aria-hidden>
+          <span className="footer-regla-linea" />
+          <Sparkle size={13} strokeWidth={0} fill="currentColor" />
+          <span className="footer-regla-linea" />
+        </div>
 
         <div className="footer-socials">
           {socialLinks.map(({ label, href, icon: Icon }) => (
@@ -162,14 +178,38 @@ export function BrunelaFooter() {
 
         .footer-services {
           margin: 0;
-          color: #9A6B77;
+          /* Era #9A6B77: 4.02:1 sobre el rosa del footer, por debajo del 4.5:1
+             que exige un texto de 14.4px. --pink-muted pasa. */
+          color: var(--pink-muted);
           font-size: 0.9rem;
           line-height: 1.5;
         }
 
+        .footer-sep {
+          margin: 0 0.5rem;
+          opacity: 0.55;
+        }
+
+        /* Filete con destello entre la navegacion y las redes. */
+        .footer-regla {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.9rem;
+          width: min(760px, 82%);
+          margin: 2.1rem auto 0;
+          color: var(--pink);
+        }
+
+        .footer-regla-linea {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(230, 79, 85, 0.34), transparent);
+        }
+
         .footer-place {
           margin: 0.3rem 0 0;
-          color: #B07882;
+          color: var(--pink-muted);
           font-size: 0.82rem;
         }
 
@@ -198,6 +238,20 @@ export function BrunelaFooter() {
         }
 
         /* ── Socials ── */
+        /* Separadores verticales entre iconos, como en la maqueta. */
+        .footer-socials a + a::before {
+          content: "";
+          position: absolute;
+          left: calc(-0.6rem - 1px);
+          top: 50%;
+          width: 1px;
+          height: 18px;
+          background: rgba(230, 79, 85, 0.28);
+          transform: translateY(-50%);
+        }
+
+        .footer-socials a { position: relative; }
+
         .footer-socials {
           display: flex;
           justify-content: center;
@@ -299,7 +353,21 @@ export function BrunelaFooter() {
             margin-top: 1.7rem;
           }
 
-          .footer-socials {
+          /* Separadores verticales entre iconos, como en la maqueta. */
+        .footer-socials a + a::before {
+          content: "";
+          position: absolute;
+          left: calc(-0.6rem - 1px);
+          top: 50%;
+          width: 1px;
+          height: 18px;
+          background: rgba(230, 79, 85, 0.28);
+          transform: translateY(-50%);
+        }
+
+        .footer-socials a { position: relative; }
+
+        .footer-socials {
             margin-top: 1.3rem;
           }
 

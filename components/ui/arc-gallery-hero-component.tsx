@@ -3,84 +3,94 @@
 import React from "react";
 import { usePublicI18n } from "@/components/language-provider";
 
+/**
+ * Hero de la landing.
+ *
+ * QUE CAMBIO (2026-08-06)
+ *   Antes el hero era un arco de 11 miniaturas circulares sobre fondo
+ *   transparente. Ahora la imagen ES el diseno: una foto a sangre del estudio
+ *   con la bailarina en la barra, y la copia apoyada en el tercio izquierdo,
+ *   que en esa foto es pared vacia.
+ *
+ *   El arco se saco a proposito: la foto ya trae sujeto propio y el arco le
+ *   caia encima. Las fotos de disciplinas NO se perdieron -- `InfinitePhotoCarousel`
+ *   va inmediatamente debajo en `app/page.tsx` y sigue mostrandolas.
+ *
+ * 🔴 POR QUE HAY UN SCRIM Y NO ES DECORATIVO
+ *   La pared de la foto es rosa. Se midieron los pixeles reales de la zona de
+ *   copia: el peor caso es #C89992. Sobre ese fondo, el coral de marca
+ *   (--pink #E64F55) da 1.50:1 -- texto invisible. Ni siquiera --pink-deep
+ *   llega (2.39:1). El unico token que sobrevivia a pelo era --ink (7.02:1).
+ *
+ *   El scrim lava esa zona hasta un blanco calido casi opaco. Sobre el, el
+ *   wordmark coral vuelve a leerse y la copia en --ink queda muy por encima de
+ *   AA. Sin el scrim, el logo de la marca desaparece contra su propio fondo.
+ *
+ *   Los porcentajes NO son gusto: se ajustaron simulando la mezcla del scrim
+ *   sobre los pixeles reales de la foto, por CAJA DE CADA ELEMENTO, en cinco
+ *   resoluciones (1280x800 a 1920x1080). Con estos valores el peor caso es:
+ *
+ *     kicker (--pink-deep, 4.5:1)   5.33:1  ✅
+ *     wordmark (--pink, 3:1)        3.18:1  ✅
+ *     parrafo (--ink, 4.5:1)       15.65:1  ✅
+ *
+ *   Dos cosas que costo descubrir midiendo:
+ *
+ *   1. Una version anterior cerraba en 72% y daba 2.91:1 en el wordmark a
+ *      1280x800 -- por debajo del 3:1 de WCAG para texto grande. A menos ancho
+ *      la columna de copia se corre hacia la zona menos lavada, asi que medir
+ *      solo a 1440 no alcanza.
+ *   2. Medir el peor pixel de TODA la columna obligaba a un scrim al 97%, que
+ *      borraba el rosa del estudio y dejaba la mitad izquierda blanca. Cada
+ *      elemento ocupa su propia caja: midiendo por caja alcanza con 90% y la
+ *      bailarina queda con 24% de velo en vez de 42%.
+ *
+ *   Mover estos numeros sin volver a medir rompe la legibilidad en silencio.
+ *
+ * ⚠️ EL COLOR DEL SCRIM ES #FEFAF7 PORQUE ES EL `background` DEL BODY.
+ *    Asi el fundido inferior entrega el hero a la seccion siguiente sin corte.
+ *    Si alguien cambia el fondo del body, hay que cambiarlo tambien aca.
+ */
+
 type ArcGalleryHeroProps = {
-  images: string[];
   className?: string;
 };
 
-const positions = [
-  { x: "-540px", y: "141px", tx: "-300px", ty: "82px", mx: "-144px", my: "34px",  s: "128px", ts: "92px", ms: "62px", z: 1, r: "-20deg" },
-  { x: "-432px", y: "89px",  tx: "-240px", ty: "48px", mx: "-128px", my: "19px",  s: "128px", ts: "92px", ms: "62px", z: 2, r: "-16deg" },
-  { x: "-324px", y: "48px",  tx: "-180px", ty: "20px", mx: "-96px",  my: "6px",   s: "128px", ts: "92px", ms: "62px", z: 3, r: "-12deg" },
-  { x: "-216px", y: "19px",  tx: "-120px", ty: "0px",  mx: "-64px",  my: "-5px",  s: "128px", ts: "92px", ms: "62px", z: 4, r: "-8deg"  },
-  { x: "-108px", y: "2px",   tx: "-60px",  ty: "-14px", mx: "-32px", my: "-13px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "-4deg"  },
-  { x: "0px",    y: "-4px",  tx: "0px",    ty: "-20px", mx: "0px",   my: "-17px", s: "128px", ts: "92px", ms: "62px", z: 6, r: "0deg"   },
-  { x: "108px",  y: "2px",   tx: "60px",   ty: "-14px", mx: "32px",  my: "-13px", s: "128px", ts: "92px", ms: "62px", z: 5, r: "4deg"   },
-  { x: "216px",  y: "19px",  tx: "120px",  ty: "0px",   mx: "64px",  my: "-5px",  s: "128px", ts: "92px", ms: "62px", z: 4, r: "8deg"   },
-  { x: "324px",  y: "48px",  tx: "180px",  ty: "20px",  mx: "96px",  my: "6px",   s: "128px", ts: "92px", ms: "62px", z: 3, r: "12deg"  },
-  { x: "432px",  y: "89px",  tx: "240px",  ty: "48px",  mx: "128px", my: "19px",  s: "128px", ts: "92px", ms: "62px", z: 2, r: "16deg"  },
-  { x: "540px",  y: "141px", tx: "300px",  ty: "82px",  mx: "158px", my: "34px",  s: "128px", ts: "92px", ms: "62px", z: 1, r: "20deg"  },
-] as const;
-
-type PhotoStyle = React.CSSProperties & {
-  "--x": string;
-  "--y": string;
-  "--tx": string;
-  "--ty": string;
-  "--mx": string;
-  "--my": string;
-  "--size": string;
-  "--tablet-size": string;
-  "--mobile-size": string;
-  "--delay": string;
-  "--rotate": string;
-  "--z": number;
-};
-
 export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
-  images,
   className = "",
 }) => {
   const { t } = usePublicI18n();
-  const photos = images.slice(0, positions.length);
 
   return (
     <section className={`brand-hero ${className}`}>
-      <div className="brand-hero-photos" aria-hidden>
-        {photos.map((src, index) => {
-          const pos = positions[index];
-
-          return (
-            <div
-              className="brand-hero-photo"
-              key={`${src}-${index}`}
-              style={
-                {
-                  "--x": pos.x,
-                  "--y": pos.y,
-                  "--tx": pos.tx,
-                  "--ty": pos.ty,
-                  "--mx": pos.mx,
-                  "--my": pos.my,
-                  "--size": pos.s,
-                  "--tablet-size": pos.ts,
-                  "--mobile-size": pos.ms,
-                  "--delay": `${(photos.length - index - 1) * 62}ms`,
-                  "--rotate": pos.r,
-                  "--z": pos.z,
-                } as PhotoStyle
-              }
-            >
-              <img src={src} alt="" draggable={false} />
-            </div>
-          );
-        })}
+      <div className="brand-hero-scene" aria-hidden>
+        {/*
+          alt vacio a proposito: la foto es ambiente. Lo que hay que anunciar es
+          el nombre del estudio, y eso lo dice el wordmark del <h1>. Describirla
+          ademas obligaria a un lector de pantalla a oir dos veces lo mismo.
+        */}
+        <img
+          className="brand-hero-bg"
+          src="/hero-estudio.avif"
+          alt=""
+          // Es la imagen mas grande de la primera pantalla: sin esto compite
+          // con el resto de la landing y el LCP se va varios cientos de ms.
+          fetchPriority="high"
+          decoding="async"
+        />
+        <div className="brand-hero-scrim" />
       </div>
 
       <div className="brand-hero-copy">
         <p className="brand-hero-kicker">{t("hero.kicker")}</p>
 
-        <div className="brand-hero-logo" aria-label="Brunela Dance Trainer">
+        {/*
+          El wordmark es el UNICO h1 de la landing (verificado: no habia
+          ninguno). Va como imagen y no como texto porque es el logo enviado de
+          la marca: re-tipografiarlo en CSS lo cambiaria. El nombre accesible
+          sale del alt.
+        */}
+        <h1 className="brand-hero-logo">
           <img
             className="brand-hero-isotype"
             src="/brand/isologo-icon.png"
@@ -93,7 +103,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
             alt="Brunela Dance Trainer"
             draggable={false}
           />
-        </div>
+        </h1>
 
         <p className="brand-hero-subtitle">{t("hero.subtitle")}</p>
 
@@ -111,528 +121,301 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         .brand-hero {
           position: relative;
           z-index: 1;
+          display: grid;
+          align-content: center;
+          justify-items: start;
           width: 100%;
           max-width: 100vw;
-          min-height: 690px;
-          height: 100vh;
-          display: grid;
-          justify-items: center;
-          align-content: center;
+          min-height: 640px;
+          height: 100svh;
+          max-height: 960px;
           overflow: hidden;
-          padding: 86px clamp(1rem, 4vw, 3rem) 4rem;
-          background: transparent;
+          padding: 104px clamp(1.25rem, 6.5vw, 6rem) 4.5rem;
+          background: #FEFAF7;
         }
 
-        .brand-hero-photos {
+        .brand-hero-scene {
           position: absolute;
-          top: 64px;
-          left: 50%;
-          z-index: 1;
-          width: min(1360px, 100vw);
-          height: 310px;
-          transform: translateX(-50%);
-          pointer-events: none;
-        }
-
-        .brand-hero-photo {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          z-index: var(--z);
-          width: var(--size);
-          aspect-ratio: 1;
-          border-radius: 999px;
+          inset: 0;
+          z-index: 0;
           overflow: hidden;
-          background: linear-gradient(135deg, var(--pink) 0%, #FFDADA 52%, #fff 100%);
-          padding: 4px;
-          opacity: 0;
-          box-shadow: 0 16px 32px rgba(217, 52, 56, 0.16), 0 0 0 1px rgba(230, 79, 85, 0.14);
-          transform: translate(-50%, -50%) translate(calc(var(--x) + 48px), calc(var(--y) - 14px)) rotate(calc(var(--rotate) + 5deg)) scale(0.88);
-          animation: hero-photo-in 760ms cubic-bezier(0.16, 1, 0.3, 1) var(--delay) forwards;
-          will-change: transform, opacity;
         }
 
-        .brand-hero-photo::after {
-          content: "";
-          position: absolute;
-          inset: 4px;
-          border-radius: inherit;
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.52);
-          pointer-events: none;
-        }
-
-        .brand-hero-photo img {
+        .brand-hero-bg {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          border-radius: inherit;
-          transition: transform 260ms ease;
+          /* La bailarina esta a ~70% del ancho. Anclar ahi la mantiene entera
+             cuando el viewport se angosta y recorta por los lados. */
+          object-position: 68% 42%;
+          animation: hero-bg-settle 1800ms cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
-        .brand-hero-photo:nth-child(5) img,
-        .brand-hero-photo:nth-child(7) img,
-        .brand-hero-photo:nth-child(10) img {
-          filter: grayscale(1) contrast(1.08);
+        .brand-hero-scrim {
+          position: absolute;
+          inset: 0;
+          /* Capa 1: entrega el hero a la seccion siguiente.
+             Capa 2: lava la columna de copia para que el coral se lea. */
+          background:
+            linear-gradient(
+              180deg,
+              rgba(254, 250, 247, 0) 79%,
+              rgba(254, 250, 247, 0.62) 92%,
+              #FEFAF7 100%
+            ),
+            linear-gradient(
+              96deg,
+              rgba(254, 250, 247, 0.90) 0%,
+              rgba(254, 250, 247, 0.86) 30%,
+              rgba(254, 250, 247, 0.64) 46%,
+              rgba(254, 250, 247, 0.24) 62%,
+              rgba(254, 250, 247, 0) 74%
+            );
         }
 
         .brand-hero-copy {
           position: relative;
           z-index: 2;
           display: grid;
-          justify-items: center;
-          width: min(520px, 100%);
-          margin-top: 10.4rem;
-          gap: 0.72rem;
-          color: #D93438;
-          text-align: center;
-          animation: hero-copy-in 720ms ease-out 460ms both;
+          justify-items: start;
+          gap: clamp(0.9rem, 1.6vh, 1.45rem);
+          width: min(560px, 100%);
+          text-align: left;
         }
+
+        .brand-hero-copy > * {
+          animation: hero-copy-in 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .brand-hero-copy > *:nth-child(1) { animation-delay: 80ms; }
+        .brand-hero-copy > *:nth-child(2) { animation-delay: 170ms; }
+        .brand-hero-copy > *:nth-child(3) { animation-delay: 290ms; }
+        .brand-hero-copy > *:nth-child(4) { animation-delay: 400ms; }
 
         .brand-hero-kicker {
           margin: 0;
-          color: var(--pink);
+          /* --pink-deep y no --pink: es texto chico, y chico exige 4.5:1.
+             Sobre el scrim, --pink-deep pasa; --pink no llegaria. */
+          color: var(--pink-deep);
           font-size: 0.76rem;
           font-weight: 900;
-          letter-spacing: 0.38em;
+          letter-spacing: 0.34em;
           text-transform: uppercase;
         }
 
         .brand-hero-logo {
           display: grid;
-          grid-template-columns: clamp(48px, 5.5vw, 66px) minmax(220px, 350px);
+          grid-template-columns: clamp(46px, 5vw, 62px) minmax(200px, 1fr);
           align-items: center;
-          justify-content: center;
-          gap: clamp(0.75rem, 1.4vw, 1.1rem);
-          width: min(520px, 100%);
+          gap: clamp(0.7rem, 1.3vw, 1.05rem);
+          width: min(500px, 100%);
+          margin: 0;
         }
 
         .brand-hero-isotype {
           width: 100%;
           height: auto;
           object-fit: contain;
-          filter: drop-shadow(0 14px 20px rgba(217, 52, 56, 0.12));
         }
 
         .brand-hero-wordmark {
-          width: min(350px, 68vw);
+          width: 100%;
           height: auto;
           object-fit: contain;
           object-position: left center;
-          filter: drop-shadow(0 14px 22px rgba(217, 52, 56, 0.1));
         }
 
         .brand-hero-subtitle {
-          max-width: 38ch;
+          max-width: 44ch;
           margin: 0;
-          color: #D93438;
-          font-size: clamp(1rem, 1.55vw, 1.14rem);
-          line-height: 1.62;
+          /* --ink y no coral: es prosa que alguien LEE. Sobre el scrim da mas
+             de 12:1, y el coral se reserva para el wordmark. */
+          color: var(--ink);
+          font-size: clamp(1.02rem, 1.5vw, 1.16rem);
+          line-height: 1.6;
+          text-wrap: pretty;
         }
 
         .hero-actions {
           display: flex;
           flex-wrap: wrap;
-          justify-content: center;
-          gap: 0.75rem;
-          width: 100%;
-          margin-top: 0.6rem;
+          gap: 0.7rem;
+          margin-top: 0.35rem;
         }
 
+        /*
+          Misma familia que el resto de los botones (tokens en globals.css). El
+          hero se permite un poco mas de aire porque es el CTA principal de la
+          pagina, pero el tracking, la curva y el salto del hover son los del
+          sistema -- que es lo que hace que se vean del mismo producto.
+        */
         .hero-action {
+          --btn-min-h: 50px;
+          --btn-pad-y: 0.85rem;
+          --btn-pad-x: 1.7rem;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 48px;
-          min-width: min(300px, 100%);
-          border-radius: 999px;
-          padding: 0.82rem 1.25rem;
-          font-size: 0.68rem;
-          font-weight: 900;
-          letter-spacing: 0.08em;
+          min-height: var(--btn-min-h);
+          border-radius: var(--btn-radius);
+          padding: var(--btn-pad-y) var(--btn-pad-x);
+          font-size: var(--btn-size);
+          font-weight: var(--btn-weight);
+          letter-spacing: var(--btn-track);
           line-height: 1.2;
           text-align: center;
           text-transform: uppercase;
           text-decoration: none;
-          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+          transition: background var(--btn-dur) ease,
+                      border-color var(--btn-dur) ease,
+                      color var(--btn-dur) ease,
+                      box-shadow var(--btn-dur) ease,
+                      transform var(--btn-dur) var(--btn-ease);
         }
 
-        .hero-action:hover {
-          transform: translateY(-2px);
+        .hero-action:hover { transform: translateY(var(--btn-lift)); }
+
+        .hero-action:focus-visible {
+          outline: 2px solid var(--pink-deep);
+          outline-offset: 3px;
         }
 
         .hero-action.primary {
           background: var(--pink);
           color: #fff;
-          box-shadow: 0 14px 28px rgba(230, 79, 85, 0.28);
+          box-shadow: 0 14px 30px rgba(230, 79, 85, 0.3);
+        }
+
+        .hero-action.primary:hover {
+          background: var(--pink-mid);
+          box-shadow: 0 18px 36px rgba(230, 79, 85, 0.36);
         }
 
         .hero-action.secondary {
-          min-width: 210px;
-          border: 1.5px solid #FFDADA;
-          background: rgba(255, 255, 255, 0.86);
-          color: #D93438;
+          border: 1.5px solid var(--pink-line);
+          background: rgba(255, 255, 255, 0.88);
+          color: var(--pink-deep);
         }
 
         .hero-action.secondary:hover {
           border-color: rgba(230, 79, 85, 0.44);
-          box-shadow: 0 14px 28px rgba(217, 52, 56, 0.08);
-        }
-
-        @keyframes hero-photo-in {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -50%) translate(calc(var(--x) + 48px), calc(var(--y) - 14px)) rotate(calc(var(--rotate) + 5deg)) scale(0.88);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--rotate)) scale(1);
-          }
+          box-shadow: 0 14px 28px rgba(217, 52, 56, 0.1);
         }
 
         @keyframes hero-copy-in {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: none; }
         }
 
-        @media (min-width: 901px) and (max-height: 820px) {
+        @keyframes hero-bg-settle {
+          from { transform: scale(1.06); }
+          to   { transform: scale(1); }
+        }
+
+        /* Pantallas anchas: la copia no se despega del borde infinitamente. */
+        @media (min-width: 1500px) {
           .brand-hero {
-            min-height: 640px;
-            padding-top: 74px;
-            padding-bottom: 2.4rem;
-          }
-
-          .brand-hero-photos {
-            top: 50px;
-            height: 270px;
-            transform: translateX(-50%) scale(0.86);
-            transform-origin: top center;
-          }
-
-          .brand-hero-copy {
-            width: min(500px, 100%);
-            margin-top: 8.4rem;
-            gap: 0.58rem;
-          }
-
-          .brand-hero-kicker {
-            font-size: 0.68rem;
-          }
-
-          .brand-hero-logo {
-            grid-template-columns: 50px minmax(210px, 315px);
-            width: min(470px, 100%);
-          }
-
-          .brand-hero-wordmark {
-            width: min(315px, 62vw);
-          }
-
-          .brand-hero-subtitle {
-            font-size: 1rem;
-            line-height: 1.48;
-          }
-
-          .hero-actions {
-            margin-top: 0.35rem;
-          }
-
-          .hero-action {
-            min-height: 44px;
-            padding-block: 0.72rem;
+            padding-left: max(6rem, calc((100vw - 1400px) / 2));
           }
         }
 
-        @media (min-width: 901px) and (max-width: 1180px) {
-          .brand-hero-photos {
-            transform: translateX(-50%) scale(0.82);
-            transform-origin: top center;
+        /* Portatiles bajos: la foto sigue entera, la copia se compacta. */
+        @media (min-width: 901px) and (max-height: 780px) {
+          .brand-hero {
+            min-height: 600px;
+            padding-top: 88px;
+            padding-bottom: 3rem;
           }
-
-          .brand-hero-copy {
-            margin-top: 8.8rem;
-          }
+          .brand-hero-copy { gap: 0.78rem; }
+          .brand-hero-logo { width: min(440px, 100%); }
+          .brand-hero-subtitle { font-size: 1rem; line-height: 1.5; }
+          .hero-action { min-height: 46px; }
         }
 
+        /*
+          ≤900px: la composicion se da vuelta. El degradado pasa a VERTICAL --
+          arriba transparente para que se vea la bailarina, abajo casi opaco
+          para apoyar la copia. Un scrim horizontal aca no serviria: en retrato
+          la columna de copia ocupa todo el ancho y quedaria sobre la foto.
+        */
         @media (max-width: 900px) {
           .brand-hero {
             height: auto;
-            min-height: auto;
-            padding-top: 82px;
-            padding-bottom: 3.25rem;
+            min-height: 100svh;
+            max-height: none;
+            align-content: end;
+            justify-items: center;
+            padding: 108px clamp(1.25rem, 6vw, 2.5rem) 3.25rem;
           }
 
-          .brand-hero-photos {
-            position: relative;
-            top: auto;
-            left: auto;
+          /*
+            78% y no 70%: en retrato la ventana visible es angosta, y con 70% la
+            bailarina quedaba corrida a la derecha, con la pared vacia ocupando
+            la izquierda y el brazo cortado por el borde. Con 78% queda centrada.
+            El valor de escritorio (68%) NO sirve aca: alli la ventana es ancha y
+            el reparto es otro.
+          */
+          .brand-hero-bg { object-position: 78% 16%; }
+
+          .brand-hero-scrim {
+            background: linear-gradient(
+              180deg,
+              rgba(254, 250, 247, 0.06) 0%,
+              rgba(254, 250, 247, 0.22) 26%,
+              rgba(254, 250, 247, 0.80) 45%,
+              rgba(254, 250, 247, 0.97) 58%,
+              #FEFAF7 78%
+            );
+          }
+
+          .brand-hero-copy {
             width: 100%;
-            height: 228px;
-            transform: none;
-            margin: 0 auto 0.4rem;
-          }
-
-          .brand-hero-photo {
-            width: var(--tablet-size);
-            transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rotate));
-          }
-
-          .brand-hero-photo:nth-child(1),
-          .brand-hero-photo:nth-child(11) {
-            display: none;
-          }
-
-          .brand-hero-copy {
-            margin-top: 0;
-          }
-
-          @keyframes hero-photo-in {
-            from {
-              opacity: 0;
-              transform: translate(-50%, -50%) translate(calc(var(--tx) + 34px), calc(var(--ty) - 10px)) rotate(calc(var(--rotate) + 4deg)) scale(0.9);
-            }
-            to {
-              opacity: 1;
-              transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rotate)) scale(1);
-            }
-          }
-        }
-
-        @media (max-width: 640px) {
-          .brand-hero {
-            padding: 62px 0.85rem 2.4rem;
-          }
-
-          .brand-hero-photos {
-            height: 148px;
-            width: min(380px, calc(100vw - 0.5rem));
-            margin-bottom: 0.9rem;
-          }
-
-          .brand-hero-photo {
-            width: var(--mobile-size);
-            padding: 3px;
-            transform: translate(-50%, -50%) translate(var(--mx), var(--my)) rotate(var(--rotate));
-          }
-
-          .brand-hero-photo:nth-child(n + 12) {
-            display: none;
-          }
-
-          .brand-hero-photo:nth-child(1) {
-            --mx: -158px;
-            --my: 34px;
-            --mobile-size: 38px;
-            --rotate: -17deg;
-          }
-
-          .brand-hero-photo:nth-child(2) {
-            --mx: -128px;
-            --my: 19px;
-            --mobile-size: 42px;
-            --rotate: -13deg;
-          }
-
-          .brand-hero-photo:nth-child(3) {
-            --mx: -96px;
-            --my: 6px;
-            --mobile-size: 46px;
-            --rotate: -10deg;
-          }
-
-          .brand-hero-photo:nth-child(4) {
-            --mx: -64px;
-            --my: -5px;
-            --mobile-size: 50px;
-            --rotate: -6deg;
-          }
-
-          .brand-hero-photo:nth-child(5) {
-            --mx: -32px;
-            --my: -13px;
-            --mobile-size: 54px;
-            --rotate: -3deg;
-          }
-
-          .brand-hero-photo:nth-child(6) {
-            --mx: 0px;
-            --my: -17px;
-            --mobile-size: 58px;
-            --rotate: 0deg;
-          }
-
-          .brand-hero-photo:nth-child(7) {
-            --mx: 32px;
-            --my: -13px;
-            --mobile-size: 54px;
-            --rotate: 3deg;
-          }
-
-          .brand-hero-photo:nth-child(8) {
-            --mx: 64px;
-            --my: -5px;
-            --mobile-size: 50px;
-            --rotate: 6deg;
-          }
-
-          .brand-hero-photo:nth-child(9) {
-            --mx: 96px;
-            --my: 6px;
-            --mobile-size: 46px;
-            --rotate: 10deg;
-          }
-
-          .brand-hero-photo:nth-child(10) {
-            --mx: 128px;
-            --my: 19px;
-            --mobile-size: 42px;
-            --rotate: 13deg;
-          }
-
-          .brand-hero-photo:nth-child(11) {
-            --mx: 158px;
-            --my: 34px;
-            --mobile-size: 38px;
-            --rotate: 17deg;
-          }
-
-          .brand-hero-copy {
-            gap: 0.58rem;
-          }
-
-          .brand-hero-kicker {
-            font-size: 0.64rem;
-            letter-spacing: 0.22em;
+            justify-items: center;
+            text-align: center;
           }
 
           .brand-hero-logo {
-            grid-template-columns: 38px minmax(190px, 250px);
-            gap: 0.55rem;
-            width: min(315px, 100%);
+            justify-content: center;
+            width: min(420px, 92%);
           }
 
-          .brand-hero-wordmark {
-            width: min(250px, 72vw);
+          .brand-hero-subtitle { max-width: 40ch; }
+
+          .hero-actions {
+            justify-content: center;
+            width: 100%;
           }
 
-          .brand-hero-subtitle {
-            max-width: 31ch;
-            font-size: 0.94rem;
-            line-height: 1.52;
-          }
-
-          .hero-action {
-            width: min(100%, 320px);
-            max-width: 320px;
-            min-height: 44px;
-            padding: 0.74rem 0.9rem;
-            font-size: 0.62rem;
-            letter-spacing: 0.055em;
-          }
-
-          @keyframes hero-photo-in {
-            from {
-              opacity: 0;
-              transform: translate(-50%, -50%) translate(calc(var(--mx) + 28px), calc(var(--my) - 8px)) rotate(calc(var(--rotate) + 4deg)) scale(0.9);
-            }
-            to {
-              opacity: 1;
-              transform: translate(-50%, -50%) translate(var(--mx), var(--my)) rotate(var(--rotate)) scale(1);
-            }
-          }
+          .hero-action { min-width: min(320px, 100%); }
         }
 
-        @media (max-width: 390px) {
-          .brand-hero-photos {
-            height: 136px;
-            width: min(344px, calc(100vw - 0.5rem));
-          }
-
-          .brand-hero-photo:nth-child(2),
-          .brand-hero-photo:nth-child(10) {
-            display: none;
-          }
-
-          .brand-hero-photo:nth-child(1) {
-            --mx: -148px;
-            --my: 30px;
-            --mobile-size: 34px;
-          }
-
-          .brand-hero-photo:nth-child(2) {
-            --mx: -120px;
-            --my: 17px;
-            --mobile-size: 38px;
-          }
-
-          .brand-hero-photo:nth-child(3) {
-            --mx: -91px;
-            --my: 6px;
-            --mobile-size: 42px;
-          }
-
-          .brand-hero-photo:nth-child(4) {
-            --mx: -61px;
-            --my: -4px;
-            --mobile-size: 46px;
-          }
-
-          .brand-hero-photo:nth-child(5) {
-            --mx: -31px;
-            --my: -11px;
-            --mobile-size: 50px;
-          }
-
-          .brand-hero-photo:nth-child(6) {
-            --mx: 0px;
-            --my: -14px;
-            --mobile-size: 54px;
-          }
-
-          .brand-hero-photo:nth-child(7) {
-            --mx: 31px;
-            --my: -11px;
-            --mobile-size: 50px;
-          }
-
-          .brand-hero-photo:nth-child(8) {
-            --mx: 61px;
-            --my: -4px;
-            --mobile-size: 46px;
-          }
-
-          .brand-hero-photo:nth-child(9) {
-            --mx: 91px;
-            --my: 6px;
-            --mobile-size: 42px;
-          }
-
-          .brand-hero-photo:nth-child(10) {
-            --mx: 120px;
-            --my: 17px;
-            --mobile-size: 38px;
-          }
-
-          .brand-hero-photo:nth-child(11) {
-            --mx: 148px;
-            --my: 30px;
-            --mobile-size: 34px;
-          }
-
+        @media (max-width: 480px) {
+          .brand-hero { padding-top: 96px; }
+          .brand-hero-kicker { font-size: 0.68rem; letter-spacing: 0.26em; }
           .brand-hero-logo {
-            grid-template-columns: 32px minmax(170px, 220px);
+            grid-template-columns: 42px minmax(0, 1fr);
+            width: min(330px, 94%);
           }
+          .brand-hero-subtitle { font-size: 1rem; }
+        }
 
-          .brand-hero-wordmark {
-            width: min(220px, 74vw);
+        /*
+          Sin movimiento: se apagan las animaciones, no se reemplazan por otra
+          cosa. Como el estado base de la copia ya es visible (la animacion
+          arranca en opacity 0 pero no hay regla que la deje oculta), quitarla
+          deja todo en su sitio. Es a proposito: una animacion que "revela"
+          contenido lo deja invisible si nunca corre.
+        */
+        @media (prefers-reduced-motion: reduce) {
+          .brand-hero-copy > *,
+          .brand-hero-bg {
+            animation: none;
           }
+          .hero-action { transition: none; }
+          .hero-action:hover { transform: none; }
         }
       `}</style>
     </section>
   );
 };
+
+export default ArcGalleryHero;

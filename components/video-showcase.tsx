@@ -22,12 +22,14 @@ export function VideoShowcase() {
   }
 
   return (
-    <section className="video-showcase-section" aria-label="Video Brunela Dance Trainer">
+    // El id es el destino del boton "Ver trailer" de la seccion Metodo. Si se
+    // borra, ese boton no da error: no hace nada, que es peor.
+    <section id="video-trailer" className="video-showcase-section" aria-label="Video Brunela Dance Trainer">
       <div className="video-showcase-frame">
         <video
           ref={videoRef}
           className="video-showcase-media"
-          poster="/fotos-landing/about-hero.jpg.jpg"
+          poster="/image.jpg"
           autoPlay
           loop
           muted
