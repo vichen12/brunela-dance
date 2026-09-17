@@ -9,3 +9,8 @@ node_modules
 
 # Datos sensibles de migracion (hashes de contrasena). NUNCA al repo.
 _local/
+
+# Originales de la sesion de fotos (65 MB). Los recortes que usa la web ya
+# estan en public/fotos-landing/. Se quedan en local como master por si hay que
+# volver a recortar; en el repo solo abultarian.
+/fotos nuevas/

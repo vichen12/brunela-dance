@@ -37,7 +37,7 @@ const FICHAS = [
     etiqueta: "Clase",
     titulo: "Ballet técnico",
     meta: "32 min · Técnica",
-    foto: "/fotos-landing/Ballet.jpg",
+    foto: "/fotos-landing/g-barra-coral.jpg",
     encuadre: "center top",
     descripcion:
       "Una clase para trabajar postura, control, coordinación y calidad de movimiento desde la base del ballet.",
@@ -53,7 +53,7 @@ const FICHAS = [
     etiqueta: "Clase",
     titulo: "Progressing Ballet Technique",
     meta: "28 min · PBT",
-    foto: "/fotos-landing/Progressing Ballet Technique.jpg",
+    foto: "/fotos-landing/g-cintas.jpg",
     encuadre: "center",
     descripcion:
       "Entrenamiento de memoria muscular para mejorar la técnica, activar correctamente el cuerpo y bailar con más seguridad.",
@@ -69,7 +69,7 @@ const FICHAS = [
     etiqueta: "Clase",
     titulo: "Flexibilidad consciente",
     meta: "24 min · Stretching",
-    foto: "/fotos-landing/Stretching.jpg",
+    foto: "/fotos-landing/g-pies.jpg",
     encuadre: "center top",
     descripcion:
       "Una práctica de movilidad y elongación para ganar rango sin forzar, cuidando la activación y la respiración.",
@@ -85,7 +85,7 @@ const FICHAS = [
     etiqueta: "Curso",
     titulo: "Pies, rotación y estabilidad",
     meta: "14 días · Objetivo específico",
-    foto: "/fotos-landing/pbt.jpg",
+    foto: "/fotos-landing/g-punta.jpg",
     encuadre: "center",
     descripcion:
       "Un recorrido guiado para trabajar bases técnicas que sostienen el rendimiento del bailarín.",
@@ -101,7 +101,7 @@ const FICHAS = [
     etiqueta: "Curso",
     titulo: "Movilidad para splits",
     meta: "14 días · Flexibilidad",
-    foto: "/fotos-landing/stretching1.jpg",
+    foto: "/fotos-landing/g-suelo.jpg",
     encuadre: "center",
     descripcion:
       "Recorrido estructurado para avanzar en flexibilidad con técnica, fuerza activa y cuidado corporal.",
@@ -117,7 +117,7 @@ const FICHAS = [
     etiqueta: "Curso",
     titulo: "Contemporary Technique",
     meta: "Series · PCT",
-    foto: "/fotos-landing/Progressing Contemporary Technique.jpg",
+    foto: "/fotos-landing/g-retrato.jpg",
     encuadre: "center",
     descripcion:
       "Un recorrido para explorar articulación, transferencia de peso, conexión con el suelo y libertad de movimiento.",
@@ -133,7 +133,7 @@ const FICHAS = [
     etiqueta: "Objetivo",
     titulo: "Técnica base",
     meta: "Biblioteca completa",
-    foto: "/fotos-landing/Pilates Mat.png",
+    foto: "/fotos-landing/g-suelo.jpg",
     encuadre: "center",
     descripcion:
       "Un punto de partida para ordenar tu entrenamiento, sostener constancia y mejorar con una base técnica clara.",
@@ -149,7 +149,7 @@ const FICHAS = [
     etiqueta: "Objetivo",
     titulo: "Progreso guiado",
     meta: "Recorridos estructurados",
-    foto: "/fotos-landing/pilates.jpg",
+    foto: "/fotos-landing/g-pies.jpg",
     encuadre: "center",
     descripcion:
       "Recorridos de trabajo con objetivos específicos para entrenar con más profundidad, orden y precisión.",
@@ -165,7 +165,7 @@ const FICHAS = [
     etiqueta: "Objetivo",
     titulo: "Acompañamiento",
     meta: "Clases en vivo y seguimiento",
-    foto: "/fotos-landing/about-2.jpg",
+    foto: "/fotos-landing/g-barra-coral.jpg",
     encuadre: "center top",
     descripcion:
       "Una experiencia más cercana para revisar tu proceso, resolver dudas y ajustar el entrenamiento a tus necesidades.",

@@ -830,7 +830,6 @@ textarea { resize: vertical; }
        paso, no pantallas: a 100vh dejarian de leerse como transicion.
    ════════════════════════════════════════════════════════════════════════ */
 .method-section,
-.video-showcase-section,
 .previews-section,
 .about-section,
 .ultimo-section,
@@ -838,6 +837,23 @@ textarea { resize: vertical; }
   display: grid;
   align-content: center;
   min-height: 100svh;
+}
+
+/*
+  ⚠️ EL TRAILER QUEDO FUERA DEL GRUPO DE ARRIBA A PROPOSITO.
+
+     Estaba adentro, o sea con `min-height: 100svh`, y encima su marco llegaba a
+     780px: entre las dos cosas la seccion ocupaba mas de una pantalla entera de
+     bloque oscuro y se leia como un muro sin fin en medio de la portada.
+
+     Las otras cuatro secciones SI quieren la pantalla completa: son secciones de
+     lectura, con su titular y su contenido, y el aire es parte del ritmo. Esta
+     no: es una BANDA de video. Una banda quiere proporcion, no altura minima, y
+     la proporcion la fija el marco.
+*/
+.video-showcase-section {
+  display: grid;
+  align-content: center;
 }
 
 .photo-marquee-section {
@@ -962,47 +978,141 @@ textarea { resize: vertical; }
 
 .video-showcase-frame {
   position: relative;
-  /* Se sube el tope de 680 a 780: con la tarjeta mas ancha, 680 la dejaba
-     achatada. Asi la proporcion queda de banda (~2.2:1) y no de recuadro. */
-  min-height: clamp(420px, 46vw, 780px);
+  /*
+    Historial de esta altura, porque fue y volvio:
+      · 680 -> quedaba achatada con la tarjeta ancha
+      · 780 -> proporcion de banda (~2.3:1), pero SUMADA al `min-height: 100svh`
+        de la seccion daba mas de una pantalla de bloque oscuro seguido
+      · 640 (hoy) -> la seccion ya no fuerza pantalla completa, asi que la
+        proporcion la fija solo esto: ~2.8:1 a pantalla ancha. Formato de banda
+        cinematografica, que es lo que esta seccion es.
+  */
+  min-height: clamp(380px, 38vw, 640px);
   overflow: hidden;
   border: 1px solid rgba(255, 218, 224, 0.18);
   border-radius: clamp(28px, 4vw, 48px);
-  background:
+  /*
+    ⚠️ LA FOTO ES EL FONDO DEL MARCO, NO UNA CAPA MAS.
+
+       Puesta aca queda DEBAJO del iframe para siempre, y eso cubre los tres
+       casos en que el video no aparece: mientras carga, si una extension o una
+       red corporativa bloquea YouTube, y si el video se borra del canal. En los
+       tres la seccion se ve igual que con video en vez de quedar en negro.
+
+       El degradado oscuro sigue debajo de la foto por si la foto tampoco carga:
+       el texto es blanco y necesita algo oscuro atras SIEMPRE.
+
+    ⚠️ EL 42% NO ES "CENTRO". Antes aca habia un poster VERTICAL y el anclaje
+       era 26%, para no cortar cabezas. El poster de ahora es 16:9 y en esta
+       banda (~2.2:1) solo se recorta ~19% de alto: 42% deja las manos y la
+       cinta -- que es el tema de la foto -- en el centro optico.
+  */
+  background-color: #0C0710;
+  background-image:
+    url("/fotos-landing/trailer-poster.jpg"),
     radial-gradient(circle at 16% 18%, rgba(230, 79, 85, 0.28), transparent 28%),
     linear-gradient(135deg, #080A12 0%, #1A1018 100%);
+  background-size: cover, auto, auto;
+  background-position: 50% 42%, center, center;
+  background-repeat: no-repeat;
   box-shadow: 0 34px 110px rgba(42, 23, 27, 0.22);
 }
 
-.video-showcase-media,
 .video-showcase-scrim {
   position: absolute;
   inset: 0;
 }
 
-.video-showcase-media {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/**
+ * La capa del video.
+ *
+ * ⚠️ `container-type: size` va ACA y no en `.video-showcase-frame`.
+ *
+ *    Puesto en el marco romperia el alto: `size` desconecta el tamaño del
+ *    elemento de su contenido, y el marco crece con el texto cuando la pantalla
+ *    es angosta. Este div esta en `inset: 0`, o sea que su tamaño ya se lo da el
+ *    marco y no su contenido: aca `size` es seguro y da las unidades cqw/cqh que
+ *    necesita el encuadre de abajo.
+ */
+.video-showcase-video {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  /* Entra cuando YouTube avisa que cargo. Sin esto se ve un parpadeo negro
+     entre que el iframe existe y que tiene imagen. */
+  opacity: 0;
+  transition: opacity 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.video-showcase-frame[data-listo="si"] .video-showcase-video { opacity: 1; }
+
+/*
+  Un iframe no entiende `object-fit`, asi que el recorte se hace a mano: se le
+  da el MAYOR de los dos tamaños que cubren la caja y se centra. 177.7778 es
+  16/9 y 56.25 es 9/16; con las unidades del contenedor, el video llena la banda
+  sea cual sea la proporcion de la pantalla.
+*/
+.video-showcase-video iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   /*
-    ⚠️ NO se deja en `center`, que es el valor por defecto.
+    🔴 EL -41% NO ES UN CENTRADO MAL HECHO. ESTA CALCULADO.
 
-       Esta banda es muy apaisada (~2.2:1) y el `poster` es un RETRATO (1.29:1).
-       Centrado, `cover` recorta arriba y abajo por igual y le corta la cabeza a
-       quien salga en la foto -- que es exactamente lo que pasaba.
+       Centrar seria -50%, y centrado se veia mal por un motivo concreto: EL
+       VIDEO TIENE SUBTITULOS QUEMADOS EN LA IMAGEN, grandes y amarillos, en su
+       franja inferior. La banda es mas apaisada que el video (~2.3:1 contra
+       16:9), asi que `cover` recorta ~23% del alto; centrado, ese recorte parte
+       los subtitulos POR LA MITAD y se lee como un error de maquetado, no como
+       una decision.
 
-       Se ancla al 26% de la altura porque en cualquier foto de una persona la
-       cara vive en el tercio superior. Sirve igual para el video: un encuadre de
-       cuerpo entero conserva la cara, y uno ya apaisado no se recorta nada.
+       La cuenta: con la caja de alto H, el iframe mide 1.29H. Centrado se ve del
+       11% al 89% del video. Corriendolo a -41% se ve del 2% al 80%: entra casi
+       todo el encuadre de arriba y la franja de subtitulos queda FUERA entera.
+       Cortarlos del todo es honesto; cortarlos a la mitad, no.
+
+    ⚠️ SI SE CAMBIA EL VIDEO, HAY QUE REVISAR ESTE NUMERO. Depende de donde
+       queden los subtitulos en ESE archivo. Un video sin subtitulos quemados
+       vuelve a querer -50%.
   */
-  object-position: 50% 26%;
-  filter: saturate(0.92) contrast(1.02);
+  transform: translate(-50%, -41%);
+  width: max(100cqw, 177.7778cqh);
+  height: max(100cqh, 56.25cqw);
+  border: 0;
+  /* El fondo no se toca: para ir a YouTube esta el enlace de abajo, que dice a
+     donde lleva. Sin esto un clic distraido abre YouTube encima de la portada
+     sin avisar. */
+  pointer-events: none;
 }
 
 .video-showcase-scrim {
+  /*
+    El velo plano de antes (86% de negro hasta el 42% del ancho) apagaba la foto
+    entera para poder leer el texto. Ahora cae mas rapido y termina antes: a
+    partir del 62% la imagen queda limpia, que es justo donde vive el motivo.
+    El texto sigue teniendo su fondo oscuro donde lo necesita.
+  */
   background:
-    linear-gradient(90deg, rgba(8, 10, 18, 0.86) 0%, rgba(8, 10, 18, 0.48) 42%, rgba(8, 10, 18, 0.16) 100%),
-    linear-gradient(0deg, rgba(8,10,18,0.42), rgba(8,10,18,0.08));
+    linear-gradient(
+      100deg,
+      rgba(10, 6, 12, 0.88) 0%,
+      rgba(10, 6, 12, 0.72) 26%,
+      rgba(10, 6, 12, 0.34) 52%,
+      rgba(10, 6, 12, 0.06) 74%,
+      rgba(10, 6, 12, 0) 100%
+    ),
+    /* Apoya el pie del cuadro para que el boton no flote sobre una zona clara. */
+    linear-gradient(0deg, rgba(10, 6, 12, 0.5) 0%, rgba(10, 6, 12, 0) 38%);
+}
+
+/* Abajo de 900px la columna de texto ocupa casi todo el ancho, asi que el velo
+   direccional deja de servir: hace falta parejo o el texto se pierde. */
+@media (max-width: 900px) {
+  .video-showcase-scrim {
+    background:
+      linear-gradient(180deg, rgba(10, 6, 12, 0.5) 0%, rgba(10, 6, 12, 0.78) 55%, rgba(10, 6, 12, 0.9) 100%);
+  }
 }
 
 .video-showcase-content {
@@ -1017,15 +1127,31 @@ textarea { resize: vertical; }
 }
 
 .video-showcase-content h2 {
-  max-width: 11ch;
+  /*
+    ⚠️ ESTE TAMAÑO DEPENDE DE LA ALTURA DEL MARCO. Bajo con ella.
+
+       Con 5.3rem y `max-width: 11ch`, "Asi se construye una tecnica real." se
+       partia en CINCO lineas: ~390px de titular solo. Sumando kicker, bajada,
+       boton y relleno pasaba de 740px, que entraba cuando el marco medida 780 y
+       deja de entrar ahora que mide 640.
+
+       14ch en vez de 11ch es la otra mitad del arreglo: con la medida mas ancha
+       el mismo texto cae en cuatro lineas en vez de cinco.
+
+    ⚠️ -0.055em y no -0.07em: por debajo de -0.04em las letras empiezan a
+       tocarse, y en cursiva pasa antes. A este tamaño -0.07 juntaba la "f" de
+       "construye" con la letra siguiente.
+  */
+  max-width: 14ch;
   margin: 0;
   color: #FFF8F8;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.6rem, 6vw, 5.3rem);
+  font-size: clamp(2.1rem, 4.2vw, 3.9rem);
   font-style: italic;
   font-weight: 700;
-  letter-spacing: -0.07em;
-  line-height: 0.92;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+  text-wrap: balance;
 }
 
 .video-showcase-content p:not(.section-kicker) {
@@ -1036,12 +1162,108 @@ textarea { resize: vertical; }
   line-height: 1.65;
 }
 
+/*
+  Utilidad para texto que solo tiene que oirse.
+  No se usa `display: none` ni `visibility: hidden`: los dos lo sacan tambien del
+  arbol de accesibilidad, que es justo lo contrario de lo que hace falta aca.
+*/
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.video-showcase-acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.15rem;
+  margin-top: 1.6rem;
+}
+
+/*
+  El enlace a YouTube: MISMA FORMA que el boton de sonido, hueca en vez de llena.
+  Era un texto subrayado y al lado de una pildora coral no formaba pareja: se
+  leia como una nota al pie, no como la otra mitad de un par.
+
+  Lleno = quedarse (oir el trailer aca). Hueco = irse (verlo en YouTube). Esa es
+  toda la jerarquia, y se lee sin explicacion porque es el par primario /
+  secundario de siempre.
+
+  ⚠️ EL `backdrop-filter` NO ES DECORATIVO ACA, y por eso esta.
+     Detras hay VIDEO: el fondo cambia cada fotograma, asi que un borde fino
+     sobre una zona clara del video desaparece. El desenfoque le da al boton un
+     fondo propio que no depende de lo que pase atras. En una superficie quieta
+     esto seria adorno; sobre video en movimiento es lo que lo mantiene legible.
+*/
+.video-yt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Mismas medidas que .video-sound-button para que el par quede parejo. */
+  min-height: 48px;
+  padding: 0.78rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Blanco casi puro: sobre video no hay "fondo" estable contra el que medir un
+     gris, asi que el contraste se resuelve con el desenfoque y el blanco. */
+  color: #FFF6F6;
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 200ms ease, border-color 200ms ease,
+              transform 200ms var(--btn-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.video-yt-link svg {
+  /* El icono es un apoyo, no un igual: mas tenue que el texto para que no
+     compita con la etiqueta. */
+  opacity: 0.75;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.video-yt-link:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.video-yt-link:hover svg {
+  opacity: 1;
+  /* El icono de "se abre afuera" se va un pelo hacia afuera. Es el unico gesto
+     del boton y dice exactamente lo que va a pasar al tocarlo. */
+  transform: translate(1.5px, -1.5px);
+}
+
+.video-yt-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video-yt-link,
+  .video-yt-link svg { transition: none; }
+  .video-yt-link:hover { transform: none; }
+  .video-yt-link:hover svg { transform: none; }
+}
+
 .video-sound-button {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   min-height: 48px;
-  margin-top: 1.8rem;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: linear-gradient(135deg, var(--pink), var(--pink-mid));
@@ -1229,12 +1451,19 @@ textarea { resize: vertical; }
          · foto 1 (de espaldas en la barra, sujeto en 19%-55%) -> 30%
          · foto 2 (de frente, sujeto mas a la izquierda)       -> 30% le cortaba
            el brazo alzado y el costado. Recalculado a 22%.
+         · foto 3 (2026-09-17, metodo.avif: Brunela en la barra con la banda
+           coral). Cambio la forma, no solo el encuadre: esta es VERTICAL (2:3)
+           y las anteriores eran apaisadas. Al parecerse mas a la caja, `cover`
+           descarta solo ~20% del ancho en vez de ~65%, y el sujeto quedo en
+           20%-95% del ancho, o sea corrido a la DERECHA. Por eso el valor sube
+           a 70%: hay que recortar por la izquierda, no por la derecha.
+           Con 22% se le cortaba la mano apoyada en la barra.
 
        Como recalcularlo: recortar la foto a la proporcion de la caja (~300x560)
        con varios valores y quedarse con el que deje al sujeto entero. Con
        `center` se pierde siempre, porque el sujeto nunca esta en el medio.
   */
-  object-position: 22% center;
+  object-position: 70% center;
   opacity: 0.94;
 }
 
@@ -1340,65 +1569,6 @@ textarea { resize: vertical; }
   color: var(--pink-muted);
   font-size: clamp(0.96rem, 1.2vw, 1.05rem);
   line-height: 1.62;
-}
-
-/*
-  CTA de la seccion. Consume el sistema de botones (tokens --btn-*), con el
-  circulo del play como unico rasgo propio.
-*/
-.method-cta {
-  --btn-min-h: 50px;
-  --btn-pad-y: 0.8rem;
-  --btn-pad-x: 1.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  gap: 0.7rem;
-  min-height: var(--btn-min-h);
-  margin-top: 0.5rem;
-  border-radius: var(--btn-radius);
-  background: var(--pink);
-  color: #fff;
-  padding: var(--btn-pad-y) var(--btn-pad-x);
-  font-size: var(--btn-size);
-  font-weight: var(--btn-weight);
-  letter-spacing: var(--btn-track);
-  line-height: 1.2;
-  text-transform: uppercase;
-  text-decoration: none;
-  box-shadow: 0 12px 26px rgba(230, 79, 85, 0.26);
-  transition: background var(--btn-dur) ease,
-              box-shadow var(--btn-dur) ease,
-              transform var(--btn-dur) var(--btn-ease);
-}
-
-.method-cta:hover {
-  background: var(--pink-mid);
-  transform: translateY(var(--btn-lift));
-  box-shadow: 0 18px 34px rgba(230, 79, 85, 0.32);
-}
-
-.method-cta:focus-visible {
-  outline: 2px solid var(--pink-deep);
-  outline-offset: 3px;
-}
-
-.method-cta-play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  /* Empuja el triangulo 1px a la derecha: un play centrado geometricamente se
-     ve descentrado, porque su masa esta a la izquierda. */
-  padding-left: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .method-cta { transition: none; }
-  .method-cta:hover { transform: none; }
 }
 
 .method-grid {

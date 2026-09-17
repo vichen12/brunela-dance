@@ -6,7 +6,6 @@ import {
   GraduationCap,
   HandHeart,
   PersonStanding,
-  Play,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -149,19 +148,39 @@ function BrandGlow() {
 // miniaturas y pasó a una foto a sangre. Esas mismas fotos de disciplinas las
 // sigue mostrando `InfinitePhotoCarousel`, que va justo debajo.
 
+/**
+ * La galeria del carrusel.
+ *
+ * SON SEIS FOTOS, LISTADAS DOCE VECES. No es un descuido.
+ *
+ *   Toda la landing se ilustra ahora con UNA sesion real de Brunela: cinco
+ *   originales, de los que salen estos seis encuadres. Antes eran doce imagenes
+ *   distintas, pero de origen desconocido y con varias personas: en la web de
+ *   una bailarina identificable, doce desconocidas es peor que seis ella.
+ *
+ *   El componente parte la lista en dos filas que viajan en direcciones
+ *   opuestas. Por eso la segunda mitad repite las mismas seis EN OTRO ORDEN: la
+ *   fila de arriba y la de abajo nunca muestran la misma pareja de fotos a la
+ *   vez, y la repeticion no se lee como repeticion.
+ *
+ * ⚠️ Si se agregan fotos, tienen que ser multiplo de dos y el mismo numero por
+ *    fila: el componente hace slice(0, 6) y slice(6).
+ */
 const galleryImages = [
-  "/fotos-landing/Ballet.jpg",
-  "/fotos-landing/about-1.jpg",
-  "/fotos-landing/Stretching.jpg",
-  "/fotos-landing/Pilates Reformer.jpg",
-  "/fotos-landing/Progressing Ballet Technique.jpg",
-  "/fotos-landing/pbt.jpg",
-  "/fotos-landing/about-2.jpg",
-  "/fotos-landing/pct.jpg",
-  "/fotos-landing/stretching1.jpg",
-  "/fotos-landing/pilates.jpg",
-  "/fotos-landing/Pilates Mat.png",
-  "/fotos-landing/Progressing Contemporary Technique.jpg",
+  // fila de arriba
+  "/fotos-landing/g-cintas.jpg",
+  "/fotos-landing/g-barra-coral.jpg",
+  "/fotos-landing/g-pies.jpg",
+  "/fotos-landing/g-retrato.jpg",
+  "/fotos-landing/g-suelo.jpg",
+  "/fotos-landing/g-punta.jpg",
+  // fila de abajo, otro orden
+  "/fotos-landing/g-suelo.jpg",
+  "/fotos-landing/g-punta.jpg",
+  "/fotos-landing/g-retrato.jpg",
+  "/fotos-landing/g-cintas.jpg",
+  "/fotos-landing/g-barra-coral.jpg",
+  "/fotos-landing/g-pies.jpg",
 ] as const;
 
 /**
@@ -452,42 +471,43 @@ export default async function HomePage() {
           cuenta la seccion lo dicen el titular y las cuatro tarjetas, y
           describirla obligaria a un lector de pantalla a oir algo que no aporta.
 
-          El recorte esta resuelto en `.method-foto-img`: la foto es apaisada y
-          la columna es alta, asi que el `object-position` esta calculado sobre
-          donde cae la bailarina, no en `center`.
+          El recorte esta resuelto en `.method-foto-img`.
         */}
         <div className="method-foto" aria-hidden>
           {/*
             🔴 EL `sizes` NO ES EL ANCHO DE LA CAJA. ES EL ANCHO DEL ORIGEN.
 
-               Aca la caja mide 33vw, y poner `sizes="32vw"` parecia lo correcto
-               -- pero estaba sirviendo la foto BORROSA, y por bastante.
+               Con `object-fit: cover`, el navegador descarta lo que sobra del
+               eje que no encaja, asi que el archivo que necesita puede ser mucho
+               mas grande que la caja.
 
-               El motivo es `object-fit: cover` en una caja alta y angosta: para
-               llenarla de arriba abajo, el navegador escala la foto por su ALTO
-               y descarta ~65% del ancho. O sea que necesita un archivo mucho mas
-               grande que la caja. Con `sizes="32vw"` Next creia que bastaba con
-               1080px de ancho y la ampliaba x2.50.
+               ⚠️ ESTE NUMERO CAMBIO AL CAMBIAR LA FOTO, Y TENIA QUE CAMBIAR.
 
-               El ancho de origen que hace falta es (ancho de caja / fraccion
-               visible) = 33vw / 0.35 ≈ 94vw. Con eso Next sirve el archivo
-               entero y la ampliacion baja de x2.50 a x1.76.
+                  Antes aca habia una foto APAISADA (3:2) metida en una columna
+                  alta: para llenarla de arriba abajo el navegador la escalaba
+                  por el alto y tiraba ~65% del ancho, asi que hacia falta pedir
+                  33vw / 0.35 ≈ 94vw. Ese 94vw esta calculado para AQUELLA foto.
+
+                  La de ahora es VERTICAL (2:3, 1200x1800), casi la forma de la
+                  caja: apenas se descarta nada, y el ancho que hace falta vuelve
+                  a ser del orden del de la caja. Dejar el 94vw serviria un
+                  archivo casi tres veces mas grande que el necesario en cada
+                  visita, sin que se vea mejor.
+
+                  40vw y no 33vw exactos: deja margen para el poco recorte que
+                  igual ocurre y para pantallas donde la columna crece.
 
             ⚠️ Debajo de 1080px la foto esta oculta por CSS, pero el navegador la
                descarga igual: el `1px` de ahi hace que se baje la variante mas
                chica en vez de la grande.
-
-            ⚠️ quality 90 y no el 75 por defecto: el origen YA viene muy
-               comprimido (0.011 bytes por pixel), asi que volver a comprimirlo
-               al 75 encima le quita lo poco que le queda.
           */}
           <Image
-            src="/image.avif"
+            src="/fotos-landing/metodo.avif"
             alt=""
-            width={1536}
-            height={1024}
-            sizes="(max-width: 1080px) 1px, 94vw"
-            quality={90}
+            width={1200}
+            height={1800}
+            sizes="(max-width: 1080px) 1px, 40vw"
+            quality={82}
             className="method-foto-img"
           />
         </div>
@@ -506,12 +526,6 @@ export default async function HomePage() {
             <p className="method-lead">
               <T id="method.lead" />
             </p>
-            <a className="method-cta" href="#video-trailer">
-              <span className="method-cta-play" aria-hidden>
-                <Play size={13} fill="currentColor" strokeWidth={0} />
-              </span>
-              <T id="method.cta" />
-            </a>
           </div>
 
           <div className="method-grid">
@@ -571,10 +585,13 @@ export default async function HomePage() {
           <div className="about-media">
             <div className="about-photo">
               <Image
-                src="/image.jpg"
+                src="/fotos-landing/sobre-mi.jpg"
                 alt="Brunela"
                 fill
                 sizes="(max-width: 900px) 88vw, 470px"
+                /* La foto ya viene recortada 3:4 anclada arriba, asi que `top`
+                   cae en la cara sin necesidad de ajustar un porcentaje: los
+                   ojos quedan a ~1/4 de la altura. */
                 style={{ objectFit: "cover", objectPosition: "top center" }}
               />
             </div>
