@@ -58,6 +58,13 @@ const RUTAS_CON_OTRA_AUTH = new Map([
     "la invoca el cron de Vercel, no una persona: exige Authorization: Bearer CRON_SECRET, " +
       "y si esa variable no esta configurada responde 503 en vez de quedar abierta",
   ],
+  [
+    "app/api/acceso/route.ts",
+    "es LA PUERTA del acceso anticipado: quien la usa por definicion todavia no entro. " +
+      "Comprueba la contraseña compartida en tiempo constante y no da acceso a ningun dato: " +
+      "lo que hay detras es el mismo sitio publico que va a estar abierto igual. " +
+      "Todo lo que exige sesion la sigue exigiendo despues de pasar por aca",
+  ],
 ]);
 
 /** Tablas sin policy a proposito. Vacio hoy: si alguna aparece, va con motivo. */
