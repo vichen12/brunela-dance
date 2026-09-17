@@ -166,7 +166,27 @@ describe("el webhook no pierde ni duplica una compra", () => {
   it("no confunde el pago de un pack con el de una suscripcion", () => {
     const fn = src().slice(src().indexOf("async function registrarCompraDePack"));
     expect(fn).toMatch(/session\.mode !== "payment"/);
-    expect(fn).toMatch(/session\.payment_status !== "paid"/);
+  });
+
+  /**
+   * ⚠️ ESTE TEST PEDIA `session.payment_status !== "paid"` Y POR ESO FALLABA.
+   *
+   *    Exigir solo "paid" es justamente el bug que el codigo arreglo: con un
+   *    cupon del 100% Stripe manda "no_payment_required", la compra se
+   *    ignoraba, y la alumna completaba el checkout sin recibir el pack.
+   *
+   *    O sea que el test estaba pidiendo la version ROTA. Se reescribe para
+   *    comprobar la intencion -- que los dos estados buenos entren y el resto
+   *    no -- en vez de una linea literal, que es lo que lo dejo desincronizado
+   *    del codigo cuando el codigo mejoro.
+   */
+  it("acepta el pago normal Y el cupon del 100%, y nada mas", () => {
+    const fn = src().slice(src().indexOf("async function registrarCompraDePack"));
+    expect(fn).toContain('"no_payment_required"');
+    expect(fn).toContain('"paid"');
+    // La comprobacion tiene que ser por lista blanca: cualquier otro estado
+    // (unpaid, por ejemplo) no puede pasar.
+    expect(fn).toMatch(/if \(!\w+\.has\(session\.payment_status\)\)/);
   });
 
   it("guarda lo que se cobro de verdad, no el precio de lista", () => {

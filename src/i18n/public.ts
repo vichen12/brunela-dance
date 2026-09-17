@@ -180,7 +180,6 @@ export const publicMessages = {
     "footer.nav.contact": "Contacto",
     "footer.copyright":
       "© 2026 Brunela Dance Trainer. Todos los derechos reservados.",
-    "footer.designed": "Diseñado por",
     "footer.backTop": "Volver arriba",
 
     "auth.top.home": "Inicio",
@@ -381,7 +380,6 @@ export const publicMessages = {
     "footer.nav.studio": "Studio",
     "footer.nav.contact": "Contact",
     "footer.copyright": "© 2026 Brunela Dance Trainer. All rights reserved.",
-    "footer.designed": "Designed by",
     "footer.backTop": "Back to top",
 
     "auth.top.home": "Home",
@@ -583,7 +581,6 @@ export const publicMessages = {
     "footer.nav.studio": "Studio",
     "footer.nav.contact": "Contact",
     "footer.copyright": "© 2026 Brunela Dance Trainer. Tous droits reserves.",
-    "footer.designed": "Concu par",
     "footer.backTop": "Retour en haut",
 
     "auth.top.home": "Accueil",
@@ -786,7 +783,6 @@ export const publicMessages = {
     "footer.nav.contact": "Contatto",
     "footer.copyright":
       "© 2026 Brunela Dance Trainer. Tutti i diritti riservati.",
-    "footer.designed": "Disegnato da",
     "footer.backTop": "Torna su",
 
     "auth.top.home": "Home",

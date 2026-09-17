@@ -135,14 +135,6 @@ export function BrunelaFooter() {
 
       <div className="footer-bottom">
         <span>{t("footer.copyright")}</span>
-        <a
-          href="https://www.linkedin.com/in/vincenzo-dallape/"
-          target="_blank"
-          rel="noreferrer"
-          suppressHydrationWarning
-        >
-          {t("footer.designed")} <strong>Vincenzo Dallape</strong>
-        </a>
       </div>
 
 
@@ -337,18 +329,18 @@ export function BrunelaFooter() {
           width: min(1080px, 100%);
           margin: 2rem auto 0;
           display: flex;
-          justify-content: space-between;
+          /* Centrado y no space-between: al quitarse el credito de diseño
+             quedo un solo hijo, y space-between lo dejaba pegado a la
+             izquierda como si faltara algo al lado.
+             (Nada de backticks en este comentario: todo este CSS vive dentro
+             de un template literal y un backtick lo parte en dos.) */
+          justify-content: center;
           align-items: center;
           gap: 1rem;
           border-top: 1px solid rgba(208, 102, 124, 0.18);
           padding: 1.35rem 1.25rem 1.75rem;
           color: #A97784;
           font-size: 0.76rem;
-        }
-
-        .footer-bottom a {
-          color: #A97784;
-          text-decoration: none;
         }
 
         .footer-bottom strong {
