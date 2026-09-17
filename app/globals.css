@@ -832,11 +832,30 @@ textarea { resize: vertical; }
 .method-section,
 .previews-section,
 .about-section,
-.ultimo-section,
-.plans-section {
+.ultimo-section {
   display: grid;
   align-content: center;
   min-height: 100svh;
+}
+
+/*
+  Planes va aparte: 85vh y un fondo PLANO.
+  El resto de la portada se apoya en degradados y resplandores; aca eso competia
+  con las tres tarjetas, que son lo unico que hay que mirar. Un color liso las
+  deja respirar y ademas separa la seccion de la de arriba sin una linea.
+*/
+.plans-section {
+  display: grid;
+  align-content: center;
+  /* 80vh y no 85: la barra fija de arriba mide 66px y se come parte de la
+     pantalla, asi que 85vh dejaba la seccion mas alta de lo que se ve. */
+  min-height: 80vh;
+  /*
+    Rosa de verdad, no un blanco con una gota. Es el unico fondo plano y saturado
+    de la portada, y esa es la idea: las tres tarjetas son BLANCAS, asi que el
+    rosa las empuja adelante. Sobre el degradado palido de antes flotaban.
+  */
+  background: #FBDCE2;
 }
 
 /*
@@ -971,8 +990,10 @@ textarea { resize: vertical; }
 .video-showcase-section {
   position: relative;
   z-index: 1;
-  width: min(1800px, calc(100% - clamp(1.5rem, 3.5vw, 4rem)));
-  margin: 0 auto clamp(3rem, 6vw, 5.5rem);
+  /* A TODO EL ANCHO. Antes estaba capado en 1800px con margen a los lados, o
+     sea una tarjeta ancha; ahora es una banda de borde a borde. */
+  width: 100%;
+  margin: 0 0 clamp(3rem, 6vw, 5.5rem);
   padding: 0;
 }
 
@@ -987,10 +1008,21 @@ textarea { resize: vertical; }
         proporcion la fija solo esto: ~2.8:1 a pantalla ancha. Formato de banda
         cinematografica, que es lo que esta seccion es.
   */
-  min-height: clamp(380px, 38vw, 640px);
+  /*
+    85vh: lo pidio asi. Es alto pero NO llena la pantalla, que era el problema
+    del bloque infinito -- siempre asoma algo abajo y se entiende que la pagina
+    sigue.
+
+    ⚠️ Y ademas ARREGLA EL RECORTE DEL VIDEO. Con la banda de 2.8:1 anterior, un
+       video 16:9 perdia el 36% del alto. A 85vh sobre un ancho completo la caja
+       queda mucho mas cerca de 16:9 y casi no se recorta nada.
+  */
+  min-height: min(85vh, 820px);
   overflow: hidden;
-  border: 1px solid rgba(255, 218, 224, 0.18);
-  border-radius: clamp(28px, 4vw, 48px);
+  /* Sin radio ni borde: a sangre completa un recuadro redondeado se lee como
+     tarjeta, y esto ya no es una tarjeta. */
+  border: 0;
+  border-radius: 0;
   /*
     ⚠️ LA FOTO ES EL FONDO DEL MARCO, NO UNA CAPA MAS.
 
@@ -1076,7 +1108,10 @@ textarea { resize: vertical; }
        queden los subtitulos en ESE archivo. Un video sin subtitulos quemados
        vuelve a querer -50%.
   */
-  transform: translate(-50%, -41%);
+  /* Vuelve a CENTRADO: el -41% existia para esquivar los subtitulos
+     quemados cuando la banda recortaba el 36% del alto. A 85vh se recorta
+     poquisimo, asi que centrar ya no los parte. */
+  transform: translate(-50%, -50%);
   width: max(100cqw, 177.7778cqh);
   height: max(100cqh, 56.25cqw);
   border: 0;
@@ -2462,8 +2497,13 @@ textarea { resize: vertical; }
 }
 
 .plans-section {
-  width: min(1200px, 100%);
-  margin: 0 auto;
+  /* A TODO EL ANCHO. Estaba capada en 1200px, asi que el fondo rosa terminaba
+     donde terminaba la grilla y quedaban dos franjas palidas a los costados.
+     Ahora la seccion pinta de borde a borde y lo que se acota es el CONTENIDO,
+     que es lo que tiene que estar acotado. */
+  width: 100%;
+  margin: 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   /* Se recorta el aire vertical que hereda de `.landing-section` (hasta 7rem
      arriba y abajo): es lo primero que hay que ceder para que las tres
      tarjetas entren en una pantalla. Ver la nota "QUE ENTRE EN UNA PANTALLA"
@@ -2478,6 +2518,14 @@ textarea { resize: vertical; }
   .plans-head p  { font-size: 0.92rem; }
 }
 
+/*
+  --pink-mid y no --pink: sobre el rosa #FBDCE2 de la seccion, --pink da 2.9:1 y
+  no llega ni al 3:1 que pide el texto grande. --pink-mid da 3.5:1 y a simple
+  vista es el mismo coral. Es el reemplazo que ya estaba documentado para
+  exactamente este caso.
+*/
+.plans-head h2 { color: var(--pink-mid); }
+
 .plans-head {
   max-width: 760px;
   margin: 0 auto clamp(1rem, 2.6vh, 2.5rem);
@@ -2488,6 +2536,8 @@ textarea { resize: vertical; }
 }
 
 .plans-grid {
+  width: min(1200px, 100%);
+  margin-inline: auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
@@ -2496,9 +2546,12 @@ textarea { resize: vertical; }
 
 .plan-card-new {
   position: relative;
-  border: 1px solid #FFDADA;
+  /* Borde y sombra un poco mas firmes: sobre el rosa saturado de la seccion, el
+     borde #FFDADA casi desaparecia y las tarjetas se fundian con el fondo. */
+  border: 1px solid #F6C3CC;
   border-radius: 8px;
   background: #fff;
+  box-shadow: 0 10px 34px rgba(176, 58, 62, 0.10);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;

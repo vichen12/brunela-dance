@@ -55,7 +55,7 @@ export const publicMessages = {
       "Si estás acá, es porque querés mejorar y tomar tu proceso en serio.",
     "method.calloutEmphasis": "Me alegra acompañarte en ese camino.",
 
-    "ultimo.title": "Último del",
+    "ultimo.title": "Lo último del",
     "ultimo.titleAccent": "estudio online.",
     "ultimo.lead": "Explorá las clases más recientes y seguí perfeccionando tu técnica desde donde estés.",
     "ultimo.nueva": "Nueva",

@@ -138,7 +138,12 @@ export function Navbar() {
           height: 66,
           display: "flex",
           alignItems: "center",
-          padding: "0 clamp(0.75rem, 4vw, 2.5rem)",
+          /* El logo y los botones se acercan al centro en pantallas anchas.
+             La barra sigue siendo de borde a borde -- el fondo y el borde de
+             abajo la necesitan asi -- pero su CONTENIDO se mete en una columna
+             de 1200px. El `max()` deja el relleno normal en pantallas chicas,
+             donde ese calculo daria negativo. */
+          padding: "0 max(clamp(0.75rem, 4vw, 2.5rem), calc((100% - 1200px) / 2))",
           background: menuOpen
             ? "rgba(255,255,255,0.98)"
             : scrolled
@@ -188,7 +193,7 @@ export function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "0.5rem",
+            gap: "0.4rem",
             marginLeft: "auto",
           }}
         >
@@ -430,12 +435,14 @@ export function Navbar() {
         */
         .brand-nav-link {
           position: relative;
-          padding: 0.45rem 0.9rem;
+          /* Mas juntos: 0.9rem de lado + 0.12em de tracking dejaba los cuatro
+             enlaces desparramados en el centro de una barra muy ancha. */
+          padding: 0.42rem 0.62rem;
           border-radius: 999px;
           color: var(--pink-deep);
           font-size: 0.7rem;
           font-weight: 800;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
           text-decoration: none;
           transition: color 200ms ease, background-color 200ms ease;

@@ -168,19 +168,21 @@ function BrandGlow() {
  */
 const galleryImages = [
   // fila de arriba
-  "/fotos-landing/g-cintas.jpg",
-  "/fotos-landing/g-barra-coral.jpg",
-  "/fotos-landing/g-pies.jpg",
-  "/fotos-landing/g-retrato.jpg",
-  "/fotos-landing/g-suelo.jpg",
-  "/fotos-landing/g-punta.jpg",
-  // fila de abajo, otro orden
-  "/fotos-landing/g-suelo.jpg",
-  "/fotos-landing/g-punta.jpg",
-  "/fotos-landing/g-retrato.jpg",
-  "/fotos-landing/g-cintas.jpg",
-  "/fotos-landing/g-barra-coral.jpg",
-  "/fotos-landing/g-pies.jpg",
+  "/fotos-landing/m-cintas.jpg",
+  "/fotos-landing/m-barra.jpg",
+  "/fotos-landing/m-retrato.jpg",
+  "/fotos-landing/m-pies.jpg",
+  "/fotos-landing/m-suelo.jpg",
+  "/fotos-landing/m-mermaid.jpg",
+  "/fotos-landing/m-pike.jpg",
+  // fila de abajo
+  "/fotos-landing/m-piso.jpg",
+  "/fotos-landing/m-tul.jpg",
+  "/fotos-landing/m-cambre.jpg",
+  "/fotos-landing/m-split.jpg",
+  "/fotos-landing/m-cou.jpg",
+  "/fotos-landing/m-barra2.jpg",
+  "/fotos-landing/m-pelota.jpg",
 ] as const;
 
 /**
@@ -317,7 +319,7 @@ const plans = [
 ] as const;
 
 function InfinitePhotoCarousel() {
-  const rows = [galleryImages.slice(0, 6), galleryImages.slice(6)];
+  const rows = [galleryImages.slice(0, 7), galleryImages.slice(7)];
 
   return (
     <section className="photo-marquee-section" aria-label="Galería de entrenamiento">
