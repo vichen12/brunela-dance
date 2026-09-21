@@ -409,14 +409,24 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
                Anclado en px desde abajo, el lavado viaja con la copia: el
                kicker queda al 97% de scrim (5.38:1) y el wordmark al 98%
                (3.4:1). Aguanta un bloque de copia de hasta 428px.
+
+               ⚠️ LA RAMPA ES CORTA Y ARRANCA JUSTO ENCIMA DE LA COPIA, NO
+                  ARRIBA DE TODO. La primera version empezaba a lavar a 620px
+                  del fondo y llegaba al 94% a 480px: en un telefono de 660px
+                  de alto eso dejaba la foto limpia solo en el 6% superior y
+                  todo lo demas era una pagina en blanco. Se descubrio
+                  RENDERIZANDO el degradado sobre la foto, no calculando
+                  contrastes: los numeros del texto daban perfecto y la imagen
+                  no existia. Con 440/380/340 la foto llega limpia hasta el 33%
+                  y el lavado sigue entero donde apoya el texto.
           */
           .brand-hero-scrim {
             background: linear-gradient(
               180deg,
-              rgba(254, 250, 247, 0.05) 0,
-              rgba(254, 250, 247, 0.20) calc(100% - 620px),
-              rgba(254, 250, 247, 0.94) calc(100% - 480px),
-              #FEFAF7 calc(100% - 350px)
+              rgba(254, 250, 247, 0.04) 0,
+              rgba(254, 250, 247, 0.12) calc(100% - 440px),
+              rgba(254, 250, 247, 0.94) calc(100% - 380px),
+              #FEFAF7 calc(100% - 340px)
             );
           }
 
@@ -444,7 +454,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         /*
           Telefonos CORTOS (iPhone SE, Android con barra grande). La copia mide
           ~506px con su relleno y el hero ahi son 559px: quedaban 53px de foto,
-          y el scrim de arriba -- que arranca 620px por encima del fondo -- salia
+          y el scrim de arriba -- que arranca 440px por encima del fondo -- salia
           negativo y lavaba la imagen entera desde el primer pixel. La bailarina
           desaparecia.
 
@@ -472,9 +482,9 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
             background: linear-gradient(
               180deg,
               rgba(254, 250, 247, 0.05) 0,
-              rgba(254, 250, 247, 0.20) calc(100% - 490px),
-              rgba(254, 250, 247, 0.94) calc(100% - 380px),
-              #FEFAF7 calc(100% - 280px)
+              rgba(254, 250, 247, 0.12) calc(100% - 380px),
+              rgba(254, 250, 247, 0.94) calc(100% - 320px),
+              #FEFAF7 calc(100% - 285px)
             );
           }
         }

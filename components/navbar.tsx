@@ -534,12 +534,30 @@ export function Navbar() {
           .mobile-language-selector { display: none !important; }
           .landing-nav-links { display: none !important; }
           .landing-mobile-nav { display: flex !important; }
+          /*
+            🔴 NO VA EN position: absolute.
+
+               Estaba absoluto, o sea FUERA del flex del header: la marca y este
+               grupo no negociaban espacio entre si. El resultado era que
+               "Ingresar" se aplastaba hasta cortarse por la mitad y el boton de
+               menu le quedaba encima.
+
+               Como item normal con margin-left auto, el header reparte: la
+               marca tiene max-width y overflow hidden -- esta pensada para
+               ceder -- y este grupo no se encoge nunca.
+          */
           .landing-mobile-nav {
-            position: absolute;
-            top: 50%;
-            right: 0.58rem;
-            margin-left: 0 !important;
-            transform: translateY(-50%);
+            position: static;
+            margin-left: auto !important;
+            transform: none;
+            flex: 0 0 auto;
+            min-width: 0;
+          }
+
+          /* Sin esto el texto del boton se parte y se corta: es lo que pasaba. */
+          .landing-mobile-nav .mobile-signin-button {
+            flex: 0 0 auto;
+            white-space: nowrap;
           }
           .site-header {
             padding-inline: 0.58rem !important;
@@ -597,7 +615,9 @@ export function Navbar() {
         /* "Ingresar" ya NO se esconde a los 520px: al sacar el selector de
            idioma de la barra hay sitio de sobra, y era el unico acceso directo
            a la cuenta desde la barra. */
-        @media (max-width: 400px) {
+        /* Entraba a 400px y era tarde: a 447 el boton ya no tenia sitio y se
+           cortaba. Se adelanta a 520. */
+        @media (max-width: 520px) {
           .landing-mobile-nav .mobile-signin-button {
             --btn-pad-x: 0.7rem;
             font-size: 0.58rem;
