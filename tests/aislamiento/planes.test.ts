@@ -200,7 +200,7 @@ describe("membership_tier_required queda derivada y no manda", () => {
 });
 
 describe("la base rechaza las listas que no pueden existir", () => {
-  it("una lista vacia no entra", async () => {
+  it("una lista vacia no entra, y la fila no se toca", async () => {
     const clase = await crearClaseConPlanes(["solista"]);
 
     const { error } = await admin()
@@ -211,6 +211,28 @@ describe("la base rechaza las listas que no pueden existir", () => {
     // 23514 = check constraint. El codigo exacto, no "hubo error": un error de
     // tipo o de columna inexistente satisfaria igual un `not.toBeNull()`.
     expect(error?.code).toBe("23514");
+
+    /**
+     * Y ADEMAS: que la fila siga como estaba.
+     *
+     * Pedir solo el codigo de error no alcanza. Las dos veces que esto estuvo
+     * roto, el sintoma no fue "no dio error" a secas:
+     *
+     *   - antes de 20260921_2 la fila quedaba {solista, principal} -- el vaciado
+     *     ENSANCHABA el acceso
+     *   - antes de 20260921_3 la fila quedaba {} -- una clase publicada que no
+     *     veia nadie
+     *
+     * Los dos daños son a la FILA, no al codigo de retorno. Esta comprobacion
+     * los habria nombrado a los dos.
+     */
+    const { data } = await admin()
+      .from("videos")
+      .select("planes_permitidos")
+      .eq("id", clase.id)
+      .single<{ planes_permitidos: string[] }>();
+
+    expect(data?.planes_permitidos).toEqual(["solista"]);
   });
 
   it("'none' en la lista no entra -- seria el catalogo abierto", async () => {

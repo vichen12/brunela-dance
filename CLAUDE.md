@@ -91,7 +91,7 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **31 migraciones**, 30 aplicadas y verificadas y **una pendiente** (la 31, `20260921_2_vaciar_planes_no_se_repara.sql`). ⚠️ **El orden NO es
+- **32 migraciones**, 31 aplicadas y verificadas y **una pendiente** (la 32, `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`). ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
 
@@ -656,9 +656,12 @@ Ordenados por lo que bloquea a lo que puede esperar.
 
 **✅ `20260921_formulario_de_clases.sql` corrió el 2026-09-21.**
 
-**🔴 QUEDA `20260921_2_vaciar_planes_no_se_repara.sql`**, que tapa un agujero que
-dejó la anterior: vaciar `planes_permitidos` **ensanchaba el acceso en
-silencio**. Hasta que se corra, `npm run test:aislamiento` da **125 de 126**.
+**✅ `20260921_2_vaciar_planes_no_se_repara.sql` corrió el 2026-09-21.**
+
+**🔴 QUEDA `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`.** La 2 destapó
+que el CHECK de la lista vacía **nunca funcionó**: `array_length('{}', 1)` es
+NULL, no 0, y un CHECK con NULL deja pasar. Hasta que se corra,
+`npm run test:aislamiento` da **125 de 126**.
 
 ### ✅ Lo que pidió Brunela — bloque A, hecho (2026-08-05)
 
@@ -827,10 +830,34 @@ Lo tapa `20260921_2_vaciar_planes_no_se_repara.sql` con una guarda de tres
 líneas. En INSERT se sigue derivando, porque ahí `'{}'` es el default de la
 columna y no se puede distinguir de «no me mandaron nada».
 
-> **La lección, que es la de siempre en este repo:** el constraint era correcto
-> y la prueba era correcta; lo que fallaba era el orden en que corren. Por eso
-> se verifica por COMPORTAMIENTO y no leyendo el esquema — mirando
-> `pg_constraint` esto se ve perfecto.
+#### Y debajo había un segundo agujero: el CHECK nunca chequeó
+
+Al dejar de reparar, la 2 destapó que la fila vacía **se guardaba igual**:
+
+```
+array_length(planes_permitidos, 1) >= 1
+```
+
+`array_length('{}', 1)` en Postgres **no devuelve 0: devuelve NULL**. La
+comparación da NULL, y un CHECK sólo rechaza cuando da FALSE — con NULL **deja
+pasar**. Esa mitad del constraint fue un adorno desde el primer día.
+
+La otra mitad —`not (planes @> array['none'])`— sí funciona, y por eso la prueba
+de `'none'` estuvo siempre en verde: el constraint existía y andaba, sólo que no
+controlaba lo que decía controlar.
+
+Lo arregla `20260921_3` con `cardinality()`, que sí devuelve 0. Y repara antes
+cualquier fila que haya quedado en `{}`, porque `add constraint` valida las filas
+existentes y con una sola fallaría la migración entera.
+
+> **La lección, que es la de siempre en este repo, y esta vez en tres capas:**
+> el trigger tapaba al constraint, y el constraint tapaba su propio NULL. Cada
+> capa se veía perfecta leyéndola. Lo único que lo encontró fue una prueba que
+> ejercita el COMPORTAMIENTO — y tardó dos migraciones en llegar al fondo porque
+> cada arreglo destapaba la capa siguiente.
+>
+> Regla concreta que sale de acá: **para contar elementos de un arreglo en un
+> CHECK va `cardinality()`, nunca `array_length(x, 1)`.**
 
 #### El aviso del formulario: mismo error, cometido por una persona
 

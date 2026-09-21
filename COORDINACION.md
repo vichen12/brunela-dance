@@ -102,7 +102,8 @@ Mientras no corra:
 - [x] ~~`npm run build`~~ — **pasa.** Corrido desde git en un worktree aparte, no
       en este directorio: `tsc` pasa con archivos sin trackear que Vercel no va
       a tener, y un build acá pisa `.next` y rompe el login
-- [ ] 🔴 **Correr `20260921_2_vaciar_planes_no_se_repara.sql`** — ver abajo
+- [x] ~~Correr `20260921_2_vaciar_planes_no_se_repara.sql`~~ — **aplicada**
+- [ ] 🔴 **Correr `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`** — ver abajo
 - [ ] Seguir con Planes de trabajo: es lo único que tengo asignado
 
 ### 🔴 Segunda migración pendiente: `20260921_2_vaciar_planes_no_se_repara.sql`
@@ -122,6 +123,13 @@ lista cada vez que la veía vacía — rama que hace falta para los INSERT que s
 mandan el tier — pero en un UPDATE no distinguía «no vino la lista» de «la
 vaciaron a propósito». El check constraint estaba bien escrito y nunca llegaba a
 dispararse: el trigger corría antes y ya había «arreglado» la fila.
+
+La 2 arregló eso, y al hacerlo destapó una capa más abajo: el CHECK de la lista
+vacía **nunca funcionó**. `array_length('{}', 1)` es NULL, no 0, y un CHECK con
+NULL deja pasar. Así que ahora el vaciado no ensancha el acceso pero **se guarda
+como `{}`**: una clase publicada que no ve nadie.
+
+Lo arregla `20260921_3` con `cardinality()`.
 
 **Hasta que se corra, `test:aislamiento` da 125/126.** No afecta a la sesión B.
 
