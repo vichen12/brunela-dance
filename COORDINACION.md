@@ -96,11 +96,43 @@ Mientras no corra:
 
 ### Qué me falta
 
-- [ ] **Correr la migración** (la corre el dueño) y después `npm run test:aislamiento` → tienen que dar 126
-- [ ] **`npm run build`** — no lo corrí: hay un dev server levantado en el 3000 y
-      un build en el mismo directorio pisa `.next` y rompe el login
-      (ya pasó dos veces, está en CLAUDE.md). `tsc` está limpio
+- [x] ~~Correr `20260921_formulario_de_clases.sql`~~ — **aplicada el 2026-09-21.**
+      Confirmado por comportamiento, no por mirar el esquema: antes fallaban las
+      14 pruebas en el guardián de migración, ahora pasan
+- [x] ~~`npm run build`~~ — **pasa.** Corrido desde git en un worktree aparte, no
+      en este directorio: `tsc` pasa con archivos sin trackear que Vercel no va
+      a tener, y un build acá pisa `.next` y rompe el login
+- [ ] 🔴 **Correr `20260921_2_vaciar_planes_no_se_repara.sql`** — ver abajo
 - [ ] Seguir con Planes de trabajo: es lo único que tengo asignado
+
+### 🔴 Segunda migración pendiente: `20260921_2_vaciar_planes_no_se_repara.sql`
+
+La primera migración dejó un agujero que encontró `test:aislamiento` contra la
+base ya migrada — 125 de 126, y la que fallaba tenía razón:
+
+```
+clase con planes_permitidos = {solista}
+update ... set planes_permitidos = '{}'
+  -> sin error
+  -> quedó {solista, principal}
+```
+
+**Vaciar la lista ensanchaba el acceso en silencio.** El trigger reconstruía la
+lista cada vez que la veía vacía — rama que hace falta para los INSERT que solo
+mandan el tier — pero en un UPDATE no distinguía «no vino la lista» de «la
+vaciaron a propósito». El check constraint estaba bien escrito y nunca llegaba a
+dispararse: el trigger corría antes y ya había «arreglado» la fila.
+
+**Hasta que se corra, `test:aislamiento` da 125/126.** No afecta a la sesión B.
+
+### Estado de las pruebas
+
+| | |
+|---|---|
+| `npm run test:sistema` | **127/127** |
+| `npm run test:aislamiento` | **125/126** — la que falta la arregla la migración de arriba |
+| `npx tsc --noEmit` | limpio |
+| `npx next build` | **pasa** |
 
 ---
 

@@ -26,7 +26,7 @@
    | Comando | Qué mira | Cuándo |
    |---|---|---|
    | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
-   | `npm run test:sistema` | **119 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,5 s, sin base** | Al tocar pantallas, cobro o acceso |
+   | `npm run test:sistema` | **127 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,5 s, sin base** | Al tocar pantallas, cobro o acceso |
    | `npm run test:aislamiento` | **126 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~165 s** | Al tocar cualquier policy |
 
    ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
@@ -91,7 +91,7 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **30 migraciones**, 29 aplicadas y verificadas y **una pendiente** (la 30, `20260921_formulario_de_clases.sql`). ⚠️ **El orden NO es
+- **31 migraciones**, 30 aplicadas y verificadas y **una pendiente** (la 31, `20260921_2_vaciar_planes_no_se_repara.sql`). ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
 
@@ -654,10 +654,11 @@ Ordenados por lo que bloquea a lo que puede esperar.
 | `20260804_chat_aislamiento_por_plan.sql` | 14/14 en `test:aislamiento` |
 | `20260805_invitaciones_a_sesiones.sql` | 34/34 en `test:aislamiento` |
 
-**🔴 QUEDA UNA SIN CORRER: `20260921_formulario_de_clases.sql`.** Es la del
-formulario de clases nuevo (ver abajo). Hasta que se corra,
-`npm run test:aislamiento` da **14 en rojo** con el mensaje que dice
-exactamente eso, y el formulario de `/admin/videos` no puede guardar.
+**✅ `20260921_formulario_de_clases.sql` corrió el 2026-09-21.**
+
+**🔴 QUEDA `20260921_2_vaciar_planes_no_se_repara.sql`**, que tapa un agujero que
+dejó la anterior: vaciar `planes_permitidos` **ensanchaba el acceso en
+silencio**. Hasta que se corra, `npm run test:aislamiento` da **125 de 126**.
 
 ### ✅ Lo que pidió Brunela — bloque A, hecho (2026-08-05)
 
@@ -793,6 +794,58 @@ policy, y se eligió la libre igual. No es un descuido.
 Cubierto por `tests/aislamiento/planes.test.ts` (14), con control positivo en
 cada bloque y código de error exacto (`23514` para el check, `42501` para la
 escritura).
+
+#### 🔴 El agujero que dejó, y que encontró una prueba
+
+`test:aislamiento` contra la base ya migrada dio **125 de 126**, y la que
+fallaba tenía razón. Reproducido a mano:
+
+```
+clase con planes_permitidos = {solista}
+update ... set planes_permitidos = '{}'
+  -> sin error
+  -> quedó {solista, principal}
+```
+
+**Vaciar la lista ensanchaba el acceso**: una clase exclusiva de Solista pasaba
+a verla Principal, sin error y sin rastro.
+
+El trigger `videos_sincronizar_planes()` reconstruía la lista cada vez que la
+veía vacía. Esa rama **hace falta** — hay código y pruebas que insertan clases
+pasando solo `membership_tier_required` — pero en un UPDATE no sabía distinguir:
+
+| | |
+|---|---|
+| «no vino la lista» | hay que derivarla — **INSERT** |
+| «la vaciaron a propósito» | hay que rechazarla — **UPDATE** |
+
+Trataba la segunda como la primera. Y el check constraint
+`videos_planes_permitidos_validos` estaba bien escrito y **nunca llegaba a
+dispararse**: el trigger corre antes y ya había «arreglado» la fila.
+
+Lo tapa `20260921_2_vaciar_planes_no_se_repara.sql` con una guarda de tres
+líneas. En INSERT se sigue derivando, porque ahí `'{}'` es el default de la
+columna y no se puede distinguir de «no me mandaron nada».
+
+> **La lección, que es la de siempre en este repo:** el constraint era correcto
+> y la prueba era correcta; lo que fallaba era el orden en que corren. Por eso
+> se verifica por COMPORTAMIENTO y no leyendo el esquema — mirando
+> `pg_constraint` esto se ve perfecto.
+
+#### El aviso del formulario: mismo error, cometido por una persona
+
+Con combinación libre, Brunela puede dejar una clase para Corps de Ballet y no
+para Principal. Quien paga el plan más caro espera ver todo lo de abajo, así que
+casi siempre es un descuido de tilde.
+
+`components/selector-de-planes.tsx` lo dice —«Principal no va a ver esta
+clase»— y **avisa, no bloquea**: puede haber una clase de bienvenida solo para
+quien recién empieza, y bloquear dejaría a Brunela trabada sin forma de decirle
+al sistema que esta vez es a propósito. Misma regla que `/admin/precios`.
+
+La regla vive en `planesCarosSinIncluir()`, que solo cuenta como hueco un plan
+**más caro** que alguno incluido: `{solista, principal}` deja a Corps afuera y
+eso es exclusividad normal, no un error.
 
 #### Lo demás, sin sorpresas
 
