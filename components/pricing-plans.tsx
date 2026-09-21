@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Lock } from "lucide-react";
-import { PiButterflyLight, PiCrownLight, PiFlowerLotusLight } from "react-icons/pi";
+import { PiButterflyLight, PiFlowerLotusLight, PiStarFourLight } from "react-icons/pi";
 import { usePublicI18n } from "@/components/language-provider";
 import type { PublicLocale, PublicMessageKey } from "@/src/i18n/public";
 
@@ -36,7 +36,7 @@ function IconoPlan({ indice }: { indice: number }) {
   const p = { size: 27, "aria-hidden": true } as const;
   if (indice === 1) return <PiFlowerLotusLight {...p} />;
   if (indice === 2) return <PiButterflyLight {...p} />;
-  return <PiCrownLight {...p} />;
+  return <PiStarFourLight {...p} />;
 }
 
 type BillingMode = "monthly" | "annual";
@@ -139,9 +139,17 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
             Se intento resolver rotando el trazo horizontal y no alcanza: al
             girarlo, la cabeza se va adonde uno quiere pero la COLA queda donde
-            estorba, y el ojo sigue el trazo mas largo. Un dibujo pensado para
-            subir tiene el rulo y la cola del lado correcto. Cuestan unos bytes
-            de marcado y cero JavaScript.
+            estorba, y el ojo sigue el trazo mas largo. Cuestan unos bytes de
+            marcado y cero JavaScript.
+
+            ⚠️ EL TRAZO QUE SUBE NO LLEVA RULO, Y NO ES POR GUSTO. La primera
+               version copiaba el bucle del horizontal para conservar el aire
+               hecho a mano. Renderizado a 30px -- el tamaño real -- el bucle se
+               empasta y queda como un puntito sucio, no como un gesto. Se
+               probaron cuatro variantes mas: las dos con rulo fallan igual, y
+               ganan las de barrido limpio. A este tamaño el detalle fino no
+               existe; lo que se lee es la direccion y el peso del trazo, y por
+               eso va a 3.6 en vez de 3.
           */}
           <svg className="pricing-save-arrow-h" viewBox="0 0 92 34" fill="none">
             <path
@@ -161,17 +169,17 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
           <svg className="pricing-save-arrow-v" viewBox="0 0 44 40" fill="none">
             <path
-              d="M3 35c4-4 8-2 7 2-1 4-6 3-5-2 2-8 12-16 26-24"
+              d="M4 36C7 25 15 16 29 10"
               stroke="currentColor"
               strokeLinecap="round"
-              strokeWidth="3"
+              strokeWidth="3.6"
             />
             <path
-              d="M22 7 32 9 30 19"
+              d="M18 7 31.5 8.5 28.5 22"
               stroke="currentColor"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="3"
+              strokeWidth="3.6"
             />
           </svg>
 
