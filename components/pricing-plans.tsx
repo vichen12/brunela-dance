@@ -728,7 +728,10 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         @media (max-width: 560px) {
           .pricing-toggle-row {
             flex-direction: column;
-            gap: 0.65rem;
+            /* 0.35 y no 0.65: la flecha apunta a la pildora de arriba, y con el
+               hueco anterior quedaban ~35px de rosa vacio entre la punta y su
+               objetivo. Una flecha que apunta a la nada no conecta nada. */
+            gap: 0.35rem;
             margin-bottom: 1.2rem;
           }
 
@@ -800,12 +803,34 @@ export function PricingPlans({ plans }: PricingPlansProps) {
                oeste a mirar al noroeste, que es donde quedo el selector.
           */
           .pricing-save-note svg {
-            width: 42px;
-            transform: rotate(48deg);
+            width: 40px;
+            /*
+              135deg, y no 48 ni 90. Se probaron los ocho angulos renderizando el
+              trazo con la caja y el transform-origin REALES, y mirandolos:
+
+                · 48deg  -- la cabeza sube pero la COLA se descuelga hacia
+                            abajo-derecha. El ojo sigue el trazo mas largo, que
+                            es la cola, asi que se lee peor que sin rotar.
+                · 90deg  -- apunta arriba, pero el glifo es ancho y chato: de
+                            pie mide 11x38 contra un texto de 11px. Desalinea la
+                            fila entera y deja de leerse como flecha.
+                · 135deg -- la punta queda como el punto MAS ALTO del trazo y la
+                            cola por debajo. Es la unica que sigue pareciendo
+                            una flecha dibujada a proposito, y la diagonal cae
+                            sobre "Anual", que es lo que la nota quiere que se
+                            toque.
+
+              ⚠️ El fondo del asunto es que este garabato esta dibujado en
+                 HORIZONTAL, para acostarse al lado de un texto. Rotarlo mueve la
+                 cabeza pero deja la cola donde estorba. Si algun dia molesta de
+                 nuevo, el arreglo de verdad no es otro angulo: es dibujar un
+                 trazo pensado para subir.
+            */
+            transform: rotate(135deg);
             transform-origin: center;
-            /* La caja rotada gana alto y pierde ancho: se recupera el hueco
-               lateral para que no quede un bache antes del texto. */
-            margin-right: -0.35rem;
+            /* Rotada queda casi cuadrada (~26x29) en vez de ancha y chata: sin
+               esto la fila se separa de mas. */
+            margin: 0 -0.2rem 0 -0.3rem;
           }
 
           .pricing-save-note span {
