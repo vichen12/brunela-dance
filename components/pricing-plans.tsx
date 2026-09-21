@@ -2,22 +2,41 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CheckCircle2, Crown, Footprints, Lock, PersonStanding } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
+import { PiButterflyLight, PiCrownLight, PiFlowerLotusLight } from "react-icons/pi";
 import { usePublicI18n } from "@/components/language-provider";
 import type { PublicLocale, PublicMessageKey } from "@/src/i18n/public";
 
 /**
  * Icono de cada plan.
  *
+ * POR QUE PHOSPHOR Y NO LUCIDE, QUE ES LO QUE USA EL RESTO
+ *   Los tres de lucide (Footprints, PersonStanding, Crown) se veian de
+ *   plantilla. Se compararon cinco juegos RENDERIZADOS al tamaño real dentro
+ *   del chip rosa -- 27px sobre --pink-wash -- y no de memoria: Phosphor Light
+ *   fue el unico con los tres del mismo peso y con aire de marca.
+ *
+ *   ⚠️ Phosphor son contornos RELLENOS, no trazo. `strokeWidth` no hace nada
+ *      acá: el grosor se elige por el sufijo del nombre (Thin / Light / normal
+ *      / Bold). Los tres llevan `Light` y por eso empastan igual.
+ *
+ *   ⚠️ Es mezcla deliberada de familias: el CheckCircle2 de la misma tarjeta
+ *      sigue siendo lucide. Dentro del chip no se nota porque el icono va solo;
+ *      si algun dia van lado a lado, hay que revisarlo.
+ *
+ *   Coste de bundle: cero. Next ya trae react-icons/pi en optimizePackageImports,
+ *   asi que entra solo el icono usado y no hubo que tocar package.json -- que con
+ *   dos sesiones sobre el repo era justo lo que habia que evitar.
+ *
  * Se elige por POSICION (1, 2, 3) y no por el nombre del plan, porque el nombre
  * es texto de presentacion y se traduce a cuatro idiomas: atarlo a "Solista"
  * dejaria sin icono a la version inglesa el dia que alguien la retoque.
  */
 function IconoPlan({ indice }: { indice: number }) {
-  const p = { size: 26, strokeWidth: 1.5, "aria-hidden": true } as const;
-  if (indice === 1) return <Footprints {...p} />;
-  if (indice === 2) return <PersonStanding {...p} />;
-  return <Crown {...p} />;
+  const p = { size: 27, "aria-hidden": true } as const;
+  if (indice === 1) return <PiFlowerLotusLight {...p} />;
+  if (indice === 2) return <PiButterflyLight {...p} />;
+  return <PiCrownLight {...p} />;
 }
 
 type BillingMode = "monthly" | "annual";
