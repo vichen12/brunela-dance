@@ -18,6 +18,8 @@
  *      sin grant da 42501 al primer SELECT.
  *   4. Toda server action exportada llama a una guarda.
  *   5. Toda ruta de /api comprueba quien llama.
+ *   6. Ningun bloque <style>{`...`}</style> tiene un backtick adentro: uno solo
+ *      cierra el template y el CSS que sigue se lee como JavaScript.
  *
  * LAS EXCEPCIONES SE DECLARAN, NO SE OMITEN
  *   Cada excepcion vive abajo CON SU MOTIVO. Agregar una es un acto deliberado y
@@ -236,6 +238,63 @@ const avisos = [];
   console.log(`  rutas de api: ${rutas.length}`);
 }
 
+// 6. Backticks dentro de un bloque <style>{`...`}</style>
+
+/**
+ * Devuelve los bloques de <style> que contienen un backtick.
+ *
+ * POR QUE EXISTE ESTA COMPROBACION
+ *   En este proyecto varias pantallas llevan su CSS adentro, en
+ *   `<style>{\`...\`}</style>`. Eso es un template literal: UN SOLO BACKTICK
+ *   ahi dentro lo cierra antes de tiempo y el resto del CSS pasa a leerse como
+ *   codigo JavaScript.
+ *
+ *   El sintoma es una catarata de errores de sintaxis en lineas que no se
+ *   tocaron, y la causa casi siempre es un comentario CSS donde alguien cito
+ *   una propiedad entre backticks -- que es exactamente como se escriben los
+ *   comentarios en el resto del repositorio.
+ *
+ *   Paso tres veces en un mismo dia: en el footer, en la seccion de "Lo ultimo"
+ *   y en el hero. Las tres veces el arreglo fue el mismo y las tres veces se
+ *   descubrio por los errores, no por leerlo. Un detector no se olvida.
+ */
+function stylesConBacktick(src) {
+  const malos = [];
+  const abre = "<style>{" + "`";
+  const cierra = "`" + "}</style>";
+  let i = 0;
+  while (true) {
+    const a = src.indexOf(abre, i);
+    if (a === -1) break;
+    const b = src.indexOf(cierra, a + abre.length);
+    if (b === -1) break;
+    const cuerpo = src.slice(a + abre.length, b);
+    if (cuerpo.includes("`")) {
+      // La linea donde empieza el bloque, para que el mensaje sirva.
+      malos.push(src.slice(0, a).split(String.fromCharCode(10)).length);
+    }
+    i = b + cierra.length;
+  }
+  return malos;
+}
+
+{
+  const tsx = archivos(RAIZ, (p) => p.endsWith(".tsx"));
+  let revisados = 0;
+  for (const p of tsx) {
+    const src = readFileSync(p, "utf8");
+    if (!src.includes("<style>{" + "`")) continue;
+    revisados += 1;
+    for (const linea of stylesConBacktick(src)) {
+      fallos.push(
+        `${relative(RAIZ, p)}:${linea} tiene un backtick DENTRO del <style>: ` +
+          `cierra el template antes de tiempo y el CSS que sigue se lee como JavaScript`
+      );
+    }
+  }
+  console.log(`  bloques <style>: ${revisados} archivos`);
+}
+
 // ─── Autocomprobacion: el detector tiene que poder dar positivo ──────────────
 
 {
@@ -249,6 +308,27 @@ const avisos = [];
     const got = actionsSinGuarda(src);
     if (JSON.stringify(got) !== JSON.stringify(esperado)) {
       fallos.push(`🔴 EL PROPIO VERIFICADOR ESTA ROTO — caso "${nombre}": esperaba ${JSON.stringify(esperado)}, dio ${JSON.stringify(got)}`);
+    }
+  }
+
+  // NL se arma con fromCharCode para no escribir ningun escape: este mismo
+  // bloque ya se rompio dos veces porque un escape se perdio entre capas.
+  const NL = String.fromCharCode(10);
+  const A = "<style>{" + "`";
+  const C = "`" + "}</style>";
+  const TICK = "`";
+  const casosStyle = [
+    ["css limpio", A + NL + ".a { color: red; }" + NL + C, 0],
+    ["backtick en un comentario",
+      A + NL + "/* usa " + TICK + "cover" + TICK + " aca */" + NL + C, 1],
+    ["dos bloques, uno malo",
+      A + NL + ".a{}" + NL + C + NL + A + NL + "/* " + TICK + "x" + TICK + " */" + NL + C, 1],
+    ["sin bloque style", "const x = 1;", 0],
+  ];
+  for (const [nombre, src, esperado] of casosStyle) {
+    const got = stylesConBacktick(src).length;
+    if (got !== esperado) {
+      fallos.push(`🔴 EL PROPIO VERIFICADOR ESTA ROTO — caso "${nombre}": esperaba ${esperado}, dio ${got}`);
     }
   }
 }
