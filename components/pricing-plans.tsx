@@ -126,7 +126,24 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         </div>
 
         <div className="pricing-save-note" aria-hidden="true">
-          <svg viewBox="0 0 92 34" fill="none">
+          {/*
+            DOS TRAZOS, UNO POR CONTEXTO. No es duplicar por duplicar.
+
+            En escritorio la nota va a la DERECHA del selector, asi que la flecha
+            tiene que ir hacia la izquierda: para eso sirve el trazo horizontal
+            de siempre.
+
+            En movil la fila se apila, la nota queda DEBAJO y el texto pasa a la
+            izquierda, asi que la flecha tiene que SUBIR hacia la derecha -- justo
+            debajo de "Anual", que es lo que la nota quiere que se toque.
+
+            Se intento resolver rotando el trazo horizontal y no alcanza: al
+            girarlo, la cabeza se va adonde uno quiere pero la COLA queda donde
+            estorba, y el ojo sigue el trazo mas largo. Un dibujo pensado para
+            subir tiene el rulo y la cola del lado correcto. Cuestan unos bytes
+            de marcado y cero JavaScript.
+          */}
+          <svg className="pricing-save-arrow-h" viewBox="0 0 92 34" fill="none">
             <path
               d="M4 17c15 0 20 11 35 9 17-2 20-21 11-22-8-1-10 15 6 18 11 2 20-2 31-10"
               stroke="currentColor"
@@ -141,6 +158,23 @@ export function PricingPlans({ plans }: PricingPlansProps) {
               strokeWidth="3"
             />
           </svg>
+
+          <svg className="pricing-save-arrow-v" viewBox="0 0 44 40" fill="none">
+            <path
+              d="M3 35c4-4 8-2 7 2-1 4-6 3-5-2 2-8 12-16 26-24"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="3"
+            />
+            <path
+              d="M22 7 32 9 30 19"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+            />
+          </svg>
+
           <span>{t("pricing.save")}!</span>
         </div>
       </div>
@@ -372,11 +406,13 @@ export function PricingPlans({ plans }: PricingPlansProps) {
         }
 
         .pricing-save-note svg {
-          width: 70px;
-          height: 28px;
           color: var(--pink);
           opacity: 0.82;
         }
+
+        .pricing-save-arrow-h { width: 70px; height: 28px; }
+        /* El trazo que sube es solo para movil. */
+        .pricing-save-arrow-v { display: none; }
 
         .pricing-save-note span {
           max-width: none;
@@ -821,35 +857,19 @@ export function PricingPlans({ plans }: PricingPlansProps) {
                48deg (positivo = horario en CSS) lleva la punta de mirar al
                oeste a mirar al noroeste, que es donde quedo el selector.
           */
-          .pricing-save-note svg {
-            width: 40px;
-            /*
-              135deg, y no 48 ni 90. Se probaron los ocho angulos renderizando el
-              trazo con la caja y el transform-origin REALES, y mirandolos:
+          /* Se invierte: el TEXTO a la izquierda y la flecha a la derecha, que
+             es el lado donde esta "Anual" en la pildora de arriba. */
+          .pricing-save-note { flex-direction: row-reverse; gap: 0.4rem; }
 
-                · 48deg  -- la cabeza sube pero la COLA se descuelga hacia
-                            abajo-derecha. El ojo sigue el trazo mas largo, que
-                            es la cola, asi que se lee peor que sin rotar.
-                · 90deg  -- apunta arriba, pero el glifo es ancho y chato: de
-                            pie mide 11x38 contra un texto de 11px. Desalinea la
-                            fila entera y deja de leerse como flecha.
-                · 135deg -- la punta queda como el punto MAS ALTO del trazo y la
-                            cola por debajo. Es la unica que sigue pareciendo
-                            una flecha dibujada a proposito, y la diagonal cae
-                            sobre "Anual", que es lo que la nota quiere que se
-                            toque.
+          .pricing-save-arrow-h { display: none; }
 
-              ⚠️ El fondo del asunto es que este garabato esta dibujado en
-                 HORIZONTAL, para acostarse al lado de un texto. Rotarlo mueve la
-                 cabeza pero deja la cola donde estorba. Si algun dia molesta de
-                 nuevo, el arreglo de verdad no es otro angulo: es dibujar un
-                 trazo pensado para subir.
-            */
-            transform: rotate(135deg);
-            transform-origin: center;
-            /* Rotada queda casi cuadrada (~26x29) en vez de ancha y chata: sin
-               esto la fila se separa de mas. */
-            margin: 0 -0.2rem 0 -0.3rem;
+          .pricing-save-arrow-v {
+            display: block;
+            width: 30px;
+            height: 27px;
+            /* Se sube un poco para acercarse a la pildora: apuntar bien no
+               sirve si la punta queda a 30px del objetivo. */
+            margin-bottom: 6px;
           }
 
           .pricing-save-note span {
