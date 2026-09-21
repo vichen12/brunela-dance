@@ -779,14 +779,33 @@ export function PricingPlans({ plans }: PricingPlansProps) {
 
           .pricing-save-note {
             position: static;
-            grid-column: 1 / -1;
             justify-content: center;
             transform: none;
-            margin-top: 0.25rem;
+            margin-top: 0.1rem;
+            /* grid-column: 1 / -1 se quito: el padre (.pricing-toggle-row) es
+               flex en columna, no grid, asi que esa linea no hacia nada. */
           }
 
+          /*
+            🔴 LA PUNTA DE LA FLECHA ESTA EN EL EXTREMO IZQUIERDO DEL TRAZO.
+
+               En escritorio la nota va a la DERECHA del selector, asi que una
+               flecha que apunta a la izquierda apunta justo al selector: bien.
+
+               En movil .pricing-toggle-row pasa a columna, la nota queda DEBAJO
+               y centrada, y el selector deja de estar a su izquierda -- pasa a
+               estar ARRIBA. Sin rotar, la flecha señalaba un espacio vacio.
+
+               48deg (positivo = horario en CSS) lleva la punta de mirar al
+               oeste a mirar al noroeste, que es donde quedo el selector.
+          */
           .pricing-save-note svg {
-            width: 46px;
+            width: 42px;
+            transform: rotate(48deg);
+            transform-origin: center;
+            /* La caja rotada gana alto y pierde ancho: se recupera el hueco
+               lateral para que no quede un bache antes del texto. */
+            margin-right: -0.35rem;
           }
 
           .pricing-save-note span {
