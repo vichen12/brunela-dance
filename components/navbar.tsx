@@ -402,6 +402,9 @@ export function Navbar() {
         .nav-button-ghost:hover {
           border-color: var(--pink);
           background: var(--pink-wash);
+          /* La sombra tambien crece: sin eso el hover aplana el boton, porque
+             el color se intensifica pero la elevacion se queda quieta. */
+          box-shadow: 0 8px 18px rgba(176, 58, 62, 0.16);
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -413,10 +416,28 @@ export function Navbar() {
           color: #fff;
           box-shadow: 0 4px 16px rgba(230,79,85,0.28);
         }
+        /*
+          El secundario tiene que pesar como el primario, no flotar al lado.
+
+          Antes era un contorno #FFDADA -- el rosa mas palido de la paleta --
+          sobre fondo TRANSPARENTE, encima de una barra que ya es blanca
+          translucida. Resultado: un contorno sin superficie al lado de un boton
+          solido con sombra. El par quedaba desbalanceado y "Ingresar" se leia
+          como algo deshabilitado.
+
+          Ahora tiene: borde derivado del coral de marca (una transparencia de
+          --pink, no un color nuevo suelto), superficie blanca propia para que
+          se despegue de la barra, y una sombra minima que lo pone a la misma
+          altura que el solido.
+
+          El texto sigue en --pink-deep: 5.96:1 sobre blanco. --pink como texto
+          daria 3.78:1 y no llega -- es la regla que ya esta en CLAUDE.md.
+        */
         .nav-button-ghost {
-          border: 1.5px solid #FFDADA;
+          border: 1.5px solid rgba(230, 79, 85, 0.4);
           color: var(--pink-deep);
-          background: transparent;
+          background: rgba(255, 255, 255, 0.8);
+          box-shadow: 0 2px 6px rgba(176, 58, 62, 0.1);
         }
 
         /*
