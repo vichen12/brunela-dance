@@ -535,20 +535,31 @@ export function Navbar() {
           .landing-nav-links { display: none !important; }
           .landing-mobile-nav { display: flex !important; }
           /*
-            🔴 NO VA EN position: absolute.
+            🔴 HAY QUE RESERVARLE SITIO AL BOTON DE MENU, QUE NO ESTA EN EL FLUJO.
 
-               Estaba absoluto, o sea FUERA del flex del header: la marca y este
-               grupo no negociaban espacio entre si. El resultado era que
-               "Ingresar" se aplastaba hasta cortarse por la mitad y el boton de
-               menu le quedaba encima.
+               En movil el boton de menu NO es el que vive dentro de este grupo
+               -- ese esta en display: none unas lineas mas abajo. El visible es
+               .mobile-floating-menu: 36px, position: fixed, a 0.58rem del
+               borde derecho y con z-index por encima de la cabecera.
 
-               Como item normal con margin-left auto, el header reparte: la
-               marca tiene max-width y overflow hidden -- esta pensada para
-               ceder -- y este grupo no se encoge nunca.
+               Al ser fixed no ocupa lugar, asi que el header no se lo reserva y
+               la pildora de "Ingresar" terminaba justo DEBAJO. No se aplastaba
+               ni se cortaba: se tapaba. Se veia "INGRE" y encima el cuadradito
+               del menu.
+
+               El margin-right son esos 36px mas aire. Si alguna vez cambia el
+               tamano o la posicion del boton flotante, este numero cambia con
+               el -- estan atados.
+
+               (Lo de position: static es aparte y se queda: como item normal
+               del flex, el header reparte de verdad entre la marca -- que tiene
+               max-width y overflow hidden, esta pensada para ceder -- y este
+               grupo, que no se encoge nunca.)
           */
           .landing-mobile-nav {
             position: static;
             margin-left: auto !important;
+            margin-right: calc(36px + 0.5rem);
             transform: none;
             flex: 0 0 auto;
             min-width: 0;
