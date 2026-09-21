@@ -27,7 +27,7 @@
    |---|---|---|
    | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
    | `npm run test:sistema` | **127 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,5 s, sin base** | Al tocar pantallas, cobro o acceso |
-   | `npm run test:aislamiento` | **126 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~165 s** | Al tocar cualquier policy |
+   | `npm run test:aislamiento` | **126 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~190 s** | Al tocar cualquier policy |
 
    ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
    rojo. Una verificación que no puede fallar no es verificación — ver trampa 7.
@@ -91,7 +91,7 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **32 migraciones**, 31 aplicadas y verificadas y **una pendiente** (la 32, `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`). ⚠️ **El orden NO es
+- **32 migraciones**, todas aplicadas y verificadas. ⚠️ El conteo es el de la rama `planes-de-trabajo`: la sesión de la portada suma la suya (`20260917`), que también está aplicada. ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
 
@@ -658,10 +658,10 @@ Ordenados por lo que bloquea a lo que puede esperar.
 
 **✅ `20260921_2_vaciar_planes_no_se_repara.sql` corrió el 2026-09-21.**
 
-**🔴 QUEDA `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`.** La 2 destapó
-que el CHECK de la lista vacía **nunca funcionó**: `array_length('{}', 1)` es
-NULL, no 0, y un CHECK con NULL deja pasar. Hasta que se corra,
-`npm run test:aislamiento` da **125 de 126**.
+**✅ `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql` corrió el 2026-09-21.**
+
+**No queda ninguna migración sin correr** en esta rama, y
+`npm run test:aislamiento` da **126 de 126**.
 
 ### ✅ Lo que pidió Brunela — bloque A, hecho (2026-08-05)
 

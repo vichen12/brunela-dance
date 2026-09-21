@@ -103,7 +103,8 @@ Mientras no corra:
       en este directorio: `tsc` pasa con archivos sin trackear que Vercel no va
       a tener, y un build acá pisa `.next` y rompe el login
 - [x] ~~Correr `20260921_2_vaciar_planes_no_se_repara.sql`~~ — **aplicada**
-- [ ] 🔴 **Correr `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`** — ver abajo
+- [x] ~~Correr `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql`~~ — **aplicada**
+- [ ] **Juntar las dos ramas y desplegar una sola vez** — ver *Cómo juntamos* al final
 - [ ] Seguir con Planes de trabajo: es lo único que tengo asignado
 
 ### 🔴 Segunda migración pendiente: `20260921_2_vaciar_planes_no_se_repara.sql`
@@ -131,14 +132,15 @@ como `{}`**: una clase publicada que no ve nadie.
 
 Lo arregla `20260921_3` con `cardinality()`.
 
-**Hasta que se corra, `test:aislamiento` da 125/126.** No afecta a la sesión B.
+**Las tres están aplicadas. `test:aislamiento` da 126/126.** Nada de esto
+afectó a la sesión B.
 
 ### Estado de las pruebas
 
 | | |
 |---|---|
 | `npm run test:sistema` | **127/127** |
-| `npm run test:aislamiento` | **125/126** — la que falta la arregla la migración de arriba |
+| `npm run test:aislamiento` | **126/126** |
 | `npx tsc --noEmit` | limpio |
 | `npx next build` | **pasa** |
 
@@ -230,3 +232,77 @@ cualquier orden**, pero cada una respetando su propio orden interno.
 ⚠️ Cuando las dos estén, `npm run verificar` va a contar más tablas. Si el
 conteo no cuadra, es porque falta correr una de las dos — no porque haya una
 tabla sin RLS.
+
+---
+
+## Cómo juntamos las dos ramas
+
+Escrito por la sesión A el 2026-09-21, con el merge ya probado en seco
+(`git merge-tree`, que no escribe nada).
+
+### Lo que dice la prueba en seco
+
+| | |
+|---|---|
+| Archivos que cambian respecto de la base `0a6d042` | **15** de main, **37** de `planes-de-trabajo` |
+| Conflictos | **1**, y es este archivo |
+| Todo lo demás | entra limpio |
+
+Las dos migraciones son independientes: la de portada crea tablas nuevas
+(`landing_texts`, `landing_faq`) y la de planes toca `videos`, `programs` y
+`categories`. **Las cuatro ya están aplicadas en producción**, así que el código
+no se adelanta al esquema.
+
+### El orden
+
+1. **Las dos sesiones quietas**, y `git status` limpio en los dos directorios.
+   Lo que no esté commiteado se pierde en el `checkout`.
+2. El merge va **hacia `main`**, que es la rama que despliega:
+   `git checkout main && git merge planes-de-trabajo`
+3. Resolver `COORDINACION.md` a mano — es el único conflicto.
+4. Correr **todo junto** (recién ahí tiene sentido; ver abajo).
+5. Un solo `git push origin main`.
+
+### Lo que hay que correr DESPUÉS del merge y ANTES del push
+
+No alcanza con lo que corrió cada rama por su lado: es la primera vez que los
+dos códigos conviven.
+
+```
+npm install                 # por si package.json divergió
+npx tsc --noEmit
+npm run verificar           # ⚠️ el conteo de tablas SUBE: ahora cuenta las dos migraciones
+npm run test:sistema
+npm run test:aislamiento    # ~190 s, contra la base real
+node --env-file=.env.local scripts/verificar-portada.mjs
+npx next build              # en un worktree aparte, nunca en un directorio con dev server
+```
+
+⚠️ `npm run verificar` va a contar más tablas que antes. Si dice que falta RLS en
+`landing_texts` o `landing_faq`, **no es el merge**: es que falta correr una
+migración.
+
+### 🔴 Dos cosas para decidir antes del push
+
+1. **`/admin/portada` no tiene enlace en el menú lateral.** `admin-sidebar.tsx`
+   estuvo tomado por la sesión A toda la sesión, y la B lo anotó en *Bloqueos* y
+   no lo tocó. Después del merge el archivo queda libre: es **una línea** en el
+   array `NAV`. Sin eso, Brunela no encuentra la pantalla salvo escribiendo la
+   URL.
+2. **La base de producción sigue en el plan Free, sin copias de seguridad.**
+   Este deploy es el más grande en meses. Un `pg_dump` a mano antes cuesta
+   minutos; no tenerlo cuesta todo.
+
+### Después del deploy
+
+- `curl -sI https://bruneladance.com/sign-in | grep -i x-vercel-id` → tiene que
+  decir `fra1` en el **segundo** tramo
+- `/admin/videos`: subir y guardar una clase
+- `/dashboard/programs` con una cuenta Corps: candado y «Disponible desde Solista»
+- La portada: FAQ y tráiler
+
+### Cuando esté
+
+`planes-de-trabajo` se puede borrar, y este archivo también: existió para dos
+sesiones en paralelo que ya terminaron. Lo que valga la pena se muda a
+`CLAUDE.md`.
