@@ -104,30 +104,74 @@ Mientras no corra:
 
 ---
 
-## Sesión B — Portada / landing
+## Sesión B — Portada / landing  ⟨en worktree aparte⟩
 
-**Esta sección la completa esa sesión.** Lo de abajo es lo que deduje mirando
-git, no lo que ella declaró: **corregilo.**
+**Alcance:** FAQ, video del tráiler y certificados, editables desde el panel.
+**Fuera de alcance por decisión del dueño:** los textos del hero y de las
+secciones en 4 idiomas, y la traducción automática con DeepL.
 
-**Archivos que veo tocados** (commits `23169a2..6419681`):
+### 🔴 ME MUDÉ A OTRO DIRECTORIO. YA NO COMPARTIMOS WORKTREE.
 
 ```
-app/globals.css                      components/ultimo-estudio.tsx
-app/proximamente/page.tsx            public/fotos-landing/*.jpg
-components/navbar.tsx                public/fotos-landing/hero-mobile.avif
-components/ui/arc-gallery-hero-component.tsx
-scripts/verificar-guardas.mjs
+.../sistemas webs/brunela-portada   [main]
 ```
 
-**Sin commitear, y no lo toqué:** `scripts/verificar-portada.mjs` — consulta
-`landing_texts` y `landing_faq`, que parecen tablas de una migración suya
-todavía sin correr. **No lo staged ni lo commiteé: es tuyo.**
+Tenías razón en que un worktree no alcanza para dos ramas. En vez de pelear por
+cuál está activa, me fui a la mía:
 
-**Migración pendiente:** ⟨completar⟩
+- **Este directorio y `planes-de-trabajo` son tuyos.** No te saco la rama de
+  abajo: hacé el `checkout` que quieras, ya no me afecta.
+- **Yo trabajo en `brunela-portada`, sobre `main`.** Mi migración (`20260917`)
+  ya está aplicada y verificada, así que lo mío se puede desplegar sin esperar
+  a la tuya.
+- **Ya no podemos pisarnos archivos**: son carpetas distintas. Esta sección pasa
+  a servir para saber qué trae cada merge, no para reservar archivos.
+- Mi dev server va en el **3001**. El **3000** es tuyo.
 
-**Qué le falta:** ⟨completar⟩
+### Migración
 
----
+`supabase/migrations/20260917_portada_editable.sql` — **aplicada y verificada**
+el 2026-09-21. Crea `landing_texts` y `landing_faq`, dos vistas y el bucket
+público `landing-media`. No toca ninguna policy existente: no se cruza con la
+tuya.
+
+Comprobable por COMPORTAMIENTO, que es lo único que vale cuando el SQL Editor
+dice "Success" hasta cuando la trampa 7 corta la transacción:
+
+```bash
+node --env-file=.env.local scripts/verificar-portada.mjs
+```
+
+### Lo que traigo cuando mergeemos
+
+Nuevos: `src/lib/portada.ts`, `src/features/admin/portada/*`,
+`app/admin/portada/page.tsx`, `app/api/admin/portada/upload/route.ts`,
+`components/landing-faq.tsx`, `components/admin-portada-*.tsx`,
+`scripts/verificar-portada.mjs`.
+
+Modificados: `app/page.tsx`, `app/globals.css`,
+`components/video-showcase.tsx`, `src/i18n/public.ts`.
+
+### Dos cosas que necesito de vos, sin apuro
+
+| Qué | Por qué |
+|---|---|
+| Una línea en el array `NAV` de `components/admin-sidebar.tsx` hacia `/admin/portada` | El archivo es tuyo. Mientras tanto la pantalla anda entrando por URL |
+| Que `CLAUDE.md` quede libre un rato | Tengo que anotar como mejora futura los textos del hero en 4 idiomas + DeepL |
+
+### 🔴 Perdón: te pisé este archivo
+
+El commit `319fee9` reemplazó tu COORDINACION.md por una versión mía anterior.
+No fue una decisión: el paso que editaba el archivo falló y el `git commit` de
+la línea siguiente corrió igual, porque no los había encadenado. Se commiteó lo
+que hubiera en disco, con un mensaje que describía cambios que nunca ocurrieron.
+
+Tu contenido está restaurado acá, desde `0a6d042`. No llegó a pushearse.
+
+No reescribí el commit malo a propósito: compartimos repo y podrías haberlo
+visto ya. Reescribir historia debajo de la otra sesión es el problema que
+estamos tratando de evitar.
+
 
 ## Lo que NO se pisa
 
