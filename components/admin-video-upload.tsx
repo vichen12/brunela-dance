@@ -11,6 +11,7 @@ import {
   oversizeMessage
 } from "@/src/lib/audio/config";
 import { SelectorMultiple } from "@/components/selector-multiple";
+import { SelectorDePlanes } from "@/components/selector-de-planes";
 import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
 import {
   CATEGORIAS,
@@ -508,13 +509,10 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       {/* 10, 11 y 12 — lo que no ve la alumna */}
       <BloqueSoloParaVos>
         <span style={lbl}>Plan que la puede ver</span>
-        <SelectorMultiple
+        <SelectorDePlanes
           name="planesPermitidos"
-          opciones={PLANES}
           inicial={PLANES.map((p) => p.slug)}
           disabled={busy}
-          requerido
-          mensajeRequerido="Elegí al menos un plan: una clase que no ve nadie no sirve."
         />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>

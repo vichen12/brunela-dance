@@ -32,6 +32,14 @@ type Props = {
   /** Bloquea el envio con un mensaje del navegador si no se eligio nada. */
   requerido?: boolean;
   mensajeRequerido?: string;
+  /**
+   * Se llama con la lista completa cada vez que cambia.
+   *
+   * Existe para que quien envuelve a este componente pueda mostrar un aviso sin
+   * duplicar el estado -- que es donde las dos copias se desincronizan y el
+   * aviso empieza a hablar de una seleccion que ya no es la que hay.
+   */
+  onCambio?: (elegidos: string[]) => void;
 };
 
 export function SelectorMultiple({
@@ -42,19 +50,28 @@ export function SelectorMultiple({
   disabled = false,
   requerido = false,
   mensajeRequerido = "Elegí al menos una opción.",
+  onCambio,
 }: Props) {
   const [elegidos, setElegidos] = useState<string[]>(() =>
     inicial.filter((s) => opciones.some((o) => o.slug === s))
   );
 
   function alternar(slug: string) {
-    setElegidos((previos) => {
-      const estaba = previos.includes(slug);
-      if (estaba) return previos.filter((s) => s !== slug);
-      // "Sin material" y un material son contradictorios: el ultimo toque gana.
-      if (excluyente && slug === excluyente) return [slug];
-      return [...previos.filter((s) => s !== excluyente), slug];
-    });
+    // Se calcula el siguiente valor a mano en vez de con el updater funcional
+    // porque `onCambio` tiene que recibirlo. Avisar desde dentro del updater
+    // seria escribir estado de otro componente durante un render de este, que
+    // React rechaza; y avisar despues de setElegidos con la variable vieja
+    // mandaria siempre la seleccion anterior.
+    const estaba = elegidos.includes(slug);
+    const siguiente = estaba
+      ? elegidos.filter((s) => s !== slug)
+      : // "Sin material" y un material son contradictorios: el ultimo toque gana.
+        excluyente && slug === excluyente
+        ? [slug]
+        : [...elegidos.filter((s) => s !== excluyente), slug];
+
+    setElegidos(siguiente);
+    onCambio?.(siguiente);
   }
 
   return (

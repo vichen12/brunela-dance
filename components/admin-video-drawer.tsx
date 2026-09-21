@@ -6,6 +6,7 @@ import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actio
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
 import { SelectorMultiple } from "@/components/selector-multiple";
+import { SelectorDePlanes } from "@/components/selector-de-planes";
 import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
 import { ClaseEnPlanes } from "@/components/clase-en-planes";
 import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/planes-de-trabajo";
@@ -218,9 +219,8 @@ function VideoForm({
       {/* 10 y 11 — lo que no ve la alumna */}
       <BloqueSoloParaVos>
         <Lbl>Plan que la puede ver</Lbl>
-        <SelectorMultiple
+        <SelectorDePlanes
           name="planesPermitidos"
-          opciones={PLANES}
           /* Una clase guardada antes de la migracion 20260921 puede no tener
              lista todavia; ahi se cae a la regla vieja, que es exactamente de
              donde el trigger la va a derivar igual. */
@@ -229,8 +229,6 @@ function VideoForm({
               ? video.planes_permitidos
               : planesDesde(video.membership_tier_required)
           }
-          requerido
-          mensajeRequerido="Elegí al menos un plan: una clase que no ve nadie no sirve."
         />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>

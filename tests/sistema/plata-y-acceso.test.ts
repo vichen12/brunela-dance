@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { celda, BOM_UTF8 } from "../../src/lib/csv";
+import {
+  planesCarosSinIncluir,
+  textoDePlanesSinIncluir,
+} from "../../src/features/studio/catalogo-clases";
 
 /**
  * Invariantes de la plata y del contenido pago.
@@ -421,5 +425,54 @@ describe("la portada tampoco anuncia lo que no se puede cobrar", () => {
     const src = leer("app/page.tsx");
     expect(src).toMatch(/supabase\.from\("packs"\)\.select\("slug"\)/);
     expect(leer("components/packs-publicos.tsx")).not.toMatch(/stripe_price_id/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// EL AVISO DE PLANES QUE QUEDAN AFUERA
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("planesCarosSinIncluir avisa del hueco, no de la exclusividad", () => {
+  const CORPS = "corps_de_ballet";
+
+  it("{corps, principal} deja a Solista en el medio: avisa", () => {
+    expect(planesCarosSinIncluir([CORPS, "principal"])).toEqual(["solista"]);
+  });
+
+  it("solo corps deja a los dos de arriba: avisa de los dos, en orden de precio", () => {
+    expect(planesCarosSinIncluir([CORPS])).toEqual(["solista", "principal"]);
+  });
+
+  it("solo principal NO avisa: lo caro sin lo barato es exclusividad normal", () => {
+    expect(planesCarosSinIncluir(["principal"])).toEqual([]);
+  });
+
+  it("{solista, principal} NO avisa: deja afuera a Corps, que es mas barato", () => {
+    expect(planesCarosSinIncluir(["solista", "principal"])).toEqual([]);
+  });
+
+  it("los tres no avisan nada", () => {
+    expect(planesCarosSinIncluir([CORPS, "solista", "principal"])).toEqual([]);
+  });
+
+  it("la lista vacia no avisa: de eso ya se encarga el campo obligatorio", () => {
+    expect(planesCarosSinIncluir([])).toEqual([]);
+  });
+
+  it("el texto nombra a los que faltan, no a los elegidos", () => {
+    expect(textoDePlanesSinIncluir(["principal"])).toBe("Principal no va a ver esta clase.");
+    expect(textoDePlanesSinIncluir(["solista", "principal"]))
+      .toBe("Solista y Principal no van a ver esta clase.");
+    expect(textoDePlanesSinIncluir([])).toBeNull();
+  });
+});
+
+describe("el aviso avisa y no bloquea", () => {
+  it("el selector de planes no deshabilita el envio por el aviso", () => {
+    const src = leer("components/selector-de-planes.tsx");
+    // Si algun dia alguien lo convierte en bloqueo, Brunela no puede publicar
+    // una clase de bienvenida solo para quien recien empieza.
+    expect(src).not.toMatch(/disabled=\{.*falta/);
+    expect(src).toMatch(/AVISA, NO BLOQUEA/);
   });
 });

@@ -202,6 +202,46 @@ export function planesDesde(tier: string): string[] {
   return PLANES.slice(desde).map((p) => p.slug);
 }
 
+/**
+ * Los planes MÁS CAROS que quedaron afuera habiendo incluido uno más barato.
+ *
+ * POR QUE EXISTE
+ *   La combinación libre permite cualquier conjunto, y eso incluye conjuntos
+ *   que casi siempre son un error de tilde: dejar la clase para Corps de Ballet
+ *   y no para Principal. Quien paga el plan más caro espera ver todo lo que ven
+ *   los de abajo, así que «Corps sí, Principal no» es casi siempre un descuido.
+ *
+ *   «Casi siempre», no siempre: puede haber una clase de bienvenida solo para
+ *   quien recién empieza. Por eso esto AVISA y no bloquea — decidido el
+ *   2026-09-21.
+ *
+ * QUE NO CUENTA COMO ERROR
+ *   Un plan más barato afuera. {solista, principal} deja a Corps afuera y eso
+ *   es exclusividad normal: lo caro incluye a lo barato, no al revés.
+ *
+ * Devuelve los slugs en orden de precio. Lista vacía = nada que avisar.
+ */
+export function planesCarosSinIncluir(elegidos: string[]): string[] {
+  const indices = elegidos
+    .map((s) => ORDEN_PLAN.get(s))
+    .filter((i): i is number => i !== undefined);
+
+  if (indices.length === 0) return [];
+
+  // El más barato de los elegidos marca el piso: de ahí para arriba, todo lo
+  // que falte es un hueco.
+  const piso = Math.min(...indices);
+  return PLANES.filter((p, i) => i > piso && !elegidos.includes(p.slug)).map((p) => p.slug);
+}
+
+/** «Principal no va a ver esta clase» / «Solista y Principal no la van a ver». */
+export function textoDePlanesSinIncluir(slugs: string[]): string | null {
+  if (slugs.length === 0) return null;
+  const labels = slugs.map((s) => PLAN_LABEL[s] ?? s);
+  if (labels.length === 1) return `${labels[0]} no va a ver esta clase.`;
+  return `${labels.slice(0, -1).join(", ")} y ${labels[labels.length - 1]} no van a ver esta clase.`;
+}
+
 /** "Corps de Ballet y Solista" / "Todos los planes". */
 export function planesEnTexto(slugs: string[] | null | undefined): string {
   const orden = ordenarPlanes(slugs ?? []);
