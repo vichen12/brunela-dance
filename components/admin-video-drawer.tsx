@@ -5,6 +5,22 @@ import { useFormStatus } from "react-dom";
 import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
+import { SelectorMultiple } from "@/components/selector-multiple";
+import { SelectorDePlanes } from "@/components/selector-de-planes";
+import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
+import { ClaseEnPlanes } from "@/components/clase-en-planes";
+import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/planes-de-trabajo";
+import {
+  CATEGORIAS,
+  ESTADOS,
+  MATERIALES,
+  NIVELES,
+  PLANES,
+  SIN_MATERIAL,
+  TIPOS_DE_CONTENIDO,
+  planesDesde,
+  rangoANivel
+} from "@/src/features/studio/catalogo-clases";
 
 /**
  * Edicion de una clase en panel lateral.
@@ -37,6 +53,11 @@ export type VideoRecord = {
   description_i18n: Record<string, string>;
   status: "draft" | "published" | "archived";
   membership_tier_required: "corps_de_ballet" | "solista" | "principal";
+  /** Lo que de verdad decide quien ve la clase. Ver la migracion 20260921. */
+  planes_permitidos: string[] | null;
+  content_type: string | null;
+  recommended_min_level: string | null;
+  recommended_max_level: string | null;
   duration_seconds: number;
   category_slugs: string[];
   equipment: string[];
@@ -102,7 +123,17 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   );
 }
 
-function VideoForm({ video, onGuardado }: { video: VideoRecord; onGuardado: () => void }) {
+function VideoForm({
+  video,
+  planes,
+  ubicaciones,
+  onGuardado,
+}: {
+  video: VideoRecord;
+  planes: PlanParaElegir[];
+  ubicaciones: UbicacionEnPlan[];
+  onGuardado: () => void;
+}) {
   // Read-only: audio_tracks is owned by the mux worker, not by this form.
   const muxedLocales = (video.audio_tracks ?? []).map((t) => t.locale);
 
@@ -111,58 +142,134 @@ function VideoForm({ video, onGuardado }: { video: VideoRecord; onGuardado: () =
       <CerrarAlGuardar onExito={onGuardado} />
       <input name="id" type="hidden" value={video.id} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Dirección">
-          {/* Solo lectura: cambiar el slug de una clase publicada rompe
-              cualquier enlace que alguien haya guardado o compartido. Se muestra
-              porque es la direccion de esa clase y a Brunela le sirve verla. */}
-          <input style={{ ...inp, background: "#fafaf9", color: "#78716c" }} defaultValue={video.slug} name="slug" readOnly />
-        </F>
-        <F label="Estado">
-          <select style={sel} defaultValue={video.status} name="status">
-            <option value="draft">Borrador</option>
-            <option value="published">Publicado</option>
-            <option value="archived">Archivado</option>
-          </select>
-        </F>
+      {/* El mismo orden que el formulario de subida, a proposito: subir y
+          editar son la misma tarea en dos momentos, y dos ordenes distintos
+          obligan a volver a buscar cada campo. */}
 
+      {/* 1 y 2 — los dos titulos */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <F label="Título en español">
           <input style={inp} defaultValue={video.title_i18n?.es ?? ""} name="titleEs" required placeholder="Ballet centro basico" />
         </F>
+        <F label="Título en inglés">
+          <input style={inp} defaultValue={video.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
+        </F>
+      </div>
 
+      {/* 3 y 4 — las dos descripciones */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <F label="Descripción en español">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripción de la clase…" />
+        </F>
+        <F label="Descripción en inglés">
+          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.en ?? ""} name="descriptionEn" placeholder="Class description..." />
+        </F>
+      </div>
+
+      {/* 5 a 8 — como se clasifica la clase */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <F label="Tipo de contenido">
+          <select style={sel} defaultValue={video.content_type ?? "clase"} name="contentType">
+            {TIPOS_DE_CONTENIDO.map((t) => (
+              <option key={t.slug} value={t.slug}>{t.label}</option>
+            ))}
+          </select>
+        </F>
+        <F label="Categoría / Colección">
+          {/* La columna es un array y el formulario elige una: se muestra la
+              primera. Una clase vieja con dos categorias conserva la segunda
+              hasta que alguien guarde, y ahi queda con la elegida. */}
+          <select style={sel} defaultValue={video.category_slugs?.[0] ?? CATEGORIAS[0].slug} name="categorySlug" required>
+            {CATEGORIAS.map((c) => (
+              <option key={c.slug} value={c.slug}>{c.label}</option>
+            ))}
+          </select>
+        </F>
+        <F label="Nivel">
+          <select
+            style={sel}
+            defaultValue={rangoANivel(video.recommended_min_level, video.recommended_max_level)}
+            name="nivel"
+          >
+            {NIVELES.map((n) => (
+              <option key={n.slug} value={n.slug}>{n.label}</option>
+            ))}
+          </select>
+        </F>
         <F label="Duración (minutos)">
           {/* En minutos, que es como piensa una clase quien la da. La conversion
               a segundos se hace en la accion: la base sigue guardando segundos. */}
           <input style={inp} defaultValue={Math.round(video.duration_seconds / 60)} min={1} name="durationMinutes" required type="number" />
         </F>
-        <F label="Plan que la puede ver">
-          <select style={sel} defaultValue={video.membership_tier_required} name="membershipTierRequired">
-            <option value="corps_de_ballet">Corps de Ballet</option>
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
-        </F>
-
-
-        {/* Los campos "Mux Playback ID" y "Mux Asset ID" salieron el 2026-08-03:
-            Mux fue reemplazado por Bunny, y esos valores los escribe sola la ruta
-            de finalizacion de subida. Editarlos a mano solo podia romper la
-            reproduccion.
-
-            OJO: stream_playback_id NO es basura -- Bunny lo escribe con la URL
-            del HLS y el proxy de video lo usa como respaldo para las clases
-            viejas. Lo que se saco es el CAMPO del formulario, no la columna. */}
-        <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={video.is_featured} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
-          </label>
-        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Descripción de la clase…" />
+      {/* 9 — materiales */}
+      <div style={{ marginTop: 14 }}>
+        <Lbl>Materiales</Lbl>
+        <SelectorMultiple
+          name="equipment"
+          opciones={MATERIALES}
+          inicial={video.equipment ?? []}
+          excluyente={SIN_MATERIAL}
+          requerido
+          mensajeRequerido="Elegí los materiales, o marcá «Sin material»."
+        />
+      </div>
+
+      {/* 10 y 11 — lo que no ve la alumna */}
+      <BloqueSoloParaVos>
+        <Lbl>Plan que la puede ver</Lbl>
+        <SelectorDePlanes
+          name="planesPermitidos"
+          /* Una clase guardada antes de la migracion 20260921 puede no tener
+             lista todavia; ahi se cae a la regla vieja, que es exactamente de
+             donde el trigger la va a derivar igual. */
+          inicial={
+            video.planes_permitidos?.length
+              ? video.planes_permitidos
+              : planesDesde(video.membership_tier_required)
+          }
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+          <F label="Estado">
+            <select style={sel} defaultValue={video.status === "archived" ? "draft" : video.status} name="status">
+              {ESTADOS.map((e) => (
+                <option key={e.slug} value={e.slug}>{e.label}</option>
+              ))}
+              {/* Una clase archivada de antes conserva su estado hasta que
+                  alguien lo cambie a mano. Sin esta opcion el desplegable
+                  mostraria "Borrador" en una clase archivada, que es mentira. */}
+              {video.status === "archived" && <option value="archived">Archivado</option>}
+            </select>
+          </F>
+
+          {/* Los campos "Mux Playback ID" y "Mux Asset ID" salieron el 2026-08-03:
+              Mux fue reemplazado por Bunny, y esos valores los escribe sola la ruta
+              de finalizacion de subida. Editarlos a mano solo podia romper la
+              reproduccion.
+
+              OJO: stream_playback_id NO es basura -- Bunny lo escribe con la URL
+              del HLS y el proxy de video lo usa como respaldo para las clases
+              viejas. Lo que se saco es el CAMPO del formulario, no la columna. */}
+          <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+              <input defaultChecked={video.is_featured} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
+            </label>
+          </div>
+        </div>
+
+        {/* 12 — a que planes de trabajo pertenece esta clase */}
+        <ClaseEnPlanes videoId={video.id} planes={planes} ubicaciones={ubicaciones} />
+      </BloqueSoloParaVos>
+
+      <div style={{ marginTop: 14 }}>
+        <F label="Dirección">
+          {/* Solo lectura: cambiar el slug de una clase publicada rompe
+              cualquier enlace que alguien haya guardado o compartido. Se muestra
+              porque es la direccion de esa clase y a Brunela le sirve verla. */}
+          <input style={{ ...inp, background: "#fafaf9", color: "#78716c" }} defaultValue={video.slug} name="slug" readOnly />
         </F>
       </div>
 
@@ -187,22 +294,15 @@ function VideoForm({ video, onGuardado }: { video: VideoRecord; onGuardado: () =
       </div>
 
 
-        <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>
-        <F label="Título en inglés">
-          <input style={inp} defaultValue={video.title_i18n?.en ?? ""} name="titleEn" placeholder="Basic ballet center" />
-        </F>
-        <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} defaultValue={video?.description_i18n?.en ?? ""} name="descriptionEn" placeholder="Class description..." />
-        </F>
-        </BloqueAvanzado>
+        {/* El ingles dejo de estar escondido aca: paso a estar al lado de su
+            equivalente en espanol, como pidio el orden nuevo. Categorias y
+            materiales tampoco estan mas: subieron a la parte principal del
+            formulario, que es donde se los busca.
 
-        <BloqueAvanzado titulo="Clasificación y portada" cantidad={3}>
-        <F label="Categorías">
-          <input style={inp} defaultValue={video.category_slugs?.join(", ") ?? ""} name="categories" placeholder="ballet, reformer" />
-        </F>
-        <F label="Materiales">
-          <input style={inp} defaultValue={video.equipment?.join(", ") ?? ""} name="equipment" placeholder="colchoneta, banda elastica" />
-        </F>
+            La portada queda escondida porque no se toca nunca: la escribe sola
+            la subida a Bunny. Sigue siendo editable por si hay que reemplazar
+            una imagen a mano. */}
+        <BloqueAvanzado titulo="Imagen de portada" cantidad={1}>
         <F label="Imagen de portada">
           <input style={inp} defaultValue={video.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
         </F>
@@ -234,7 +334,15 @@ function VideoForm({ video, onGuardado }: { video: VideoRecord; onGuardado: () =
 }
 
 /** El boton de la fila y su panel. Uno por clase, pero solo uno abierto. */
-export function EditarClase({ video }: { video: VideoRecord }) {
+export function EditarClase({
+  video,
+  planes = [],
+  ubicaciones = [],
+}: {
+  video: VideoRecord;
+  planes?: PlanParaElegir[];
+  ubicaciones?: UbicacionEnPlan[];
+}) {
   const [abierto, setAbierto] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
@@ -273,6 +381,8 @@ export function EditarClase({ video }: { video: VideoRecord }) {
       >
         <VideoForm
           video={video}
+          planes={planes}
+          ubicaciones={ubicaciones}
           onGuardado={() => { setAbierto(false); setGuardado(true); }}
         />
       </AdminDrawer>

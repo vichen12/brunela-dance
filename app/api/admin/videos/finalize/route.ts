@@ -6,6 +6,15 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { getBunnyStreamEnv } from "@/src/lib/env";
 import { bunnyHlsUrl, bunnyThumbnailUrl, deleteBunnyVideo } from "@/src/lib/video/bunny";
 import { audioLabel, audioObjectPath, isAudioLocale, ORIGINAL_LOCALE } from "@/src/lib/audio/config";
+import {
+  CATEGORIA_SLUGS,
+  MATERIAL_SLUGS,
+  NIVEL_SLUGS,
+  TIPO_SLUGS,
+  nivelARango
+} from "@/src/features/studio/catalogo-clases";
+
+const CONTENT_TYPES = TIPO_SLUGS;
 
 /** Los nombres del schema no significan nada fuera del codigo. */
 const CAMPO_LEGIBLE: Record<string, string> = {
@@ -16,11 +25,15 @@ const CAMPO_LEGIBLE: Record<string, string> = {
   titleEn: "título en inglés",
   descriptionEs: "descripción en español",
   descriptionEn: "descripción en inglés",
-  membershipTierRequired: "plan requerido",
+  planesPermitidos: "planes que la pueden ver",
   status: "estado",
   durationSeconds: "duración",
-  categories: "categorías",
-  equipment: "material",
+  contentType: "tipo de contenido",
+  categorySlug: "categoría",
+  nivel: "nivel",
+  equipment: "materiales",
+  programId: "plan de trabajo",
+  programDayNumber: "día del plan",
   isFeatured: "destacado",
 };
 
@@ -33,20 +46,30 @@ const schema = z.object({
   titleEn: z.string().optional(),
   descriptionEs: z.string().min(1),
   descriptionEn: z.string().optional(),
-  membershipTierRequired: z.enum(["corps_de_ballet", "solista", "principal"]),
-  status: z.enum(["draft", "published", "archived"]),
+  /**
+   * 🔴 ESTO ES CONTROL DE ACCESO, no una etiqueta: es lo que lee la policy
+   *    videos_select_allowed_by_tier. El `.min(1)` no es cosmetico -- una lista
+   *    vacia seria una clase que no ve nadie, y la base la rechaza igual con un
+   *    check constraint. Se valida en los dos lados a proposito.
+   */
+  planesPermitidos: z.array(z.enum(["corps_de_ballet", "solista", "principal"])).min(1),
+  status: z.enum(["draft", "published"]),
   durationSeconds: z.coerce.number().int().positive(),
-  categories: z.string().optional(),
-  equipment: z.string().optional(),
+  contentType: z.enum(CONTENT_TYPES),
+  categorySlug: z.enum(CATEGORIA_SLUGS),
+  nivel: z.enum(NIVEL_SLUGS),
+  /**
+   * Listas cerradas y no texto libre: antes esto era un CSV, y "Colchoneta" y
+   * "colchoneta" eran dos materiales distintos para la base. Un slug que no
+   * este en la lista se rechaza en vez de guardarse, porque guardarlo lo deja
+   * invisible en todos los filtros sin dar ningun error.
+   */
+  equipment: z.array(z.enum(MATERIAL_SLUGS)).default([]),
+  /** Enganchar la clase a un plan de trabajo es opcional: casi siempre es null. */
+  programId: z.string().uuid().nullable().optional(),
+  programDayNumber: z.coerce.number().int().positive().nullable().optional(),
   isFeatured: z.boolean().default(false)
 });
-
-function parseCsv(value: string | undefined) {
-  return (value ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 function buildI18n(es: string, en?: string) {
   return en && en.trim() ? { es, en: en.trim() } : { es };
@@ -104,11 +127,22 @@ export async function POST(request: Request) {
     slug: data.slug.trim(),
     title_i18n: buildI18n(data.titleEs.trim(), data.titleEn),
     description_i18n: buildI18n(data.descriptionEs.trim(), data.descriptionEn),
-    membership_tier_required: data.membershipTierRequired,
+    // membership_tier_required NO se escribe aca: lo deriva el trigger
+    // videos_sincronizar_planes como el plan mas bajo de la lista. Mandarlo
+    // ademas seria dar dos ordenes distintas sobre lo mismo, y la que gana no
+    // es la que se lee en este archivo.
+    planes_permitidos: data.planesPermitidos,
     status: data.status,
     duration_seconds: data.durationSeconds,
-    category_slugs: parseCsv(data.categories),
-    equipment: parseCsv(data.equipment),
+    content_type: data.contentType,
+    // La categoria es una sola, pero la columna es un array desde el primer
+    // dia y la biblioteca filtra con `overlaps`. Se guarda como array de uno.
+    category_slugs: [data.categorySlug],
+    ...(() => {
+      const { min, max } = nivelARango(data.nivel);
+      return { recommended_min_level: min, recommended_max_level: max };
+    })(),
+    equipment: data.equipment,
     // Unsigned canonical URLs, stored as a record of which Bunny asset this row
     // points at. Never rendered: playback and posters are signed per request.
     thumbnail_url: bunnyThumbnailUrl(data.bunnyVideoId),
@@ -130,6 +164,36 @@ export async function POST(request: Request) {
     // not accumulate videos with no catalog entry.
     await deleteBunnyVideo(data.bunnyVideoId);
     return NextResponse.json({ error: result.error?.message ?? "No se pudo guardar." }, { status: 500 });
+  }
+
+  /**
+   * Enganchar la clase a un dia de un plan de trabajo.
+   *
+   * POR QUE NO TIRA ABAJO LA SUBIDA SI FALLA
+   *   El video ya esta en Bunny y la fila ya esta en el catalogo. Borrar todo
+   *   eso porque el dia 3 de un plan estaba ocupado seria hacerle repetir una
+   *   subida de varios gigabytes por algo que se arregla en /admin/programs en
+   *   diez segundos. Se avisa y se sigue.
+   *
+   * `upsert` sobre (program_id, day_number), que es el unique de la tabla: si
+   * ese dia ya tenia una clase, esta la reemplaza. Es lo que dice el formulario
+   * abajo del campo, asi que no sorprende a nadie.
+   */
+  let avisoPlan: string | null = null;
+
+  if (data.programId && data.programDayNumber) {
+    const { error: planError } = await supabase.from("program_days").upsert(
+      {
+        program_id: data.programId,
+        day_number: data.programDayNumber,
+        video_id: result.data.id
+      },
+      { onConflict: "program_id,day_number" }
+    );
+
+    if (planError) {
+      avisoPlan = `La clase se guardó, pero no se pudo agregar al plan: ${planError.message}. Se puede agregar a mano desde Planes de trabajo.`;
+    }
   }
 
   // Extra languages need the mux worker. Queue the job; the class is already
@@ -157,8 +221,18 @@ export async function POST(request: Request) {
     queued = !jobError;
     if (jobError) {
       revalidatePath("/admin/videos");
+      revalidatePath("/admin/programs");
       return NextResponse.json(
-        { ok: true, queued: false, warning: `La clase se guardo, pero no se pudo encolar el muxeo: ${jobError.message}` },
+        {
+          ok: true,
+          queued: false,
+          warning: [
+            `La clase se guardo, pero no se pudo encolar el muxeo: ${jobError.message}`,
+            avisoPlan
+          ]
+            .filter(Boolean)
+            .join(" ")
+        },
         { status: 200 }
       );
     }
@@ -166,6 +240,8 @@ export async function POST(request: Request) {
 
   revalidatePath("/admin/videos");
   revalidatePath("/dashboard/library");
+  revalidatePath("/admin/programs");
+  revalidatePath("/dashboard/programs");
 
-  return NextResponse.json({ ok: true, queued });
+  return NextResponse.json({ ok: true, queued, ...(avisoPlan ? { warning: avisoPlan } : null) });
 }

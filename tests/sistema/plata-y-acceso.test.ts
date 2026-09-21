@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { celda, BOM_UTF8 } from "../../src/lib/csv";
+import {
+  planesCarosSinIncluir,
+  textoDePlanesSinIncluir,
+} from "../../src/features/studio/catalogo-clases";
 
 /**
  * Invariantes de la plata y del contenido pago.
@@ -237,6 +241,67 @@ describe("los identificadores de reproduccion no salen del servidor", () => {
     }
   });
 
+  /**
+   * La vitrina de planes de trabajo (2026-09-21).
+   *
+   * Un plan de trabajo es LA diferencia entre Corps de Ballet y Solista, asi
+   * que la pantalla le muestra a Corps los planes que no tiene, con candado.
+   * Eso obliga a leer con service_role en una pagina de alumna, que es
+   * exactamente la forma que tiene la biblioteca de filtrar contenido pago sin
+   * regalarlo.
+   *
+   * Lo que se paga aca NO es saber que existe un plan llamado "Trabajo de
+   * pies": es saber QUE CLASE va cada dia. Por eso lo que estas pruebas cuidan
+   * es `program_days`.
+   */
+  it("la vitrina de planes no trae el dia por dia de un plan cerrado", () => {
+    const src = leer("app/dashboard/programs/page.tsx");
+
+    const consulta = src.match(/from\("program_days"\)\.select\("([^"]*)"\)/)?.[1] ?? "";
+    expect(consulta, "no se encontro la consulta de program_days").not.toBe("");
+
+    // Nivel y categoria son chips de vitrina y no identifican ninguna clase.
+    // Un slug, un id o un titulo si: con el slug se tantea la URL de la clase.
+    //
+    // ⚠️ CON LIMITES DE PALABRA, NO `toContain`. `category_slugs` -- que es un
+    //    chip legitimo -- contiene "slug", asi que un `toContain("slug")` da
+    //    rojo sobre codigo correcto. Es la misma trampa de substring que
+    //    `'%tier_required%'` contra `membership_tier_required` (CLAUDE.md,
+    //    trampa 7): lo que se busca es una COLUMNA llamada asi, no el texto.
+    for (const prohibido of ["slug", "title_i18n", "video_id", "bunny_video_id", "stream_playback_id"]) {
+      expect(
+        consulta,
+        `la vitrina de planes expone ${prohibido}`
+      // `\\b` y no `\b`: dentro de un template literal, `\b` es el caracter de
+      // retroceso, asi que la regex buscaba un backspace y no coincidia nunca
+      // -- la prueba pasaba SIEMPRE, incluso con el slug expuesto.
+      ).not.toMatch(new RegExp(`\\b${prohibido}\\b`));
+    }
+  });
+
+  it("la ficha de un plan cerrado no consulta program_days", () => {
+    const src = leer("app/dashboard/programs/[slug]/page.tsx");
+    const bloqueada = src.slice(src.indexOf("async function PlanBloqueado"));
+    expect(bloqueada.length, "no se encontro PlanBloqueado").toBeGreaterThan(0);
+    expect(bloqueada, "la pagina de venta lee el dia por dia").not.toContain("program_days");
+  });
+
+  it("el candado sale de RLS y no de comparar tiers en JavaScript", () => {
+    const src = leer("app/dashboard/programs/page.tsx");
+    // El conjunto de accesibles se pide con el cliente de la alumna. Comparar
+    // membership_tier a mano daria una respuesta que puede no coincidir con la
+    // que da la policy en la pagina siguiente.
+    expect(src).toMatch(/supabase\.from\("programs"\)\.select\("id"\)/);
+    expect(src).toMatch(/const bloqueado = \(id: string\) => !accesibles\.has\(id\)/);
+    expect(src, "compara tiers a mano en vez de preguntarle a RLS")
+      .not.toMatch(/membership_tier_rank|profile\?\.membership_tier ===/);
+  });
+
+  it("la tarjeta bloqueada lleva a vender, no al detalle", () => {
+    const src = leer("app/dashboard/programs/page.tsx");
+    expect(src).toMatch(/cerrado \? "\/dashboard\/plan" :/);
+  });
+
   it("el proxy de video decide con el cliente DE LA ALUMNA", () => {
     const src = leer("app/api/video/[videoId]/[...path]/route.ts");
     // Si buscara con service_role, RLS no opinaria y cualquiera con el id
@@ -360,5 +425,54 @@ describe("la portada tampoco anuncia lo que no se puede cobrar", () => {
     const src = leer("app/page.tsx");
     expect(src).toMatch(/supabase\.from\("packs"\)\.select\("slug"\)/);
     expect(leer("components/packs-publicos.tsx")).not.toMatch(/stripe_price_id/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// EL AVISO DE PLANES QUE QUEDAN AFUERA
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("planesCarosSinIncluir avisa del hueco, no de la exclusividad", () => {
+  const CORPS = "corps_de_ballet";
+
+  it("{corps, principal} deja a Solista en el medio: avisa", () => {
+    expect(planesCarosSinIncluir([CORPS, "principal"])).toEqual(["solista"]);
+  });
+
+  it("solo corps deja a los dos de arriba: avisa de los dos, en orden de precio", () => {
+    expect(planesCarosSinIncluir([CORPS])).toEqual(["solista", "principal"]);
+  });
+
+  it("solo principal NO avisa: lo caro sin lo barato es exclusividad normal", () => {
+    expect(planesCarosSinIncluir(["principal"])).toEqual([]);
+  });
+
+  it("{solista, principal} NO avisa: deja afuera a Corps, que es mas barato", () => {
+    expect(planesCarosSinIncluir(["solista", "principal"])).toEqual([]);
+  });
+
+  it("los tres no avisan nada", () => {
+    expect(planesCarosSinIncluir([CORPS, "solista", "principal"])).toEqual([]);
+  });
+
+  it("la lista vacia no avisa: de eso ya se encarga el campo obligatorio", () => {
+    expect(planesCarosSinIncluir([])).toEqual([]);
+  });
+
+  it("el texto nombra a los que faltan, no a los elegidos", () => {
+    expect(textoDePlanesSinIncluir(["principal"])).toBe("Principal no va a ver esta clase.");
+    expect(textoDePlanesSinIncluir(["solista", "principal"]))
+      .toBe("Solista y Principal no van a ver esta clase.");
+    expect(textoDePlanesSinIncluir([])).toBeNull();
+  });
+});
+
+describe("el aviso avisa y no bloquea", () => {
+  it("el selector de planes no deshabilita el envio por el aviso", () => {
+    const src = leer("components/selector-de-planes.tsx");
+    // Si algun dia alguien lo convierte en bloqueo, Brunela no puede publicar
+    // una clase de bienvenida solo para quien recien empieza.
+    expect(src).not.toMatch(/disabled=\{.*falta/);
+    expect(src).toMatch(/AVISA, NO BLOQUEA/);
   });
 });

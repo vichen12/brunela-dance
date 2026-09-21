@@ -26,8 +26,8 @@
    | Comando | Qué mira | Cuándo |
    |---|---|---|
    | `npm run verificar` | RLS, policy y grant por tabla; guarda en cada action y ruta. **~1 s, sin credenciales** | Corre solo en cada commit |
-   | `npm run test:sistema` | **59 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,3 s, sin base** | Al tocar pantallas, cobro o acceso |
-   | `npm run test:aislamiento` | **112 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~150 s** | Al tocar cualquier policy |
+   | `npm run test:sistema` | **127 pruebas** de interfaz, rutas, caché, plata y contenido pago. **~0,5 s, sin base** | Al tocar pantallas, cobro o acceso |
+   | `npm run test:aislamiento` | **126 pruebas** contra Supabase real, incluida la **auditoría adversarial**. **~190 s** | Al tocar cualquier policy |
 
    ⚠️ Los tres se **probaron rompiendo cosas a propósito** para confirmar que dan
    rojo. Una verificación que no puede fallar no es verificación — ver trampa 7.
@@ -91,7 +91,7 @@ y 5.744 líneas.
 
 ## Base de datos
 
-- **29 migraciones**, todas aplicadas y verificadas. ⚠️ **El orden NO es
+- **32 migraciones**, todas aplicadas y verificadas. ⚠️ El conteo es el de la rama `planes-de-trabajo`: la sesión de la portada suma la suya (`20260917`), que también está aplicada. ⚠️ **El orden NO es
   alfabético** — está en `SETUP.md` § 1.1. Las trampas: `phase_b1` va DESPUÉS de
   `phase_b`, `phase_b0` va sola, y las 17 y 18 van al final.
 
@@ -654,7 +654,14 @@ Ordenados por lo que bloquea a lo que puede esperar.
 | `20260804_chat_aislamiento_por_plan.sql` | 14/14 en `test:aislamiento` |
 | `20260805_invitaciones_a_sesiones.sql` | 34/34 en `test:aislamiento` |
 
-**No queda ninguna migración sin correr.**
+**✅ `20260921_formulario_de_clases.sql` corrió el 2026-09-21.**
+
+**✅ `20260921_2_vaciar_planes_no_se_repara.sql` corrió el 2026-09-21.**
+
+**✅ `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql` corrió el 2026-09-21.**
+
+**No queda ninguna migración sin correr** en esta rama, y
+`npm run test:aislamiento` da **126 de 126**.
 
 ### ✅ Lo que pidió Brunela — bloque A, hecho (2026-08-05)
 
@@ -747,6 +754,260 @@ motivo, así que agregar `checkout.session.completed` es aditivo.
 - **En el cruce plan/pack, el pack va PRIMERO** (en el onboarding y en el
   arranque automático). Quien llegó por un pack no eligió plan, y cobrarle una
   suscripción que no pidió es el peor error posible ahí.
+
+### 🔴 Formulario de clases nuevo — falta correr la migración (2026-09-21)
+
+**Qué cambió:** el formulario de `/admin/videos` pasó de texto libre a listas
+cerradas, en el orden que pidió Brunela: título ES/EN, descripción ES/EN, tipo
+de contenido, categoría, nivel, duración, materiales, planes, estado y — abajo
+de todo, en un recuadro aparte — a qué plan de clases pertenece.
+
+**El vocabulario vive en UN archivo**, `src/features/studio/catalogo-clases.ts`:
+los 2 tipos, las 11 categorías, los 4 niveles, los 17 materiales, los 3 planes
+y los 2 estados. Lo consumen el formulario de subida, el panel de edición, los
+filtros de la biblioteca, el dashboard y la ficha de la clase. Antes cada
+pantalla tenía su propia lista escrita a mano, y agregar una categoría la
+dejaba en el filtro como slug crudo en minúscula.
+
+**La migración `20260921_formulario_de_clases.sql` NO está corrida.** Agrega dos
+columnas, un trigger, un índice GIN, reescribe la policy del catálogo y
+reemplaza las categorías. Va **al final de todo**: redefine
+`videos_select_allowed_by_tier`, que ya se reescribió tres veces, y corrida
+antes que packs pierde la rama de packs en silencio (trampa 8). Trae una guarda
+que falla ruidosamente si packs no corrió.
+
+#### 🔴 El acceso al catálogo pasó de RANGO a LISTA
+
+Hasta ahora era «de este plan para arriba»: una columna y una comparación de
+rangos. **Pedido explícito del 2026-09-21: combinación libre**, o sea poder
+publicar algo para Corps y Principal y no para Solista.
+
+Se advirtió que la alternativa —«de este plan para arriba»— no tocaba ninguna
+policy, y se eligió la libre igual. No es un descuido.
+
+| | |
+|---|---|
+| Quién manda | `videos.planes_permitidos` (`membership_tier[]`). Es lo que lee la policy |
+| `membership_tier_required` | **sigue viva pero es DERIVADA**: el plan más bajo de la lista, puesto por trigger. La usan insignias y filtros |
+| ⚠️ La trampa | Con `{corps, principal}` esa columna dice `corps_de_ballet` y **Solista NO ve la clase**. Quien quiera saber quién ve qué mira la LISTA |
+| Por qué se deja | Sacarla obligaría a tocar una docena de pantallas para no ganar nada |
+| El trigger va en **los dos sentidos** | Si la escritura trae la lista, gana la lista. Si trae solo el tier, la lista se reconstruye con la regla vieja — sin esto, todo lo que inserta pasando solo el tier (incluidas `tests/aislamiento/ayudantes.ts`) crearía clases que no ve nadie |
+| Filtrar por plan | `contains("planes_permitidos", [plan])`, **nunca** `eq("membership_tier_required", plan)`: con `eq`, filtrar por Solista no encuentra una clase `{corps, solista}` |
+
+Cubierto por `tests/aislamiento/planes.test.ts` (14), con control positivo en
+cada bloque y código de error exacto (`23514` para el check, `42501` para la
+escritura).
+
+#### 🔴 El agujero que dejó, y que encontró una prueba
+
+`test:aislamiento` contra la base ya migrada dio **125 de 126**, y la que
+fallaba tenía razón. Reproducido a mano:
+
+```
+clase con planes_permitidos = {solista}
+update ... set planes_permitidos = '{}'
+  -> sin error
+  -> quedó {solista, principal}
+```
+
+**Vaciar la lista ensanchaba el acceso**: una clase exclusiva de Solista pasaba
+a verla Principal, sin error y sin rastro.
+
+El trigger `videos_sincronizar_planes()` reconstruía la lista cada vez que la
+veía vacía. Esa rama **hace falta** — hay código y pruebas que insertan clases
+pasando solo `membership_tier_required` — pero en un UPDATE no sabía distinguir:
+
+| | |
+|---|---|
+| «no vino la lista» | hay que derivarla — **INSERT** |
+| «la vaciaron a propósito» | hay que rechazarla — **UPDATE** |
+
+Trataba la segunda como la primera. Y el check constraint
+`videos_planes_permitidos_validos` estaba bien escrito y **nunca llegaba a
+dispararse**: el trigger corre antes y ya había «arreglado» la fila.
+
+Lo tapa `20260921_2_vaciar_planes_no_se_repara.sql` con una guarda de tres
+líneas. En INSERT se sigue derivando, porque ahí `'{}'` es el default de la
+columna y no se puede distinguir de «no me mandaron nada».
+
+#### Y debajo había un segundo agujero: el CHECK nunca chequeó
+
+Al dejar de reparar, la 2 destapó que la fila vacía **se guardaba igual**:
+
+```
+array_length(planes_permitidos, 1) >= 1
+```
+
+`array_length('{}', 1)` en Postgres **no devuelve 0: devuelve NULL**. La
+comparación da NULL, y un CHECK sólo rechaza cuando da FALSE — con NULL **deja
+pasar**. Esa mitad del constraint fue un adorno desde el primer día.
+
+La otra mitad —`not (planes @> array['none'])`— sí funciona, y por eso la prueba
+de `'none'` estuvo siempre en verde: el constraint existía y andaba, sólo que no
+controlaba lo que decía controlar.
+
+Lo arregla `20260921_3` con `cardinality()`, que sí devuelve 0. Y repara antes
+cualquier fila que haya quedado en `{}`, porque `add constraint` valida las filas
+existentes y con una sola fallaría la migración entera.
+
+> **La lección, que es la de siempre en este repo, y esta vez en tres capas:**
+> el trigger tapaba al constraint, y el constraint tapaba su propio NULL. Cada
+> capa se veía perfecta leyéndola. Lo único que lo encontró fue una prueba que
+> ejercita el COMPORTAMIENTO — y tardó dos migraciones en llegar al fondo porque
+> cada arreglo destapaba la capa siguiente.
+>
+> Regla concreta que sale de acá: **para contar elementos de un arreglo en un
+> CHECK va `cardinality()`, nunca `array_length(x, 1)`.**
+
+#### El aviso del formulario: mismo error, cometido por una persona
+
+Con combinación libre, Brunela puede dejar una clase para Corps de Ballet y no
+para Principal. Quien paga el plan más caro espera ver todo lo de abajo, así que
+casi siempre es un descuido de tilde.
+
+`components/selector-de-planes.tsx` lo dice —«Principal no va a ver esta
+clase»— y **avisa, no bloquea**: puede haber una clase de bienvenida solo para
+quien recién empieza, y bloquear dejaría a Brunela trabada sin forma de decirle
+al sistema que esta vez es a propósito. Misma regla que `/admin/precios`.
+
+La regla vive en `planesCarosSinIncluir()`, que solo cuenta como hueco un plan
+**más caro** que alguno incluido: `{solista, principal}` deja a Corps afuera y
+eso es exclusividad normal, no un error.
+
+#### Lo demás, sin sorpresas
+
+- **Nivel NO es columna nueva.** Los 4 niveles del formulario son un rango de
+  `recommended_min_level` / `recommended_max_level`, que ya existían. La ida y
+  la vuelta están en `catalogo-clases.ts`. Una columna al lado serían dos
+  fuentes de verdad — la familia de errores que este proyecto ya pagó cuatro
+  veces.
+- **Materiales** siguen en `equipment text[]`: lo que cambió es que ahora son
+  una lista cerrada y no un CSV donde «Colchoneta» y «colchoneta» eran dos
+  materiales distintos.
+- **Las 11 categorías reemplazan** a ballet/pilates/stretching/pbt/pct. Momento
+  barato: 0 clases, 0 documentos, 0 salas. Las viejas se **desactivan**, no se
+  borran, porque `documents.category_slug` y `chat_rooms.category_slug` guardan
+  el slug suelto.
+- **«Archivado» salió del desplegable** por pedido. El enum y la columna siguen;
+  una clase archivada de antes muestra su propio estado y se puede guardar.
+
+#### Los planes de clases ya existían
+
+Lo que pidió Brunela —«yo te armo las clases de la semana de pies»— es
+`programs` + `program_days`, que están desde `phase_a` y se editan en
+`/admin/programs`. Lo que faltaba era **engancharlos desde la subida**, porque
+el orden de las clases se tiene en la cabeza justo cuando se sube el video.
+
+El formulario de subida ofrece plan + día, con el **primer día libre** ya
+completado (el primer hueco, no «el último más uno»: un plan de 14 días al que
+le falta el 7 tiene que ofrecer el 7). Si falla el enganche **no se tira abajo
+la subida**: el video ya está en Bunny y se avisa para arreglarlo a mano.
+
+El panel de **edición** no lo ofrece a propósito: un día es una relación entre
+un plan y una clase, y verla desde un solo lado deja el otro sin contexto.
+
+### Planes de trabajo — se llaman así, y Corps los ve con candado (2026-09-21)
+
+**Qué es un plan de trabajo:** una serie de días en orden, cada uno con una
+clase — «Trabajo de pies, 14 días». En la base son `programs` + `program_days`,
+que existen desde `phase_a`. **Es LA diferencia entre Corps de Ballet y
+Solista:** Corps ve las clases sueltas y elige; Solista las ve ordenadas.
+
+#### El nombre
+
+En toda la interfaz se llaman **«Planes de trabajo»**, nunca «Programas» ni
+«planes» a secas. Son 27 strings en 14 archivos: navegación lateral y móvil,
+cabecera y barra del panel, accesos del dashboard, `helpers.ts`,
+`dictionary.ts`, analíticas y la página de suscripción.
+
+> No había colisión real antes — la interfaz decía «Programas» en todos lados y
+> «Planes» solo en la suscripción. La metió el formulario de subida del
+> 2026-09-21 al decir «plan de clases». Se renombró igual, por pedido explícito:
+> es como habla Brunela.
+
+`src/i18n/messages.ts` y `components/ui/demo.tsx` quedaron **sin tocar a
+propósito**: no los importa nadie, son código muerto. Renombrarlos habría hecho
+parecer que estaban vivos.
+
+#### 🔴 La vitrina de planes, y qué es lo que NO muestra
+
+Antes, un Corps entraba a `/dashboard/programs` y leía *«Todavía no hay
+programas publicados para tu plan»* — porque RLS, correctamente, no le devolvía
+ninguno. O sea que a quien había que convencer de subir de plan se le mostraba
+una pantalla vacía que se lee como «acá no hay nada».
+
+Ahora ve todos los planes publicados, con candado y con **«Disponible desde
+Solista»**, y la tarjeta bloqueada lleva a `/dashboard/plan`. Es el mismo patrón
+que la vitrina de la biblioteca.
+
+| | |
+|---|---|
+| Quién decide el candado | `supabase.from("programs").select("id")` con el cliente **de la alumna**, o sea RLS. **Nunca** comparar `membership_tier` en JavaScript: daría una respuesta que puede no coincidir con la policy de la página siguiente |
+| Qué muestra la vitrina | portada, título, descripción, cuántos días, nivel y foco |
+| 🔴 Qué NO muestra | **el día por día.** Qué clase toca cada día es el trabajo que se paga. La consulta de `program_days` con `service_role` pide **solo** `recommended_min_level` y `category_slugs` — ni slug, ni id, ni título |
+| El detalle | `/dashboard/programs/[slug]` ya no hace `notFound()` para quien no tiene el plan: muestra una página de venta. **Esa página no consulta `program_days`** |
+
+Cubierto por 4 invariantes en `tests/sistema/plata-y-acceso.test.ts`, las cuatro
+**probadas rompiendo el código a propósito**.
+
+> ⚠️ Una de esas pruebas nació inútil y hay que saber por qué: comparaba con
+> `` new RegExp(`${x}`) `` escrito con **una** barra. Dentro de un template
+> literal `` es el carácter de retroceso, así que la regex buscaba un
+> backspace y **no coincidía nunca** — pasaba siempre, incluso con el slug
+> expuesto. Van dos barras.
+>
+> Y el límite de palabra tampoco es adorno: `category_slugs` contiene «slug», así
+> que un `toContain("slug")` da rojo sobre código correcto. Misma familia que
+> `'%tier_required%'` contra `membership_tier_required` (trampa 7).
+
+#### Agregar una clase a un plan, desde la clase
+
+Antes había que ir a `/admin/programs`, abrir el plan y buscar la clase en un
+desplegable de todas. Ahora está en los dos lados:
+
+- **Al subir** — bloque «Agregar a un plan de trabajo», dentro de *Solo para vos*.
+- **Al editar** — `components/clase-en-planes.tsx`, que además **lista en qué
+  planes ya está** y permite quitarla.
+
+El día viene precompletado con el **primer hueco libre**, no con «el último más
+uno»: un plan de 14 días al que le falta el 7 tiene que ofrecer el 7, o ese día
+no se llena nunca.
+
+**Dos cosas que no se pueden deshacer sin romperlo:**
+
+1. **Una clase puede estar en VARIOS planes y varios días.** `program_days` tiene
+   `unique (program_id, day_number)`, **no** una restricción por video. Lo único
+   imposible es que un día tenga dos clases. Por eso el panel muestra una lista,
+   no un solo selector.
+2. **🔴 El id de QUITAR va en el `name`/`value` del botón, no en un `<input
+   type="hidden">`.** El bloque se renderiza dentro del formulario de la clase;
+   con un hidden por fila, las tres mandarían el mismo `name` y
+   `formData.get()` devolvería siempre el primero — apretar QUITAR en el día 7
+   borraría el día 1.
+
+Las acciones son propias (`agregarClaseAPlanAction`, `quitarClaseDePlanAction`)
+y **no** reusan `upsertProgramDayAction`: esa pide el *slug* de la clase y
+termina redirigiendo a `/admin/programs`, que cerraría el panel abierto.
+
+#### La ficha del plan, para la alumna
+
+Tiene que contestar cuatro cosas, en este orden: **qué me toca hoy**, **por dónde
+voy**, **cuánto me falta** y **qué viene después**. Antes contestaba solo la
+última, y mal — los 14 días se veían todos iguales.
+
+- El total son los **días cargados**, no `duration_days`. Un plan que promete 14
+  y tiene 3 mostraba «0/3 días» al lado de un chip que decía «14 días»: las dos
+  cifras ciertas y contradiciéndose. Para la alumna manda lo que existe.
+- Tres estados por día: completado (✓), **hoy** (borde de marca) y futuro
+  (apagado). **Los futuros se pueden abrir**, decidido el 2026-09-21: bloquearlos
+  forzaría el orden pero castiga a la que quiere adelantar antes de un viaje.
+
+#### Arrastre corregido
+
+`app/dashboard/library/page.tsx` filtraba por plan con
+`.eq("membership_tier_required", fPlan)` en SQL mientras el filtro en memoria ya
+usaba `planes_permitidos`. SQL descartaba antes, así que filtrar por «Solista» no
+encontraba una clase `{corps, solista}`. Ahora es `.contains()` en los dos lados.
 
 ### 🔵 `/admin/precios` — cómo funciona el aviso
 

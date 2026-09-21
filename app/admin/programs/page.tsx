@@ -175,7 +175,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
     <main style={{ fontFamily: "inherit" }}>
       <header className="hero-stage">
         <p className="eyebrow">Gestión de contenido</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Programas.</h1>
+        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Planes de trabajo.</h1>
         <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
           Recorridos de varios días. Cada día lleva una clase, y la alumna avanza en orden.
         </p>
@@ -187,7 +187,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       {/* Resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { value: programs.length, label: "Programas", sub: "creados" },
+          { value: programs.length, label: "Planes", sub: "creados" },
           { value: publicados, label: "Publicados", sub: "visibles para las alumnas" },
           { value: programDays.length, label: "Días", sub: "cargados en total" },
         ].map((s) => (

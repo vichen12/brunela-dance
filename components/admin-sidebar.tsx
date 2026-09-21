@@ -6,7 +6,7 @@ import type { Route } from "next";
 import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
-  MessageSquare, Megaphone, Settings, Eye, LogOut, Tag, Package,
+  MessageSquare, Megaphone, Settings, Eye, LogOut, Tag, Package, Home,
 } from "lucide-react";
 
 /**
@@ -42,9 +42,13 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/videos",     label: "Clases",     Icon: Play },
       { href: "/admin/categories", label: "Categorías", Icon: Grid2x2 },
-      { href: "/admin/programs",   label: "Programas",  Icon: AlignLeft },
+      { href: "/admin/programs",   label: "Planes de trabajo",  Icon: AlignLeft },
       { href: "/admin/documents",  label: "Documentos", Icon: FileText },
       { href: "/admin/packs",      label: "Packs",      Icon: Package },
+      // La portada va en Contenido y no en Ajustes a proposito: lo que se edita
+      // ahi -- FAQ, trailer, certificados -- es contenido que ve la visitante,
+      // no una regla de como se comporta el sistema.
+      { href: "/admin/portada",    label: "Portada",    Icon: Home },
     ],
   },
   {

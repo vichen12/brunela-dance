@@ -305,13 +305,13 @@ export default async function AnaliticasPage() {
           )}
         </Bloque>
 
-        {/* ── Programas ──────────────────────────────────────────────────── */}
+        {/* ── Planes de trabajo ──────────────────────────────────────────── */}
         <Bloque
-          pregunta="¿Terminan los programas?"
-          accion={{ href: "/admin/programs", texto: "Ir a programas" }}
+          pregunta="¿Terminan los planes de trabajo?"
+          accion={{ href: "/admin/programs", texto: "Ir a planes de trabajo" }}
         >
           {a.programas.length === 0 ? (
-            <p style={vacio}>Todavía no hay programas cargados.</p>
+            <p style={vacio}>Todavía no hay planes de trabajo cargados.</p>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {a.programas.map((p) => (
@@ -327,7 +327,7 @@ export default async function AnaliticasPage() {
                     <p style={{ ...vacio, marginTop: 8, fontSize: 11.5 }}>
                       Lo empezaron {p.laEmpezaron}{" "}
                       {p.laEmpezaron === 1 ? "alumna" : "alumnas"}. Hacen falta{" "}
-                      {p.umbral.minimo} para saber si el programa se termina o se abandona.
+                      {p.umbral.minimo} para saber si el plan se termina o se abandona.
                     </p>
                   ) : (
                     <p style={{ ...vacio, marginTop: 8, fontSize: 12 }}>

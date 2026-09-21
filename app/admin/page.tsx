@@ -81,7 +81,7 @@ export default async function AdminOverviewPage() {
       trend: undefined, trendUp: true,
     },
     {
-      label: "Programas activos", sub: "secuencias publicadas", value: totalPrograms ?? 0,
+      label: "Planes activos", sub: "planes de trabajo publicados", value: totalPrograms ?? 0,
       sparkPoints: "0,20 10,18 20,20 30,16 40,18 50,16 60,14 70,14 80,12",
       trend: undefined, trendUp: true, href: "/admin/programs",
     },
@@ -118,7 +118,7 @@ export default async function AdminOverviewPage() {
   const quickLinks = [
     { href: "/admin/videos",     icono: "videos",     label: "Clases",        desc: "Subir y publicar clases" },
     { href: "/admin/categories", icono: "categorias", label: "Categorías",    desc: "Crear y configurar" },
-    { href: "/admin/programs",   icono: "programas",  label: "Programas",     desc: "Secuencias día a día" },
+    { href: "/admin/programs",   icono: "programas",  label: "Planes de trabajo", desc: "Secuencias día a día" },
     { href: "/admin/users",      icono: "alumnas",    label: "Alumnas",       desc: "Planes y permisos" },
     { href: "/admin/documents",  icono: "documentos", label: "Documentos",    desc: "PDF y archivos" },
     { href: "/admin/chat",       icono: "chat",       label: "Chat",          desc: "Salas y moderación" },

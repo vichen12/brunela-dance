@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario, ultimaVista } from "@/src/features/studio/progress";
 import { resolveI18nText } from "@/src/features/studio/helpers";
+import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 
 export const dynamic = "force-dynamic";
 
@@ -66,31 +67,29 @@ const TIER_COLOR: Record<MembershipTier, { bg: string; color: string }> = {
   principal:       { bg: "#1c1917", color: "var(--pink-wash)" },
 };
 
-const CLASS_CATS = [
-  { key: "ballet",     label: "Ballet",     sub: "Tecnica clasica",  grad: "linear-gradient(145deg, var(--pink-soft), var(--pink))" },
-  { key: "pilates",    label: "Pilates",    sub: "Suelo y reformer", grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
-  { key: "stretching", label: "Stretching", sub: "Movilidad activa", grad: "linear-gradient(145deg, var(--pink-wash), #a855f7)" },
-  { key: "pbt",        label: "PBT",        sub: "PBT Certificado",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
-  { key: "pct",        label: "PCT",        sub: "PCT Certificado",  grad: "linear-gradient(145deg, var(--pink-wash), var(--pink-mid))" },
-];
-
 /**
  * Etiqueta legible de cada categoria, para no mostrar el slug crudo.
  *
- * Los dos slugs viejos siguen mapeados: hasta que se corra
- * 20260803_unify_pilates_categories.sql puede haber clases con category_slugs
- * = 'reformer', y sin esto la tarjeta mostraria "reformer" en minuscula.
+ * Sale de la MISMA lista que el desplegable de /admin/videos: cuando estaba
+ * escrita aca aparte, agregar una categoria en el panel dejaba la tarjeta del
+ * dashboard mostrando "pies-y-tobillos" en minuscula y con guiones.
+ *
+ * Los slugs viejos siguen mapeados a mano: la migracion 20260921 los desactiva,
+ * pero una clase que todavia los tenga no tiene por que verse rota.
  */
 const CAT_LABEL: Record<string, string> = {
-  ...Object.fromEntries(CLASS_CATS.map((c) => [c.key, c.label])),
+  ...CATEGORIA_LABEL,
+  pilates: "Pilates",
   reformer: "Pilates",
   mat: "Pilates",
+  pbt: "PBT",
+  pct: "PCT",
 };
 
 const QUICK_LINKS = [
   { href: "/dashboard/library"   as const, label: "Biblioteca",  sub: "Explorá todas las clases",
     d: "M2.5 3h4a2 2 0 012 2v8a1.6 1.6 0 00-1.6-1.4H2.5V3z", d2: "M13.5 3h-4a2 2 0 00-2 2v8a1.6 1.6 0 011.6-1.4h4.4V3z" },
-  { href: "/dashboard/programs"  as const, label: "Programas",   sub: "Seguí tu plan paso a paso",
+  { href: "/dashboard/programs"  as const, label: "Planes de trabajo", sub: "Tu semana, día por día",
     d: "M3 4.5h10M3 8h10M3 11.5h6" },
   { href: "/dashboard/live"      as const, label: "Calendario",  sub: "Ver próximos en vivo",
     d: "M3 4.5h10v9H3v-9z", d2: "M3 7.2h10M5.6 2.6v3M10.4 2.6v3" },

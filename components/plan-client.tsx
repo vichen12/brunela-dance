@@ -44,8 +44,8 @@ const PLAN_META: Record<CatalogTier['tier'], {
   },
   solista: {
     name: 'SOLISTA',
-    desc: 'Programa guiado con progresos estructurados.',
-    features: ['Todo Corps de Ballet', 'Programas estructurados', 'Mayor profundidad técnica', 'Objetivos por semana'],
+    desc: 'Planes de trabajo guiados, con progreso estructurado.',
+    features: ['Todo Corps de Ballet', 'Planes de trabajo día por día', 'Mayor profundidad técnica', 'Objetivos por semana'],
     cabecera: 'suave',
     encima: 'MÁS ELEGIDA',
     // corona

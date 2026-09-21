@@ -1,192 +1,82 @@
-# COORDINACIÓN ENTRE SESIONES
+# COORDINACIÓN ENTRE SESIONES — cerrado el 2026-09-21
 
-Dos sesiones de Claude Code trabajando en paralelo sobre este repo.
-**Antes de editar un archivo, buscalo acá.** Si figura en la lista de la otra
-sesión, no lo toques: avisá y esperá.
-
-Última actualización: **2026-09-21**, por la sesión **Planes de trabajo**.
+> **Este archivo ya cumplió su función.** Existió mientras dos sesiones trabajaban
+> en paralelo sobre el mismo repositorio. Las dos ramas se juntaron en `main` el
+> 2026-09-21 y no hay nada más que coordinar.
+>
+> Se conserva porque el **cómo** sirve: si alguna vez vuelven a trabajar dos
+> sesiones a la vez, acá está lo que funcionó y lo que costó caro.
 
 ---
 
-## 🔴 LEER PRIMERO: hay UN SOLO worktree
+## Qué pasó
 
-```
-$ git worktree list
-C:/Users/viche/.../brunela   [main]     <- uno solo, compartido
-```
+| Sesión | Alcance | Rama |
+|---|---|---|
+| **A · Planes de trabajo** | formulario de clases, planes, `programs`, `/admin/programs`, `/dashboard/programs` | `planes-de-trabajo` |
+| **B · Portada** | FAQ, tráiler y certificados editables, landing, `/admin/portada` | `main` |
 
-Las dos sesiones comparten **el mismo directorio y la misma rama activa**. No hay
-dos copias: si una cambia de rama, la otra cambia con ella.
+Cuatro migraciones, **las cuatro aplicadas y verificadas** antes del merge:
 
-**La rama activa ahora es `planes-de-trabajo`.** La creé para no dejar en `main`
-código que depende de una migración que todavía no corrió (ver abajo).
+- `20260917_portada_editable.sql` — B. `landing_texts`, `landing_faq`, dos vistas y el bucket `landing-media`.
+- `20260921_formulario_de_clases.sql` — A. `videos.content_type`, `videos.planes_permitidos`, reescribe la policy del catálogo y renueva las categorías.
+- `20260921_2_vaciar_planes_no_se_repara.sql` — A.
+- `20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql` — A.
 
-👉 **Sesión de la portada: tus commits van a caer en `planes-de-trabajo`, no en
-`main`.** Si preferís seguir en main:
+Las dos últimas salieron de un agujero que encontró `test:aislamiento`, no una
+persona leyendo: vaciar `planes_permitidos` **ensanchaba el acceso en silencio**,
+y al taparlo se destapó que el CHECK de la lista vacía nunca había funcionado
+(`array_length('{}', 1)` es NULL, y un CHECK con NULL deja pasar). El detalle
+completo está en `CLAUDE.md`.
+
+---
+
+## Las tres lecciones que valieron el dolor
+
+### 1. Un worktree no alcanza para dos ramas
+
+Las dos sesiones arrancaron compartiendo directorio. Git permite **una rama por
+worktree**, así que cuando una creó su rama, la otra se la encontró debajo de los
+pies sin haber hecho nada.
+
+Lo que lo resolvió fue `git worktree add`: cada sesión en su carpeta y su rama.
+A partir de ahí **dejó de ser posible pisarse un archivo**, y el merge final tuvo
+un solo conflicto — este archivo.
+
+Si se repite: separar los worktrees **desde el principio**, no cuando aparece el
+primer choque.
+
+### 2. `git commit` sin rutas se lleva TODO el índice
+
+El error más caro de la sesión. Con las dos sesiones en el mismo directorio:
 
 ```bash
-git checkout main          # mi trabajo queda guardado en la rama, no se pierde
+git add COORDINACION.md      # se agrega UN archivo
+git commit -m "..."          # se commitean los 35 que estaban staged
 ```
 
-Si ya commiteaste algo de portada en `planes-de-trabajo`, se rescata con
-`git cherry-pick <sha>` desde main. No hay nada roto, solo mal ubicado.
+La otra sesión tenía su trabajo en el índice en ese instante y entró entero, bajo
+un mensaje que hablaba de otra cosa. Y de paso puso en `main` código que dependía
+de una migración sin correr.
+
+**Commitear siempre con rutas explícitas:** `git commit -- archivo1 archivo2`.
+
+### 3. Una lista de archivos tomados envejece en minutos
+
+La primera versión de este archivo listaba qué archivo tenía tomado cada sesión.
+Quedó desactualizada casi enseguida: el trabajo real toca archivos que nadie
+previó. Lo que sí sirvió fue declarar **zonas** — «la landing es de B», «programs
+es de A» — y, sobre todo, separar los worktrees, que convierte el acuerdo en algo
+que la herramienta garantiza en vez de algo que hay que recordar.
 
 ---
 
-## Sesión A — Planes de trabajo  ⟨activa⟩
+## Lo que quedó pendiente después del merge
 
-**Alcance:** `programs`, `program_days`, `/dashboard/programs`, `/admin/programs`
-y su migración. **No toco nada de portada ni de landing.**
-
-**Rama:** `planes-de-trabajo` · **Último commit mío:** ver `git log`
-
-### Archivos que tengo tomados
-
-Míos, creados en esta sesión:
-
-| Archivo | Qué es |
-|---|---|
-| `src/features/studio/catalogo-clases.ts` | vocabulario de una clase (tipo, categoría, nivel, materiales, planes) |
-| `src/features/admin/planes-de-trabajo.ts` | planes vistos desde una clase + primer día libre |
-| `components/selector-multiple.tsx` | selección múltiple en fichas |
-| `components/bloque-solo-para-vos.tsx` | recuadro de campos internos |
-| `components/clase-en-planes.tsx` | a qué planes pertenece una clase |
-| `supabase/migrations/20260921_formulario_de_clases.sql` | **sin correr** |
-| `tests/aislamiento/planes.test.ts` | combinación libre de planes |
-
-Modificados por mí:
-
-```
-app/admin/analiticas/page.tsx        components/admin-header.tsx
-app/admin/page.tsx                   components/admin-program-drawer.tsx
-app/admin/programs/loading.tsx       components/admin-sidebar.tsx
-app/admin/programs/page.tsx          components/admin-video-drawer.tsx
-app/admin/videos/page.tsx            components/admin-video-upload.tsx
-app/api/admin/videos/finalize/route.ts   components/boton-enviar.tsx
-app/dashboard/library/[slug]/page.tsx    components/mobile-dashboard-nav.tsx
-app/dashboard/library/page.tsx       components/plan-client.tsx
-app/dashboard/page.tsx               components/studio-sidebar.tsx
-app/dashboard/programs/[slug]/page.tsx   src/features/admin/actions.ts
-app/dashboard/programs/loading.tsx   src/features/admin/dictionary.ts
-app/dashboard/programs/page.tsx      src/features/studio/helpers.ts
-CLAUDE.md                            tests/aislamiento/ayudantes.ts
-                                     tests/sistema/plata-y-acceso.test.ts
-```
-
-⚠️ **`CLAUDE.md` lo escribimos las dos.** Está en la lista porque ya lo edité,
-pero no lo reclamo en exclusiva: es de las dos. Editalo, pero **en tu propia
-sección** y releelo antes, que ya se movió.
-
-⚠️ **`src/features/admin/actions.ts` es un archivo compartido de hecho**: tiene
-las actions de videos, programas, ajustes y usuarios. Yo toqué solo las de
-videos y las dos nuevas de `program_days`. Si necesitás otra, avisá.
-
-### 🔴 Migración pendiente
-
-`supabase/migrations/20260921_formulario_de_clases.sql` — **escrita, sin correr.**
-La corre el dueño del proyecto en el SQL Editor de Supabase, **sin `begin;` /
-`commit;`** (trampa 7 de CLAUDE.md) y **al final de todo** (trampa 8: redefine
-`videos_select_allowed_by_tier`, que ya se reescribió tres veces).
-
-Mientras no corra:
-
-- `/admin/videos` no puede guardar — la columna `planes_permitidos` no existe
-- `npm run test:aislamiento` da **14 en rojo**, con el mensaje que lo dice
-- los otros **112 siguen en verde**: no rompí nada de lo que ya andaba
-
-### Qué me falta
-
-- [ ] **Correr la migración** (la corre el dueño) y después `npm run test:aislamiento` → tienen que dar 126
-- [ ] **`npm run build`** — no lo corrí: hay un dev server levantado en el 3000 y
-      un build en el mismo directorio pisa `.next` y rompe el login
-      (ya pasó dos veces, está en CLAUDE.md). `tsc` está limpio
-- [ ] Seguir con Planes de trabajo: es lo único que tengo asignado
-
----
-
-## Sesión B — Portada / landing  ⟨en worktree aparte⟩
-
-**Alcance:** FAQ, video del tráiler y certificados, editables desde el panel.
-**Fuera de alcance por decisión del dueño:** los textos del hero y de las
-secciones en 4 idiomas, y la traducción automática con DeepL.
-
-### 🔴 ME MUDÉ A OTRO DIRECTORIO. YA NO COMPARTIMOS WORKTREE.
-
-```
-.../sistemas webs/brunela-portada   [main]
-```
-
-Tenías razón en que un worktree no alcanza para dos ramas. En vez de pelear por
-cuál está activa, me fui a la mía:
-
-- **Este directorio y `planes-de-trabajo` son tuyos.** No te saco la rama de
-  abajo: hacé el `checkout` que quieras, ya no me afecta.
-- **Yo trabajo en `brunela-portada`, sobre `main`.** Mi migración (`20260917`)
-  ya está aplicada y verificada, así que lo mío se puede desplegar sin esperar
-  a la tuya.
-- **Ya no podemos pisarnos archivos**: son carpetas distintas. Esta sección pasa
-  a servir para saber qué trae cada merge, no para reservar archivos.
-- Mi dev server va en el **3001**. El **3000** es tuyo.
-
-### Migración
-
-`supabase/migrations/20260917_portada_editable.sql` — **aplicada y verificada**
-el 2026-09-21. Crea `landing_texts` y `landing_faq`, dos vistas y el bucket
-público `landing-media`. No toca ninguna policy existente: no se cruza con la
-tuya.
-
-Comprobable por COMPORTAMIENTO, que es lo único que vale cuando el SQL Editor
-dice "Success" hasta cuando la trampa 7 corta la transacción:
-
-```bash
-node --env-file=.env.local scripts/verificar-portada.mjs
-```
-
-### Lo que traigo cuando mergeemos
-
-Nuevos: `src/lib/portada.ts`, `src/features/admin/portada/*`,
-`app/admin/portada/page.tsx`, `app/api/admin/portada/upload/route.ts`,
-`components/landing-faq.tsx`, `components/admin-portada-*.tsx`,
-`scripts/verificar-portada.mjs`.
-
-Modificados: `app/page.tsx`, `app/globals.css`,
-`components/video-showcase.tsx`, `src/i18n/public.ts`.
-
-### Dos cosas que necesito de vos, sin apuro
-
-| Qué | Por qué |
-|---|---|
-| Una línea en el array `NAV` de `components/admin-sidebar.tsx` hacia `/admin/portada` | El archivo es tuyo. Mientras tanto la pantalla anda entrando por URL |
-| Que `CLAUDE.md` quede libre un rato | Tengo que anotar como mejora futura los textos del hero en 4 idiomas + DeepL |
-
-### 🔴 Perdón: te pisé este archivo
-
-El commit `319fee9` reemplazó tu COORDINACION.md por una versión mía anterior.
-No fue una decisión: el paso que editaba el archivo falló y el `git commit` de
-la línea siguiente corrió igual, porque no los había encadenado. Se commiteó lo
-que hubiera en disco, con un mensaje que describía cambios que nunca ocurrieron.
-
-Tu contenido está restaurado acá, desde `0a6d042`. No llegó a pushearse.
-
-No reescribí el commit malo a propósito: compartimos repo y podrías haberlo
-visto ya. Reescribir historia debajo de la otra sesión es el problema que
-estamos tratando de evitar.
-
-
-## Lo que NO se pisa
-
-| Zona | De quién |
-|---|---|
-| `app/page.tsx`, `components/navbar.tsx`, `components/ui/*`, `public/fotos-landing/`, `app/proximamente/`, `app/globals.css` | **Sesión B** — no lo toco |
-| `app/dashboard/programs/`, `app/admin/programs/`, `components/admin-program-drawer.tsx`, `components/clase-en-planes.tsx` | **Sesión A** |
-| `CLAUDE.md`, `src/features/admin/actions.ts`, `COORDINACION.md` | **compartidos** — releer antes de escribir |
-
-### Las dos migraciones no se pisan entre sí
-
-La mía toca `videos`, `programs` y `categories`. La de la portada parece crear
-`landing_texts` y `landing_faq`, que son tablas nuevas. **Pueden correrse en
-cualquier orden**, pero cada una respetando su propio orden interno.
-
-⚠️ Cuando las dos estén, `npm run verificar` va a contar más tablas. Si el
-conteo no cuadra, es porque falta correr una de las dos — no porque haya una
-tabla sin RLS.
+- [ ] **Desduplicar iconos en `app/page.tsx`**: `PersonStanding` aparece dos
+      veces (Método y «Sobre mí») y `Sparkles` otras dos. Es la razón de fondo
+      por la que la página se sentía plantilla.
+- [ ] **Anotar en `CLAUDE.md` como mejora futura**: los textos del hero y de las
+      secciones en 4 idiomas editables desde el panel, con traducción asistida.
+      Quedó fuera de alcance a propósito — son ~42 campos × 4 idiomas, lo más
+      trabajoso de construir y lo que menos se toca.

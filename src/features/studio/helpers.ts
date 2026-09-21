@@ -8,7 +8,7 @@ export type I18nRecord = Record<string, string>;
 export const dashboardSections = [
   { href: "/dashboard", label: "Overview", key: "overview" },
   { href: "/dashboard/library", label: "Biblioteca", key: "library" },
-  { href: "/dashboard/programs", label: "Programas", key: "programs" },
+  { href: "/dashboard/programs", label: "Planes de trabajo", key: "programs" },
   { href: "/dashboard/live", label: "En vivo", key: "live" }
 ] as const;
 

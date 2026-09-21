@@ -3,6 +3,18 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { EditarClase } from "@/components/admin-video-drawer";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
+import {
+  armarPlanesDeTrabajo,
+  type DiaDePlan,
+  type PlanParaElegir,
+  type UbicacionEnPlan,
+} from "@/src/features/admin/planes-de-trabajo";
+import {
+  CATEGORIA_LABEL,
+  nivelEnTexto,
+  planesDesde,
+  planesEnTexto
+} from "@/src/features/studio/catalogo-clases";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -23,6 +35,11 @@ type VideoRecord = {
   description_i18n: Record<string, string>;
   status: "draft" | "published" | "archived";
   membership_tier_required: "corps_de_ballet" | "solista" | "principal";
+  /** Lo que de verdad decide quien ve la clase. Ver la migracion 20260921. */
+  planes_permitidos: string[] | null;
+  content_type: string | null;
+  recommended_min_level: string | null;
+  recommended_max_level: string | null;
   duration_seconds: number;
   category_slugs: string[];
   equipment: string[];
@@ -247,7 +264,7 @@ function Flash({ message, tone }: { message: string | null; tone: "success" | "e
 
 // ── Upload form (real Bunny upload: video file + audio file per language) ────────
 
-function UploadForm({ bunnyReady }: { bunnyReady: boolean }) {
+function UploadForm({ bunnyReady, programas }: { bunnyReady: boolean; programas: PlanParaElegir[] }) {
   if (!bunnyReady) {
     return (
       <div style={{ fontSize: 13, color: "#9a3412", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "14px 16px", lineHeight: 1.6 }}>
@@ -259,7 +276,7 @@ function UploadForm({ bunnyReady }: { bunnyReady: boolean }) {
     );
   }
 
-  return <AdminVideoUpload />;
+  return <AdminVideoUpload programas={programas} />;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -283,25 +300,47 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
   let consultaVideos = supabase
     .from("videos")
-    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured");
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, planes_permitidos, content_type, recommended_min_level, recommended_max_level, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured");
 
   if (fEstado) consultaVideos = consultaVideos.eq("status", fEstado);
-  if (fPlan) consultaVideos = consultaVideos.eq("membership_tier_required", fPlan);
+  // `contains` y no `eq`: desde la migracion 20260921 el acceso vive en la
+  // LISTA. Con `eq` sobre el minimo derivado, filtrar por "Solista" no
+  // encontraria una clase {corps, solista} -- su minimo es corps -- aunque
+  // Solista la vea perfectamente.
+  if (fPlan) consultaVideos = consultaVideos.contains("planes_permitidos", [fPlan]);
   if (q) {
     // Titulo en espanol o slug. `or` de PostgREST: una sola consulta.
     const t = q.replace(/[,()]/g, " ");
     consultaVideos = consultaVideos.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
   }
 
-  const [{ data }, { data: jobData }, { count: totalVideos }] = await Promise.all([
-    consultaVideos.order("created_at", { ascending: false }),
-    supabase
-      .from("video_mux_jobs")
-      .select("id, video_id, status, attempts, last_error, expected_locales, created_at, claimed_at")
-      .order("created_at", { ascending: false }),
-    // El total SIN filtrar, para que el contador diga "5 de 19" y no "5 de 5".
-    supabase.from("videos").select("*", { count: "exact", head: true }),
-  ]);
+  const [{ data }, { data: jobData }, { count: totalVideos }, { data: programsData }, { data: programDaysData }] =
+    await Promise.all([
+      consultaVideos.order("created_at", { ascending: false }),
+      supabase
+        .from("video_mux_jobs")
+        .select("id, video_id, status, attempts, last_error, expected_locales, created_at, claimed_at")
+        .order("created_at", { ascending: false }),
+      // El total SIN filtrar, para que el contador diga "5 de 19" y no "5 de 5".
+      supabase.from("videos").select("*", { count: "exact", head: true }),
+      // Los planes de trabajo, para poder enganchar la clase a uno al subirla
+      // o desde su propio panel. Van en el mismo Promise.all y no en una
+      // consulta aparte: son dos viajes mas a Frankfurt, ~30 ms cada uno, y en
+      // paralelo no cuestan nada.
+      supabase.from("programs").select("id, title_i18n, duration_days").order("title_i18n->>es"),
+      // `id` y `video_id` hacen falta para el panel de la clase: `id` es lo
+      // unico con lo que se puede QUITAR una fila, y `video_id` es por donde se
+      // agrupa "¿en que planes esta esta clase?".
+      supabase.from("program_days").select("id, program_id, day_number, video_id"),
+    ]);
+
+  // Los planes ofrecibles y, por clase, en que dia de que plan esta puesta.
+  // Las dos cosas salen de la misma pasada: ver src/features/admin/planes-de-trabajo.ts
+  const { paraElegir: programas, ubicacionesPorClase } = armarPlanesDeTrabajo(
+    (programsData ?? []) as { id: string; title_i18n: Record<string, string> | null; duration_days: number }[],
+    (programDaysData ?? []) as DiaDePlan[]
+  );
+  const SIN_UBICACION: UbicacionEnPlan[] = [];
 
   const videos = (data ?? []) as VideoRecord[];
   const published = videos.filter((v) => v.status === "published").length;
@@ -395,7 +434,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
           background: "#fff", border: "1px solid #f0eeec", borderTop: "none",
           borderRadius: "0 0 14px 14px", padding: "24px 22px",
         }}>
-          <UploadForm bunnyReady={bunnyReady} />
+          <UploadForm bunnyReady={bunnyReady} programas={programas} />
         </div>
       </details>
 
@@ -416,6 +455,13 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
             {videos.map((video) => {
               const st = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
               const tier = TIER_STYLE[video.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
+              // El texto sale de la LISTA y el color del minimo: la insignia
+              // tiene que decir quien ve la clase de verdad. Con {corps,
+              // principal} el minimo es corps y Solista NO la ve; mostrar solo
+              // "Corps" ahi seria decir lo contrario de lo que hace la policy.
+              const planesTexto = planesEnTexto(
+                video.planes_permitidos?.length ? video.planes_permitidos : planesDesde(video.membership_tier_required)
+              );
               // El nombre viejo era hasMux y el badge decia "Mux OK": nombraba al
               // proveedor en vez de responder lo unico que importa mirando la lista,
               // que es si esa clase ya se puede ver.
@@ -457,7 +503,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                           {video.title_i18n.es ?? video.slug}
                         </span>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>{st.label}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: tier.bg, color: tier.color }}>{tier.label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: tier.bg, color: tier.color }}>{planesTexto}</span>
                         {video.is_featured && (
                           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#fef9c3", color: "#854d0e" }}>Destacado</span>
                         )}
@@ -465,7 +511,11 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                       <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#a8a29e", flexWrap: "wrap" }}>
                         <span>/{video.slug}</span>
                         <span>{durMin} min</span>
-                        {video.category_slugs?.length > 0 && <span>{video.category_slugs.join(", ")}</span>}
+                        {video.content_type === "mini_training" && <span>Mini Training</span>}
+                        {video.category_slugs?.length > 0 && (
+                          <span>{video.category_slugs.map((c) => CATEGORIA_LABEL[c] ?? c).join(", ")}</span>
+                        )}
+                        <span>{nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}</span>
                         {tieneVideo && <span style={{ color: "#059669", fontWeight: 600 }}>Video listo</span>}
                         {allLocales.length > 0 && (
                           <span style={{ color: "#7c3aed", fontWeight: 600 }}>Audio: {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
@@ -533,7 +583,11 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                     padding: "9px 18px", borderTop: "1px solid #f9f7f6",
                     display: "flex", alignItems: "center", gap: 8,
                   }}>
-                    <EditarClase video={video} />
+                    <EditarClase
+                      video={video}
+                      planes={programas}
+                      ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
+                    />
                   </div>
                 </div>
               );

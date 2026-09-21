@@ -1,6 +1,6 @@
 import { SkHero, SkFilas } from "@/components/skeleton";
 
-/** Programas: filas plegables con sus dias. */
+/** Planes de trabajo: filas plegables con sus dias. */
 export default function Loading() {
   return (
     <main style={{ fontFamily: "inherit" }}>

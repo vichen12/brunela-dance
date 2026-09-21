@@ -13,15 +13,15 @@ import {
 } from "@/src/features/admin/actions";
 
 /**
- * Edicion de un programa y sus dias, en panel lateral.
+ * Edicion de un plan de trabajo y sus dias, en panel lateral.
  *
  * LAS OPCIONES DEL SELECTOR DE CLASES
  *   El <select> para agregar un dia lista TODAS las clases, y se renderizaba
- *   una vez por programa aunque nadie lo abriera. Medido hoy: 3 programas x 19
+ *   una vez por plan aunque nadie lo abriera. Medido hoy: 3 planes x 19
  *   clases = 57 opciones. Con 20 programas y 100 clases serian 2.000.
  *
- *   Escala con el PRODUCTO de programas por clases, que es la peor forma de
- *   escalar. Dentro del panel se renderiza uno solo, el del programa abierto.
+ *   Escala con el PRODUCTO de planes por clases, que es la peor forma de
+ *   escalar. Dentro del panel se renderiza uno solo, el del plan abierto.
  */
 
 export type ProgramRecord = {
@@ -66,7 +66,7 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   return <label style={{ display: "flex", flexDirection: "column" }}><Lbl>{label}</Lbl>{children}</label>;
 }
 /**
- * El formulario del programa. Se exporta porque lo usan los DOS caminos: el
+ * El formulario del plan de trabajo. Se exporta porque lo usan los DOS caminos: el
  * alta (en la pagina, sin panel) y la edicion (dentro del drawer). Una copia
  * por camino garantiza que en unos meses uno tenga un campo que el otro no.
  */
@@ -79,7 +79,7 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
       <input name="id" type="hidden" value={program?.id ?? ""} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label={esNuevo ? "Dirección del programa" : "Dirección"}>
+        <F label={esNuevo ? "Dirección del plan" : "Dirección"}>
           {/* Al editar es solo lectura: cambiarla rompe cualquier enlace ya
               compartido. Al crear hace falta, porque todavia no existe. */}
           <input
@@ -127,14 +127,14 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
         <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <input defaultChecked={program?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink)" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este programa</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este plan</span>
           </label>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
         <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Qué trabaja este programa…" />
+          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Qué trabaja este plan…" />
         </F>
         <F label="Descripción en inglés">
           <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.en ?? ""} name="descriptionEn" />
@@ -228,7 +228,7 @@ export function EditarPrograma({
 
                 {/* Días */}
                 <div style={{ marginTop: 26, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
-                  <Lbl>Días del programa</Lbl>
+                  <Lbl>Días del plan</Lbl>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
                     {days.length === 0 && (

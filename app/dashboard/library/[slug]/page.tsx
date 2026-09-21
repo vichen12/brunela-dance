@@ -6,6 +6,12 @@ import {
   safePercent,
   type MembershipTier,
 } from "@/src/features/studio/helpers";
+import {
+  CATEGORIA_LABEL,
+  TIPO_LABEL,
+  materialesEnTexto,
+  nivelEnTexto,
+} from "@/src/features/studio/catalogo-clases";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -27,6 +33,9 @@ type VideoRecord = {
   duration_seconds: number;
   category_slugs: string[];
   equipment: string[];
+  content_type: string | null;
+  recommended_min_level: string | null;
+  recommended_max_level: string | null;
   thumbnail_url: string | null;
   stream_provider: string | null;
   stream_playback_id: string | null;
@@ -68,7 +77,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
 
   const { data: video, error: videoError } = await supabase
     .from("videos")
-    .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, equipment, thumbnail_url, stream_provider, stream_playback_id, bunny_video_id, audio_tracks")
+    .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, equipment, content_type, recommended_min_level, recommended_max_level, thumbnail_url, stream_provider, stream_playback_id, bunny_video_id, audio_tracks")
     .eq("slug", slug)
     .maybeSingle<VideoRecord>();
 
@@ -97,6 +106,18 @@ export default async function VideoDetailPage({ params, searchParams }: { params
   const title = resolveI18nText(video.title_i18n);
   const description = resolveI18nText(video.description_i18n);
   const thumbBg = catGradient(video.category_slugs);
+
+  /**
+   * Lo que va arriba del titulo. Un Mini Training se anuncia como tal antes que
+   * por su categoria: es lo primero que cambia la expectativa de cuanto dura y
+   * que pide, y es la distincion que la alumna busca de un vistazo.
+   */
+  const categoriaCruda = video.category_slugs[0];
+  const categoriaTexto = (
+    video.content_type === "mini_training"
+      ? TIPO_LABEL.mini_training
+      : CATEGORIA_LABEL[categoriaCruda] ?? categoriaCruda ?? "Clase"
+  ).toUpperCase();
   const totalMin = Math.floor(video.duration_seconds / 60);
   const elapsedSec = progress?.max_position_seconds ?? 0;
   const elapsedMin = Math.floor(elapsedSec / 60);
@@ -134,7 +155,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
         </Link>
         <span style={{ color: "#DFC0BB", fontSize: 10 }}>›</span>
         <span style={{ fontSize: 9, letterSpacing: "0.1em", color: "#A89490" }}>
-          {video.category_slugs[0]?.toUpperCase()} — {title}
+          {categoriaTexto} — {title}
         </span>
       </div>
 
@@ -193,7 +214,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
           {/* Video info */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 8.5, letterSpacing: "0.15em", color: "#B8857F", marginBottom: 8 }}>
-              {video.category_slugs[0]?.toUpperCase()} · {formatDurationLabel(video.duration_seconds)}
+              {categoriaTexto} · {formatDurationLabel(video.duration_seconds)} · {nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#1C1618", letterSpacing: "0.03em", marginBottom: 12, lineHeight: 1.2 }}>
               {title}
@@ -219,7 +240,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
             {video.equipment.length > 0 && (
               <div style={{ marginLeft: "auto", textAlign: "right" }}>
                 <div style={{ fontSize: 8.5, letterSpacing: "0.1em", color: "#C49490", marginBottom: 4 }}>MATERIALES</div>
-                <div style={{ fontSize: 11, color: "#1C1618" }}>{video.equipment.join(", ")}</div>
+                <div style={{ fontSize: 11, color: "#1C1618" }}>{materialesEnTexto(video.equipment)}</div>
               </div>
             )}
           </div>

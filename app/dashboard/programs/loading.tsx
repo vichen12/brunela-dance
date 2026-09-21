@@ -1,6 +1,6 @@
 import { SkHero, SkGrid } from "@/components/skeleton";
 
-/** Programas: rejilla de tarjetas. */
+/** Planes de trabajo: rejilla de tarjetas. */
 export default function Loading() {
   return (
     <main className="pb-20 pt-6 md:pb-28 md:pt-10">

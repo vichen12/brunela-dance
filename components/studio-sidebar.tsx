@@ -28,7 +28,7 @@ type NavItem = { href: string; exact?: boolean; label: string; d: string; d2?: s
 /**
  * Todas las pantallas de alumna viven aca.
  *
- * Programas y En vivo llegaban solo desde las tarjetas del Inicio, asi que una
+ * Los planes de trabajo y En vivo llegaban solo desde las tarjetas del Inicio, asi que una
  * alumna que entraba directo a Clases podia no enterarse nunca de que existian
  * -- y Principal se compra en buena medida por las clases en vivo.
  */
@@ -37,7 +37,7 @@ const NAV: NavItem[] = [
     d: 'M2.5 7L8 2.5 13.5 7v6a.5.5 0 01-.5.5h-3.5v-4h-3v4H3a.5.5 0 01-.5-.5V7z' },
   { href: '/dashboard/library', label: 'Clases',
     d: 'M4.5 3.5L13 8l-8.5 4.5V3.5z' },
-  { href: '/dashboard/programs', label: 'Programas',
+  { href: '/dashboard/programs', label: 'Planes de trabajo',
     d: 'M3 4.5h10M3 8h10M3 11.5h6' },
   { href: '/dashboard/live', label: 'En vivo',
     d: 'M3 4.5h10v9H3v-9z', d2: 'M3 7.2h10M5.6 2.6v3M10.4 2.6v3' },

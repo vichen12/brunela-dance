@@ -5,7 +5,7 @@ const adminMessages = {
     nav: {
       overview: "Resumen",
       videos: "Videos",
-      programs: "Programas",
+      programs: "Planes de trabajo",
       settings: "Settings",
       users: "Usuarios"
     },
@@ -19,7 +19,7 @@ const adminMessages = {
       sectionTitle: "Modulos activos",
       cards: {
         videos: "Biblioteca de videos",
-        programs: "Programas de 14 dias",
+        programs: "Planes de trabajo de 14 dias",
         settings: "Configuración del estudio",
         users: "Usuarios y accesos"
       }
@@ -50,11 +50,11 @@ const adminMessages = {
       }
     },
     programs: {
-      title: "Gestión de programas",
-      description: "Administra programas y la secuencia dia por dia con slugs de video.",
-      createTitle: "Nuevo programa",
-      listTitle: "Programas existentes",
-      daysTitle: "Dias del programa",
+      title: "Gestión de planes de trabajo",
+      description: "Administra los planes de trabajo y su secuencia dia por dia.",
+      createTitle: "Nuevo plan de trabajo",
+      listTitle: "Planes de trabajo existentes",
+      daysTitle: "Dias del plan",
       form: {
         slug: "Dirección",
         titleEs: "Título en español",
@@ -66,9 +66,9 @@ const adminMessages = {
         durationDays: "Cantidad de dias",
         coverImage: "Cover image URL",
         featured: "Destacado",
-        submitCreate: "Crear programa",
-        submitUpdate: "Guardar programa",
-        delete: "Eliminar programa",
+        submitCreate: "Crear plan de trabajo",
+        submitUpdate: "Guardar plan de trabajo",
+        delete: "Eliminar plan de trabajo",
         dayNumber: "Dia",
         videoSlug: "Clase",
         addDay: "Guardar dia",
