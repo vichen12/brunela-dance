@@ -15,6 +15,14 @@ import {
   type MembershipTier,
   type VideoStatus,
 } from "@/src/features/studio/helpers";
+import {
+  CATEGORIAS,
+  CATEGORIA_LABEL,
+  NIVELES,
+  nivelEnTexto,
+  planesDesde,
+  rangoANivel,
+} from "@/src/features/studio/catalogo-clases";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +35,8 @@ type VideoRecord = {
   /** Solo viaja cuando hay busqueda. Ver la consulta de la fase D. */
   description_i18n?: Record<string, string>;
   membership_tier_required: MembershipTier;
+  /** Lo que de verdad decide quien ve la clase. Ver la migracion 20260921. */
+  planes_permitidos: string[] | null;
   duration_seconds: number;
   category_slugs: string[];
   thumbnail_url: string | null;
@@ -55,21 +65,14 @@ function fechaCorta(iso: string | null) {
     .toUpperCase();
 }
 
-const NIVEL_LABEL: Record<string, string> = {
-  principiante: "Principiante",
-  intermedio: "Intermedio",
-  avanzado: "Avanzado",
-  profesional: "Profesional",
-  maestro: "Maestro",
-};
-
-/** Un solo texto de nivel, como en el diseno: "Intermedio" o "Todos los niveles". */
-function nivelTexto(min: string | null, max: string | null) {
-  if (!min || !max) return "Todos los niveles";
-  if (min === "principiante" && max === "maestro") return "Todos los niveles";
-  if (min === max) return NIVEL_LABEL[min] ?? min;
-  return `${NIVEL_LABEL[min] ?? min} a ${NIVEL_LABEL[max] ?? max}`;
-}
+/**
+ * El nivel se lee del par (recommended_min_level, recommended_max_level), que
+ * es como lo guarda la base desde el primer dia, pero se MUESTRA con los cuatro
+ * niveles que ofrece el formulario de carga: Inicial, Intermedio, Avanzado y
+ * Todos. La conversion vive en catalogo-clases.ts, que es tambien de donde sale
+ * el desplegable de /admin/videos: una sola lista para elegir y para mostrar.
+ */
+const nivelTexto = nivelEnTexto;
 
 type ProgressRecord = { video_id: string; completion_percent: number };
 
@@ -112,17 +115,34 @@ const TIER_META: Record<string, { bg: string; color: string; label: string }> = 
   principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
 };
 
+/**
+ * Un degrade por categoria, para la tarjeta de la clase que todavia no tiene
+ * miniatura.
+ *
+ * Escrito a mano y no generado por indice: con `CATEGORIAS[i % paleta.length]`
+ * agregar una categoria en el medio le cambia el color a todas las de abajo, y
+ * la biblioteca entera se ve distinta por haber sumado una fila a una lista.
+ *
+ * Los slugs viejos (pilates, pbt, pct, reformer, mat) quedan mapeados abajo: la
+ * migracion 20260921 los desactiva, pero una clase que todavia los tenga no
+ * tiene por que perder su color y caer en el gris de reserva.
+ */
 const CAT_GRADIENTS: Record<string, string> = {
-  ballet:     "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
+  ballet:                        "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
+  tecnica:                       "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-soft) 100%)",
+  dehors:                        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
+  movilidad:                     "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink-mid) 100%)",
+  stretching:                    "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
+  "pies-y-tobillos":             "linear-gradient(145deg, var(--rose) 0%, var(--pink) 100%)",
+  equilibrio:                    "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
+  "abdominales-para-bailarines": "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink) 100%)",
+  "linea-y-control":             "linear-gradient(145deg, var(--rose) 0%, var(--pink-mid) 100%)",
+  giros:                         "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-soft) 100%)",
+  "preparacion-fisica":          "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
+
   pilates:    "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
-  stretching: "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
   pbt:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
   pct:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
-
-  // Se dejan mapeadas para que una clase que todavia tenga el slug viejo no
-  // pierda su degrade y caiga en el gris de reserva. Desaparecen solas cuando
-  // se corra 20260803_unify_pilates_categories.sql; antes de eso, la pantalla
-  // no se rompe.
   reformer:   "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
   mat:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
 };
@@ -135,13 +155,15 @@ function catGradient(slugs: string[]): string {
 /** Cuantas clases por tanda. Con menos, "Ver más" aparece demasiado seguido. */
 const POR_PAGINA = 24;
 
+/**
+ * Los chips fijos salen de la MISMA lista que el desplegable de /admin/videos.
+ * Cuando estaban escritos aca aparte, agregar una categoria en el panel la
+ * dejaba en el filtro como slug crudo en minuscula -- "pies-y-tobillos" -- y
+ * nadie se enteraba hasta verlo en pantalla.
+ */
 const FIXED_FILTERS = [
-  { key: "all",        label: "Todas"      },
-  { key: "ballet",     label: "Ballet"     },
-  { key: "pilates",    label: "Pilates"    },
-  { key: "stretching", label: "Stretching" },
-  { key: "pbt",        label: "PBT"        },
-  { key: "pct",        label: "PCT"        },
+  { key: "all", label: "Todas" },
+  ...CATEGORIAS.map((c) => ({ key: c.slug, label: c.label })),
 ];
 
 /**
@@ -175,16 +197,14 @@ const canonico = (slug: string) => SLUG_CANONICO[slug] ?? slug;
 // ── Los cuatro filtros ───────────────────────────────────────────────────────
 // Todos salen de datos que ya existen: ninguno necesita capturar nada nuevo.
 
-const NIVELES = ["principiante", "intermedio", "avanzado", "profesional", "maestro"] as const;
-const NIVEL_ORDEN = new Map(NIVELES.map((n, i) => [n as string, i]));
-
+/**
+ * El filtro ofrece los mismos niveles que el formulario de carga, no los cinco
+ * crudos del enum. Ofrecer "Profesional" cuando ninguna clase se puede cargar
+ * como profesional es un filtro que solo puede devolver vacio.
+ */
 const OPCIONES_NIVEL = [
-  { key: "",              label: "Todos los niveles" },
-  { key: "principiante",  label: "Principiante" },
-  { key: "intermedio",    label: "Intermedio" },
-  { key: "avanzado",      label: "Avanzado" },
-  { key: "profesional",   label: "Profesional" },
-  { key: "maestro",       label: "Maestro" },
+  { key: "", label: "Todos los niveles" },
+  ...NIVELES.filter((n) => n.slug !== "todos").map((n) => ({ key: n.slug, label: n.label })),
 ];
 
 const OPCIONES_DURACION = [
@@ -218,13 +238,27 @@ const OPCIONES_ESTADO = [
  * Los limites sin definir se tratan como abiertos: sin esto, una clase a la
  * que nadie le cargo el rango desaparece de todos los filtros de nivel.
  */
+/**
+ * Los planes que ven una clase.
+ *
+ * El `?? planesDesde(...)` cubre a las clases guardadas ANTES de la migracion
+ * 20260921, que todavia no tienen lista propia: ahi vale la regla vieja, "de
+ * ese plan para arriba", que es exactamente la que uso el backfill.
+ */
+function planesDeLaClase(v: { planes_permitidos: string[] | null; membership_tier_required: string }): string[] {
+  return v.planes_permitidos?.length ? v.planes_permitidos : planesDesde(v.membership_tier_required);
+}
+
+/**
+ * Una clase marcada "Todos" entra en cualquier filtro de nivel; el resto tiene
+ * que coincidir. Se compara por el nivel del FORMULARIO y no por el par crudo,
+ * para que una clase vieja guardada como principiante..profesional caiga en la
+ * misma casilla que muestra su ficha.
+ */
 function coincideNivel(min: string | null, max: string | null, nivel: string): boolean {
   if (!nivel) return true;
-  const buscado = NIVEL_ORDEN.get(nivel);
-  if (buscado === undefined) return true;
-  const desde = min ? NIVEL_ORDEN.get(min) ?? 0 : 0;
-  const hasta = max ? NIVEL_ORDEN.get(max) ?? NIVELES.length - 1 : NIVELES.length - 1;
-  return buscado >= desde && buscado <= hasta;
+  const suyo = rangoANivel(min, max);
+  return suyo === "todos" || suyo === nivel;
 }
 
 function coincideDuracion(segundos: number, rango: string): boolean {
@@ -319,14 +353,18 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   // de la fila y en el listado no se muestra. Con 200 clases son cientos de KB
   // por carga que no se usaban para nada.
   const COLUMNAS_BASE =
-    "id, slug, title_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, stream_playback_id, bunny_video_id, is_featured, status, published_at, recommended_min_level, recommended_max_level";
+    "id, slug, title_i18n, membership_tier_required, planes_permitidos, duration_seconds, category_slugs, thumbnail_url, stream_playback_id, bunny_video_id, is_featured, status, published_at, recommended_min_level, recommended_max_level";
   const columnas = busqueda ? `${COLUMNAS_BASE}, description_i18n` : COLUMNAS_BASE;
 
   let consulta = supabase.from("videos").select(columnas);
   if (activeCategory !== "all") {
     consulta = consulta.overlaps("category_slugs", CATEGORIA_EQUIVALENTES[activeCategory] ?? [activeCategory]);
   }
-  if (fPlan) consulta = consulta.eq("membership_tier_required", fPlan);
+  // `contains` y no `eq`: desde la migracion 20260921 el acceso vive en la
+  // LISTA. Con `eq` sobre el minimo derivado, filtrar por "Solista" descartaba
+  // en SQL una clase {corps, solista} -- su minimo es corps -- aunque Solista la
+  // vea perfectamente, y el filtro en memoria de mas abajo ya no la recibia.
+  if (fPlan) consulta = consulta.contains("planes_permitidos", [fPlan]);
 
   const [{ data: videosData }, progressData] = await Promise.all([
     consulta
@@ -353,7 +391,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     const admin = createSupabaseAdminClient();
     const { data } = await admin
       .from("videos")
-      .select("id, slug, title_i18n, description_i18n, membership_tier_required, duration_seconds, category_slugs, thumbnail_url, is_featured, status, published_at, recommended_min_level, recommended_max_level")
+      .select("id, slug, title_i18n, description_i18n, membership_tier_required, planes_permitidos, duration_seconds, category_slugs, thumbnail_url, is_featured, status, published_at, recommended_min_level, recommended_max_level")
       .eq("status", "published")
       .order("is_featured", { ascending: false })
       .order("published_at", { ascending: false });
@@ -429,7 +467,10 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const visible = porTexto.filter((v) => {
     if (!coincideNivel(v.recommended_min_level, v.recommended_max_level, fNivel)) return false;
     if (!coincideDuracion(v.duration_seconds, fDuracion)) return false;
-    if (fPlan && v.membership_tier_required !== fPlan) return false;
+    // Desde la migracion 20260921 el acceso vive en la LISTA. Comparar contra
+    // el minimo derivado dejaria afuera una clase {corps, solista} al filtrar
+    // por "Solista", aunque Solista la vea perfectamente.
+    if (fPlan && !planesDeLaClase(v).includes(fPlan)) return false;
 
     if (fEstado) {
       const p = progressMap.get(v.id);
@@ -857,7 +898,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                             background: "#fff", color: "var(--pink)",
                             padding: "5px 11px", borderRadius: 99, textTransform: "uppercase",
                           }}>
-                            {video.category_slugs[0] ?? "Clase"}
+                            {CATEGORIA_LABEL[video.category_slugs[0]] ?? video.category_slugs[0] ?? "Clase"}
                           </span>
                           {video.is_featured && (
                             <span style={{

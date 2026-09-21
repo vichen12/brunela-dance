@@ -10,6 +10,19 @@ import {
   maxAudioMinutes,
   oversizeMessage
 } from "@/src/lib/audio/config";
+import { SelectorMultiple } from "@/components/selector-multiple";
+import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
+import {
+  CATEGORIAS,
+  ESTADOS,
+  MATERIALES,
+  NIVELES,
+  PLANES,
+  SIN_MATERIAL,
+  TIPOS_DE_CONTENIDO
+} from "@/src/features/studio/catalogo-clases";
+
+import type { PlanParaElegir } from "@/src/features/admin/planes-de-trabajo";
 
 /** 16 MiB: big enough to keep throughput high, small enough to retry cheaply. */
 const CHUNK_SIZE = 16 * 1024 * 1024;
@@ -147,7 +160,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function AdminVideoUpload() {
+export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegir[] }) {
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
   const videoIdRef = useRef<string | null>(null);
@@ -159,6 +172,17 @@ export function AdminVideoUpload() {
   const [detail, setDetail] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [sizeErrors, setSizeErrors] = useState<Record<string, string>>({});
+
+  /**
+   * El plan de trabajo al que se engancha la clase, si va a alguno.
+   *
+   * Es estado y no un campo suelto porque elegir el plan tiene que COMPLETAR el
+   * dia: el numero correcto es casi siempre "el siguiente libre", y hacerselo
+   * buscar a mano en /admin/programs para despues escribirlo aca es la clase de
+   * paso donde se pisa un dia ya ocupado.
+   */
+  const [programId, setProgramId] = useState("");
+  const [programDay, setProgramDay] = useState("");
 
   const busy = phase === "preparing" || phase === "video" || phase === "audio" || phase === "saving";
 
@@ -343,12 +367,21 @@ export function AdminVideoUpload() {
             titleEn: fd.get("titleEn"),
             descriptionEs: fd.get("descriptionEs"),
             descriptionEn: fd.get("descriptionEn"),
-            membershipTierRequired: fd.get("membershipTierRequired"),
+            // getAll y no get: son listas de a una entrada por elegido. Con
+            // get() llegaria solo el PRIMER material y el primer plan, y la
+            // clase quedaria mas cerrada de lo que se pidio sin avisar.
+            planesPermitidos: fd.getAll("planesPermitidos"),
             status: fd.get("status"),
             // La interfaz habla en minutos; la base guarda segundos.
             durationSeconds: Number(fd.get("durationMinutes") ?? 0) * 60,
-            categories: fd.get("categories"),
-            equipment: fd.get("equipment"),
+            contentType: fd.get("contentType"),
+            categorySlug: fd.get("categorySlug"),
+            nivel: fd.get("nivel"),
+            equipment: fd.getAll("equipment"),
+            // "" cuando no se eligio ningun plan de trabajo: la clase se sube
+            // igual y no se engancha a nada.
+            programId: fd.get("programId") || null,
+            programDayNumber: fd.get("programDayNumber") || null,
             isFeatured: fd.get("isFeatured") === "on"
           })
         });
@@ -368,6 +401,11 @@ export function AdminVideoUpload() {
               : "Clase subida y guardada. Se está procesando.")
         );
         form.reset();
+        // form.reset() devuelve a su valor inicial los campos del DOM, pero no
+        // toca el estado de React: sin estas dos lineas la clase siguiente
+        // aparece ya enganchada al plan de la anterior.
+        setProgramId("");
+        setProgramDay("");
         setSizeErrors({});
         router.refresh();
       } catch (err) {
@@ -395,45 +433,17 @@ export function AdminVideoUpload() {
 
   return (
     <form onSubmit={onSubmit}>
+      {/* 1 y 2 — los dos titulos */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Field label="Dirección">
-          <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
-          <AutoDireccion desde="titleEs" />
-        </Field>
-        <Field label="Estado">
-          <select style={sel} defaultValue="draft" name="status" disabled={busy}>
-            <option value="draft">Borrador</option>
-            <option value="published">Publicado</option>
-            <option value="archived">Archivado</option>
-          </select>
-        </Field>
-
         <Field label="Título en español">
           <input style={inp} name="titleEs" required placeholder="Ballet centro basico" disabled={busy} />
         </Field>
         <Field label="Título en inglés">
           <input style={inp} name="titleEn" placeholder="Basic ballet center" disabled={busy} />
         </Field>
-
-        <Field label="Duración (minutos)">
-          <input style={inp} defaultValue={15} min={1} name="durationMinutes" required type="number" disabled={busy} />
-        </Field>
-        <Field label="Plan que la puede ver">
-          <select style={sel} defaultValue="corps_de_ballet" name="membershipTierRequired" disabled={busy}>
-            <option value="corps_de_ballet">Corps de Ballet</option>
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
-        </Field>
-
-        <Field label="Categorías">
-          <input style={inp} name="categories" placeholder="ballet, reformer" disabled={busy} />
-        </Field>
-        <Field label="Materiales">
-          <input style={inp} name="equipment" placeholder="colchoneta, banda elastica" disabled={busy} />
-        </Field>
       </div>
 
+      {/* 3 y 4 — las dos descripciones */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
         <Field label="Descripción en español">
           <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEs" required disabled={busy} placeholder="Descripción de la clase…" />
@@ -442,6 +452,154 @@ export function AdminVideoUpload() {
           <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEn" disabled={busy} placeholder="Class description..." />
         </Field>
       </div>
+
+      {/* 5 a 8 — como se clasifica la clase */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <Field label="Tipo de contenido">
+          <select style={sel} defaultValue="clase" name="contentType" disabled={busy}>
+            {TIPOS_DE_CONTENIDO.map((t) => (
+              <option key={t.slug} value={t.slug}>{t.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Categoría / Colección">
+          <select style={sel} defaultValue={CATEGORIAS[0].slug} name="categorySlug" required disabled={busy}>
+            {CATEGORIAS.map((c) => (
+              <option key={c.slug} value={c.slug}>{c.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Nivel">
+          <select style={sel} defaultValue="todos" name="nivel" disabled={busy}>
+            {NIVELES.map((n) => (
+              <option key={n.slug} value={n.slug}>{n.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Duración (minutos)">
+          <input style={inp} defaultValue={15} min={1} name="durationMinutes" required type="number" disabled={busy} />
+        </Field>
+      </div>
+
+      {/* 9 — materiales */}
+      <div style={{ marginTop: 14 }}>
+        <span style={lbl}>Materiales</span>
+        <SelectorMultiple
+          name="equipment"
+          opciones={MATERIALES}
+          excluyente={SIN_MATERIAL}
+          disabled={busy}
+          requerido
+          mensajeRequerido="Elegí los materiales, o marcá «Sin material»."
+        />
+      </div>
+
+      {/* La direccion no la escribe nadie: sale sola del titulo en espanol.
+          Sigue siendo un campo y no un calculo del servidor porque una clase ya
+          publicada no puede cambiar de direccion sin romper los enlaces que
+          alguien haya guardado, y eso se ve mejor pudiendo leerla. */}
+      <div style={{ marginTop: 14 }}>
+        <Field label="Dirección de la clase (se completa sola)">
+          <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
+          <AutoDireccion desde="titleEs" />
+        </Field>
+      </div>
+
+      {/* 10, 11 y 12 — lo que no ve la alumna */}
+      <BloqueSoloParaVos>
+        <span style={lbl}>Plan que la puede ver</span>
+        <SelectorMultiple
+          name="planesPermitidos"
+          opciones={PLANES}
+          inicial={PLANES.map((p) => p.slug)}
+          disabled={busy}
+          requerido
+          mensajeRequerido="Elegí al menos un plan: una clase que no ve nadie no sirve."
+        />
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+          <Field label="Estado">
+            <select style={sel} defaultValue="draft" name="status" disabled={busy}>
+              {ESTADOS.map((e) => (
+                <option key={e.slug} value={e.slug}>{e.label}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        {/*
+          Agregar la clase a un plan de trabajo (`programs` + `program_days`).
+
+          POR QUE ESTA ACA Y NO SOLO EN /admin/programs
+            El plan se arma pensando en el orden de las clases, y ese orden se
+            tiene en la cabeza justo cuando se sube el video. Obligar a subir
+            aca, ir a la otra pantalla, buscar la clase por su direccion y
+            escribir el dia es donde se pierde el hilo -- y donde se escribe un
+            dia que ya estaba ocupado.
+
+            Es opcional a proposito: una clase suelta (lo que ve Corps de
+            Ballet) no pertenece a ningun plan, y ese es el caso normal.
+        */}
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e7e5e4" }}>
+          <span style={lbl}>Agregar a un plan de trabajo (opcional)</span>
+
+          {programas.length === 0 ? (
+            <p style={{ fontSize: 11.5, color: "#78716c", lineHeight: 1.7, marginTop: 6 }}>
+              Todavía no hay ningún plan de trabajo armado. Se crean en{" "}
+              <a href="/admin/programs" style={{ color: "var(--pink-mid)", fontWeight: 700 }}>
+                Planes de trabajo
+              </a>
+              , y una vez creados aparecen acá para enganchar la clase directo al subirla.
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: 11.5, color: "#a8a29e", lineHeight: 1.7, margin: "4px 0 10px" }}>
+                Un plan de trabajo es una serie de días en orden — «Trabajo de pies, 14 días».
+                Si esta clase es uno de esos días, elegí cuál.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <Field label="Plan de trabajo">
+                  <select
+                    style={sel}
+                    name="programId"
+                    value={programId}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setProgramId(id);
+                      const elegido = programas.find((p) => p.id === id);
+                      setProgramDay(elegido ? String(elegido.proximoDia) : "");
+                    }}
+                  >
+                    <option value="">No agregar a ningún plan</option>
+                    {programas.map((p) => (
+                      <option key={p.id} value={p.id}>{p.titulo}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Día del plan">
+                  <input
+                    style={{ ...inp, ...(programId ? null : { background: "#f5f5f4", color: "#a8a29e" }) }}
+                    type="number"
+                    min={1}
+                    name="programDayNumber"
+                    value={programDay}
+                    placeholder="—"
+                    required={Boolean(programId)}
+                    disabled={busy || !programId}
+                    onChange={(e) => setProgramDay(e.target.value)}
+                  />
+                </Field>
+              </div>
+              {programId && (
+                <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 8, lineHeight: 1.6 }}>
+                  Si ese día ya tenía otra clase, esta la reemplaza.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </BloqueSoloParaVos>
 
       {/* Video file */}
       <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>

@@ -1,148 +1,184 @@
-# COORDINACIÓN ENTRE SESIONES
+# COORDINACIÓN
 
-Dos sesiones de Claude Code trabajando en paralelo sobre este repo.
-**Antes de editar un archivo, buscalo acá.** Si figura en la lista de la otra
-sesión, no lo toques: avisá y esperá.
+Dos sesiones trabajando en el mismo árbol al mismo tiempo. Este archivo dice
+**quién tiene tomado qué**, para que nadie pise a nadie.
 
-Última actualización: **2026-09-21**, por la sesión **Planes de trabajo**.
+> **Regla:** antes de editar un archivo, buscalo acá. Si figura como tomado por
+> la otra sesión, **no lo toques** — anotalo abajo en *Bloqueos* y seguí con
+> otra cosa.
+>
+> Y commiteá seguido. Un archivo sin commitear no se puede recuperar si el otro
+> lo pisa: los archivos **nuevos** ni siquiera están en el historial de git.
+
+Actualizado: 2026-09-21 · última mano: **sesión A**, que corrigió su sección y
+agregó lo de la rama.
 
 ---
 
-## 🔴 LEER PRIMERO: hay UN SOLO worktree
+## 🔴 LA RAMA ACTIVA YA NO ES `main`
+
+**Sesión B, esto te afecta: leelo antes de tu próximo commit.**
+
+Hay **un solo worktree**, así que las dos sesiones compartimos directorio *y*
+rama activa. No hay dos copias:
 
 ```
 $ git worktree list
-C:/Users/viche/.../brunela   [main]     <- uno solo, compartido
+C:/Users/viche/.../brunela   [planes-de-trabajo]    <- uno solo, compartido
 ```
 
-Las dos sesiones comparten **el mismo directorio y la misma rama activa**. No hay
-dos copias: si una cambia de rama, la otra cambia con ella.
+La sesión A creó `planes-de-trabajo` para no dejar en `main` código que depende
+de una migración **que todavía no corrió** — `/admin/videos` haría 500 contra la
+base de producción, que es la misma que `main` despliega.
 
-**La rama activa ahora es `planes-de-trabajo`.** La creé para no dejar en `main`
-código que depende de una migración que todavía no corrió (ver abajo).
-
-👉 **Sesión de la portada: tus commits van a caer en `planes-de-trabajo`, no en
-`main`.** Si preferís seguir en main:
+**Consecuencia para B: tus commits van a caer en `planes-de-trabajo`.** Si
+preferís seguir en main:
 
 ```bash
-git checkout main          # mi trabajo queda guardado en la rama, no se pierde
+git checkout main      # el trabajo de A queda en la rama, no se pierde
 ```
 
-Si ya commiteaste algo de portada en `planes-de-trabajo`, se rescata con
-`git cherry-pick <sha>` desde main. No hay nada roto, solo mal ubicado.
+Si ya commiteaste portada en `planes-de-trabajo`, se rescata con
+`git cherry-pick <sha>` parado en main. No hay nada roto, solo mal ubicado.
+
+> **Cómo pasó, para que no se repita:** A escribió su propio `COORDINACION.md`
+> sin releer el archivo, **pisando el de B**. El de B está sano en `6c8fd3f` y es
+> el que estás leyendo: A lo restauró y se limitó a corregir su sección. La regla
+> de arriba — *releer antes de escribir* — vale también para este archivo, y A
+> fue la primera en romperla.
 
 ---
 
-## Sesión A — Planes de trabajo  ⟨activa⟩
+## Sesión A — Planes de trabajo
 
-**Alcance:** `programs`, `program_days`, `/dashboard/programs`, `/admin/programs`
-y su migración. **No toco nada de portada ni de landing.**
+Formulario de clases y planes de trabajo (lo que antes se llamaba "programas").
 
-**Rama:** `planes-de-trabajo` · **Último commit mío:** ver `git log`
+**Migración propia:** `supabase/migrations/20260921_formulario_de_clases.sql`
+*(al 2026-09-21 todavía SIN correr: `videos.content_type` no existe en la base)*
 
-### Archivos que tengo tomados
+| Archivos nuevos |
+|---|
+| `components/bloque-solo-para-vos.tsx` |
+| `components/clase-en-planes.tsx` |
+| `components/selector-multiple.tsx` |
+| `src/features/admin/planes-de-trabajo.ts` |
+| `src/features/studio/catalogo-clases.ts` |
+| `tests/aislamiento/planes.test.ts` |
 
-Míos, creados en esta sesión:
+| Archivos modificados |
+|---|
+| `app/admin/analiticas/page.tsx` |
+| `app/admin/page.tsx` |
+| `app/admin/programs/page.tsx`, `app/admin/programs/loading.tsx` |
+| `app/admin/videos/page.tsx` |
+| `app/api/admin/videos/finalize/route.ts` |
+| `app/dashboard/library/page.tsx`, `app/dashboard/library/[slug]/page.tsx` |
+| `app/dashboard/page.tsx` |
+| `app/dashboard/programs/page.tsx`, `[slug]/page.tsx`, `loading.tsx` |
+| `components/admin-header.tsx` |
+| `components/admin-program-drawer.tsx` |
+| `components/admin-sidebar.tsx` |
+| `components/admin-video-drawer.tsx` |
+| `components/admin-video-upload.tsx` |
+| `components/boton-enviar.tsx` |
+| `components/mobile-dashboard-nav.tsx` |
+| `components/plan-client.tsx` |
+| `components/studio-sidebar.tsx` |
+| `src/features/admin/actions.ts` |
+| `src/features/admin/dictionary.ts` |
+| `src/features/studio/helpers.ts` |
+| `tests/aislamiento/ayudantes.ts` |
+| `tests/sistema/plata-y-acceso.test.ts` |
+| `CLAUDE.md` |
 
-| Archivo | Qué es |
-|---|---|
-| `src/features/studio/catalogo-clases.ts` | vocabulario de una clase (tipo, categoría, nivel, materiales, planes) |
-| `src/features/admin/planes-de-trabajo.ts` | planes vistos desde una clase + primer día libre |
-| `components/selector-multiple.tsx` | selección múltiple en fichas |
-| `components/bloque-solo-para-vos.tsx` | recuadro de campos internos |
-| `components/clase-en-planes.tsx` | a qué planes pertenece una clase |
-| `supabase/migrations/20260921_formulario_de_clases.sql` | **sin correr** |
-| `tests/aislamiento/planes.test.ts` | combinación libre de planes |
+> Esta lista la dedujo la sesión B de `git status` el 2026-09-21 10:55, porque
+> el archivo todavía no existía. **Sesión A: corregila si falta algo** — lo que
+> no esté acá, la otra sesión lo va a dar por libre.
 
-Modificados por mí:
+**✅ Sesión A confirma la lista: está completa y correcta.** Solo falta el
+archivo de la migración en «nuevos» (`supabase/migrations/20260921_…sql`), que
+ya figura arriba como migración propia.
 
-```
-app/admin/analiticas/page.tsx        components/admin-header.tsx
-app/admin/page.tsx                   components/admin-program-drawer.tsx
-app/admin/programs/loading.tsx       components/admin-sidebar.tsx
-app/admin/programs/page.tsx          components/admin-video-drawer.tsx
-app/admin/videos/page.tsx            components/admin-video-upload.tsx
-app/api/admin/videos/finalize/route.ts   components/boton-enviar.tsx
-app/dashboard/library/[slug]/page.tsx    components/mobile-dashboard-nav.tsx
-app/dashboard/library/page.tsx       components/plan-client.tsx
-app/dashboard/page.tsx               components/studio-sidebar.tsx
-app/dashboard/programs/[slug]/page.tsx   src/features/admin/actions.ts
-app/dashboard/programs/loading.tsx   src/features/admin/dictionary.ts
-app/dashboard/programs/page.tsx      src/features/studio/helpers.ts
-CLAUDE.md                            tests/aislamiento/ayudantes.ts
-                                     tests/sistema/plata-y-acceso.test.ts
-```
+**Todo eso está commiteado** en `planes-de-trabajo`, así que ya no hay nada de A
+sin respaldo en git.
 
-⚠️ **`CLAUDE.md` lo escribimos las dos.** Está en la lista porque ya lo edité,
-pero no lo reclamo en exclusiva: es de las dos. Editalo, pero **en tu propia
-sección** y releelo antes, que ya se movió.
+### Qué le falta a A
 
-⚠️ **`src/features/admin/actions.ts` es un archivo compartido de hecho**: tiene
-las actions de videos, programas, ajustes y usuarios. Yo toqué solo las de
-videos y las dos nuevas de `program_days`. Si necesitás otra, avisá.
+- [ ] **Correr la migración** — la corre el dueño en el SQL Editor, **sin
+      `begin;`/`commit;`** (trampa 7) y **al final de todo** (trampa 8: redefine
+      `videos_select_allowed_by_tier`, que ya se reescribió tres veces). Trae una
+      guarda que falla ruidosamente si se corre antes que la de packs
+- [ ] Después de correrla, `npm run test:aislamiento` → tienen que dar **126**.
+      Hoy dan **112 verdes y 14 en rojo**, y los 14 dicen exactamente que falta
+      la migración
+- [ ] `npm run build` — ver el estado más abajo
 
-### 🔴 Migración pendiente
-
-`supabase/migrations/20260921_formulario_de_clases.sql` — **escrita, sin correr.**
-La corre el dueño del proyecto en el SQL Editor de Supabase, **sin `begin;` /
-`commit;`** (trampa 7 de CLAUDE.md) y **al final de todo** (trampa 8: redefine
-`videos_select_allowed_by_tier`, que ya se reescribió tres veces).
-
-Mientras no corra:
-
-- `/admin/videos` no puede guardar — la columna `planes_permitidos` no existe
-- `npm run test:aislamiento` da **14 en rojo**, con el mensaje que lo dice
-- los otros **112 siguen en verde**: no rompí nada de lo que ya andaba
-
-### Qué me falta
-
-- [ ] **Correr la migración** (la corre el dueño) y después `npm run test:aislamiento` → tienen que dar 126
-- [ ] **`npm run build`** — no lo corrí: hay un dev server levantado en el 3000 y
-      un build en el mismo directorio pisa `.next` y rompe el login
-      (ya pasó dos veces, está en CLAUDE.md). `tsc` está limpio
-- [ ] Seguir con Planes de trabajo: es lo único que tengo asignado
+**Qué NO toca A, por consigna:** nada de portada ni de landing.
 
 ---
 
-## Sesión B — Portada / landing
+## Sesión B — Portada editable (recortada)
 
-**Esta sección la completa esa sesión.** Lo de abajo es lo que deduje mirando
-git, no lo que ella declaró: **corregilo.**
+FAQ, video del tráiler y certificados, editables desde el panel.
+**Fuera de alcance por decisión:** los textos del hero y de las secciones en 4
+idiomas, y la traducción automática con DeepL.
 
-**Archivos que veo tocados** (commits `23169a2..6419681`):
+**Migración propia:** `supabase/migrations/20260917_portada_editable.sql`
+*(**aplicada y verificada** el 2026-09-21 con `scripts/verificar-portada.mjs`)*
 
-```
-app/globals.css                      components/ultimo-estudio.tsx
-app/proximamente/page.tsx            public/fotos-landing/*.jpg
-components/navbar.tsx                public/fotos-landing/hero-mobile.avif
-components/ui/arc-gallery-hero-component.tsx
-scripts/verificar-guardas.mjs
-```
+| Archivos nuevos |
+|---|
+| `COORDINACION.md` |
+| `scripts/verificar-portada.mjs` |
+| `src/lib/portada.ts` |
+| `src/features/admin/portada/campos.ts` |
+| `src/features/admin/portada/actions.ts` |
+| `app/admin/portada/page.tsx` |
+| `app/api/admin/portada/upload/route.ts` |
+| `components/admin-portada-faq.tsx` |
+| `components/admin-portada-media.tsx` |
+| `components/landing-faq.tsx` |
 
-**Sin commitear, y no lo toqué:** `scripts/verificar-portada.mjs` — consulta
-`landing_texts` y `landing_faq`, que parecen tablas de una migración suya
-todavía sin correr. **No lo staged ni lo commiteé: es tuyo.**
+| Archivos modificados |
+|---|
+| `app/page.tsx` |
+| `app/globals.css` |
+| `components/video-showcase.tsx` |
+| `src/i18n/public.ts` |
 
-**Migración pendiente:** ⟨completar⟩
-
-**Qué le falta:** ⟨completar⟩
+**Ya commiteado por la sesión B** (no tocar sin avisar): la puerta de acceso
+anticipado (`middleware.ts`, `src/lib/acceso-anticipado.ts`, `app/proximamente/`,
+`app/api/acceso/`, `components/cuenta-regresiva.tsx`), las fotos de
+`public/fotos-landing/`, `components/navbar.tsx`,
+`components/ui/arc-gallery-hero-component.tsx`,
+`components/ui/hover-footer.tsx`, `components/ultimo-estudio.tsx`,
+`next.config.ts` y `scripts/verificar-guardas.mjs`.
 
 ---
 
-## Lo que NO se pisa
+## Bloqueos
 
-| Zona | De quién |
-|---|---|
-| `app/page.tsx`, `components/navbar.tsx`, `components/ui/*`, `public/fotos-landing/`, `app/proximamente/`, `app/globals.css` | **Sesión B** — no lo toco |
-| `app/dashboard/programs/`, `app/admin/programs/`, `components/admin-program-drawer.tsx`, `components/clase-en-planes.tsx` | **Sesión A** |
-| `CLAUDE.md`, `src/features/admin/actions.ts`, `COORDINACION.md` | **compartidos** — releer antes de escribir |
+Cosas que una sesión necesita y están tomadas por la otra.
 
-### Las dos migraciones no se pisan entre sí
+| Qué | Quién lo necesita | Archivo tomado por | Estado |
+|---|---|---|---|
+| Enlace a `/admin/portada` en el menú lateral | B | `components/admin-sidebar.tsx` — A | ✅ **LIBRE.** A ya commiteó. Ojo: en el array `NAV` la etiqueta de `/admin/programs` ahora dice «Planes de trabajo», no «Programas» |
+| Nota de "mejora futura: textos del hero en 4 idiomas + DeepL" | B | `CLAUDE.md` — A | ✅ **LIBRE.** A ya commiteó. **Releelo antes**: creció bastante (formulario de clases, combinación libre de planes, vitrina de planes de trabajo) |
 
-La mía toca `videos`, `programs` y `categories`. La de la portada parece crear
-`landing_texts` y `landing_faq`, que son tablas nuevas. **Pueden correrse en
-cualquier orden**, pero cada una respetando su propio orden interno.
+> ⚠️ «Libre» significa que lo que A tenía escrito ya está en git, no que A no
+> vaya a volver a tocarlo. Si B lo edita, que lo commitee enseguida: así el
+> próximo que lo abra ve la versión de los dos.
 
-⚠️ Cuando las dos estén, `npm run verificar` va a contar más tablas. Si el
-conteo no cuadra, es porque falta correr una de las dos — no porque haya una
-tabla sin RLS.
+---
+
+## Zonas de nadie
+
+Archivos que ninguna de las dos tiene tomados y que, si hay que tocar, se
+anotan acá primero.
+
+- `supabase/migrations/` — cada sesión **sólo** su propia migración. Las dos
+  reescriben policies distintas; si alguna necesita tocar la de la otra, se
+  habla antes. ⚠️ `20260921` reescribe `videos_select_allowed_by_tier` y
+  `20260917` no toca ninguna policy existente: hoy no chocan.
+- `package.json` — si hace falta una dependencia nueva, avisar. Dos sesiones
+  editando `package.json` a la vez dejan el `package-lock.json` inservible.

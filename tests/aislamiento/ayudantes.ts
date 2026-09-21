@@ -305,6 +305,18 @@ export async function exigirMigracionDePacks() {
 }
 
 /** Una clase publicada que exige `tier`. Es lo que un pack va a desbloquear. */
+/**
+ * Una clase publicada.
+ *
+ * Se sigue pasando el TIER y no la lista a proposito: asi este helper prueba,
+ * de paso, que el camino viejo -- escribir solo membership_tier_required --
+ * sigue produciendo el mismo acceso que antes de la migracion 20260921. Si el
+ * trigger que deriva la lista se rompiera, la clase naceria sin planes y TODAS
+ * las pruebas de packs y de catalogo se pondrian en rojo, que es justo lo que
+ * uno quiere que pase.
+ *
+ * Para la combinacion libre esta `crearClaseConPlanes`.
+ */
 export async function crearClase(tier: Exclude<Tier, "none">): Promise<{ id: string }> {
   const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const { data, error } = await admin()
@@ -321,6 +333,59 @@ export async function crearClase(tier: Exclude<Tier, "none">): Promise<{ id: str
     .single();
   if (error || !data) throw new Error(`No se pudo crear la clase: ${error?.message}`);
   return data;
+}
+
+/** Una clase publicada visible por una combinacion CUALQUIERA de planes. */
+export async function crearClaseConPlanes(
+  planes: Exclude<Tier, "none">[],
+  opts: { status?: "draft" | "published" } = {}
+): Promise<{ id: string }> {
+  const marca = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const status = opts.status ?? "published";
+  const { data, error } = await admin()
+    .from("videos")
+    .insert({
+      slug: `${PREFIJO}clase-${marca}`,
+      title_i18n: { es: `${PREFIJO}clase ${marca}` },
+      status,
+      planes_permitidos: planes,
+      duration_seconds: 60,
+      published_at: status === "published" ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`No se pudo crear la clase: ${error?.message}`);
+  return data;
+}
+
+/** Falla ruidosamente si la migracion del formulario de clases no esta puesta. */
+export async function exigirMigracionDePlanes() {
+  const a = admin();
+
+  // Se pregunta por la COLUMNA, no por la tabla: `videos` existe desde phase_a,
+  // asi que un select cualquiera pasaria igual sin la migracion y las pruebas
+  // de abajo darian verde por el motivo equivocado.
+  const columna = await a.from("videos").select("planes_permitidos, content_type").limit(1);
+  if (columna.error) {
+    throw new Error(
+      `FALTA LA MIGRACION DEL FORMULARIO DE CLASES.
+
+` +
+        `  ${columna.error.code ?? "?"}: ${columna.error.message}
+
+` +
+        `  1. Correr supabase/migrations/20260921_formulario_de_clases.sql
+` +
+        `     (PEGAR SIN el begin;/commit; -- trampa 7 de CLAUDE.md)
+
+` +
+        `  2. Si la columna YA existe, es la cache de esquema de PostgREST:
+
+` +
+        `       notify pgrst, 'reload schema';
+`
+    );
+  }
 }
 
 export async function crearPack(videoIds: string[]): Promise<{ id: string }> {

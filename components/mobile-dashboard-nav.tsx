@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 
 /**
  * Los MISMOS ocho destinos que el sidebar de escritorio. Antes habia cinco y
- * Programas, En vivo y Documentos no se podian abrir desde el telefono.
+ * Planes de trabajo, En vivo y Documentos no se podian abrir desde el telefono.
  *
  * POR QUE NO ESTAN LOS OCHO EN LA BARRA DE ABAJO
  *   Ocho mas Admin son nueve columnas. En una pantalla de 375px queda cada una
@@ -18,7 +18,7 @@ import { useState, useEffect } from 'react';
 const NAV = [
   { href: '/dashboard',           label: 'Inicio',     exact: true  },
   { href: '/dashboard/library',   label: 'Clases',     exact: false },
-  { href: '/dashboard/programs',  label: 'Programas',  exact: false },
+  { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false },
   { href: '/dashboard/live',      label: 'En vivo',    exact: false },
   { href: '/dashboard/chat',      label: 'Mi chat',    exact: false },
   { href: '/dashboard/community', label: 'Comunidad',  exact: false },

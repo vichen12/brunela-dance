@@ -32,6 +32,7 @@ export function BotonEnviar({
   formAction,
   name,
   value,
+  disabled,
 }: {
   children: React.ReactNode;
   /** Que decir mientras trabaja. Por defecto, "Guardando...". */
@@ -46,19 +47,25 @@ export function BotonEnviar({
   formAction?: (formData: FormData) => void | Promise<void>;
   name?: string;
   value?: string;
+  /**
+   * Deshabilitado por el LLAMADOR, no por estar enviando. Se suma al de
+   * `pending`: un boton que ya estaba apagado no se enciende por terminar un
+   * envio ajeno del mismo formulario.
+   */
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className={className}
       formAction={formAction}
       name={name}
       value={value}
       style={{
-        cursor: pending ? "progress" : "pointer",
+        cursor: pending ? "progress" : disabled ? "default" : "pointer",
         opacity: pending ? 0.65 : 1,
         transition: "opacity 140ms ease",
         ...style,
