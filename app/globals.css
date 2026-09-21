@@ -1127,6 +1127,17 @@ textarea { resize: vertical; }
   16/9 y 56.25 es 9/16; con las unidades del contenedor, el video llena la banda
   sea cual sea la proporcion de la pantalla.
 */
+/* Un archivo propio llena el marco igual que el iframe, pero esto SI entiende
+   object-fit: no hace falta la cuenta de unidades de contenedor. */
+.video-showcase-archivo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+
 .video-showcase-video iframe {
   position: absolute;
   top: 50%;
@@ -3400,4 +3411,129 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PREGUNTAS FRECUENTES
+   Es la ultima seccion antes del pie. No lleva min-height: 100svh -- su alto
+   depende de cuantas preguntas haya cargadas, y forzar una pantalla entera con
+   tres preguntas deja medio viewport vacio.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.faq-section {
+  position: relative;
+  z-index: 1;
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.faq-shell {
+  width: min(760px, calc(100% - clamp(1.5rem, 6vw, 3rem)));
+  margin-inline: auto;
+}
+
+.faq-head { text-align: center; margin-bottom: clamp(1.6rem, 4vw, 2.6rem); }
+
+.faq-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(1.8rem, 4.5vw, 2.9rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  /* --pink-mid y no --pink: sobre el crema del fondo, --pink no llega al 3:1
+     que pide el texto grande. Es el reemplazo documentado en CLAUDE.md. */
+  color: var(--pink-mid, #D93438);
+  text-wrap: balance;
+}
+
+.faq-lead {
+  margin: 0;
+  font-size: clamp(0.92rem, 1.5vw, 1.02rem);
+  line-height: 1.6;
+  color: var(--pink-muted, #8C5F5F);
+  text-wrap: pretty;
+}
+
+.faq-lista { display: grid; gap: 0.7rem; }
+
+.faq-item {
+  border: 1px solid var(--pink-line, #F2C6C6);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.faq-item[open] {
+  border-color: var(--pink-soft, #FFDADA);
+  box-shadow: 0 14px 40px rgba(176, 58, 62, 0.08);
+}
+
+.faq-pregunta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  /* 44px de area tactil: es lo que se toca en el telefono. */
+  min-height: 44px;
+  padding: clamp(0.9rem, 2.2vw, 1.15rem) clamp(1rem, 2.6vw, 1.5rem);
+  cursor: pointer;
+  font-family: var(--font-body), sans-serif;
+  font-size: clamp(0.92rem, 1.5vw, 1.02rem);
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ink, #1c1917);
+  list-style: none;
+}
+
+/* El triangulito por defecto de <summary>, en los dos motores. */
+.faq-pregunta::-webkit-details-marker { display: none; }
+.faq-pregunta::marker { content: ""; }
+
+.faq-pregunta:focus-visible {
+  outline: 2px solid var(--pink-deep, #B03A3E);
+  outline-offset: -3px;
+  border-radius: 14px;
+}
+
+/* El signo se dibuja con dos trazos y se convierte en menos al abrir: una sola
+   forma, sin iconos ni fuente extra. */
+.faq-signo {
+  position: relative;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.faq-signo::before,
+.faq-signo::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--pink-deep, #B03A3E);
+  transform: translateY(-50%);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.faq-signo::after { transform: translateY(-50%) rotate(90deg); }
+.faq-item[open] .faq-signo::after { transform: translateY(-50%) rotate(0deg); opacity: 0; }
+
+.faq-respuesta {
+  padding: 0 clamp(1rem, 2.6vw, 1.5rem) clamp(1rem, 2.6vw, 1.35rem);
+  font-size: clamp(0.88rem, 1.4vw, 0.97rem);
+  line-height: 1.7;
+  color: var(--pink-muted, #8C5F5F);
+  /* Los saltos que escribio Brunela en el textarea se respetan, y nada de lo
+     que escriba puede inyectar marcado: es texto, no HTML. */
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-item,
+  .faq-signo::before,
+  .faq-signo::after { transition: none; }
 }

@@ -171,6 +171,9 @@ export const publicMessages = {
     "plan3.include3": "Acompañamiento más personalizado",
     "plan3.include4": "Mayor seguimiento en tu progreso",
 
+    "faq.title": "Preguntas frecuentes",
+    "faq.lead": "Lo que se pregunta casi todo el mundo antes de empezar.",
+
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
     "footer.place": "Barcelona y online",
@@ -371,6 +374,9 @@ export const publicMessages = {
     "plan3.include2": "2 live classes per month with booking",
     "plan3.include3": "More personalised support",
     "plan3.include4": "Greater monitoring of your progress",
+
+    "faq.title": "Frequently asked questions",
+    "faq.lead": "What almost everyone asks before starting.",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
@@ -573,6 +579,9 @@ export const publicMessages = {
     "plan3.include3": "Accompagnement plus personnalisé",
     "plan3.include4": "Meilleur suivi de ta progression",
 
+    "faq.title": "Questions frequentes",
+    "faq.lead": "Ce que presque tout le monde demande avant de commencer.",
+
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
     "footer.place": "Barcelone et en ligne",
@@ -773,6 +782,9 @@ export const publicMessages = {
     "plan3.include2": "2 lezioni live al mese con prenotazione",
     "plan3.include3": "Supporto più personalizzato",
     "plan3.include4": "Maggiore monitoraggio dei tuoi progressi",
+
+    "faq.title": "Domande frequenti",
+    "faq.lead": "Quello che quasi tutti chiedono prima di iniziare.",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Balletto - PBT - PCT - Pilates - Stretching",

@@ -43,10 +43,57 @@ import { T } from "@/components/language-provider";
  *    los tres la seccion se ve como se ve hoy en vez de quedar en negro.
  */
 
-const VIDEO_ID = "XFt3nFx8-4g";
+/** El trailer de fabrica, el dia que Brunela todavia no cargo ninguno. */
+const VIDEO_ID_POR_DEFECTO = "XFt3nFx8-4g";
+
+/**
+ * Saca el id de un enlace de YouTube, o null si no lo es.
+ *
+ * POR QUE SE ACEPTAN LAS DOS COSAS
+ *   El panel deja SUBIR un archivo (va al bucket landing-media) o PEGAR una
+ *   direccion. Si lo que pega es de YouTube conviene usar el reproductor de
+ *   YouTube y no un <video> apuntando a una pagina HTML, que no reproduciria
+ *   nada. Y si sube un mp4, va como <video> y no hay iframe que cargar.
+ *
+ *   Ademas hay un motivo de plata: el proyecto esta en el plan Free y son 5 GB
+ *   de egress al mes. Un video servido desde YouTube no los gasta; uno servido
+ *   desde Storage, si. Que pegar un enlace funcione es lo que hace que la
+ *   opcion barata siga disponible.
+ *
+ * ⚠️ Se parsea con URL y se compara el HOST exacto. Un `includes("youtube")`
+ *    diria que si a `misitio.com/youtube` y terminariamos embebiendo lo que
+ *    haya ahi.
+ */
+function idDeYouTube(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return u.pathname.slice(1) || null;
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const m = u.pathname.match(/^\/(?:embed|v|shorts)\/([^/?]+)/);
+      return m ? m[1] : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 const ORIGEN_YT = "https://www.youtube-nocookie.com";
 
-export function VideoShowcase() {
+export function VideoShowcase({
+  src = null,
+  poster = null,
+}: {
+  /** Lo que cargo Brunela: un archivo del bucket o un enlace de YouTube. */
+  src?: string | null;
+  poster?: string | null;
+} = {}) {
+  const idYt = idDeYouTube(src);
+  /** Es un archivo suelto: hay src y NO es de YouTube. */
+  const esArchivo = Boolean(src) && idYt === null;
+  const VIDEO_ID = idYt ?? VIDEO_ID_POR_DEFECTO;
   const seccionRef = useRef<HTMLElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -109,6 +156,18 @@ export function VideoShowcase() {
   }, []);
 
   function alternarSonido() {
+    // Con un archivo propio no hay postMessage: se toca el elemento directo.
+    if (esArchivo) {
+      const v = document.querySelector<HTMLVideoElement>(".video-showcase-archivo");
+      const siguiente = !muted;
+      if (v) {
+        v.muted = siguiente;
+        if (!siguiente) void v.play();
+      }
+      setMuted(siguiente);
+      return;
+    }
+
     if (!montar) {
       // Con reduced-motion el primer toque es "reproducir", no "activar sonido".
       setMontar(true);
@@ -128,7 +187,7 @@ export function VideoShowcase() {
    * `playsinline=1` evita que iOS se lo lleve a pantalla completa solo, que
    * arruinaria la portada en el telefono.
    */
-  const src =
+  const srcIframe =
     `${ORIGEN_YT}/embed/${VIDEO_ID}` +
     `?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}` +
     `&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1` +
@@ -146,12 +205,57 @@ export function VideoShowcase() {
       className="video-showcase-section"
       aria-label="Tráiler de Brunela Dance Trainer"
     >
-      <div className="video-showcase-frame" data-listo={listo ? "si" : "no"}>
+      <div
+        className="video-showcase-frame"
+        data-listo={listo || esArchivo ? "si" : "no"}
+        /*
+          El poster cargado desde el panel pisa al del CSS.
+          ⚠️ Van las TRES capas de background-image otra vez, no solo la foto:
+             `background-image` es una sola propiedad, y escribir una capa borra
+             las otras dos -- el resplandor coral y el degradado oscuro que hay
+             debajo. Sin ellos, el texto blanco queda sobre lo que haya.
+        */
+        style={
+          poster
+            ? {
+                backgroundImage: [
+                  `url("${poster}")`,
+                  "radial-gradient(circle at 16% 18%, rgba(230, 79, 85, 0.28), transparent 28%)",
+                  "linear-gradient(135deg, #080A12 0%, #1A1018 100%)",
+                ].join(", "),
+              }
+            : undefined
+        }
+      >
         <div className="video-showcase-video">
-          {montar && (
+          {/*
+            Un archivo subido va como <video> y no como iframe: apuntar un
+            iframe a un mp4 deja al navegador decidiendo, y lo que decide no es
+            el reproductor de la seccion.
+
+            No lleva `controls`: los controles son los botones de abajo, igual
+            que con YouTube. Y `preload="metadata"` -- no "auto" -- para no
+            bajar el video entero a quien nunca llega hasta aca.
+          */}
+          {esArchivo && src && (
+            <video
+              className="video-showcase-archivo"
+              src={src}
+              poster={poster ?? undefined}
+              autoPlay={!menosMovimiento}
+              loop
+              muted={muted}
+              playsInline
+              preload="metadata"
+              aria-hidden
+              tabIndex={-1}
+            />
+          )}
+
+          {!esArchivo && montar && (
             <iframe
               ref={iframeRef}
-              src={src}
+              src={srcIframe}
               title="Tráiler de Brunela Dance Trainer"
               /* `autoplay` en allow es lo que permite que arranque en muted;
                  sin el, Chrome lo frena y queda la foto para siempre. */
@@ -180,9 +284,9 @@ export function VideoShowcase() {
 
           <div className="video-showcase-acciones">
             <button className="video-sound-button" type="button" onClick={alternarSonido}>
-              {!montar ? <Play size={17} /> : muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+              {!montar && !esArchivo ? <Play size={17} /> : muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
               <span>
-                {!montar ? <T id="method.cta" /> : muted ? <T id="video.soundOn" /> : <T id="video.soundOff" />}
+                {!montar && !esArchivo ? <T id="method.cta" /> : muted ? <T id="video.soundOn" /> : <T id="video.soundOff" />}
               </span>
             </button>
 
@@ -196,6 +300,7 @@ export function VideoShowcase() {
               `noopener` no es decorativo: sin el, la pestaña que se abre puede
               tocar `window.opener` y redirigir esta.
             */}
+            {!esArchivo && (
             <a
               className="video-yt-link"
               href={`https://youtu.be/${VIDEO_ID}`}
@@ -206,6 +311,7 @@ export function VideoShowcase() {
               <ExternalLink size={14} aria-hidden />
               <span className="sr-only"> (se abre en una pestaña nueva)</span>
             </a>
+            )}
           </div>
         </div>
       </div>

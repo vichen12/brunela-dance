@@ -19,6 +19,16 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { VideoShowcase } from "@/components/video-showcase";
 import { UltimoEstudio } from "@/components/ultimo-estudio";
 import { T } from "@/components/language-provider";
+import { LandingFaq } from "@/components/landing-faq";
+import {
+  preguntasFrecuentes,
+  textosDePortada,
+  comoTexto,
+  comoLista,
+  CLAVE_VIDEO_SRC,
+  CLAVE_VIDEO_POSTER,
+  CLAVE_CERTIFICADOS,
+} from "@/src/lib/portada";
 import type { PublicMessageKey } from "@/src/i18n/public";
 
 function GrainTexture() {
@@ -241,7 +251,15 @@ function IconoMetodo({ nombre }: { nombre: (typeof methodCards)[number]["icono"]
   }
 }
 
-const aboutHighlights = ["Ballet", "Pilates", "PBT", "PCT", "RAD CPD Credits"];
+/**
+ * Los certificados, cuando Brunela todavia no cargo los suyos.
+ *
+ * ⚠️ ESTO NO ES UN PLACEHOLDER: ES EL PISO. La lista de la base PISA a esta,
+ *    no la reemplaza. Si la base no responde, o si alguien vacia el campo, la
+ *    portada muestra estos cinco y no un hueco. Vaciar el campo en el panel es
+ *    justamente la forma de volver aca.
+ */
+const CERTIFICADOS_POR_DEFECTO = ["Ballet", "Pilates", "PBT", "PCT", "RAD CPD Credits"];
 
 // El icono va como cadena por el mismo motivo que en methodCards: ver la nota
 // de la trampa 6 alla arriba.
@@ -442,7 +460,21 @@ async function packsDeLaPortada(): Promise<PackPublico[]> {
 }
 
 export default async function HomePage() {
-  const [precios, packs] = await Promise.all([preciosDeLaBase(), packsDeLaPortada()]);
+  /**
+   * Las cuatro lecturas van en paralelo: son cuatro viajes a Frankfurt de ~30 ms
+   * cada uno y en serie serian 120 ms de portada. Ninguna puede tirar la pagina
+   * -- todas devuelven vacio ante cualquier problema, ver src/lib/portada.ts.
+   */
+  const [precios, packs, faq, textos] = await Promise.all([
+    preciosDeLaBase(),
+    packsDeLaPortada(),
+    preguntasFrecuentes(),
+    textosDePortada(),
+  ]);
+
+  const certificados = comoLista(textos[CLAVE_CERTIFICADOS]) ?? CERTIFICADOS_POR_DEFECTO;
+  const trailerSrc = comoTexto(textos[CLAVE_VIDEO_SRC]);
+  const trailerPoster = comoTexto(textos[CLAVE_VIDEO_POSTER]);
 
   const plansConPrecio = plans.map((p) => {
     const dePanel = precios[p.tier];
@@ -463,7 +495,7 @@ export default async function HomePage() {
 
       <InfinitePhotoCarousel />
 
-      <VideoShowcase />
+      <VideoShowcase src={trailerSrc} poster={trailerPoster} />
 
       {/* El id lo usa el navbar (enlace + resaltado de seccion activa). Sin el,
           esta seccion era contenido real al que no llegaba ningun enlace. */}
@@ -631,7 +663,7 @@ export default async function HomePage() {
             </div>
 
             <div className="about-tags">
-              {aboutHighlights.map((item) => (
+              {certificados.map((item) => (
                 <span key={item}>{item}</span>
               ))}
             </div>
@@ -698,6 +730,11 @@ export default async function HomePage() {
             packs no queda un hueco ni un título huérfano. */}
         {packs.length > 0 && <PacksPublicos packs={packs} />}
       </section>
+
+      {/* Entre el precio y el pie a proposito: las objeciones aparecen justo
+          despues de ver cuanto sale. Si no hay preguntas publicadas, este
+          componente devuelve null y no queda ni un titulo huerfano. */}
+      <LandingFaq preguntas={faq} />
 
       <div style={{ position: "relative", zIndex: 1 }}>
         <BrunelaFooter />
