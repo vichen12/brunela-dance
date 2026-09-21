@@ -1017,7 +1017,7 @@ textarea { resize: vertical; }
        video 16:9 perdia el 36% del alto. A 85vh sobre un ancho completo la caja
        queda mucho mas cerca de 16:9 y casi no se recorta nada.
   */
-  min-height: min(85vh, 820px);
+  min-height: min(85svh, 820px);
   overflow: hidden;
   /* Sin radio ni borde: a sangre completa un recuadro redondeado se lee como
      tarjeta, y esto ya no es una tarjeta. */
@@ -1048,6 +1048,48 @@ textarea { resize: vertical; }
   background-position: 50% 42%, center, center;
   background-repeat: no-repeat;
   box-shadow: 0 34px 110px rgba(42, 23, 27, 0.22);
+}
+
+/*
+  🔴 EN EL TELEFONO EL ALTO NO PUEDE SALIR DE LA ALTURA DE PANTALLA.
+
+     Con 85vh la caja queda en 0.54:1 contra un video 16:9. `cover` entonces
+     amplia 3.27x y deja ver el 30.6% DEL ANCHO: una tira vertical del centro,
+     no un encuadre. Medido a 360, 390 y 430 -- da casi lo mismo en los tres,
+     porque la proporcion alto/ancho de un telefono es casi constante.
+
+     Atado al ANCHO la fraccion visible es fija por construccion: 9/(16*1.15)
+     = 48.9%. El min() con 85svh cubre el telefono apaisado, y el 820px empalma
+     con el valor de escritorio sin salto (a 720px, 115vw ya vale 828).
+
+     El mismo recorte sufria el POSTER, que usa esta caja: de una foto donde el
+     cuerpo vive en el 0-35% del ancho se veia solo la zapatilla y el piso.
+*/
+@media (max-width: 720px) {
+  .video-showcase-frame {
+    min-height: min(115vw, 85svh, 820px);
+    background-position: 40% 50%, center, center;
+  }
+
+  /* En movil la medida corta no gana nada: el titular queda fijo en 2.1rem y
+     14ch lo parte en 5 lineas dentro de una columna mas angosta que la
+     pantalla. */
+  /*
+  🔴 ESTE KICKER NO VA SOBRE FONDO CLARO: VA SOBRE VIDEO.
+
+     --pink #E64F55 a 9.92px sobre el velo de movil da 2.98:1 contra el poster
+     real, y 1.64:1 contra un fotograma blanco -- y es un video de danza en un
+     estudio de paredes blancas, asi que ese fotograma va a pasar.
+
+     La regla de marca de CLAUDE.md es "--pink para SUPERFICIE glanceable";
+     aca es texto chico de lectura. --pink-soft da 8.5:1 sobre el poster y
+     4.7:1 en el peor caso, y sigue siendo de la familia coral.
+*/
+.video-showcase-content .section-kicker {
+  color: var(--pink-soft, #FFDADA);
+}
+
+.video-showcase-content h2 { max-width: 18ch; }
 }
 
 .video-showcase-scrim {
@@ -1146,7 +1188,7 @@ textarea { resize: vertical; }
 @media (max-width: 900px) {
   .video-showcase-scrim {
     background:
-      linear-gradient(180deg, rgba(10, 6, 12, 0.5) 0%, rgba(10, 6, 12, 0.78) 55%, rgba(10, 6, 12, 0.9) 100%);
+      linear-gradient(180deg, rgba(10, 6, 12, 0.62) 0%, rgba(10, 6, 12, 0.80) 52%, rgba(10, 6, 12, 0.92) 100%);
   }
 }
 
@@ -1220,6 +1262,30 @@ textarea { resize: vertical; }
   flex-wrap: wrap;
   gap: 0.6rem 1.15rem;
   margin-top: 1.6rem;
+}
+
+/*
+  ⚠️ EL ANCHO DEL PAR DEPENDE DE LA ETIQUETA, Y LA ETIQUETA CAMBIA SOLA.
+
+     "Ver trailer" mide 340px con el gap y entra a 390px; "Activar sonido" mide
+     367px y NO entra. O sea que la fila arranca entera y SE PARTE EN DOS en
+     cuanto el IntersectionObserver monta el iframe, delante de la persona. Y
+     vuelve a saltar en cada toque, porque Activar y Silenciar cruzan el umbral
+     en los dos sentidos. 390px es el ancho del iPhone 12 al 16.
+
+     Apilados, la maqueta deja de depender del texto.
+*/
+@media (max-width: 420px) {
+  .video-showcase-acciones {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    /* Hace falta porque .video-showcase-content tiene justify-items: start. */
+    width: 100%;
+  }
+
+  .video-sound-button,
+  .video-yt-link { justify-content: center; }
 }
 
 /*

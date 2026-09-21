@@ -142,7 +142,12 @@ export default async function ProximamentePage({
            una version suya, no como otra pagina.
            ──────────────────────────────────────────────────────────────── */
         .pa-page {
-          min-height: 100dvh;
+          /* svh y no dvh: dvh se recalcula cuando Safari colapsa su barra, y
+             esta pantalla scrollea en movil (~893px de contenido en un iPhone
+             de 844), asi que el grid entero se re-maquetaba a mitad del
+             scroll. Con svh la altura no se mueve y el contenido crece igual,
+             porque es min-height. */
+          min-height: 100svh;
           display: grid;
           grid-template-columns: minmax(0, 0.9fr) minmax(430px, 1.1fr);
           background: #FFF8F8;
@@ -378,8 +383,23 @@ export default async function ProximamentePage({
           .pa-page { grid-template-columns: 1fr; }
 
           .pa-foto {
-            min-height: clamp(190px, 34vh, 300px);
-            background-position: center 22%;
+            min-height: clamp(190px, 34svh, 300px);
+            /*
+              🔴 EL 22% DEJABA LA CARA DEBAJO DEL VELO Y LAS MANOS AFUERA.
+
+                 En la foto la cara vive entre el 37.5% y el 54% del alto, y las
+                 manos en la barra entre el 67% y el 75%. Con 22% la ventana era
+                 9.9%-65.1%: media banda de pierna y pared, los ojos al 67% del
+                 alto de la banda (al 83% en un telefono de 430) y las manos
+                 cortadas. Y justo ahi el velo ya lleva 25-39% de blanco encima,
+                 asi que la unica cara de la pantalla quedaba destenida y al
+                 borde.
+
+                 Con 40% la ventana es 17.9%-73.1%: la cara cae al 53% -- casi
+                 el centro -- y entran las manos. El velo sobre la cara baja al
+                 12%.
+            */
+            background-position: center 40%;
           }
 
           .pa-foto::after {
@@ -390,7 +410,13 @@ export default async function ProximamentePage({
           .pa-col { width: 100%; }
         }
 
-        @media (max-width: 430px) {
+        /*
+          La fila entra comoda hasta ~320px: el boton "Entrar" mide 99.6px y al
+          input le quedan 204px a 360 y 274px a 430. Cortar en 430 apilaba de
+          gusto justo en el ancho del iPhone Pro Max -- el telefono mas grande
+          recibia la version degradada.
+        */
+        @media (max-width: 359px) {
           .pa-row { flex-direction: column; }
           .pa-btn { width: 100%; }
         }

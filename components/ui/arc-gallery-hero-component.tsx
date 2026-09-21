@@ -69,6 +69,25 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           el nombre del estudio, y eso lo dice el wordmark del <h1>. Describirla
           ademas obligaria a un lector de pantalla a oir dos veces lo mismo.
         */}
+        {/*
+          ART DIRECTION, no solo tamaño.
+
+          En vertical la ventana visible era el 52%-85% del ancho del original:
+          o sea que la mitad izquierda -- el suelo despejado que se espejo A
+          PROPOSITO para poner ahi el logo -- NO SE VE NUNCA en un telefono, y
+          la copia caia justo encima de la bailarina.
+
+          Ademas el telefono decodificaba 3.69 Mpx (2560x1440) para pintar
+          0.26 Mpx: 14 veces mas de lo necesario, en el elemento que ES el LCP
+          y en AVIF, que decodifica mas lento que JPEG.
+        */}
+        <picture>
+          <source
+            media="(max-width: 900px)"
+            srcSet="/fotos-landing/hero-mobile.avif"
+            width={1080}
+            height={1620}
+          />
         <img
           className="brand-hero-bg"
           /* ⚠️ Esta imagen esta ESPEJADA respecto del original de la sesion.
@@ -85,6 +104,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           fetchPriority="high"
           decoding="async"
         />
+        </picture>
         <div className="brand-hero-scrim" />
       </div>
 
@@ -355,22 +375,48 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           }
 
           /*
-            78% y no 70%: en retrato la ventana visible es angosta, y con 70% la
-            bailarina quedaba corrida a la derecha, con la pared vacia ocupando
-            la izquierda y el brazo cortado por el borde. Con 78% queda centrada.
-            El valor de escritorio (68%) NO sirve aca: alli la ventana es ancha y
-            el reparto es otro.
-          */
-          .brand-hero-bg { object-position: 78% 16%; }
+            center a secas, y ya no 78%: desde que existe hero-mobile.avif la
+            foto que se sirve aca YA VIENE ENCUADRADA para vertical, asi que no
+            hay nada que reencuadrar. El 78% era para recortar la version
+            apaisada, y aplicado sobre el recorte vertical corre a la bailarina.
 
+            Tampoco lleva componente vertical: en retrato cover escala por el
+            ALTO, el desplazamiento vertical da 0 y se ve el 100% del alto. Un
+            porcentaje ahi sugiere una palanca que no existe.
+          */
+          .brand-hero-bg { object-position: center; }
+
+          /*
+            🔴 LOS TOPES VAN EN px DESDE ABAJO, NO EN PORCENTAJE.
+
+               La copia esta anclada al borde inferior (align-content: end mas
+               padding-bottom), asi que su ALTO es fijo -- unos 360px -- pero
+               su posicion EN PORCENTAJE del hero cambia con cada telefono: el
+               kicker cae al 28% en un iPhone SE y al 45% en un Pro Max. Con los
+               topes en %, el lavado caia donde no habia texto.
+
+               Lo que eso producia, medido sobre los pixeles reales de la foto:
+
+                 iPhone SE      wordmark 1.00:1   kicker 1.19:1
+                 iPhone 13/14   wordmark 1.97:1   kicker 2.76:1
+                 Pro Max        wordmark 2.75:1   kicker 4.10:1
+
+               1.00:1 es invisible. El logo de la marca desaparecia contra su
+               propio fondo -- exactamente el fallo que la nota de arriba dice
+               haber resuelto, porque ahi se midio el scrim de ESCRITORIO, que
+               es horizontal y son otras reglas.
+
+               Anclado en px desde abajo, el lavado viaja con la copia: el
+               kicker queda al 97% de scrim (5.38:1) y el wordmark al 98%
+               (3.4:1). Aguanta un bloque de copia de hasta 428px.
+          */
           .brand-hero-scrim {
             background: linear-gradient(
               180deg,
-              rgba(254, 250, 247, 0.06) 0%,
-              rgba(254, 250, 247, 0.22) 26%,
-              rgba(254, 250, 247, 0.80) 45%,
-              rgba(254, 250, 247, 0.97) 58%,
-              #FEFAF7 78%
+              rgba(254, 250, 247, 0.05) 0,
+              rgba(254, 250, 247, 0.20) calc(100% - 620px),
+              rgba(254, 250, 247, 0.94) calc(100% - 480px),
+              #FEFAF7 calc(100% - 350px)
             );
           }
 
@@ -393,6 +439,44 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           }
 
           .hero-action { min-width: min(320px, 100%); }
+        }
+
+        /*
+          Telefonos CORTOS (iPhone SE, Android con barra grande). La copia mide
+          ~506px con su relleno y el hero ahi son 559px: quedaban 53px de foto,
+          y el scrim de arriba -- que arranca 620px por encima del fondo -- salia
+          negativo y lavaba la imagen entera desde el primer pixel. La bailarina
+          desaparecia.
+
+          Se cede alto en la COPIA, no en el scrim: el scrim es legibilidad.
+        */
+        @media (max-width: 900px) and (max-height: 700px) {
+          .brand-hero {
+            /* 76px alcanza: la barra en movil mide 30px de marca mas relleno,
+               no los 108 que reserva el caso general. */
+            padding-top: 76px;
+            padding-bottom: 2.25rem;
+          }
+          .brand-hero-copy { gap: 0.72rem; }
+          .brand-hero-logo { width: min(288px, 88%); }
+          .brand-hero-subtitle {
+            max-width: 34ch;
+            font-size: 0.94rem;
+            line-height: 1.48;
+          }
+          .hero-action {
+            --btn-min-h: 46px;
+            --btn-pad-x: 1.15rem;
+          }
+          .brand-hero-scrim {
+            background: linear-gradient(
+              180deg,
+              rgba(254, 250, 247, 0.05) 0,
+              rgba(254, 250, 247, 0.20) calc(100% - 490px),
+              rgba(254, 250, 247, 0.94) calc(100% - 380px),
+              #FEFAF7 calc(100% - 280px)
+            );
+          }
         }
 
         @media (max-width: 480px) {

@@ -38,7 +38,7 @@ const FICHAS = [
     titulo: "Ballet técnico",
     meta: "32 min · Técnica",
     foto: "/fotos-landing/c-barra.jpg",
-    encuadre: "center top",
+    encuadre: "center 30%",
     descripcion:
       "Una clase para trabajar postura, control, coordinación y calidad de movimiento desde la base del ballet.",
     puntos: [
@@ -54,7 +54,7 @@ const FICHAS = [
     titulo: "Progressing Ballet Technique",
     meta: "28 min · PBT",
     foto: "/fotos-landing/c-cintas.jpg",
-    encuadre: "center",
+    encuadre: "25% 30%",
     descripcion:
       "Entrenamiento de memoria muscular para mejorar la técnica, activar correctamente el cuerpo y bailar con más seguridad.",
     puntos: [
@@ -70,7 +70,7 @@ const FICHAS = [
     titulo: "Flexibilidad consciente",
     meta: "24 min · Stretching",
     foto: "/fotos-landing/c-mermaid.jpg",
-    encuadre: "center top",
+    encuadre: "center 80%",
     descripcion:
       "Una práctica de movilidad y elongación para ganar rango sin forzar, cuidando la activación y la respiración.",
     puntos: [
@@ -86,7 +86,7 @@ const FICHAS = [
     titulo: "Pies, rotación y estabilidad",
     meta: "14 días · Objetivo específico",
     foto: "/fotos-landing/c-retrato.jpg",
-    encuadre: "center",
+    encuadre: "center 18%",
     descripcion:
       "Un recorrido guiado para trabajar bases técnicas que sostienen el rendimiento del bailarín.",
     puntos: [
@@ -102,7 +102,7 @@ const FICHAS = [
     titulo: "Movilidad para splits",
     meta: "14 días · Flexibilidad",
     foto: "/fotos-landing/c-split.jpg",
-    encuadre: "center",
+    encuadre: "65% 60%",
     descripcion:
       "Recorrido estructurado para avanzar en flexibilidad con técnica, fuerza activa y cuidado corporal.",
     puntos: [
@@ -118,7 +118,7 @@ const FICHAS = [
     titulo: "Contemporary Technique",
     meta: "Series · PCT",
     foto: "/fotos-landing/c-pike.jpg",
-    encuadre: "center",
+    encuadre: "60% 60%",
     descripcion:
       "Un recorrido para explorar articulación, transferencia de peso, conexión con el suelo y libertad de movimiento.",
     puntos: [
@@ -150,7 +150,7 @@ const FICHAS = [
     titulo: "Progreso guiado",
     meta: "Recorridos estructurados",
     foto: "/fotos-landing/c-cou.jpg",
-    encuadre: "center",
+    encuadre: "center 60%",
     descripcion:
       "Recorridos de trabajo con objetivos específicos para entrenar con más profundidad, orden y precisión.",
     puntos: [
@@ -166,7 +166,7 @@ const FICHAS = [
     titulo: "Acompañamiento",
     meta: "Clases en vivo y seguimiento",
     foto: "/fotos-landing/c-cambre.jpg",
-    encuadre: "center top",
+    encuadre: "center 70%",
     descripcion:
       "Una experiencia más cercana para revisar tu proceso, resolver dudas y ajustar el entrenamiento a tus necesidades.",
     puntos: [
@@ -951,7 +951,18 @@ export function UltimoEstudio() {
 
         @media (max-width: 760px) {
           .ultimo-detalle { grid-template-columns: minmax(0, 1fr); }
-          .ultimo-detalle-foto { min-height: 200px; }
+          .ultimo-detalle-foto {
+            /* 200px fijos descartaban el 42% del alto de la foto: en un movil de
+               360 la caja quedaba 328x200 (1.64:1) contra un archivo de 0.95:1.
+               Con 4/3 la caja pasa a 328x246 y el descarte baja al 29%. */
+            min-height: 0;
+            aspect-ratio: 4 / 3;
+          }
+          /* En movil la foto esta ARRIBA del texto, no a su izquierda: el
+             degradado de union tiene que caer abajo, no al costado. */
+          .ultimo-detalle-foto::after {
+            background: linear-gradient(180deg, transparent 72%, rgba(255, 255, 255, 0.28) 100%);
+          }
         }
 
         @media (max-width: 900px) {
@@ -963,20 +974,58 @@ export function UltimoEstudio() {
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
+            /* Sin esto, deslizar mas alla de la primera ficha encadena el gesto
+               y el navegador se va ATRAS. Con tres fichas se llega al extremo
+               cada dos deslizamientos. */
+            overscroll-behavior-x: contain;
+            /* Aire para que la sombra de la ficha no quede cercenada por el
+               overflow. */
+            padding: 6px 0 20px;
           }
 
           .ultimo-pista::-webkit-scrollbar { display: none; }
 
-          .ultimo-card { scroll-snap-align: start; }
+          /*
+            ⚠️ EL ALTO FIJO SE DA VUELTA EN EL CARRUSEL.
+
+               min-height: clamp(330px, 30vw, 420px) esta pensado para la
+               grilla de 3 columnas del escritorio, donde la columna se
+               ANGOSTA. Aca pasa lo contrario: la pista da el ancho entero, asi
+               que al girar el telefono la ficha queda 717x330 y cover
+               descarta el 56% del alto de la foto -- cabezas y pies afuera.
+
+               La columna se queda en 100% porque de eso depende la navegacion
+               por puntos; lo que se limita es la FICHA.
+          */
+          .ultimo-card {
+            /* center y no start: al centrar la ficha con margin auto, el
+               anclaje de start queda corrido medio margen y los puntos dejan
+               de coincidir con lo que se ve. */
+            scroll-snap-align: center;
+            min-height: 0;
+            aspect-ratio: 5 / 6;
+            width: min(100%, 24rem);
+            margin-inline: auto;
+          }
 
           .ultimo-puntos {
             display: flex;
             justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1.2rem;
+            /* 1.1rem y no 0.5: hace sitio al area tactil invisible de abajo.
+               17.6px es mayor que los 16px que suman las dos expansiones, asi
+               que las areas no se solapan. */
+            gap: 1.1rem;
+            margin-top: 0.6rem;
           }
 
+          /*
+            ⚠️ 9x9 px es imposible de acertar con el dedo, y estos botones SOLO
+               existen en movil -- o sea que el unico sitio donde se usan era el
+               unico donde no se podian tocar. WCAG 2.5.8 pide 24x24.
+               El ::after agranda el area sin cambiar el dibujo del punto.
+          */
           .ultimo-punto {
+            position: relative;
             width: 9px; height: 9px;
             border: 0;
             border-radius: 999px;
@@ -984,6 +1033,12 @@ export function UltimoEstudio() {
             padding: 0;
             cursor: pointer;
             transition: background var(--btn-dur) ease, width var(--btn-dur) ease;
+          }
+
+          .ultimo-punto::after {
+            content: "";
+            position: absolute;
+            inset: -16px -8px;
           }
 
           .ultimo-punto.is-activo { width: 26px; background: var(--pink); }
@@ -996,7 +1051,22 @@ export function UltimoEstudio() {
 
         @media (max-width: 620px) {
           .ultimo-tabs { width: 100%; }
-          .ultimo-tab { flex: 1; justify-content: center; padding-inline: 0.5rem; }
+          .ultimo-tab { flex: 1; justify-content: center; padding-inline: 0.5rem; min-height: 44px; }
+        }
+
+        /*
+          A 360px las tres pestañas entraban por 0.4px. Con la tipografia de
+          respaldo -- la que se ve mientras Montserrat carga, por el
+          font-display: swap -- "Cursos" mide un pelo mas y flex-wrap las
+          parte en dos renglones, dejando una sola abajo. Aflojando el relleno y
+          el tracking quedan 37px de margen en vez de 0.4.
+        */
+        @media (max-width: 400px) {
+          .ultimo-tab {
+            gap: 0.3rem;
+            padding-inline: 0.3rem;
+            letter-spacing: 0.02em;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
