@@ -424,14 +424,19 @@ describe("quien compró un pack ve lo suyo, no un catálogo con candados", () =>
   });
 
   it("cambiar de filtro NO te saca de «Explorar todo»", () => {
-    // El propio archivo ya documenta este fallo con los otros filtros: perder
-    // el estado al navegar cambia la lista por dos motivos a la vez.
+    // El fallo de antes: cada enlace armaba su query string a mano y en mas de
+    // uno se perdia `ver=todo`, asi que la lista cambiaba por dos motivos a la
+    // vez. Ahora hay UN armador, `enlace()`, que conserva todo lo puesto.
     const src = lib();
-    const armadores = src.split('fEstado ? `estado=${fEstado}` : ""').length - 1;
-    const conservan = src.split('modoTodo && !sinNada ? "ver=todo" : ""').length - 1;
-    // Uno de los armadores es el del propio conmutador, que pone `ver` a mano.
-    expect(conservan, `${armadores} armadores de URL, ${conservan} conservan la vista`)
-      .toBe(armadores - 1);
+    expect(src).toMatch(/const enlace = /);
+    expect(src).toMatch(/ver: modoTodo && !sinNada \? "todo" : ""/);
+    // Ninguna URL de la biblioteca con parametros armada a mano por fuera de el.
+    expect(src.match(/`\/dashboard\/library\?/g) ?? []).toHaveLength(0);
+    // Y los formularios GET (buscar, filtros) llevan la vista como campo oculto.
+    const formularios = src.split('action="/dashboard/library"').length - 1;
+    const conVista = src.split('<input type="hidden" name="ver" value="todo" />').length - 1;
+    expect(formularios).toBeGreaterThan(0);
+    expect(conVista, `${formularios} formularios, ${conVista} conservan la vista`).toBe(formularios);
   });
 
   it("el contador no miente en «Explorar todo»", () => {

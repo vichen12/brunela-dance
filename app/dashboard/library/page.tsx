@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Pencil, Rocket, Archive, Clapperboard } from "lucide-react";
+import { Pencil, Rocket, Archive, Play, Lock, Search, Plus, Tag, ArrowRight, ArrowUpRight, X } from "lucide-react";
+import { Movimiento, Revelar, Aparecer, Grilla, Item, Pildoras, SelectAuto } from "@/components/biblioteca-motion";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -523,523 +524,553 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     return true;
   });
 
+  /**
+   * Arma un enlace de la biblioteca conservando TODO lo que esta puesto
+   * (busqueda, categoria, filtros y vista) salvo lo que se pisa. Antes cada
+   * enlace armaba su propio query string a mano, y en mas de un lugar se perdia
+   * un parametro en silencio.
+   */
+  const enlace = (cambios: Record<string, string | null> = {}) => {
+    const base: Record<string, string> = {
+      category: activeCategory !== "all" ? activeCategory : "",
+      q: busqueda,
+      nivel: fNivel,
+      dur: fDuracion,
+      plan: fPlan,
+      estado: fEstado,
+      ver: modoTodo && !sinNada ? "todo" : "",
+    };
+    for (const [k, v] of Object.entries(cambios)) base[k] = v ?? "";
+    const qs = Object.entries(base)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
+    return `/dashboard/library${qs ? `?${qs}` : ""}`;
+  };
+
+  const borradores = visible.filter((v) => v.status !== "published").length;
+  // null fuera de "Explorar todo": ahi no hay nada que aclarar.
+  const tuyas = modoTodo && !sinNada ? visible.filter((v) => !bloqueada(v.id)).length : null;
+  const filtros = ([
+    { name: "nivel",  valor: fNivel,    ops: OPCIONES_NIVEL,    etiqueta: "Nivel" },
+    { name: "dur",    valor: fDuracion, ops: OPCIONES_DURACION, etiqueta: "Duración" },
+    { name: "plan",   valor: fPlan,     ops: OPCIONES_PLAN,     etiqueta: "Plan" },
+    { name: "estado", valor: fEstado,   ops: OPCIONES_ESTADO,   etiqueta: "Estado" },
+  ] as const).filter((f) => isAdmin || f.name !== "plan");
+
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+    <main className="pb-20 md:pb-28" style={{ minHeight: "100vh", background: "#fff" }}>
+      <style>{CSS_BIBLIOTECA}</style>
+      <Movimiento>
+      <section className="bib">
         {/* ⚠️ El texto NO promete que ya esten desbloqueadas. Stripe redirige al
             instante y el webhook puede tardar unos segundos: decirle "ya podés
             verlas" y que no aparezcan es peor que avisarle de la demora. */}
         {avisoCompra && (
-          <div
-            role="status"
-            style={{
-              borderRadius: 16, padding: "13px 18px", fontSize: 13.5, lineHeight: 1.55,
-              background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0",
-            }}
-          >
-            {avisoCompra}
-          </div>
+          <div role="status" className="bib-aviso">{avisoCompra}</div>
         )}
 
-        {/* Header */}
-        <header className="hero-stage" style={{ position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
-            <div style={{ minWidth: 280, flex: 1 }}>
-              <p className="eyebrow">Biblioteca de clases</p>
-              <h1 className="display mt-5 text-5xl leading-none md:text-7xl">
-                {isAdmin ? (
-                  <>Gestión de <span style={{ color: "var(--pink)", fontStyle: "italic" }}>clases.</span></>
-                ) : (
-                  <>Tus <span style={{ color: "var(--pink)", fontStyle: "italic" }}>clases.</span></>
-                )}
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
+        {/* ── Cabecera ── */}
+        <header className="bib-mast">
+          <div style={{ minWidth: 0 }}>
+            <Aparecer>
+              <p className="bib-eyebrow">
+                <span className="bib-eyebrow-raya" />
+                Biblioteca de clases
+              </p>
+            </Aparecer>
+            <h1 className="bib-titulo">
+              {isAdmin ? (
+                <>
+                  <Revelar retraso={0.05}>Gestión de</Revelar>
+                  <Revelar retraso={0.15}><em>clases.</em></Revelar>
+                </>
+              ) : (
+                <Revelar retraso={0.05}>Tus <em>clases.</em></Revelar>
+              )}
+            </h1>
+            <Aparecer retraso={0.3}>
+              <p className="bib-lede">
                 {isAdmin
-                  ? "Publicá, editá y organizá todas las clases del estudio."
+                  ? "Publicá, editá y organizá todas las clases del estudio. Como admin ves también los borradores."
                   : "Todo el contenido disponible según tu plan, para que sigas creciendo cada día."}
               </p>
-            </div>
-
-            {/* Buscador: formulario GET, sin JavaScript. Conserva la categoria activa. */}
-            <form method="get" action="/dashboard/library" style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
-              {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", display: "flex" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" />
-                    <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                  </svg>
-                </span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={busqueda}
-                  placeholder="Buscar clases, categorías, etc."
-                  aria-label="Buscar clases"
-                  style={{
-                    width: 300, maxWidth: "100%", padding: "13px 18px 13px 44px",
-                    borderRadius: 999, border: "1px solid #F1E9E7", background: "#fff",
-                    fontSize: 13, color: "var(--ink)", outline: "none", fontFamily: "inherit",
-                  }}
-                />
-              </div>
-              <button type="submit" style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "13px 22px", borderRadius: 999, cursor: "pointer",
-                background: "var(--pink-wash)", color: "var(--pink)",
-                border: "none", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
-              }}>
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 4.5h12M4.5 8h7M6.5 11.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                Buscar
-              </button>
-            </form>
+            </Aparecer>
           </div>
 
-          {/* Los cuatro filtros. Van DENTRO de un form GET propio y con
-              autoSubmit por onChange deshabilitado a proposito: sin JavaScript
-              igual funcionan con el boton, y con el teclado se recorren en
-              orden. Conservan la busqueda y la categoria activa. */}
-          <form
-            method="get"
-            action="/dashboard/library"
-            style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap", alignItems: "center" }}
-          >
-            {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
-            {busqueda && <input type="hidden" name="q" value={busqueda} />}
-
-            {([
-              { name: "nivel",  valor: fNivel,    ops: OPCIONES_NIVEL,    etiqueta: "Nivel" },
-              { name: "dur",    valor: fDuracion, ops: OPCIONES_DURACION, etiqueta: "Duración" },
-              { name: "plan",   valor: fPlan,     ops: OPCIONES_PLAN,     etiqueta: "Plan" },
-              { name: "estado", valor: fEstado,   ops: OPCIONES_ESTADO,   etiqueta: "Estado" },
-            ] as const).filter((f) => isAdmin || f.name !== "plan").map((f) => (
-              <select
-                key={f.name}
-                name={f.name}
-                defaultValue={f.valor}
-                aria-label={f.etiqueta}
-                style={{
-                  minHeight: 40, padding: "9px 14px", borderRadius: 999,
-                  border: `1px solid ${f.valor ? "var(--pink)" : "#F1E9E7"}`,
-                  background: f.valor ? "var(--pink-wash)" : "#fff",
-                  color: f.valor ? "var(--pink-deep)" : "var(--muted)",
-                  fontSize: 12.5, fontWeight: f.valor ? 700 : 500,
-                  fontFamily: "inherit", cursor: "pointer", outline: "none",
-                }}
-              >
-                {f.ops.map((o) => (
-                  <option key={o.key} value={o.key}>{o.label}</option>
-                ))}
-              </select>
-            ))}
-
-            <button type="submit" style={{
-              minHeight: 40, padding: "9px 18px", borderRadius: 999, cursor: "pointer",
-              background: "var(--pink)", color: "#fff", border: "none",
-              fontSize: 12.5, fontWeight: 700, fontFamily: "inherit",
-            }}>
-              Aplicar
-            </button>
-
-            {hayFiltros && (
-              <Link
-                href={`/dashboard/library${
-                  activeCategory !== "all" || busqueda
-                    ? `?${[
-                        activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
-                        busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
-                      ].filter(Boolean).join("&")}`
-                    : ""
-                }` as never}
-                style={{
-                  minHeight: 40, display: "inline-flex", alignItems: "center",
-                  padding: "9px 16px", borderRadius: 999, textDecoration: "none",
-                  color: "var(--pink-deep)", fontSize: 12.5, fontWeight: 700,
-                }}
-              >
-                Quitar filtros
-              </Link>
-            )}
-          </form>
           {isAdmin && (
-            <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-              <Link
-                href="/admin/videos"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 99,
-                  background: "var(--pink)", color: "#fff",
-                  fontSize: 12, fontWeight: 700, textDecoration: "none",
-                  boxShadow: "0 4px 14px rgba(230, 79, 85,0.35)",
-                }}
-              >
-                <span style={{ fontSize: 15 }}>+</span> Nueva clase
+            <Aparecer retraso={0.4} className="bib-mast-acciones">
+              <Link href="/admin/videos" className="bib-btn bib-btn--lleno">
+                <Plus size={16} strokeWidth={2.2} /> Nueva clase
               </Link>
-              <Link
-                href="/admin/categories"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 99,
-                  background: "var(--pink-wash)", color: "var(--pink)",
-                  border: "1.5px solid var(--pink-soft)",
-                  fontSize: 12, fontWeight: 700, textDecoration: "none",
-                }}
-              >
-                Categorías
+              <Link href="/admin/categories" className="bib-btn">
+                <Tag size={15} strokeWidth={2} /> Categorías
               </Link>
-            </div>
+              <Link href="/admin/videos" className="bib-btn bib-btn--texto">
+                Panel de clases <ArrowUpRight size={15} strokeWidth={2.2} />
+              </Link>
+            </Aparecer>
           )}
         </header>
 
-        {/* Admin bar — visible to admin only */}
-        {isAdmin && (
-          <div style={{
-            borderRadius: 18, padding: "14px 20px",
-            background: "linear-gradient(135deg, #1c1917, #292524)",
-            border: "1px solid #44403c",
-            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Clapperboard size={16} strokeWidth={1.9} />
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "var(--pink-wash)" }}>Modo administración</p>
-                <p style={{ fontSize: 10, color: "#a8a29e", marginTop: 1 }}>Ves todas las clases incluidas borradores. Los botones de edición aparecen en cada tarjeta.</p>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <Link href="/admin/videos" style={{
-                padding: "6px 14px", borderRadius: 99, fontSize: 10, fontWeight: 700,
-                background: "var(--pink)", color: "#fff", textDecoration: "none",
-              }}>Panel completo</Link>
-            </div>
-          </div>
-        )}
+        {/* ── Buscar y filtrar ── */}
+        <Aparecer retraso={0.35} className="bib-barra">
+          {/* Buscador: formulario GET, sin JavaScript. Conserva categoria, filtros y vista. */}
+          <form method="get" action="/dashboard/library" className="bib-buscar" role="search">
+            {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
+            {fNivel && <input type="hidden" name="nivel" value={fNivel} />}
+            {fDuracion && <input type="hidden" name="dur" value={fDuracion} />}
+            {fPlan && <input type="hidden" name="plan" value={fPlan} />}
+            {fEstado && <input type="hidden" name="estado" value={fEstado} />}
+            {modoTodo && !sinNada && <input type="hidden" name="ver" value="todo" />}
+            <Search size={18} strokeWidth={1.8} className="bib-buscar-ico" aria-hidden="true" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={busqueda}
+              placeholder="Buscar por título, categoría o descripción"
+              aria-label="Buscar clases"
+            />
+            <button type="submit" className="bib-buscar-btn" aria-label="Buscar">
+              <ArrowRight size={16} strokeWidth={2} />
+            </button>
+          </form>
 
-        {/* Filter tabs */}
-        {/* ── Conmutador de vista ──────────────────────────────────────────
-            Solo para quien tiene algo. Quien no tiene nada ya esta viendo el
-            catalogo completo: ofrecerle "Explorar todo" seria un boton que no
-            hace nada.
+          {/* Los filtros se aplican al cambiarlos. Sin JavaScript queda el
+              boton de <noscript>. Conservan busqueda, categoria y vista. */}
+          <form method="get" action="/dashboard/library" className="bib-filtros">
+            {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
+            {busqueda && <input type="hidden" name="q" value={busqueda} />}
+            {modoTodo && !sinNada && <input type="hidden" name="ver" value="todo" />}
+            {filtros.map((f) => (
+              <SelectAuto
+                key={f.name}
+                name={f.name}
+                defaultValue={f.valor}
+                etiqueta={f.etiqueta}
+                opciones={f.ops.map((o) => ({ key: o.key, label: o.label }))}
+              />
+            ))}
+            <noscript>
+              <button type="submit" className="bib-btn bib-btn--lleno">Aplicar</button>
+            </noscript>
+            {hayFiltros && (
+              <Link href={enlace({ nivel: null, dur: null, plan: null, estado: null }) as never} className="bib-quitar">
+                <X size={13} strokeWidth={2.2} /> Quitar filtros
+              </Link>
+            )}
+          </form>
+        </Aparecer>
 
-            Va ARRIBA de las categorias y con otra forma (recuadro, no pastilla)
-            porque no es un filtro mas: cambia QUE conjunto se mira, mientras
-            que los de abajo lo acotan. */}
-        {!sinNada && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            {([
-              { key: "", label: "Mis clases", ayuda: "Lo que ya podés ver" },
-              { key: "todo", label: "Explorar todo", ayuda: "El catálogo completo" },
-            ] as const).map((v) => {
-              const activa = (v.key === "todo") === modoTodo;
-              // Conserva busqueda y filtros: cambiar de vista no puede borrar en
-              // silencio lo que la alumna venia buscando.
-              const qs = [
-                v.key ? `ver=todo` : "",
-                activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
-                busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
-                fNivel ? `nivel=${fNivel}` : "",
-                fDuracion ? `dur=${fDuracion}` : "",
-                fPlan ? `plan=${fPlan}` : "",
-                fEstado ? `estado=${fEstado}` : "",
-              ].filter(Boolean).join("&");
-              return (
-                <Link
-                  key={v.key || "mias"}
-                  href={`/dashboard/library${qs ? `?${qs}` : ""}` as never}
-                  title={v.ayuda}
-                  style={{
-                    padding: "9px 20px", textDecoration: "none", borderRadius: 12,
-                    fontSize: 13, fontWeight: 700,
-                    background: activa ? "var(--pink-mid)" : "#fff",
-                    color: activa ? "#fff" : "var(--ink)",
-                    border: activa ? "none" : "1.5px solid var(--pink-line)",
-                  }}
-                >{v.label}</Link>
-              );
-            })}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {filters.map((f) => (
-            <Link
-              key={f.key}
-              // Conserva la busqueda Y los cuatro filtros. Antes solo llevaba
-              // `q`: cambiar de categoria con un filtro puesto lo borraba en
-              // silencio y la lista cambiaba por dos motivos a la vez.
-              href={
-                (() => {
-                  const qs = [
-                    f.key !== "all" ? `category=${encodeURIComponent(f.key)}` : "",
-                    busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
-                    fNivel ? `nivel=${fNivel}` : "",
-                    fDuracion ? `dur=${fDuracion}` : "",
-                    fPlan ? `plan=${fPlan}` : "",
-                    fEstado ? `estado=${fEstado}` : "",
-                  // Conserva la vista: cambiar de filtro estando en "Explorar todo" no
-                  // puede devolverla a "Mis clases" en silencio.
-                  modoTodo && !sinNada ? "ver=todo" : ""
-                  ].filter(Boolean).join("&");
-                  return `/dashboard/library${qs ? `?${qs}` : ""}`;
-                })() as never
-              }
-              style={{
-                padding: "7px 18px", textDecoration: "none", borderRadius: 99,
-                fontSize: 12, fontWeight: 700, letterSpacing: "0.02em",
-                background: activeCategory === f.key ? "var(--pink)" : "#fff",
-                color: activeCategory === f.key ? "#fff" : "var(--pink)",
-                border: activeCategory === f.key ? "none" : "1px solid var(--pink-wash)",
-              }}
-            >{f.label}</Link>
-          ))}
-        </div>
+        {/* ── Vista y categorias ──
+            El conmutador va solo para quien tiene algo: quien no tiene nada ya
+            esta viendo el catalogo completo, y "Explorar todo" no haria nada.
+            Es un segmento y no una pildora mas porque no acota: cambia QUE
+            conjunto se mira. */}
+        <Aparecer retraso={0.45} className="bib-nav">
+          {!sinNada && (
+            <Pildoras
+              variante="segmento"
+              etiqueta="Vista"
+              items={[
+                { href: enlace({ ver: null, pagina: null }), label: "Mis clases", activa: !modoTodo, ayuda: "Lo que ya podés ver" },
+                { href: enlace({ ver: "todo", pagina: null }), label: "Explorar todo", activa: modoTodo, ayuda: "El catálogo completo" },
+              ]}
+            />
+          )}
+          <Pildoras
+            etiqueta="Categorías"
+            items={filters.map((f) => ({
+              href: enlace({ category: f.key !== "all" ? f.key : null }),
+              label: f.label,
+              activa: activeCategory === f.key,
+            }))}
+          />
+        </Aparecer>
 
         {/* Contador.
             ⚠️ En "Explorar todo" el numero grande es el CATALOGO, no lo que ella
-               puede ver. Decir "34 clases" a secas ahi seria mentirle sobre lo
-               que compro, que es justo la sensacion que este cambio viene a
-               arreglar. Por eso al lado va cuantas tiene abiertas. */}
-        <p className="eyebrow">
-          {visible.length} {visible.length === 1 ? "clase" : "clases"}
-          {busqueda ? ` para “${busqueda}”` : ""}
-          {modoTodo && !sinNada
-            ? ` · ${visible.filter((v) => !bloqueada(v.id)).length} ${
-                visible.filter((v) => !bloqueada(v.id)).length === 1 ? "tuya" : "tuyas"
-              }`
-            : ""}
-          {isAdmin ? ` (${visible.filter(v => v.status !== "published").length} borradores)` : ""}
-        </p>
+               puede ver: al lado va cuantas tiene abiertas. */}
+        <div className="bib-contador">
+          <span className="bib-contador-num">{visible.length}</span>
+          <span>
+            {visible.length === 1 ? "clase" : "clases"}
+            {busqueda ? ` para “${busqueda}”` : ""}
+            {tuyas !== null ? ` · ${tuyas} ${tuyas === 1 ? "tuya" : "tuyas"}` : ""}
+            {isAdmin && borradores > 0 ? ` · ${borradores} ${borradores === 1 ? "borrador" : "borradores"}` : ""}
+          </span>
+        </div>
 
-        {/* Grid */}
+        {/* ── Grilla ── */}
         {visible.length === 0 ? (
-          <div style={{
-            border: "1.5px dashed var(--pink-line)", borderRadius: 20, padding: "40px 24px",
-            fontSize: 13, color: "var(--muted)", textAlign: "center",
-          }}>
+          <div className="bib-vacio">
+            <p className="bib-vacio-titulo">
+              {isAdmin && !busqueda && !hayFiltros
+                ? "Todavía no hay clases."
+                : busqueda
+                  ? `No encontramos clases para “${busqueda}”.`
+                  : "No hay clases para este filtro."}
+            </p>
             {isAdmin
-              ? <>No hay clases todavía. <Link href="/admin/videos" style={{ color: "var(--pink)", fontWeight: 700 }}>Subí la primera.</Link></>
-              : busqueda
-                ? `No encontramos clases para “${busqueda}”.`
-                : "No hay clases para este filtro todavía."
-            }
+              ? <Link href="/admin/videos" className="bib-btn bib-btn--lleno"><Plus size={16} strokeWidth={2.2} /> Subir una clase</Link>
+              : hayFiltros || busqueda
+                ? <Link href="/dashboard/library" className="bib-btn">Ver todas las clases</Link>
+                : null}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))", gap: 16 }}>
+          <Grilla className="bib-grilla">
             {visible.map((video) => {
               const pct = safePercent(progressMap.get(video.id)?.completion_percent);
               const title = resolveI18nText(video.title_i18n);
-              const desc = resolveI18nText(video.description_i18n ?? {});
-              const tier = TIER_META[video.membership_tier_required] ?? TIER_META.none;
               const isDraft = video.status !== "published";
-              // Thumbnails live behind the same token-protected pull zone as the
-              // video, so they have to be signed per request too.
+              // Las miniaturas viven detras de la misma pull zone con token que
+              // el video, asi que tambien se firman por request.
               const bunnyId = video.bunny_video_id ?? bunnyVideoIdFromUrl(video.stream_playback_id);
               const thumbSrc =
                 bunnyId && hasBunnyStreamEnv() ? bunnySignedUrls(bunnyId).thumbnail : video.thumbnail_url;
+              const categoria = CATEGORIA_LABEL[video.category_slugs[0]] ?? video.category_slugs[0] ?? "Clase";
+              const fecha = fechaCorta(video.published_at);
 
               return (
-                <div key={video.id} style={{ position: "relative" }}>
-                  {/* Draft overlay badge */}
-                  {isDraft && isAdmin && (
-                    <div style={{
-                      position: "absolute", top: 10, left: 10, zIndex: 10,
-                      fontSize: 8, fontWeight: 700, letterSpacing: "0.12em",
-                      background: "#fef9c3", color: "#854d0e",
-                      padding: "3px 8px", borderRadius: 99, textTransform: "uppercase",
-                    }}>BORRADOR</div>
-                  )}
-
-                  {/* Admin action buttons */}
-                  {isAdmin && (
-                    <div style={{
-                      position: "absolute", top: 10, right: 10, zIndex: 10,
-                      display: "flex", gap: 5,
-                    }}>
-                      <Link
-                        href={`/admin/videos`}
-                        title="Editar en panel"
-                        style={{
-                          width: 28, height: 28, borderRadius: 8,
-                          background: "rgba(255,255,255,0.92)", backdropFilter: "blur(4px)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 12, textDecoration: "none",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                          border: "1px solid rgba(0,0,0,0.06)",
-                        }}
-                      ><Pencil size={13} strokeWidth={2} /></Link>
-                      <form action={quickPublishToggleAction} style={{ display: "inline" }}>
-                        <input type="hidden" name="id" value={video.id}/>
-                        <input type="hidden" name="status" value={video.status}/>
-                        <button
-                          type="submit"
-                          title={isDraft ? "Publicar" : "Volver a borrador"}
-                          style={{
-                            width: 28, height: 28, borderRadius: 8, cursor: "pointer",
-                            background: isDraft ? "rgba(230, 79, 85,0.9)" : "rgba(255,255,255,0.92)",
-                            backdropFilter: "blur(4px)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, border: "1px solid rgba(0,0,0,0.06)",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                          }}
-                        >{isDraft ? <Rocket size={13} strokeWidth={2} /> : <Archive size={13} strokeWidth={2} />}</button>
-                      </form>
-                    </div>
-                  )}
-
-                  {/* ⚠️ EL CANDADO ES POR CLASE, NO POR ALUMNA.
-                      Era una sola bandera basada en `membership_tier === none`,
-                      y quien compra un pack SIGUE en 'none'. Resultado: veia
-                      candado en TODO -- incluida la clase que acababa de pagar --
-                      y la tarjeta la mandaba a comprar un plan. Se cobro y no dio
-                      acceso, aunque RLS si se lo daba.
-                      Ahora lo decide `bloqueada()`, que sale de RLS: la misma
-                      regla que usa el reproductor. */}
-                  <Link
-                    href={(bloqueada(video.id) ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
-                    style={{ textDecoration: "none", display: "block", height: "100%", position: "relative" }}
-                  >
-                    {bloqueada(video.id) && (
-                      <span style={{
-                        position: "absolute", top: 12, right: 12, zIndex: 3,
-                        display: "inline-flex", alignItems: "center", gap: 6,
-                        background: "rgba(255,255,255,0.94)", color: "var(--pink-deep)",
-                        borderRadius: 999, padding: "6px 12px",
-                        fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
-                        textTransform: "uppercase", border: "1px solid var(--pink-line)",
-                        boxShadow: "0 4px 14px rgba(28,25,23,0.12)",
-                      }}>
-                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
-                          <path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2M3.5 7h9v6h-9V7Z"
-                            stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                        </svg>
-                        {TIER_META[planQueDesbloquea(video, planDeLaAlumna)]?.label ?? "Plan"}
-                      </span>
-                    )}
-                    <div className="feature-tile" style={{
-                      padding: 0, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column",
-                      opacity: isDraft && !isAdmin ? 0.5 : 1,
-                    }}>
-                      {/* Thumbnail */}
-                      <div style={{ position: "relative", height: 166, flexShrink: 0 }}>
-                        {thumbSrc ? (
-                          <img src={thumbSrc} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
-                        ) : (
-                          <div style={{ width: "100%", height: "100%", background: catGradient(video.category_slugs) }}/>
-                        )}
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(28,25,23,0.5) 0%, transparent 55%)" }}/>
-                        <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
-                          <span style={{
-                            fontSize: 9, letterSpacing: "0.1em", fontWeight: 700,
-                            background: "#fff", color: "var(--pink)",
-                            padding: "5px 11px", borderRadius: 99, textTransform: "uppercase",
-                          }}>
-                            {CATEGORIA_LABEL[video.category_slugs[0]] ?? video.category_slugs[0] ?? "Clase"}
+                <Item key={video.id} className="bib-item">
+                  <article className={"bib-card" + (isDraft && !isAdmin ? " es-apagada" : "")}>
+                    {/* ⚠️ EL CANDADO ES POR CLASE, NO POR ALUMNA.
+                        Lo decide `bloqueada()`, que sale de RLS: la misma regla
+                        que usa el reproductor. Quien compro un pack sigue en
+                        'none' y aun asi tiene que poder abrir su clase. */}
+                    <Link
+                      href={(bloqueada(video.id) ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
+                      className="bib-card-link"
+                    >
+                      <div className="bib-img" style={thumbSrc ? undefined : { background: catGradient(video.category_slugs) }}>
+                        {thumbSrc && <img src={thumbSrc} alt="" loading="lazy" />}
+                        {thumbSrc && <span className="bib-img-sombra" aria-hidden="true" />}
+                        <span className="bib-chips">
+                          {isDraft && isAdmin && <span className="bib-chip bib-chip--borrador">Borrador</span>}
+                          {video.is_featured && <span className="bib-chip bib-chip--dest">Destacada</span>}
+                        </span>
+                        {bloqueada(video.id) && (
+                          <span className="bib-candado">
+                            <Lock size={11} strokeWidth={2.2} aria-hidden="true" />
+                            {TIER_META[planQueDesbloquea(video, planDeLaAlumna)]?.label ?? "Plan"}
                           </span>
-                          {video.is_featured && (
-                            <span style={{
-                              fontSize: 9, letterSpacing: "0.1em", fontWeight: 700,
-                              background: "var(--pink)", color: "#fff",
-                              padding: "5px 11px", borderRadius: 99,
-                            }}>DESTACADA</span>
-                          )}
-                        </div>
-                        <div style={{
-                          position: "absolute", bottom: 10, right: 12,
-                          fontSize: 11, fontWeight: 600,
-                          background: "rgba(28,25,23,0.72)", color: "#fff",
-                          padding: "4px 10px", borderRadius: 8,
-                        }}>{mmss(video.duration_seconds)}</div>
-                      </div>
-
-                      {/* Info */}
-                      <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
-                        {fechaCorta(video.published_at) && (
-                          <p style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 7, fontWeight: 600 }}>
-                            {fechaCorta(video.published_at)}
-                          </p>
                         )}
-                        <p style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ink)", marginBottom: 6, lineHeight: 1.3 }}>
-                          {title}
-                        </p>
-                        <p style={{
-                          fontSize: 12, marginBottom: 12,
-                          color: pct > 0 ? "var(--pink)" : "var(--muted)",
-                        }}>
-                          {nivelTexto(video.recommended_min_level, video.recommended_max_level)}
-                        </p>
-
+                        <span className="bib-play" aria-hidden="true">
+                          {bloqueada(video.id) ? <Lock size={18} strokeWidth={2} /> : <Play size={18} strokeWidth={2} fill="currentColor" />}
+                        </span>
+                        <span className="bib-dur">{mmss(video.duration_seconds)}</span>
                         {pct > 0 && (
-                          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ flex: 1, background: "var(--pink-wash)", borderRadius: 99, height: 4 }}>
-                              <div style={{ background: "var(--pink)", height: "100%", width: `${pct}%`, borderRadius: 99 }}/>
-                            </div>
-                            <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>{pct}%</span>
-                          </div>
+                          <span className="bib-prog" aria-label={`${pct}% visto`}>
+                            <span style={{ width: `${pct}%` }} />
+                          </span>
                         )}
                       </div>
-                    </div>
-                  </Link>
-                </div>
+                      <div className="bib-info">
+                        <p className="bib-cat">
+                          {categoria}
+                          {fecha ? <span className="bib-fecha"> · {fecha}</span> : null}
+                        </p>
+                        <h3 className="bib-card-titulo">{title}</h3>
+                        <p className="bib-meta">
+                          {nivelTexto(video.recommended_min_level, video.recommended_max_level)}
+                          {pct > 0 ? <span className="bib-meta-pct"> · {pct >= 90 ? "Completada" : `${pct}% visto`}</span> : null}
+                        </p>
+                      </div>
+                    </Link>
+
+                    {/* Acciones de admin. Son server actions con requireAdmin():
+                        esconderlas no protege nada, la guarda esta en la accion. */}
+                    {isAdmin && (
+                      <div className="bib-admin">
+                        <Link
+                          href={`/admin/videos?q=${encodeURIComponent(title)}` as never}
+                          title="Editar en el panel"
+                          aria-label={`Editar ${title}`}
+                          className="bib-admin-btn"
+                        >
+                          <Pencil size={14} strokeWidth={2} />
+                          <span>Editar</span>
+                        </Link>
+                        <form action={quickPublishToggleAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value={video.status} />
+                          <button
+                            type="submit"
+                            title={isDraft ? "Publicar" : "Volver a borrador"}
+                            aria-label={isDraft ? `Publicar ${title}` : `Pasar ${title} a borrador`}
+                            className={"bib-admin-btn" + (isDraft ? " es-publicar" : "")}
+                          >
+                            {isDraft ? <Rocket size={14} strokeWidth={2} /> : <Archive size={14} strokeWidth={2} />}
+                            <span>{isDraft ? "Publicar" : "Despublicar"}</span>
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </article>
+                </Item>
               );
             })}
 
-            {/* Add new card — admin only */}
             {isAdmin && (
-              <Link href="/admin/videos" style={{ textDecoration: "none" }}>
-                <div style={{
-                  height: "100%", minHeight: 280, borderRadius: "2rem",
-                  border: "2px dashed var(--pink-line)", display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center", gap: 12,
-                  background: "rgba(253,242,248,0.4)",
-                  transition: "background 0.2s, border-color 0.2s",
-                }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14,
-                    background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 22, color: "#fff", boxShadow: "0 4px 12px rgba(230, 79, 85,0.3)",
-                  }}>+</div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink)" }}>Nueva clase</p>
-                  <p style={{ fontSize: 11, color: "var(--muted)" }}>Subir video al catálogo</p>
-                </div>
-              </Link>
+              <Item className="bib-item">
+                <Link href="/admin/videos" className="bib-nueva">
+                  <span className="bib-nueva-ico"><Plus size={22} strokeWidth={1.8} /></span>
+                  <span className="bib-nueva-titulo">Nueva clase</span>
+                  <span className="bib-nueva-sub">Subir un video al catálogo</span>
+                </Link>
+              </Item>
             )}
-          </div>
+          </Grilla>
         )}
 
-        {/* Fase D: "Ver más" en vez de traer el catalogo entero de una.
-            Es acumulativo -- la pagina siguiente se suma, no reemplaza -- que
-            es lo que espera alguien recorriendo clases. */}
+        {/* Fase D: "Ver más" en vez de traer el catalogo entero de una. Es
+            acumulativo: la pagina siguiente se suma, no reemplaza. */}
         {hayMasPaginas && (
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>
-            <Link
-              href={(() => {
-                const qs = [
-                  activeCategory !== "all" ? `category=${encodeURIComponent(activeCategory)}` : "",
-                  busqueda ? `q=${encodeURIComponent(busqueda)}` : "",
-                  fNivel ? `nivel=${fNivel}` : "",
-                  fDuracion ? `dur=${fDuracion}` : "",
-                  fPlan ? `plan=${fPlan}` : "",
-                  fEstado ? `estado=${fEstado}` : "",
-                  // Conserva la vista: cambiar de filtro estando en "Explorar todo" no
-                  // puede devolverla a "Mis clases" en silencio.
-                  modoTodo && !sinNada ? "ver=todo" : "",
-                  `pagina=${pagina + 1}`,
-                ].filter(Boolean).join("&");
-                return `/dashboard/library?${qs}`;
-              })() as never}
-              style={{
-                display: "inline-flex", alignItems: "center", minHeight: 48,
-                padding: "13px 30px", borderRadius: 999, textDecoration: "none",
-                background: "#fff", color: "var(--pink-deep)",
-                border: "1.5px solid var(--pink-line)", fontSize: 13, fontWeight: 700,
-              }}
-            >Ver más clases</Link>
+          <div className="bib-mas">
+            <Link href={enlace({ pagina: String(pagina + 1) }) as never} className="bib-btn">
+              Ver más clases <ArrowRight size={15} strokeWidth={2} />
+            </Link>
           </div>
         )}
       </section>
+      </Movimiento>
     </main>
   );
 }
+
+// ── Estilos ──────────────────────────────────────────────────────────────────
+// Misma direccion que el panel del estudio: titular en Bodoni, filetes finos en
+// vez de cajas, coral de la landing y nada negro de fondo.
+
+const CSS_BIBLIOTECA = `
+.bib {
+  max-width: 1440px; margin: 0 auto;
+  padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0;
+  display: flex; flex-direction: column;
+}
+.bib a:focus { outline: none; }
+.bib a:focus-visible, .bib button:focus-visible, .bib select:focus-visible, .bib input:focus-visible {
+  outline: 2px solid var(--pink); outline-offset: 3px;
+}
+.bib-aviso {
+  border-radius: 16px; padding: 13px 18px; margin-bottom: 20px; font-size: 13.5px; line-height: 1.55;
+  background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;
+}
+
+/* cabecera */
+.bib-mast {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  padding-bottom: clamp(22px, 3vw, 32px);
+}
+.bib-eyebrow {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep);
+}
+.bib-eyebrow-raya { display: inline-block; width: 36px; height: 1.5px; background: var(--pink); }
+.bib-titulo {
+  font-family: var(--font-serif), serif; font-weight: 400;
+  font-size: clamp(44px, 6.4vw, 96px); line-height: 0.96; letter-spacing: -0.025em; color: var(--ink);
+}
+.bib-titulo em { font-style: italic; color: var(--pink-mid); }
+.bib-lede { margin-top: 18px; max-width: 54ch; font-size: 15px; line-height: 1.7; color: #57534e; }
+.bib-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-bottom: 8px; }
+
+.bib-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  height: 44px; padding: 0 20px; border-radius: 99px; text-decoration: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--ink); border: 1.5px solid #d6d3d1; background: #fff;
+  transition: border-color .2s, background .2s, color .2s, transform .2s, box-shadow .2s;
+}
+.bib-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
+.bib-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
+.bib-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
+.bib-btn--texto { border-color: transparent; background: transparent; color: var(--pink-deep); padding: 0 8px; }
+.bib-btn--texto:hover { border-color: transparent; color: var(--ink); }
+
+/* buscar y filtrar */
+.bib-barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px 28px; flex-wrap: wrap;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid #e7e5e4; padding: 14px 0;
+}
+.bib-buscar { position: relative; flex: 1 1 320px; max-width: 520px; display: flex; align-items: center; }
+.bib-buscar-ico { position: absolute; left: 2px; color: #a8a29e; pointer-events: none; }
+.bib-buscar input {
+  width: 100%; height: 46px; padding: 0 44px 0 32px; border: 0; background: transparent;
+  font: inherit; font-size: 15px; color: var(--ink); outline: none;
+}
+.bib-buscar input::placeholder { color: #a8a29e; }
+.bib-buscar:focus-within .bib-buscar-ico { color: var(--pink); }
+.bib-buscar-btn {
+  position: absolute; right: 0; width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 0; background: var(--pink-wash); color: var(--pink-deep); transition: background .2s, color .2s;
+}
+.bib-buscar-btn:hover { background: var(--pink); color: #fff; }
+
+.bib-filtros { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bib-select {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px;
+  padding: 0 32px 0 14px; border-radius: 99px; border: 1px solid #e7e5e4; background: #fff;
+  font-size: 12.5px; color: #78716c; cursor: pointer; transition: border-color .2s, background .2s;
+}
+.bib-select:hover { border-color: #a8a29e; }
+.bib-select.es-activo { border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep); }
+.bib-select-etq { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.bib-select select {
+  appearance: none; -webkit-appearance: none; border: 0; background: transparent; outline: none;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer; padding: 0;
+}
+.bib-select.es-activo select { color: var(--pink-deep); }
+.bib-select svg { position: absolute; right: 13px; pointer-events: none; }
+.bib-quitar {
+  display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 10px;
+  font-size: 12px; font-weight: 700; color: var(--pink-deep); text-decoration: none;
+}
+.bib-quitar:hover { color: var(--ink); }
+
+/* vista y categorias */
+.bib-nav { display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap; padding: 20px 0 6px; }
+.bib-seg {
+  display: inline-flex; padding: 4px; border-radius: 99px; background: #f5f5f4; flex-shrink: 0;
+}
+.bib-seg-op {
+  position: relative; padding: 9px 18px; border-radius: 99px; text-decoration: none;
+  font-size: 13px; font-weight: 700; color: #78716c; transition: color .2s;
+}
+.bib-seg-op:hover { color: var(--ink); }
+.bib-seg-op.es-activa { color: var(--ink); }
+.bib-seg-fondo {
+  position: absolute; inset: 0; border-radius: 99px; background: #fff;
+  box-shadow: 0 1px 2px rgba(28,25,23,0.08), 0 4px 12px -4px rgba(28,25,23,0.12);
+}
+.bib-pildoras {
+  display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
+  padding: 2px 0; -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
+  mask-image: linear-gradient(to right, #000 92%, transparent);
+}
+.bib-pildoras::-webkit-scrollbar { display: none; }
+.bib-pildora {
+  position: relative; flex-shrink: 0; padding: 8px 16px; border-radius: 99px; text-decoration: none;
+  font-size: 12.5px; font-weight: 600; color: #57534e; border: 1px solid #e7e5e4; transition: border-color .2s, color .2s;
+}
+.bib-pildora:hover { border-color: var(--pink-line); color: var(--pink-deep); }
+.bib-pildora.es-activa { color: #fff; border-color: transparent; }
+.bib-pildora-fondo { position: absolute; inset: -1px; border-radius: 99px; background: var(--pink); }
+.bib-pildora-txt { position: relative; }
+
+.bib-contador {
+  display: flex; align-items: baseline; gap: 10px; padding: 18px 0 22px;
+  font-size: 13px; color: #78716c;
+}
+.bib-contador-num { font-family: var(--font-serif), serif; font-size: 34px; line-height: 1; color: var(--ink); }
+
+/* grilla */
+.bib-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 34px 22px; }
+.bib-item { min-width: 0; }
+.bib-card { position: relative; height: 100%; }
+.bib-card.es-apagada { opacity: 0.5; }
+.bib-card-link { display: block; text-decoration: none; color: inherit; }
+.bib-img {
+  position: relative; aspect-ratio: 16 / 11; border-radius: 18px; overflow: hidden; isolation: isolate;
+  background: var(--pink-wash);
+  transition: box-shadow .4s, transform .4s cubic-bezier(.16,1,.3,1);
+}
+.bib-img img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: transform .9s cubic-bezier(.16,1,.3,1);
+}
+.bib-card-link:hover .bib-img { transform: translateY(-4px); box-shadow: 0 22px 40px -22px rgba(176,58,62,0.55); }
+.bib-card-link:hover .bib-img img { transform: scale(1.06); }
+.bib-img-sombra {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(to top, rgba(28,25,23,0.45) 0%, rgba(28,25,23,0) 45%);
+}
+.bib-chips { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; gap: 6px; }
+.bib-chip {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 99px; backdrop-filter: blur(8px);
+}
+.bib-chip--borrador { background: rgba(255,255,255,0.92); color: var(--pink-deep); }
+.bib-chip--dest { background: var(--pink); color: #fff; }
+.bib-candado {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px;
+  background: rgba(255,255,255,0.94); color: var(--pink-deep);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.bib-play {
+  position: absolute; z-index: 2; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  background: rgba(255,255,255,0.94); color: var(--pink-mid);
+  opacity: 0; transform: scale(0.7); transition: opacity .3s, transform .4s cubic-bezier(.16,1,.3,1);
+}
+.bib-card-link:hover .bib-play { opacity: 1; transform: scale(1); }
+.bib-dur {
+  position: absolute; z-index: 2; right: 12px; bottom: 12px;
+  font-size: 11.5px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums;
+  padding: 3px 9px; border-radius: 8px; background: rgba(28,25,23,0.45); backdrop-filter: blur(6px);
+}
+.bib-prog { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.35); }
+.bib-prog span { display: block; height: 100%; background: var(--pink); }
+
+.bib-info { padding: 14px 2px 0; }
+.bib-cat { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pink-deep); }
+.bib-fecha { color: #a8a29e; }
+.bib-card-titulo {
+  margin-top: 6px; font-family: var(--font-serif), serif; font-weight: 400;
+  font-size: 22px; line-height: 1.15; letter-spacing: -0.01em; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bib-card-link:hover .bib-card-titulo { color: var(--pink-deep); }
+.bib-meta { margin-top: 6px; font-size: 12.5px; color: #78716c; }
+.bib-meta-pct { color: var(--pink-deep); font-weight: 600; }
+
+.bib-admin { display: flex; gap: 6px; margin-top: 12px; }
+.bib-admin form { display: contents; }
+.bib-admin-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid #e7e5e4; background: #fff; color: #57534e; cursor: pointer; text-decoration: none;
+  font: inherit; font-size: 11.5px; font-weight: 700; transition: border-color .2s, background .2s, color .2s;
+}
+.bib-admin-btn:hover { border-color: var(--pink-line); background: var(--pink-wash); color: var(--pink-deep); }
+.bib-admin-btn.es-publicar { border-color: var(--pink); background: var(--pink); color: #fff; }
+.bib-admin-btn.es-publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
+
+.bib-nueva {
+  height: 100%; min-height: 240px; aspect-ratio: auto; border-radius: 18px; border: 1.5px dashed #d6d3d1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none; color: #78716c; transition: border-color .25s, background .25s, color .25s;
+}
+.bib-nueva:hover { border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep); }
+.bib-nueva-ico {
+  width: 52px; height: 52px; border-radius: 50%; border: 1.5px solid currentColor; margin-bottom: 6px;
+  display: inline-flex; align-items: center; justify-content: center; transition: transform .5s cubic-bezier(.16,1,.3,1);
+}
+.bib-nueva:hover .bib-nueva-ico { transform: rotate(90deg); }
+.bib-nueva-titulo { font-family: var(--font-serif), serif; font-size: 22px; color: var(--ink); }
+.bib-nueva-sub { font-size: 12px; }
+
+.bib-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;
+  padding: 56px 24px; border-radius: 22px; border: 1.5px dashed #e7e5e4;
+}
+.bib-vacio-titulo { font-family: var(--font-serif), serif; font-size: 28px; color: var(--ink); }
+.bib-mas { display: flex; justify-content: center; padding-top: 40px; }
+
+@media (max-width: 760px) {
+  .bib-barra { flex-direction: column; align-items: stretch; }
+  .bib-buscar { flex: none; max-width: none; }
+  .bib-filtros { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .bib-filtros::-webkit-scrollbar { display: none; }
+  .bib-select { flex-shrink: 0; }
+  .bib-nav { flex-direction: column; align-items: stretch; }
+  .bib-seg { align-self: flex-start; }
+  .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 16px; }
+}
+@media (max-width: 480px) {
+  .bib-mast-acciones { width: 100%; }
+  .bib-mast-acciones .bib-btn:not(.bib-btn--texto) { flex: 1; }
+  .bib-grilla { grid-template-columns: minmax(0, 1fr); }
+}
+`;
