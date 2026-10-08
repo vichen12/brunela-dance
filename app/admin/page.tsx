@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { MetricCard, QuickLinksGrid } from "@/components/admin-overview-client";
+import { Saludo } from "@/components/saludo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,9 @@ function TierBlock({ count, label, pct, bg, color, borderColor }: {
 }
 
 export default async function AdminOverviewPage() {
-  await requireAdmin();
+  const { profile } = await requireAdmin();
+  // El nombre de quien entro: hay tres admins y todas leian "Brunela".
+  const nombre = profile?.full_name?.trim().split(/s+/)[0] || null;
   const supabase = await createSupabaseServerClient();
 
   const now = new Date();
@@ -60,8 +63,6 @@ export default async function AdminOverviewPage() {
     return acc;
   }, {});
 
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
   const dateLabel = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const row1 = [
@@ -144,7 +145,7 @@ export default async function AdminOverviewPage() {
           fontSize: 42, fontWeight: 700, lineHeight: 1.1,
           color: "#1c1917", marginTop: 8, letterSpacing: "-0.01em",
         }}>
-          {greeting}, Brunela.<span style={{ color: "var(--pink)" }}>✦</span>
+          <Saludo />{nombre ? `, ${nombre}.` : "."}<span style={{ color: "var(--pink)" }}>✦</span>
         </h1>
         <p style={{ marginTop: 8, fontSize: 13, color: "#78716c", lineHeight: 1.6 }}>
           Aquí está el resumen del estudio. Todo listo para gestionar.

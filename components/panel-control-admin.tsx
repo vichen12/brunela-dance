@@ -6,7 +6,7 @@ import {
   motion, MotionConfig, animate, useInView, useMotionValue, useReducedMotion, useTransform,
   type Variants,
 } from "motion/react";
-import { ArrowRight, ArrowUpRight, Plus, Play, Upload } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Plus, Play, Upload, User } from "lucide-react";
 import { Saludo } from "@/components/saludo";
 import { HoraSesion } from "@/components/hora-sesion";
 
@@ -49,17 +49,45 @@ export type DatosPanel = {
     anuncios: number;
   };
   porPlan: { tier: TierClave; cantidad: number }[];
-  ultimas: { id: string; nombre: string; tier: TierClave; cuando: string }[];
+  /** nombre null = el perfil no tiene nombre cargado. */
+  ultimas: { id: string; nombre: string | null; tier: TierClave; cuando: string }[];
   clases: { id: string; titulo: string; estado: string; portada: string | null; minutos: number | null }[];
   enVivo: { id: string; titulo: string; iso: string; zona: string; reservas: number }[];
 };
 
-const TIER: Record<TierClave, { label: string; color: string }> = {
-  principal:       { label: "Principal",       color: "#FDECEC" },
-  solista:         { label: "Solista",         color: "#E64F55" },
-  corps_de_ballet: { label: "Corps de Ballet", color: "#EB7478" },
-  none:            { label: "Sin plan",        color: "#57534e" },
+/** color: relleno de butacas y marcas. tinta: texto, con contraste sobre blanco. */
+const TIER: Record<TierClave, { label: string; color: string; tinta: string }> = {
+  principal:       { label: "Principal",       color: "#B03A3E", tinta: "#B03A3E" },
+  solista:         { label: "Solista",         color: "#E64F55", tinta: "#B03A3E" },
+  corps_de_ballet: { label: "Corps de Ballet", color: "#F2A3A6", tinta: "#8C5F5F" },
+  none:            { label: "Sin plan",        color: "#d6d3d1", tinta: "#78716c" },
 };
+
+const BUTACAS = 20;
+
+/**
+ * Reparte las 20 butacas por plan con el metodo del resto mayor: la suma da
+ * siempre 20, y un plan con alguna alumna nunca queda en cero butacas.
+ */
+function repartirButacas(porPlan: { tier: TierClave; cantidad: number }[], total: number): (TierClave | null)[] {
+  if (total === 0) return Array(BUTACAS).fill(null);
+  const exactas = porPlan.map((p) => (p.cantidad / total) * BUTACAS);
+  const asignadas = porPlan.map((p, i) => (p.cantidad > 0 ? Math.max(1, Math.floor(exactas[i])) : 0));
+  let resto = BUTACAS - asignadas.reduce((a, b) => a + b, 0);
+  const porFraccion = exactas
+    .map((x, i) => ({ i, frac: x - Math.floor(x) }))
+    .filter(({ i }) => porPlan[i].cantidad > 0)
+    .sort((a, b) => b.frac - a.frac);
+  for (let k = 0; resto > 0; k = (k + 1) % porFraccion.length) {
+    asignadas[porFraccion[k].i]++;
+    resto--;
+  }
+  while (resto < 0) {
+    asignadas[asignadas.indexOf(Math.max(...asignadas))]--;
+    resto++;
+  }
+  return porPlan.flatMap((p, i) => Array<TierClave>(asignadas[i]).fill(p.tier));
+}
 
 const ESTADO: Record<string, { label: string; clase: string }> = {
   published: { label: "Publicada", clase: "pc-estado--pub" },
@@ -132,12 +160,13 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
   const m = datos.metricas;
   const total = datos.porPlan.reduce((a, p) => a + p.cantidad, 0);
   const huecos = Math.max(0, 4 - datos.clases.length);
+  const butacas = repartirButacas(datos.porPlan, total);
 
   const cifras = [
     { valor: m.alumnas,    label: "Alumnas",           sub: `+${m.altasDelMes} este mes`, href: "/admin/users" },
-    { valor: m.conPlan,    label: "Con plan activo",   sub: `${m.principal} en Principal`, href: "/admin/users" },
-    { valor: m.publicadas, label: "Clases publicadas", sub: `${m.borradores} ${m.borradores === 1 ? "borrador" : "borradores"} · ${m.totales} en total`, href: "/admin/videos" },
-    { valor: m.reservas,   label: "Reservas en vivo",  sub: `${m.sesiones} ${m.sesiones === 1 ? "sesión" : "sesiones"} en agenda`, href: "/admin/live" },
+    { valor: m.conPlan,    label: "Con plan activo",   sub: `${m.principal} en Principal`, href: "/admin/users?plan=con-plan" },
+    { valor: m.publicadas, label: "Clases publicadas", sub: `${m.borradores} ${m.borradores === 1 ? "borrador" : "borradores"} · ${m.totales} en total`, href: "/admin/videos?estado=published" },
+    { valor: m.reservas,   label: "Reservas en vivo",  sub: `${m.sesiones} ${m.sesiones === 1 ? "sesión" : "sesiones"} en agenda`, href: "/admin/live?estado=scheduled" },
   ];
 
   const atajos = [
@@ -217,7 +246,7 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
                   const e = ESTADO[c.estado] ?? { label: c.estado, clase: "pc-estado--borr" };
                   return (
                     <motion.div key={c.id} whileHover="hover" initial="reposo">
-                      <Link href="/admin/videos" className="pc-clase">
+                      <Link href={`/admin/videos?q=${encodeURIComponent(c.titulo)}` as never} className="pc-clase">
                         <div className="pc-clase-img">
                           {c.portada ? (
                             <motion.img
@@ -267,7 +296,7 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
                     const f = partesFecha(s.iso, s.zona);
                     return (
                       <motion.li key={s.id} whileHover={{ x: 6 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
-                        <Link href="/admin/live" className="pc-vivo-fila">
+                        <Link href={`/admin/live?q=${encodeURIComponent(s.titulo)}` as never} className="pc-vivo-fila">
                           <span className="pc-vivo-fecha">
                             <span className="pc-vivo-dia">{f.dia}</span>
                             <span className="pc-vivo-mes">{f.mes}</span>
@@ -294,69 +323,87 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
           <motion.aside className="pc-lateral" variants={grupo} initial="oculto" animate="visible">
 
             <motion.section variants={sube} className="pc-estudio">
-              <motion.div
-                className="pc-estudio-luz" aria-hidden="true"
-                animate={{ x: [0, 30, -14, 0], y: [0, -20, 14, 0], scale: [1, 1.12, 0.94, 1] }}
-                transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-              />
               <div className="pc-estudio-a">
-              <p className="pc-estudio-eyebrow">El estudio</p>
-              <p className="pc-estudio-total">
-                <span className="pc-estudio-num"><Contador valor={total} /></span>
-                <span>{total === 1 ? "alumna" : "alumnas"}</span>
-              </p>
+                <div className="pc-estudio-cab">
+                  <p className="pc-estudio-eyebrow">El estudio</p>
+                  <Link href="/admin/users" className="pc-estudio-link">Alumnas <ArrowUpRight size={13} strokeWidth={2.2} /></Link>
+                </div>
+                <div className="pc-estudio-total">
+                  <span className="pc-estudio-num"><Contador valor={total} /></span>
+                  <span className="pc-estudio-total-txt">
+                    <span>{total === 1 ? "alumna" : "alumnas"}</span>
+                    <span className="pc-estudio-altas">+{m.altasDelMes} este mes</span>
+                  </span>
+                </div>
 
-              <div className="pc-pila" role="img" aria-label={datos.porPlan.map((p) => `${TIER[p.tier].label}: ${p.cantidad}`).join(", ")}>
-                {total > 0 && datos.porPlan.map((p, i) => p.cantidad > 0 && (
-                  <motion.span
-                    key={p.tier}
-                    style={{ background: TIER[p.tier].color }}
-                    initial={{ flexGrow: 0 }}
-                    animate={{ flexGrow: p.cantidad }}
-                    transition={{ duration: 1.1, delay: 0.4 + i * 0.1, ease: SUAVE }}
-                  />
-                ))}
-              </div>
+                {/* Butacas: 20 asientos, cada uno es el 5% del estudio. Con 4 o con
+                    400 alumnas se lee igual, y es mas danza que una barra. */}
+                <div
+                  className="pc-butacas" role="img"
+                  aria-label={datos.porPlan.map((p) => TIER[p.tier].label + ": " + p.cantidad).join(", ")}
+                >
+                  {butacas.map((tier, i) => (
+                    <motion.span
+                      key={i}
+                      className="pc-butaca"
+                      style={{ background: tier ? TIER[tier].color : undefined }}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.35 + i * 0.03 }}
+                    />
+                  ))}
+                </div>
 
-              <ul className="pc-leyenda">
-                {datos.porPlan.map((p) => {
-                  const pct = total > 0 ? Math.round((p.cantidad / total) * 100) : 0;
-                  return (
-                    <li key={p.tier}>
-                      <span className="pc-punto" style={{ background: TIER[p.tier].color }} />
-                      <span className="pc-leyenda-nombre">{TIER[p.tier].label}</span>
-                      <span className="pc-leyenda-num">{p.cantidad}</span>
-                      <span className="pc-leyenda-pct">{pct}%</span>
-                    </li>
-                  );
-                })}
-              </ul>
-
+                <ul className="pc-reparto">
+                  {datos.porPlan.map((p) => {
+                    const pct = total > 0 ? Math.round((p.cantidad / total) * 100) : 0;
+                    return (
+                      <li key={p.tier}>
+                        <Link href={`/admin/users?plan=${p.tier}` as never} className="pc-reparto-fila">
+                        <span className="pc-reparto-marca" style={{ background: TIER[p.tier].color }} />
+                        <span className="pc-reparto-nombre">{TIER[p.tier].label}</span>
+                        <span className="pc-reparto-puntos" aria-hidden="true" />
+                        <span className="pc-reparto-pct">{pct}%</span>
+                        <span className="pc-reparto-num">{p.cantidad}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
 
               <div className="pc-estudio-sep" />
 
               <div className="pc-estudio-b">
-
-              <div className="pc-estudio-cab">
-                <p className="pc-estudio-eyebrow" style={{ margin: 0 }}>Últimas altas</p>
-                <Link href="/admin/users" className="pc-estudio-link">Ver todas <ArrowUpRight size={13} strokeWidth={2.2} /></Link>
-              </div>
-              {datos.ultimas.length === 0 ? (
-                <p className="pc-estudio-vacio">Todavía no hay alumnas.</p>
-              ) : (
-                <ul className="pc-altas">
-                  {datos.ultimas.slice(0, 5).map((u) => (
-                    <li key={u.id}>
-                      <span className="pc-inicial">{(u.nombre.trim()[0] ?? "?").toUpperCase()}</span>
-                      <span className="pc-altas-txt">
-                        <span className="pc-altas-nombre">{u.nombre}</span>
-                        <span className="pc-altas-cuando">{TIER[u.tier]?.label ?? "Sin plan"} · {u.cuando}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                <div className="pc-estudio-cab">
+                  <p className="pc-estudio-eyebrow">Últimas altas</p>
+                  <Link href="/admin/users" className="pc-estudio-link">Ver todas <ArrowUpRight size={13} strokeWidth={2.2} /></Link>
+                </div>
+                {datos.ultimas.length === 0 ? (
+                  <p className="pc-estudio-vacio">Todavía no hay alumnas.</p>
+                ) : (
+                  <ul className="pc-altas">
+                    {datos.ultimas.slice(0, 5).map((u) => {
+                      const t = TIER[u.tier] ?? TIER.none;
+                      return (
+                        <li key={u.id}>
+                          <Link href={`/admin/users?plan=${u.tier}` as never} className="pc-altas-fila">
+                          <span className="pc-inicial" style={{ borderColor: t.color, color: t.tinta }}>
+                            {u.nombre ? u.nombre.trim()[0]?.toUpperCase() : <User size={15} strokeWidth={1.8} />}
+                          </span>
+                          <span className="pc-altas-txt">
+                            {u.nombre
+                              ? <span className="pc-altas-nombre">{u.nombre}</span>
+                              : <span className="pc-altas-nombre pc-altas-nombre--sin">Sin nombre cargado</span>}
+                            <span className="pc-altas-plan" style={{ color: t.tinta }}>{t.label}</span>
+                          </span>
+                          <span className="pc-altas-cuando">{u.cuando}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </motion.section>
 
@@ -393,6 +440,8 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
 
 const CSS = `
 .pc { display: flex; flex-direction: column; }
+.pc a:focus { outline: none; }
+.pc a:focus-visible { outline: 2px solid var(--pink); outline-offset: 3px; border-radius: 12px; }
 
 /* ── cabecera ── */
 .pc-mast {
@@ -542,49 +591,79 @@ const CSS = `
 /* ── lateral ── */
 .pc-lateral { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .pc-estudio {
-  position: relative; overflow: hidden; isolation: isolate;
-  background: var(--ink); color: #fff; border-radius: 24px; padding: 26px 26px 22px;
+  position: relative; background: #fff; border: 1px solid #e7e5e4; border-radius: 24px;
+  padding: 24px 26px 22px; overflow: hidden;
 }
-.pc-estudio-luz {
-  position: absolute; z-index: -1; pointer-events: none;
-  width: 340px; height: 340px; right: -150px; top: -150px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(230,79,85,0.5), rgba(230,79,85,0) 68%);
+.pc-estudio::before {
+  content: ""; position: absolute; left: 26px; right: 26px; top: 0; height: 3px;
+  background: var(--pink); border-radius: 0 0 3px 3px;
 }
+.pc-estudio-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .pc-estudio-eyebrow {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--rose);
-  margin-bottom: 10px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #78716c;
 }
-.pc-estudio-total { display: flex; align-items: baseline; gap: 10px; font-size: 14px; color: #d6d3d1; }
-.pc-estudio-num { font-family: var(--font-serif), serif; font-size: 64px; line-height: 0.9; color: #fff; letter-spacing: -0.03em; }
-.pc-pila {
-  display: flex; gap: 3px; height: 10px; margin: 20px 0 16px; border-radius: 99px; overflow: hidden;
-  background: rgba(255,255,255,0.08);
-}
-.pc-pila span { display: block; height: 100%; flex-basis: 0; min-width: 0; }
-.pc-leyenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.pc-leyenda li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-.pc-punto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
-.pc-leyenda-nombre { flex: 1; color: #e7e5e4; }
-.pc-leyenda-num { font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.pc-leyenda-pct { width: 38px; text-align: right; font-size: 11.5px; color: #a8a29e; font-variant-numeric: tabular-nums; }
-.pc-estudio-sep { height: 1px; background: rgba(255,255,255,0.12); margin: 22px 0 18px; }
-.pc-estudio-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .pc-estudio-link {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 11.5px; font-weight: 600; color: #e7e5e4; text-decoration: none;
+  font-size: 11.5px; font-weight: 700; color: var(--pink-deep); text-decoration: none;
 }
-.pc-estudio-link:hover { color: #fff; text-decoration: underline; }
+.pc-estudio-link:hover { text-decoration: underline; }
+.pc-estudio-total { display: flex; align-items: flex-end; gap: 14px; }
+.pc-estudio-num {
+  font-family: var(--font-serif), serif; font-size: 76px; line-height: 0.82;
+  color: var(--ink); letter-spacing: -0.04em;
+}
+.pc-estudio-total-txt { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; font-size: 15px; color: var(--ink); }
+.pc-estudio-altas { font-size: 12px; color: var(--pink-muted); }
+
+.pc-butacas {
+  display: grid; grid-template-columns: repeat(10, minmax(0, 18px)); justify-content: space-between;
+  row-gap: 9px; margin: 24px 0 20px;
+}
+.pc-butaca {
+  position: relative; display: block; height: 15px;
+  border-radius: 7px 7px 3px 3px; background: #ece9e7;
+}
+.pc-butaca::after {
+  content: ""; position: absolute; left: 2px; right: 2px; bottom: -4px; height: 2px;
+  border-radius: 2px; background: inherit; opacity: 0.45;
+}
+
+.pc-reparto { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.pc-reparto-fila {
+  display: flex; align-items: baseline; gap: 10px; text-decoration: none;
+  padding: 3px 8px; margin: 0 -8px; border-radius: 10px; transition: background .2s;
+}
+.pc-reparto-fila:hover { background: var(--pink-wash); }
+.pc-reparto-fila:hover .pc-reparto-nombre { color: var(--pink-deep); }
+.pc-reparto-marca { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; align-self: center; }
+.pc-reparto-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.pc-reparto-puntos { flex: 1; min-width: 12px; border-bottom: 1.5px dotted #d6d3d1; transform: translateY(-4px); }
+.pc-reparto-pct { font-size: 11px; color: #a8a29e; font-variant-numeric: tabular-nums; }
+.pc-reparto-num {
+  font-family: var(--font-serif), serif; font-size: 24px; line-height: 1; color: var(--ink);
+  min-width: 22px; text-align: right; font-variant-numeric: lining-nums tabular-nums;
+}
+
+.pc-estudio-sep { height: 1px; background: #f0eeec; margin: 22px 0 18px; }
 .pc-estudio-vacio { font-size: 13px; color: #a8a29e; }
-.pc-altas { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.pc-altas li { display: flex; align-items: center; gap: 12px; }
+.pc-altas { list-style: none; margin: 0; padding: 0; }
+.pc-altas-fila {
+  display: flex; align-items: center; gap: 12px; padding: 9px 8px; margin: 0 -8px;
+  text-decoration: none; border-radius: 12px; transition: background .2s;
+}
+.pc-altas-fila:hover { background: #fafaf9; }
+.pc-altas li + li { border-top: 1px solid #f5f5f4; }
 .pc-inicial {
   width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-serif), serif; font-size: 16px; color: var(--ink); background: var(--pink-soft);
+  border: 1.5px solid; background: #fff;
+  font-family: var(--font-serif), serif; font-style: italic; font-size: 17px;
 }
-.pc-altas-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pc-altas-nombre { font-size: 13px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pc-altas-cuando { font-size: 11.5px; color: #a8a29e; }
+.pc-altas-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pc-altas-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-altas-nombre--sin { font-weight: 400; font-style: italic; color: #a8a29e; }
+.pc-altas-plan { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.pc-altas-cuando { font-size: 11.5px; color: #a8a29e; white-space: nowrap; }
 
 .pc-atajos { margin-top: 40px; border-top: 1px solid var(--ink); padding-top: 18px; }
 .pc-atajos-titulo {
@@ -598,7 +677,7 @@ const CSS = `
   text-decoration: none; color: inherit; border-radius: 16px; transition: background .2s;
 }
 .pc-atajos li:first-child .pc-atajo { padding-left: 0; }
-.pc-atajo:hover { background: #fff; }
+.pc-atajo:hover { background: var(--pink-wash); }
 .pc-atajo-num { font-family: var(--font-serif), serif; font-style: italic; font-size: 30px; color: var(--pink-mid); width: 36px; flex-shrink: 0; }
 .pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pc-atajo-label { font-size: 14px; font-weight: 700; color: var(--ink); }
@@ -609,7 +688,7 @@ const CSS = `
 /* ── responsive ── */
 @media (max-width: 1180px) {
   .pc-cuerpo { grid-template-columns: minmax(0, 1fr); }
-  .pc-estudio { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 0 28px; }
+  .pc-estudio { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 0 32px; }
   .pc-estudio-sep { margin: 0; height: auto; }
   .pc-atajos ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pc-atajos li:nth-child(3) { border-left: 0; }

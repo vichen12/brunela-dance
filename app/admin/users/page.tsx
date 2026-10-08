@@ -9,6 +9,19 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 /** Alumnas por pagina. Con 50 entra una pantalla larga sin scroll infinito. */
 const POR_PAGINA = 50;
 
+/**
+ * Filtro por plan, por URL: el panel de inicio enlaza cada cifra a su lista
+ * ("Con plan activo" -> ?plan=con-plan). Se filtra en SQL y no sobre la pagina
+ * ya traida: filtrar 50 filas en memoria daria una lista incompleta.
+ */
+const FILTROS_PLAN: Record<string, string> = {
+  "con-plan": "Con plan activo",
+  principal: "Principal",
+  solista: "Solista",
+  corps_de_ballet: "Corps de Ballet",
+  none: "Sin plan",
+};
+
 type ProfileRow = {
   id: string;
   email: string;
@@ -82,6 +95,14 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   // carga -- una consulta que anda perfecto con 10 alumnas y se vuelve pesada
   // con 500, justo cuando el estudio empieza a funcionar.
   const pagina = Math.max(0, Math.min(200, Number(params.pagina) || 0));
+  const plan = typeof params.plan === "string" && params.plan in FILTROS_PLAN ? params.plan : "";
+  const conPlan = (p: number) => `/admin/users?${plan ? `plan=${plan}&` : ""}pagina=${p}`;
+
+  let consulta = supabase
+    .from("profiles")
+    .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at");
+  if (plan === "con-plan") consulta = consulta.neq("membership_tier", "none");
+  else if (plan) consulta = consulta.eq("membership_tier", plan as "none");
 
   // ⚠️ Los totales van en su PROPIA consulta, y no es un viaje de mas al pedo.
   //    Contarlos sobre las filas de la pagina daria "3 solistas" habiendo 30:
@@ -90,9 +111,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   //
   //    Trae una sola columna, asi que pesa poco aunque no se pagine.
   const [{ data }, { data: todosLosTiers }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at")
+    consulta
       .order("created_at", { ascending: false })
       .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA),
     supabase.from("profiles").select("membership_tier, is_admin"),
@@ -127,19 +146,27 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           // profiles.length incluye a las admin. El panel de inicio cuenta solo
           // alumnas, asi que los dos numeros no coinciden -- y no coincidian por
           // una etiqueta, no por un error. Ahora cada uno dice lo que cuenta.
-          { value: totalAlumnas, label: "Alumnas", color: "#1c1917" },
-          { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)" },
-          { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)" },
-          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)" },
+          { value: totalAlumnas, label: "Alumnas", color: "#1c1917", filtro: "" },
+          { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)", filtro: "principal" },
+          { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)", filtro: "solista" },
+          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)", filtro: "corps_de_ballet" },
         ].map((s) => (
-          <div key={s.label} style={{
-            background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "18px 20px",
+          <Link key={s.label} href={(s.filtro ? `/admin/users?plan=${s.filtro}` : "/admin/users") as never} style={{
+            background: "#fff", borderRadius: 16, padding: "18px 20px", textDecoration: "none",
+            border: plan === s.filtro ? "1.5px solid var(--pink)" : "1px solid #f0eeec",
           }}>
             <p style={{ fontSize: 28, fontWeight: 800, color: s.color, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#a8a29e", marginTop: 6, letterSpacing: "0.04em" }}>{s.label}</p>
-          </div>
+          </Link>
         ))}
       </div>
+
+      {plan && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, fontSize: 13, color: "var(--ink-soft)" }}>
+          Mostrando: <strong style={{ color: "var(--ink)" }}>{FILTROS_PLAN[plan]}</strong>
+          <Link href="/admin/users" style={{ color: "var(--pink-deep)", fontWeight: 700, fontSize: 12 }}>Quitar filtro</Link>
+        </div>
+      )}
 
       {/* User list */}
       <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, overflow: "hidden" }}>
@@ -159,7 +186,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
         {profiles.length === 0 ? (
           <div style={{ padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
-            No hay perfiles registrados todavia.
+            {plan ? "No hay nadie con ese plan." : "No hay perfiles registrados todavía."}
           </div>
         ) : (
           profiles.map((profile, i) => {
@@ -307,7 +334,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           gap: 14, marginTop: 18,
         }}>
           {pagina > 0 ? (
-            <Link href={`/admin/users?pagina=${pagina - 1}`} style={{
+            <Link href={conPlan(pagina - 1) as never} style={{
               padding: "10px 18px", borderRadius: 999, textDecoration: "none",
               background: "#fff", color: "var(--pink-deep)",
               border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
@@ -319,7 +346,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           </span>
 
           {hayMasPaginas ? (
-            <Link href={`/admin/users?pagina=${pagina + 1}`} style={{
+            <Link href={conPlan(pagina + 1) as never} style={{
               padding: "10px 18px", borderRadius: 999, textDecoration: "none",
               background: "#fff", color: "var(--pink-deep)",
               border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,

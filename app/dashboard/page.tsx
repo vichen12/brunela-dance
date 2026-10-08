@@ -341,7 +341,7 @@ export default async function DashboardPage() {
   // la profesora eran ceros ocupando media pantalla.
   if (isAdmin) {
     return (
-      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh" }}>
+      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh", background: "#fff" }}>
         <section style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px)" }}>
           <PanelControlAdmin datos={{
             nombre: nombreReal,
@@ -367,7 +367,7 @@ export default async function DashboardPage() {
             ],
             ultimas: recentUsers.map((u) => ({
               id: u.id,
-              nombre: u.full_name?.trim() || "Sin nombre",
+              nombre: u.full_name?.trim() || null,
               tier: u.membership_tier,
               cuando: timeAgo(u.created_at),
             })),
