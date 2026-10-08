@@ -249,6 +249,32 @@ function planesDeLaClase(v: { planes_permitidos: string[] | null; membership_tie
   return v.planes_permitidos?.length ? v.planes_permitidos : planesDesde(v.membership_tier_required);
 }
 
+const ORDEN_DE_PLANES = ["corps_de_ballet", "solista", "principal"];
+
+/**
+ * Que plan nombrar en el candado de una clase que la alumna no puede abrir.
+ *
+ * 🔴 NO ES `membership_tier_required`.
+ *    Desde la combinacion libre de planes (migracion 20260921) esa columna es
+ *    el plan MAS BAJO de la lista, no el que hace falta. Con una clase para
+ *    {corps, principal}, una alumna Solista veia "🔒 Corps" -- un plan mas
+ *    barato que el que ya paga -- justo en el momento de venderle la subida.
+ *
+ * La respuesta correcta es el plan mas barato DE LA LISTA que este por encima
+ * del suyo. Si no hay ninguno (caso raro: la clase es solo para planes mas
+ * bajos), se nombra el mas barato de la lista.
+ */
+function planQueDesbloquea(
+  v: { planes_permitidos: string[] | null; membership_tier_required: string },
+  planActual: string
+): string {
+  const lista = planesDeLaClase(v)
+    .filter((p) => ORDEN_DE_PLANES.includes(p))
+    .sort((a, b) => ORDEN_DE_PLANES.indexOf(a) - ORDEN_DE_PLANES.indexOf(b));
+  const rango = ORDEN_DE_PLANES.indexOf(planActual); // -1 si no tiene plan
+  return lista.find((p) => ORDEN_DE_PLANES.indexOf(p) > rango) ?? lista[0] ?? "corps_de_ballet";
+}
+
 /**
  * Una clase marcada "Todos" entra en cualquier filtro de nivel; el resto tiene
  * que coincidir. Se compara por el nivel del FORMULARIO y no por el par crudo,
@@ -291,9 +317,8 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   };
   const fNivel    = uno("nivel",  OPCIONES_NIVEL.map((o) => o.key));
   const fDuracion = uno("dur",    OPCIONES_DURACION.map((o) => o.key));
-  const fPlan     = uno("plan",   OPCIONES_PLAN.map((o) => o.key));
+  const fPlanPedido = uno("plan", OPCIONES_PLAN.map((o) => o.key));
   const fEstado   = uno("estado", OPCIONES_ESTADO.map((o) => o.key));
-  const hayFiltros = Boolean(fNivel || fDuracion || fPlan || fEstado);
 
   // Paginacion acumulativa: "Ver más" trae la pagina siguiente SIN perder las
   // anteriores, que es lo que espera alguien recorriendo un catalogo. Se pide
@@ -302,6 +327,18 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
   const profileData = await getCurrentProfile(user.id);
   const isAdmin = profileData?.is_admin ?? false;
+
+  /**
+   * El filtro por PLAN es configuracion de Brunela, no algo de la alumna.
+   *
+   * A quien no es admin se le ignora aunque lo escriba a mano en la URL
+   * (?plan=solista): esconder el desplegable no alcanza si el parametro
+   * sigue filtrando. Para la alumna el plan existe solo como candado en las
+   * clases que no puede abrir.
+   */
+  const fPlan = isAdmin ? fPlanPedido : "";
+  const hayFiltros = Boolean(fNivel || fDuracion || fPlan || fEstado);
+  const planDeLaAlumna = profileData?.membership_tier ?? "none";
   /**
    * ⚠️ TENER UN PACK NO ES "NO TENER PLAN".
    *
@@ -577,7 +614,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               { name: "dur",    valor: fDuracion, ops: OPCIONES_DURACION, etiqueta: "Duración" },
               { name: "plan",   valor: fPlan,     ops: OPCIONES_PLAN,     etiqueta: "Plan" },
               { name: "estado", valor: fEstado,   ops: OPCIONES_ESTADO,   etiqueta: "Estado" },
-            ] as const).map((f) => (
+            ] as const).filter((f) => isAdmin || f.name !== "plan").map((f) => (
               <select
                 key={f.name}
                 name={f.name}
@@ -877,7 +914,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                           <path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2M3.5 7h9v6h-9V7Z"
                             stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                         </svg>
-                        {TIER_META[video.membership_tier_required]?.label ?? "Plan"}
+                        {TIER_META[planQueDesbloquea(video, planDeLaAlumna)]?.label ?? "Plan"}
                       </span>
                     )}
                     <div className="feature-tile" style={{
