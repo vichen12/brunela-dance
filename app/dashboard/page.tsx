@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HoraSesion } from "@/components/hora-sesion";
-import { Users, Play, CalendarDays, Megaphone } from "lucide-react";
+import { PanelControlAdmin } from "@/components/panel-control-admin";
+import { Saludo } from "@/components/saludo";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -45,6 +46,23 @@ type LiveSession = {
 
 type Announcement = { id: string; title: string; content: string; tier_target: string };
 
+type ClaseReciente = {
+  id: string;
+  slug: string;
+  title_i18n: Record<string, string>;
+  status: string;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+};
+
+type SesionProxima = {
+  id: string;
+  title_i18n: Record<string, string>;
+  starts_at: string;
+  session_timezone: string;
+  live_session_bookings: { count: number }[] | null;
+};
+
 type RecentUser = {
   id: string;
   full_name: string | null;
@@ -54,17 +72,6 @@ type RecentUser = {
 
 const TIER_ORDER: Record<MembershipTier, number> = {
   none: 0, corps_de_ballet: 1, solista: 2, principal: 3,
-};
-
-const TIER_LABEL: Record<MembershipTier, string> = {
-  none: "Sin plan", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
-};
-
-const TIER_COLOR: Record<MembershipTier, { bg: string; color: string }> = {
-  none:            { bg: "#f1f5f9", color: "#64748b" },
-  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)" },
-  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)" },
-  principal:       { bg: "#1c1917", color: "var(--pink-wash)" },
 };
 
 /**
@@ -142,9 +149,12 @@ function timeAgo(iso: string) {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   if (days === 0) return "hoy";
   if (days === 1) return "ayer";
-  if (days < 7) return `hace ${days}d`;
-  if (days < 30) return `hace ${Math.floor(days / 7)}sem`;
-  return `hace ${Math.floor(days / 30)}m`;
+  if (days < 7) return `hace ${days} días`;
+  if (days < 30) return `hace ${Math.floor(days / 7)} sem`;
+  // "hace 5m" se leia como cinco MINUTOS. Se escribe la palabra entera.
+  if (days < 365) { const m = Math.floor(days / 30); return `hace ${m} ${m === 1 ? "mes" : "meses"}`; }
+  const a = Math.floor(days / 365);
+  return `hace ${a} ${a === 1 ? "año" : "años"}`;
 }
 
 export default async function DashboardPage() {
@@ -155,9 +165,11 @@ export default async function DashboardPage() {
 
   const isAdmin = profile?.is_admin ?? false;
   const tier = profile?.membership_tier ?? "none";
-  const firstName = isAdmin
-    ? "Brunela"
-    : (profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "alumna");
+  // El nombre de QUIEN entro. Antes toda cuenta admin leia "Brunela", y hay
+  // tres admins: el saludo le hablaba a otra persona.
+  const nombreReal = profile?.full_name?.trim().split(/s+/)[0] || null;
+  const firstName =
+    profile?.full_name?.trim().split(/s+/)[0] || user.email?.split("@")[0] || "alumna";
 
   const now = new Date().toISOString();
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
@@ -215,6 +227,8 @@ export default async function DashboardPage() {
   let newUsersMonth: number | null = null;
   let activeAnnouncements: number | null = null;
   let recentUsersRaw: RecentUser[] | null = null;
+  let clasesRecientesRaw: ClaseReciente[] = [];
+  let proximasEnVivoRaw: SesionProxima[] = [];
 
   if (isAdmin) {
     try {
@@ -224,7 +238,7 @@ export default async function DashboardPage() {
       const [
         r0, r1, r2, r3, r4,
         r5, r6, r7, r8, r9,
-        r10, r11, r12,
+        r10, r11, r12, r13, r14,
       ] = await Promise.all([
         supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
         supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "corps_de_ballet"),
@@ -243,6 +257,16 @@ export default async function DashboardPage() {
         supabaseAdmin.from("profiles")
           .select("id, full_name, membership_tier, created_at")
           .order("created_at", { ascending: false }).limit(6),
+        // Lo ultimo que se subio, en cualquier estado: un borrador olvidado es
+        // justo lo que la admin tiene que ver al entrar.
+        supabaseAdmin.from("videos")
+          .select("id, slug, title_i18n, status, thumbnail_url, duration_seconds")
+          .order("created_at", { ascending: false }).limit(4),
+        supabaseAdmin.from("live_sessions")
+          .select("id, title_i18n, starts_at, session_timezone, live_session_bookings(count)")
+          .eq("status", "scheduled").gte("starts_at", now)
+          .eq("live_session_bookings.status", "reserved")
+          .order("starts_at", { ascending: true }).limit(3),
       ]);
 
       totalUsers = r0.count;
@@ -258,6 +282,8 @@ export default async function DashboardPage() {
       newUsersMonth = r10.count;
       activeAnnouncements = r11.count;
       recentUsersRaw = (r12.data ?? []) as RecentUser[];
+      clasesRecientesRaw = (r13.data ?? []) as ClaseReciente[];
+      proximasEnVivoRaw = (r14.data ?? []) as SesionProxima[];
     } catch {
       // Admin client unavailable (missing SUPABASE_SERVICE_ROLE_KEY) — degrade gracefully
     }
@@ -288,7 +314,6 @@ export default async function DashboardPage() {
   const resumeMin = Math.floor(resumeElapsed / 60);
   const resumeSec = resumeElapsed % 60;
   const canAccessLive = liveData ? TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required] : false;
-  const tierStyle = TIER_COLOR[tier];
   const announcements = (announcementsData ?? []) as Announcement[];
 
   // Solo las que todavia no pasaron y siguen publicadas. Se filtra y ordena en
@@ -309,184 +334,66 @@ export default async function DashboardPage() {
 
   const recentUsers = (recentUsersRaw ?? []) as RecentUser[];
   const paidUsers = (corpsCount ?? 0) + (solistaCount ?? 0) + (principalCount ?? 0);
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Buenos dias" : hour < 19 ? "Buenas tardes" : "Buenas noches";
 
-  type TierRow = { label: string; count: number; bg: string; color: string; border?: string; barBg: string };
-  const TIER_ROWS: TierRow[] = [
-    { label: "Principal",       count: principalCount ?? 0, bg: "#1c1917", color: "var(--pink-wash)", barBg: "#1c1917" },
-    { label: "Solista",         count: solistaCount ?? 0,   bg: "var(--pink-mid)", color: "#fff",    barBg: "var(--pink-mid)" },
-    { label: "Corps de Ballet", count: corpsCount ?? 0,     bg: "var(--pink-wash)", color: "var(--pink-deep)", border: "1px solid var(--pink-line)", barBg: "var(--rose)" },
-    { label: "Sin plan",        count: noPlanCount ?? 0,    bg: "#f5f5f4", color: "#78716c", barBg: "#d4d4d4" },
-  ];
+
+  // La admin ve el panel del estudio y nada mas. La seccion personal (clases
+  // vistas, racha, "continua viendo") es la vista de una alumna: en la cuenta de
+  // la profesora eran ceros ocupando media pantalla.
+  if (isAdmin) {
+    return (
+      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh" }}>
+        <section style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px)" }}>
+          <PanelControlAdmin datos={{
+            nombre: nombreReal,
+            fecha: formatDate(),
+            metricas: {
+              alumnas: totalUsers ?? 0,
+              altasDelMes: newUsersMonth ?? 0,
+              conPlan: paidUsers,
+              principal: principalCount ?? 0,
+              sinPlan: noPlanCount ?? 0,
+              reservas: totalBookings ?? 0,
+              sesiones: scheduledLive ?? 0,
+              publicadas: publishedVideos ?? 0,
+              borradores: draftVideos ?? 0,
+              totales: totalVideos ?? 0,
+              anuncios: activeAnnouncements ?? 0,
+            },
+            porPlan: [
+              { tier: "principal", cantidad: principalCount ?? 0 },
+              { tier: "solista", cantidad: solistaCount ?? 0 },
+              { tier: "corps_de_ballet", cantidad: corpsCount ?? 0 },
+              { tier: "none", cantidad: noPlanCount ?? 0 },
+            ],
+            ultimas: recentUsers.map((u) => ({
+              id: u.id,
+              nombre: u.full_name?.trim() || "Sin nombre",
+              tier: u.membership_tier,
+              cuando: timeAgo(u.created_at),
+            })),
+            clases: clasesRecientesRaw.map((v) => ({
+              id: v.id,
+              titulo: resolveI18nText(v.title_i18n) || "Sin título",
+              estado: v.status,
+              portada: v.thumbnail_url,
+              minutos: v.duration_seconds ? Math.round(v.duration_seconds / 60) : null,
+            })),
+            enVivo: proximasEnVivoRaw.map((s) => ({
+              id: s.id,
+              titulo: resolveI18nText(s.title_i18n) || "Clase en vivo",
+              iso: s.starts_at,
+              zona: s.session_timezone,
+              reservas: s.live_session_bookings?.[0]?.count ?? 0,
+            })),
+          }} />
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="pb-20 md:pb-10" style={{ minHeight: "100vh" }}>
       <section style={{ maxWidth: 980, margin: "0 auto", padding: "32px 28px", display: "flex", flexDirection: "column", gap: 18 }}>
-
-        {/* ── ADMIN SYSTEM OVERVIEW ── */}
-        {isAdmin && (
-          <>
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink-deep)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 5 }}>
-                  {formatDate()}
-                </p>
-                <h1 style={{ fontFamily: "var(--font-display), serif", fontSize: 32, fontWeight: 800, color: "#1c1917", lineHeight: 1.1, letterSpacing: "-0.01em" }}>
-                  Panel de control
-                </h1>
-              </div>
-              <Link href="/admin" style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "9px 20px", borderRadius: 99, textDecoration: "none",
-                background: "#1c1917", color: "var(--pink-wash)",
-                fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-              }}>
-                Admin completo →
-              </Link>
-            </div>
-
-            {/* KPI row 1: users */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-              {([
-                { value: totalUsers ?? 0,    label: "Alumnas totales",   accent: "#1c1917", sub: `+${newUsersMonth ?? 0} este mes`,      href: "/admin/users" },
-                { value: paidUsers,           label: "Con plan activo",   accent: "var(--pink-mid)", sub: `${principalCount ?? 0} principal`,     href: "/admin/users" },
-                { value: noPlanCount ?? 0,    label: "Sin plan",          accent: "#78716c", sub: "Sin suscripcion activa",               href: "/admin/users" },
-                { value: totalBookings ?? 0,  label: "Reservas activas",  accent: "var(--pink-mid)", sub: `${scheduledLive ?? 0} sesiones prog.`, href: "/admin/live" },
-              ] as const).map((s, i) => (
-                <Link key={i} href={s.href as never} style={{ textDecoration: "none" }}>
-                  <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 16, padding: "18px 20px", height: "100%" }}>
-                    <p style={{ fontSize: 32, fontWeight: 800, color: s.accent, letterSpacing: "-0.03em", lineHeight: 1 }}>{s.value}</p>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917", marginTop: 7 }}>{s.label}</p>
-                    <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 3 }}>{s.sub}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* KPI row 2: content */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-              {([
-                { value: publishedVideos ?? 0,    label: "Videos publicados",  sub: `${draftVideos ?? 0} borradores`,        href: "/admin/videos" },
-                { value: totalVideos ?? 0,        label: "Videos totales",     sub: "En la biblioteca",                      href: "/admin/videos" },
-                { value: scheduledLive ?? 0,      label: "Sesiones proximas",  sub: "Programadas y activas",                 href: "/admin/live" },
-                { value: activeAnnouncements ?? 0,label: "Anuncios activos",   sub: "Visibles para alumnas",                 href: "/admin/announcements" },
-              ] as const).map((s, i) => (
-                <Link key={i} href={s.href as never} style={{ textDecoration: "none" }}>
-                  <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 16, padding: "18px 20px", height: "100%" }}>
-                    <p style={{ fontSize: 32, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.03em", lineHeight: 1 }}>{s.value}</p>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917", marginTop: 7 }}>{s.label}</p>
-                    <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 3 }}>{s.sub}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Tier breakdown + Recent signups */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-
-              {/* Tier breakdown */}
-              <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20, padding: "22px 24px" }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 18 }}>
-                  Distribucion por plan
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {TIER_ROWS.map((row) => {
-                    const pct = (totalUsers ?? 0) > 0 ? Math.round((row.count / (totalUsers ?? 1)) * 100) : 0;
-                    return (
-                      <div key={row.label}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-                            background: row.bg, color: row.color, border: row.border,
-                            padding: "3px 9px", borderRadius: 99,
-                          }}>{row.label.toUpperCase()}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>{row.count}</span>
-                        </div>
-                        <div style={{ height: 4, background: "#f5f5f4", borderRadius: 99 }}>
-                          <div style={{ height: "100%", width: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, borderRadius: 99, background: row.barBg }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Recent signups */}
-              <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20, padding: "22px 24px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase" }}>
-                    Ultimas alumnas
-                  </p>
-                  <Link href="/admin/users" style={{ fontSize: 11, color: "var(--pink-deep)", fontWeight: 600, textDecoration: "none" }}>
-                    Ver todas →
-                  </Link>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {recentUsers.length === 0 ? (
-                    <p style={{ fontSize: 12, color: "#a8a29e" }}>No hay alumnas todavia.</p>
-                  ) : recentUsers.map((u) => {
-                    const badge = TIER_COLOR[u.membership_tier] ?? TIER_COLOR.none;
-                    const initial = (u.full_name?.trim()[0] ?? "?").toUpperCase();
-                    return (
-                      <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                          width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                          background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 700, color: "var(--pink-deep)",
-                        }}>{initial}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {u.full_name ?? "Sin nombre"}
-                          </p>
-                          <p style={{ fontSize: 10, color: "#a8a29e" }}>{timeAgo(u.created_at)}</p>
-                        </div>
-                        <span style={{
-                          fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
-                          background: badge.bg, color: badge.color,
-                          padding: "2px 7px", borderRadius: 99, flexShrink: 0,
-                          border: u.membership_tier === "corps_de_ballet" ? "1px solid var(--pink-line)" : undefined,
-                        }}>{TIER_LABEL[u.membership_tier].toUpperCase()}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Admin quick actions */}
-            <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20, padding: "20px 24px" }}>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
-                Acciones rapidas
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                {([
-                  { href: "/admin/users",         label: "Gestionar alumnas", Icon: Users },
-                  { href: "/admin/videos",         label: "Subir clase",       Icon: Play },
-                  { href: "/admin/live",           label: "Nueva sesión",      Icon: CalendarDays },
-                  { href: "/admin/announcements",  label: "Nuevo anuncio",     Icon: Megaphone },
-                ] as const).map((a) => (
-                  <Link key={a.href} href={a.href} style={{
-                    display: "flex", flexDirection: "column", gap: 8, textDecoration: "none",
-                    padding: "16px 18px", borderRadius: 14, background: "#fafaf9", border: "1.5px solid #f0eeec",
-                  }}>
-                    <a.Icon size={19} strokeWidth={1.9} style={{ color: "var(--pink-deep)" }} />
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#1c1917" }}>{a.label}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Section divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "4px 0" }}>
-              <div style={{ flex: 1, height: 1, background: "#f0eeec" }} />
-              <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: "#c4b5af", textTransform: "uppercase" }}>Tu actividad</p>
-              <div style={{ flex: 1, height: 1, background: "#f0eeec" }} />
-            </div>
-          </>
-        )}
 
         {/* ── PERSONAL SECTION ── */}
 
@@ -562,32 +469,22 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Greeting */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div>
-            {!isAdmin && (
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
-                {formatDate()}
-              </p>
-            )}
-            <h2 style={{
-              fontFamily: "var(--font-display), serif",
-              fontSize: isAdmin ? 22 : 36, fontWeight: 800, color: "var(--ink)",
-              lineHeight: 1.1, letterSpacing: "-0.01em",
-            }}>
-              {greeting},{" "}
-              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>{firstName}.</span>
-            </h2>
-            <p style={{ marginTop: 6, fontSize: 13, color: "#78716c", lineHeight: 1.5 }}>
-              Tu cuerpo te espera. Segui donde lo dejaste.
-            </p>
-          </div>
-          {isAdmin && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, padding: "6px 16px", borderRadius: 99,
-              background: tierStyle.bg, color: tierStyle.color, alignSelf: "flex-start", marginTop: 4,
-            }}>{TIER_LABEL[tier]}</span>
-          )}
+        {/* Saludo */}
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
+            {formatDate()}
+          </p>
+          <h2 style={{
+            fontFamily: "var(--font-display), serif",
+            fontSize: 36, fontWeight: 800, color: "var(--ink)",
+            lineHeight: 1.1, letterSpacing: "-0.01em",
+          }}>
+            <Saludo />,{" "}
+            <span style={{ color: "var(--pink)", fontStyle: "italic" }}>{firstName}.</span>
+          </h2>
+          <p style={{ marginTop: 6, fontSize: 13, color: "#78716c", lineHeight: 1.5 }}>
+            Tu cuerpo te espera. Seguí donde lo dejaste.
+          </p>
         </div>
 
         {/* Personal stats */}

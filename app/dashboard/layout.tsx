@@ -46,10 +46,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/registro/onboarding" as never);
   }
 
-  const userName = profile?.is_admin
-    ? "BRUNELA"
-    : (profile?.full_name?.split(" ")[0]?.toUpperCase() ??
-       (user.email?.split("@")[0] ?? "ALUMNA").toUpperCase());
+  // El nombre de quien entro. Antes cualquier admin leia "BRUNELA", y hay tres.
+  const userName = (
+    profile?.full_name?.trim().split(/s+/)[0] ||
+    user.email?.split("@")[0] ||
+    "alumna"
+  ).toUpperCase();
 
   const isAdmin = profile?.is_admin ?? false;
 
