@@ -61,7 +61,10 @@ export function StudioSidebar({
   membershipTier,
   isAdmin,
   seguirViendo,
+  foto,
 }: {
+  /** Foto de perfil, si subio una. */
+  foto?: string | null;
   userName: string;
   membershipTier: MembershipTier;
   isAdmin: boolean;
@@ -123,7 +126,12 @@ export function StudioSidebar({
           </Link>
         )}
         <div className="sb-perfil">
-          <span className="sb-avatar" aria-hidden="true">{initial}</span>
+          <Link href={"/dashboard/perfil" as Route} className="sb-avatar" title="Mi perfil" aria-label="Mi perfil">
+            {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={foto} alt="" className="sb-avatar-img" />
+          ) : initial}
+          </Link>
           <div className="sb-perfil-txt">
             <p className="sb-perfil-nombre">{userName}</p>
             <span className="sb-perfil-plan">

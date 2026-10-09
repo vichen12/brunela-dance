@@ -20,7 +20,7 @@ const ROUTES: Record<string, string> = {
   "/admin/analiticas":    "Analíticas",
 };
 
-export function AdminHeader({ inicial }: { inicial: string }) {
+export function AdminHeader({ inicial, foto }: { inicial: string; foto?: string | null }) {
   const pathname = usePathname();
   // Una ficha (/admin/users/abc) toma el nombre de su seccion: antes caia
   // en "Backstage", que no es el nombre de nada.
@@ -55,8 +55,13 @@ export function AdminHeader({ inicial }: { inicial: string }) {
           <Eye size={15} strokeWidth={2} aria-hidden="true" />
           <span>Ver como alumna</span>
         </Link>
-        {/* El avatar lleva a la configuracion del estudio. */}
-        <Link href="/admin/settings" className="ah-avatar" title="Configuración" aria-label="Configuración">{inicial}</Link>
+        {/* El avatar lleva a Mi perfil: nombre y foto. */}
+        <Link href={"/admin/perfil" as never} className="ah-avatar" title="Mi perfil" aria-label="Mi perfil">
+          {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={foto} alt="" className="ah-avatar-img" />
+          ) : inicial}
+        </Link>
       </div>
     </header>
   );

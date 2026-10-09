@@ -4303,3 +4303,8 @@ a.sb-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-lin
 .sistema .abus .dsp--pildora.es-activo .dsp-boton { border-color: var(--pink); background: var(--rubor); }
 .sistema .abus .dsp-prefijo { line-height: 1; }
 .sistema .abus .dsp-texto { line-height: 1; }
+
+/* Foto de perfil dentro de los avatares (cabecera y menus). */
+.ah-avatar, .sb-avatar { overflow: hidden; }
+.ah-avatar-img, .sb-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+a.sb-avatar { text-decoration: none; }

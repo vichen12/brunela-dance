@@ -31,7 +31,11 @@ const getSeguirViendo = cache(async (userId: string) => {
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const [profile, seguirViendo] = await Promise.all([getProfile(user.id), getSeguirViendo(user.id)]);
+  const [profile, seguirViendo, { data: fotoData }] = await Promise.all([
+    getProfile(user.id),
+    getSeguirViendo(user.id),
+    (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
+  ]);
 
   // COMPUERTA DE ONBOARDING
   //
@@ -73,6 +77,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="studio-sidebar-wrapper">
           <StudioSidebar
             userName={userName}
+            foto={fotoData?.avatar_url ?? null}
             membershipTier={profile?.membership_tier ?? "none"}
             isAdmin={isAdmin}
             seguirViendo={seguirViendo}

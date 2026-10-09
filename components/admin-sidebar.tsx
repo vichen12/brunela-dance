@@ -74,7 +74,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
  * `nombre` es el de quien entro: hay tres cuentas admin y antes las tres
  * leian "BRUNELA" al pie del menu.
  */
-export function AdminSidebar({ nombre }: { nombre: string }) {
+export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string | null }) {
   const pathname = usePathname();
 
   // En pantallas chicas el menu es un cajon: se cierra al navegar.
@@ -138,7 +138,12 @@ export function AdminSidebar({ nombre }: { nombre: string }) {
       <div className="sb-pie">
         {/* "Ver como alumna" vive en la cabecera: aca restaba alto a un menu de 14 items. */}
         <div className="sb-perfil">
-          <Link href={"/admin/settings" as Route} className="sb-avatar" title="Configuración" aria-label="Configuración">{(nombre.trim()[0] ?? "A").toUpperCase()}</Link>
+          <Link href={"/admin/perfil" as Route} className="sb-avatar" title="Mi perfil" aria-label="Mi perfil">
+            {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={foto} alt="" className="sb-avatar-img" />
+          ) : (nombre.trim()[0] ?? "A").toUpperCase()}
+          </Link>
           <div className="sb-perfil-txt">
             <p className="sb-perfil-nombre" style={{ textTransform: "capitalize" }}>{nombre}</p>
             <span className="sb-perfil-plan">Administración</span>
