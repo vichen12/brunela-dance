@@ -34,6 +34,7 @@ export function BotonEnviar({
   value,
   disabled,
   title,
+  confirmar,
 }: {
   children: React.ReactNode;
   /** Que decir mientras trabaja. Por defecto, "Guardando...". */
@@ -56,6 +57,11 @@ export function BotonEnviar({
   disabled?: boolean;
   /** Ayuda al pasar el mouse. */
   title?: string;
+  /**
+   * Pregunta antes de enviar. Para lo que no se deshace (borrar): un clic de
+   * mas no puede llevarse una categoria o un documento.
+   */
+  confirmar?: string;
 }) {
   const { pending } = useFormStatus();
 
@@ -68,6 +74,7 @@ export function BotonEnviar({
       name={name}
       value={value}
       title={title}
+      onClick={confirmar ? (e) => { if (!window.confirm(confirmar)) e.preventDefault(); } : undefined}
       style={{
         cursor: pending ? "progress" : disabled ? "default" : "pointer",
         opacity: pending ? 0.65 : 1,

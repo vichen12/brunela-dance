@@ -208,7 +208,7 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
             ELIMINAR terminaba llamando a updateLiveSessionAction. El id ya
             viaja en el hidden del formulario externo. */}
         {!isNew && (
-          <BotonEnviar pendingLabel="Borrando…" formAction={deleteLiveSessionAction} style={{
+          <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar esta sesión en vivo? Se pierden sus reservas. No se puede deshacer." formAction={deleteLiveSessionAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", cursor: "pointer",

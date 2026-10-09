@@ -274,7 +274,7 @@ export default async function AdminAnnouncementsPage({
                       )}
                       <form action={deleteAnnouncementAction}>
                         <input type="hidden" name="id" value={a.id} />
-                        <BotonEnviar pendingLabel="Borrando…" style={{
+                        <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este anuncio? No se puede deshacer." style={{
                           fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
                           background: "#fee2e2", color: "#991b1b", border: "none", cursor: "pointer",
                         }}>Eliminar</BotonEnviar>

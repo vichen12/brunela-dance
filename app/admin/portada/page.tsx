@@ -226,9 +226,9 @@ export default async function PortadaAdminPage({ searchParams }: { searchParams:
 
                   <form action={borrarPreguntaAction}>
                     <input type="hidden" name="id" value={p.id} />
-                    <button className="pa-icono pa-borrar" type="submit" title="Borrar">
+                    <BotonEnviar className="pa-icono pa-borrar" title="Borrar" pendingLabel="…" confirmar="¿Borrar esta pregunta del FAQ?">
                       <Trash2 size={15} />
-                    </button>
+                    </BotonEnviar>
                   </form>
                 </div>
               </li>

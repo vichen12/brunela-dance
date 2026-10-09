@@ -325,7 +325,7 @@ function VideoForm({
             no borraba: guardaba. El id ya viaja en el hidden del form externo,
             que es el que deleteVideoAction lee. */}
         {(
-          <BotonEnviar pendingLabel="Borrando…" formAction={deleteVideoAction} style={{
+          <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar esta clase? Se borra también el video. No se puede deshacer." formAction={deleteVideoAction} style={{
             background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
             borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", cursor: "pointer",

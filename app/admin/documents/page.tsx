@@ -1,3 +1,4 @@
+import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
@@ -172,9 +173,9 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
                   </div>
                   <form action={deleteDocumentAction}>
                     <input name="id" type="hidden" value={doc.id} />
-                    <button className="button-secondary" type="submit" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>
+                    <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este documento? Se borra también el archivo. No se puede deshacer." className="button-secondary" style={{ padding: "6px 14px", fontSize: "0.7rem" }}>
                       Eliminar
-                    </button>
+                    </BotonEnviar>
                   </form>
                 </div>
 
