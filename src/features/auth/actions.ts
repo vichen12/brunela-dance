@@ -51,7 +51,16 @@ export async function signInAction(formData: FormData) {
     const callbackParam = parsed.data.callbackUrl
       ? `&callbackUrl=${encodeURIComponent(parsed.data.callbackUrl)}`
       : "";
-    redirect(`/sign-in?error=${encodeURIComponent(error.message)}${callbackParam}`);
+    // Los mensajes de Supabase llegan en ingles; los que puede ver una alumna
+    // se traducen. Uno desconocido pasa tal cual: mejor eso que esconderlo.
+    const mensaje = /invalid login credentials/i.test(error.message)
+      ? "El correo o la contraseña no son correctos. Si no recordás la contraseña, tocá «Olvidé mi contraseña»."
+      : /email not confirmed/i.test(error.message)
+        ? "Todavía no confirmaste tu correo. Buscá el mail de confirmación (mirá también en Spam)."
+        : /too many|rate limit/i.test(error.message)
+          ? "Demasiados intentos seguidos. Esperá un minuto y probá de nuevo."
+          : error.message;
+    redirect(`/sign-in?error=${encodeURIComponent(mensaje)}${callbackParam}`);
   }
 
   redirect(safeRedirectUrl(parsed.data.callbackUrl) as never);
