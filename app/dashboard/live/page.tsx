@@ -16,6 +16,9 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { ArrowRight, CalendarCheck, Check, Clock, Users, Video, X } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getCurrentProfile } from "@/src/features/auth/profile";
+import { AdminBuscador } from "@/components/admin-buscador";
+import Link from "next/link";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -56,6 +59,18 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const error = typeof params.error === "string" ? params.error : null;
   const redirectTo = "/dashboard/live";
 
+  // Filtros y paginas. Se filtra en memoria: RLS ya recorta a lo que esta
+  // alumna puede ver, y una agenda de clases en vivo son decenas, no miles.
+  const txt = (k: string) => (typeof params[k] === "string" ? (params[k] as string).trim() : "");
+  const q = txt("q");
+  const fPlan = ["corps_de_ballet", "solista", "principal"].includes(txt("plan")) ? txt("plan") : "";
+  const fCuando = ["semana", "mes"].includes(txt("cuando")) ? txt("cuando") : "";
+  const fMias = ["reservadas", "libres"].includes(txt("mias")) ? txt("mias") : "";
+  const pagina = Math.max(0, Math.min(100, Number(params.pagina) || 0));
+  const POR_PAGINA = 6;
+  const perfil = await getCurrentProfile(user.id);
+  const esAdmin = Boolean(perfil?.is_admin);
+
   const [
     { data: sessionsData },
     { data: bookingsData },
@@ -73,10 +88,11 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
       .select("live_session_id, status")
       .eq("user_id", user.id),
     supabase.from("live_session_access_links").select("live_session_id, join_url, passcode"),
-    // Sus invitaciones. La policy ya la deja ver solo las propias, asi que no
-    // hace falta filtrar por user_id: filtrarlo igual seria sugerir que la
-    // seguridad esta aca, y esta en la base.
-    supabase.from("live_session_invitations").select("live_session_id")
+    // Sus invitaciones. Para una alumna la policy ya devuelve solo las propias;
+    // el filtro por user_id es para la ADMIN, que las ve todas y leia
+    // "Invitada por Brunela" en sesiones a las que invito a otra persona.
+    // La seguridad sigue estando en la base: esto es presentacion.
+    supabase.from("live_session_invitations").select("live_session_id").eq("user_id", user.id)
   ]);
 
   const sessions = (sessionsData ?? []) as LiveSessionRecord[];
@@ -96,6 +112,35 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const proximas = sessions.filter((s) => new Date(s.ends_at).getTime() >= ahora && s.status !== "canceled" && s.status !== "completed");
   const pasadas = sessions.filter((s) => !proximas.includes(s)).reverse();
   const reservasActivas = Array.from(bookings.values()).filter((b) => b.status !== "canceled").length;
+  // La marca "Proxima clase" es de la primera de la agenda, filtre lo que filtre.
+  const idProxima = proximas[0]?.id ?? null;
+
+  const normal = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const reservada = (id: string) => { const b = bookings.get(id); return b?.status === "reserved" || b?.status === "waitlisted"; };
+  const filtradas = proximas.filter((sesion) => {
+    if (q && !normal(resolveI18nText(sesion.title_i18n) + " " + resolveI18nText(sesion.description_i18n)).includes(normal(q))) return false;
+    if (fPlan && sesion.membership_tier_required !== fPlan) return false;
+    if (fCuando) {
+      const limite = ahora + (fCuando === "semana" ? 7 : 31) * 86400000;
+      if (new Date(sesion.starts_at).getTime() > limite) return false;
+    }
+    if (fMias === "reservadas" && !reservada(sesion.id)) return false;
+    if (fMias === "libres" && reservada(sesion.id)) return false;
+    return true;
+  });
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaReal = Math.min(pagina, totalPaginas - 1);
+  const enPagina = filtradas.slice(paginaReal * POR_PAGINA, paginaReal * POR_PAGINA + POR_PAGINA);
+  const conPagina = (p: number) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (fPlan) u.set("plan", fPlan);
+    if (fCuando) u.set("cuando", fCuando);
+    if (fMias) u.set("mias", fMias);
+    if (p > 0) u.set("pagina", String(p));
+    const t = u.toString();
+    return "/dashboard/live" + (t ? "?" + t : "");
+  };
 
   const tarjeta = (session: LiveSessionRecord, esLaProxima: boolean, pasada: boolean) => {
     const booking = bookings.get(session.id);
@@ -139,10 +184,12 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
             <div className="sv-acciones">
               {accessLink && (
                 <a className="sv-entrar" href={accessLink.join_url} rel="noreferrer" target="_blank">
-                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> Entrar a la clase
+                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> {esAdmin && !isReserved ? "Entrar como profesora" : "Entrar a la clase"}
                 </a>
               )}
-              {isReserved ? (
+              {/* La admin no reserva: entra a dar la clase. Antes veia los dos
+                  botones juntos y parecia que tenia que anotarse. */}
+              {esAdmin && !isReserved ? null : isReserved ? (
                 <form action={cancelLiveSessionBookingAction}>
                   <input name="sessionId" type="hidden" value={session.id} />
                   <input name="redirectTo" type="hidden" value={redirectTo} />
@@ -212,7 +259,36 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
             cta={<AdminBoton href="/dashboard/library" lleno>Mientras tanto, ver clases <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" /></AdminBoton>}
           />
         ) : (
-          <ul className="sv-lista">{proximas.map((s, i) => tarjeta(s, i === 0, false))}</ul>
+          <>
+            <AdminBuscador
+              action="/dashboard/live"
+              q={q}
+              placeholder="Buscar una clase en vivo"
+              total={proximas.length}
+              mostrando={filtradas.length}
+              filtros={[
+                { name: "cuando", valor: fCuando, etiqueta: "Cuándo", opciones: [{ key: "", label: "Todas las fechas" }, { key: "semana", label: "Próximos 7 días" }, { key: "mes", label: "Este mes" }] },
+                { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: [{ key: "", label: "Todos los planes" }, { key: "corps_de_ballet", label: "Corps de Ballet" }, { key: "solista", label: "Solista" }, { key: "principal", label: "Principal" }] },
+                ...(esAdmin ? [] : [{ name: "mias", valor: fMias, etiqueta: "Reservas", opciones: [{ key: "", label: "Todas" }, { key: "reservadas", label: "Mis reservas" }, { key: "libres", label: "Sin reservar" }] }]),
+              ]}
+            />
+            {filtradas.length === 0 ? (
+              <div className="ad-vacio">
+                <p className="ad-vacio-titulo">Ninguna clase coincide.</p>
+                <p>Probá con otra fecha o sacá algún filtro.</p>
+                <Link href="/dashboard/live" className="ad-btn">Ver todas</Link>
+              </div>
+            ) : (
+              <ul className="sv-lista">{enPagina.map((s) => tarjeta(s, s.id === idProxima, false))}</ul>
+            )}
+            {totalPaginas > 1 && (
+              <nav className="sv-paginas" aria-label="Páginas">
+                {paginaReal > 0 ? <Link href={conPagina(paginaReal - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
+                <span className="sv-paginas-txt">Página {paginaReal + 1} de {totalPaginas}</span>
+                {paginaReal < totalPaginas - 1 ? <Link href={conPagina(paginaReal + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
+              </nav>
+            )}
+          </>
         )}
 
         {pasadas.length > 0 && (
@@ -238,6 +314,8 @@ function partesFecha(iso: string, zona: string) {
 }
 
 const CSS = `
+.sv-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.sv-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); }
 .sv { padding-bottom: 80px; }
 .sv-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
 .sv .ad-mast { padding-bottom: 4px; }

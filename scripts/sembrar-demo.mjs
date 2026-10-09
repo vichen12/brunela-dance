@@ -177,6 +177,15 @@ const SESIONES = [
   ["live-casi-llena", "Centro avanzado (casi llena)", "Quedan pocos lugares.", "scheduled", "solista", 4, 19, 60, 3, true],
   ["live-barra-pasada", "Barra de la semana pasada", "Ya ocurrió.", "completed", "corps_de_ballet", -5, 17, 60, 25, false],
   ["live-taller-pasado", "Taller de adagio (pasado)", "Ya ocurrió.", "completed", "solista", -12, 18, 60, 15, false],
+  // Mas agenda, para que la pantalla tenga varias paginas y los filtros sirvan.
+  ["live-adagio-del-jueves", "Adagio del jueves", "Centro lento, con foco en la línea.", "scheduled", "solista", 15, 18, 60, 15, true],
+  ["live-pies-express", "Pies express", "Treinta minutos de pies antes de la cena.", "scheduled", "corps_de_ballet", 17, 19, 30, 30, true],
+  ["live-fuerza-de-salto", "Fuerza de salto", "Pliométrico en vivo, con correcciones.", "scheduled", "principal", 19, 17, 50, 10, true],
+  ["live-movilidad-matinal", "Movilidad matinal", "Para arrancar el día suelta.", "scheduled", "corps_de_ballet", 21, 8, 30, 40, false],
+  ["live-taller-de-puntas", "Taller de puntas", "Preparación de tobillo y empeine para puntas.", "scheduled", "principal", 24, 16, 90, 8, true],
+  ["live-barra-de-fin-de-mes", "Barra de fin de mes", "La barra larga del mes.", "scheduled", "solista", 28, 17, 75, 20, true],
+  ["live-stretching-profundo", "Stretching profundo", "Elongación larga y tranquila.", "scheduled", "corps_de_ballet", 33, 18, 60, 40, false],
+  ["live-giros-ii", "Giros II", "Segunda parte del taller de giros.", "scheduled", "principal", 38, 16, 90, 8, true],
   ["live-cancelada", "Sesión cancelada", "Se canceló por enfermedad.", "canceled", "corps_de_ballet", 2, 18, 60, 20, false],
 ];
 
