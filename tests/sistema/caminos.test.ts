@@ -223,9 +223,13 @@ describe("las pantallas lentas tienen esqueleto de carga", () => {
 
   it("el esqueleto del chat se usa de verdad", () => {
     // SkChat existia sin que nadie lo importara: escrito y nunca conectado.
-    const usos = ["app/admin/chat/loading.tsx", "app/dashboard/chat/loading.tsx", "app/dashboard/community/loading.tsx"]
-      .filter((p) => existsSync(p) && leer(p).includes("SkChat"));
-    expect(usos).toHaveLength(3);
+    // /admin/mensajes y /admin/comunidad son las vistas de gestion que antes
+    // vivian dentro de /dashboard/chat y /dashboard/community.
+    const usos = [
+      "app/admin/chat/loading.tsx", "app/dashboard/chat/loading.tsx", "app/dashboard/community/loading.tsx",
+      "app/admin/mensajes/loading.tsx", "app/admin/comunidad/loading.tsx",
+    ].filter((p) => existsSync(p) && leer(p).includes("SkChat"));
+    expect(usos).toHaveLength(5);
   });
 });
 

@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { Pencil, Rocket, Archive, Play, Lock, Search, Plus, Tag, ArrowRight, ArrowUpRight, X, Clock, BarChart3, Sparkles, CheckCircle2, Library } from "lucide-react";
+import { Play, Lock, Search, ArrowRight, X, Clock, BarChart3, Sparkles, CheckCircle2, Library } from "lucide-react";
 import { Movimiento, Revelar, Aparecer, Grilla, Item, Pildoras, SelectAuto } from "@/components/biblioteca-motion";
-import { requireUser, requireAdmin } from "@/src/features/auth/guards";
+import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario } from "@/src/features/studio/progress";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import {
   formatDurationLabel,
@@ -76,35 +74,10 @@ const nivelTexto = nivelEnTexto;
 
 type ProgressRecord = { video_id: string; completion_percent: number };
 
-// ── Admin inline actions ──────────────────────────────────────────────────────
-
-async function quickPublishToggleAction(formData: FormData) {
-  "use server";
-  // Una server action es un endpoint POST publico: que el formulario se
-  // renderice bajo {isAdmin && ...} no impide que la llamen. Y esta corre con
-  // service_role, que saltea RLS -- sin esta linea, cualquier alumna logueada
-  // puede despublicar el catalogo.
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = String(formData.get("id") ?? "");
-  const current = formData.get("status") as string;
-  const next = current === "published" ? "draft" : "published";
-  await supabase.from("videos").update({ status: next }).eq("id", id);
-  revalidatePath("/dashboard/library");
-  revalidatePath("/admin/videos");
-}
-
-async function quickDeleteVideoAction(formData: FormData) {
-  "use server";
-  // Ver quickPublishToggleAction. Esta ademas es destructiva.
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = String(formData.get("id") ?? "");
-  await supabase.from("videos").delete().eq("id", id);
-  revalidatePath("/dashboard/library");
-  revalidatePath("/admin/videos");
-  redirect("/dashboard/library" as never);
-}
+// Antes aca vivian quickPublishToggleAction y quickDeleteVideoAction (publicar
+// y borrar desde la biblioteca). Se sacaron: /dashboard/** es la vista de
+// alumna, identica para todas, y gestionar clases vive en /admin/videos. Una
+// server action que nadie usa sigue siendo un endpoint POST publico.
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
@@ -214,14 +187,6 @@ const OPCIONES_DURACION = [
   { key: "larga", label: "Más de 45 min" },
 ];
 
-const OPCIONES_PLAN = [
-  { key: "",                label: "Todos los planes" },
-  { key: "none",            label: "Sin plan" },
-  { key: "corps_de_ballet", label: "Corps de ballet" },
-  { key: "solista",         label: "Solista" },
-  { key: "principal",       label: "Principal" },
-];
-
 const OPCIONES_ESTADO = [
   { key: "",           label: "Cualquier estado" },
   { key: "sin_empezar", label: "Sin empezar" },
@@ -317,7 +282,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   };
   const fNivel    = uno("nivel",  OPCIONES_NIVEL.map((o) => o.key));
   const fDuracion = uno("dur",    OPCIONES_DURACION.map((o) => o.key));
-  const fPlanPedido = uno("plan", OPCIONES_PLAN.map((o) => o.key));
   const fEstado   = uno("estado", OPCIONES_ESTADO.map((o) => o.key));
 
   // Paginacion acumulativa: "Ver más" trae la pagina siguiente SIN perder las
@@ -326,18 +290,22 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const pagina = Math.max(0, Math.min(50, Number(params.pagina) || 0));
 
   const profileData = await getCurrentProfile(user.id);
-  const isAdmin = profileData?.is_admin ?? false;
-
   /**
-   * El filtro por PLAN es configuracion de Brunela, no algo de la alumna.
+   * /dashboard/** ES LA VISTA DE ALUMNA, identica para todas -- admin incluida.
+   * Gestionar clases (borradores, publicar, filtrar por plan) vive en
+   * /admin/videos.
    *
-   * A quien no es admin se le ignora aunque lo escriba a mano en la URL
-   * (?plan=solista): esconder el desplegable no alcanza si el parametro
-   * sigue filtrando. Para la alumna el plan existe solo como candado en las
-   * clases que no puede abrir.
+   * ⚠️ RLS a la admin le devuelve TODO (las policies de `videos` llevan
+   *    is_admin()), borradores incluidos. Para que vea exactamente lo que
+   *    veria una alumna de SU plan, se recorta a mano: status = published y
+   *    la lista de planes de la clase contra el plan de su perfil. Para una
+   *    alumna esos recortes no cambian nada: RLS ya los hizo.
+   *
+   * El filtro por PLAN ya no existe aca: era una herramienta de Brunela. Un
+   * ?plan= escrito a mano en la URL se ignora.
    */
-  const fPlan = isAdmin ? fPlanPedido : "";
-  const hayFiltros = Boolean(fNivel || fDuracion || fPlan || fEstado);
+  const isAdmin = profileData?.is_admin ?? false;
+  const hayFiltros = Boolean(fNivel || fDuracion || fEstado);
   const planDeLaAlumna = profileData?.membership_tier ?? "none";
   /**
    * ⚠️ TENER UN PACK NO ES "NO TENER PLAN".
@@ -355,7 +323,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     .select("id", { count: "exact", head: true });
 
   const sinNada =
-    !isAdmin &&
     (profileData?.membership_tier ?? "none") === "none" &&
     (comprasPropias ?? 0) === 0;
 
@@ -397,11 +364,14 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   if (activeCategory !== "all") {
     consulta = consulta.overlaps("category_slugs", CATEGORIA_EQUIVALENTES[activeCategory] ?? [activeCategory]);
   }
-  // `contains` y no `eq`: desde la migracion 20260921 el acceso vive en la
-  // LISTA. Con `eq` sobre el minimo derivado, filtrar por "Solista" descartaba
-  // en SQL una clase {corps, solista} -- su minimo es corps -- aunque Solista la
-  // vea perfectamente, y el filtro en memoria de mas abajo ya no la recibia.
-  if (fPlan) consulta = consulta.contains("planes_permitidos", [fPlan]);
+  // Vista de alumna: nunca borradores. Para la alumna RLS ya los saca; para
+  // la admin no, y por eso va explicito.
+  consulta = consulta.eq("status", "published");
+  // La admin ve lo de SU plan, como una alumna con ese plan. `contains` y no
+  // `eq`: desde la migracion 20260921 el acceso vive en la LISTA, y con `eq`
+  // sobre el minimo derivado una clase {corps, solista} no apareceria para
+  // Solista.
+  if (isAdmin) consulta = consulta.contains("planes_permitidos", [planDeLaAlumna]);
 
   const [{ data: videosData }, progressData] = await Promise.all([
     consulta
@@ -462,8 +432,15 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
    */
   const accesibles = new Set<string>();
   if (modoTodo && !sinNada) {
-    const { data } = await supabase.from("videos").select("id");
-    for (const v of (data ?? []) as { id: string }[]) accesibles.add(v.id);
+    if (isAdmin) {
+      // A la admin RLS le contesta "todo", asi que preguntarle no sirve para
+      // mostrarle la vista de alumna: el candado sale del plan de su perfil,
+      // con la misma lista que lee la policy.
+      for (const v of vitrina) if (planesDeLaClase(v).includes(planDeLaAlumna)) accesibles.add(v.id);
+    } else {
+      const { data } = await supabase.from("videos").select("id");
+      for (const v of (data ?? []) as { id: string }[]) accesibles.add(v.id);
+    }
   }
 
   /** Con candado y sin enlace al detalle. */
@@ -504,11 +481,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const visible = porTexto.filter((v) => {
     if (!coincideNivel(v.recommended_min_level, v.recommended_max_level, fNivel)) return false;
     if (!coincideDuracion(v.duration_seconds, fDuracion)) return false;
-    // Desde la migracion 20260921 el acceso vive en la LISTA. Comparar contra
-    // el minimo derivado dejaria afuera una clase {corps, solista} al filtrar
-    // por "Solista", aunque Solista la vea perfectamente.
-    if (fPlan && !planesDeLaClase(v).includes(fPlan)) return false;
-
     if (fEstado) {
       const p = progressMap.get(v.id);
       // "Completada" usa el mismo umbral que el reproductor para marcarla
@@ -535,7 +507,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
       q: busqueda,
       nivel: fNivel,
       dur: fDuracion,
-      plan: fPlan,
       estado: fEstado,
       ver: modoTodo && !sinNada ? "todo" : "",
     };
@@ -547,15 +518,13 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     return `/dashboard/library${qs ? `?${qs}` : ""}`;
   };
 
-  const borradores = visible.filter((v) => v.status !== "published").length;
   // null fuera de "Explorar todo": ahi no hay nada que aclarar.
   const tuyas = modoTodo && !sinNada ? visible.filter((v) => !bloqueada(v.id)).length : null;
   const filtros = ([
     { name: "nivel",  valor: fNivel,    ops: OPCIONES_NIVEL,    etiqueta: "Nivel" },
     { name: "dur",    valor: fDuracion, ops: OPCIONES_DURACION, etiqueta: "Duración" },
-    { name: "plan",   valor: fPlan,     ops: OPCIONES_PLAN,     etiqueta: "Plan" },
     { name: "estado", valor: fEstado,   ops: OPCIONES_ESTADO,   etiqueta: "Estado" },
-  ] as const).filter((f) => isAdmin || f.name !== "plan");
+  ] as const);
 
   return (
     <main className="pb-20 md:pb-28" style={{ minHeight: "100vh", background: "#fff" }}>
@@ -584,34 +553,15 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               </p>
             </Aparecer>
             <h1 className="bib-titulo">
-              {isAdmin ? (
-                <Revelar retraso={0.05}>Gestión de <em>clases</em></Revelar>
-              ) : (
-                <Revelar retraso={0.05}>Tus <em>clases</em></Revelar>
-              )}
+              <Revelar retraso={0.05}>Tus <em>clases</em></Revelar>
             </h1>
             <Aparecer retraso={0.25}>
               <p className="bib-lede">
-                {isAdmin
-                  ? "Publicá, editá y organizá todas las clases del estudio. Como admin ves también los borradores."
-                  : "Todo el contenido disponible según tu plan, para que sigas creciendo cada día."}
+                Todo el contenido disponible según tu plan, para que sigas creciendo cada día.
               </p>
             </Aparecer>
           </div>
 
-          {isAdmin && (
-            <Aparecer retraso={0.35} className="bib-mast-acciones">
-              <Link href="/admin/videos" className="bib-btn bib-btn--lleno">
-                <Plus size={16} strokeWidth={2.4} /> Nueva clase
-              </Link>
-              <Link href="/admin/categories" className="bib-btn">
-                <Tag size={15} strokeWidth={2.2} /> Categorías
-              </Link>
-              <Link href="/admin/videos" className="bib-btn bib-btn--texto">
-                Panel de clases <ArrowUpRight size={15} strokeWidth={2.4} />
-              </Link>
-            </Aparecer>
-          )}
         </header>
 
         {/* ── Buscar y filtrar ── */}
@@ -621,7 +571,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
             {fNivel && <input type="hidden" name="nivel" value={fNivel} />}
             {fDuracion && <input type="hidden" name="dur" value={fDuracion} />}
-            {fPlan && <input type="hidden" name="plan" value={fPlan} />}
             {fEstado && <input type="hidden" name="estado" value={fEstado} />}
             {modoTodo && !sinNada && <input type="hidden" name="ver" value="todo" />}
             <Search size={18} strokeWidth={2} className="bib-buscar-ico" aria-hidden="true" />
@@ -656,7 +605,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               <button type="submit" className="bib-btn bib-btn--lleno">Aplicar</button>
             </noscript>
             {hayFiltros && (
-              <Link href={enlace({ nivel: null, dur: null, plan: null, estado: null }) as never} className="bib-quitar">
+              <Link href={enlace({ nivel: null, dur: null, estado: null }) as never} className="bib-quitar">
                 <X size={13} strokeWidth={2.4} /> Quitar filtros
               </Link>
             )}
@@ -698,7 +647,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             {visible.length === 1 ? "clase" : "clases"}
             {busqueda ? ` para “${busqueda}”` : ""}
             {tuyas !== null ? ` · ${tuyas} ${tuyas === 1 ? "tuya" : "tuyas"}` : ""}
-            {isAdmin && borradores > 0 ? ` · ${borradores} ${borradores === 1 ? "borrador" : "borradores"}` : ""}
           </span>
         </div>
 
@@ -711,29 +659,26 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               <span className="bib-vacio-burbuja bib-vacio-burbuja--c"><Sparkles size={16} strokeWidth={2.2} /></span>
             </div>
             <p className="bib-vacio-titulo">
-              {isAdmin && !busqueda && !hayFiltros
+              {!busqueda && !hayFiltros
                 ? "Todavía no hay clases."
                 : busqueda
                   ? `No encontramos clases para “${busqueda}”.`
                   : "No hay clases para este filtro."}
             </p>
             <p className="bib-vacio-sub">
-              {isAdmin && !busqueda && !hayFiltros
-                ? "Subí la primera y va a aparecer acá, lista para tus alumnas."
+              {!busqueda && !hayFiltros
+                ? "Muy pronto van a aparecer acá las clases de tu plan."
                 : "Probá con otra palabra o sacá algún filtro: seguro hay algo lindo esperándote."}
             </p>
-            {isAdmin
-              ? <Link href="/admin/videos" className="bib-btn bib-btn--lleno"><Plus size={16} strokeWidth={2.4} /> Subir una clase</Link>
-              : hayFiltros || busqueda
-                ? <Link href="/dashboard/library" className="bib-btn">Ver todas las clases</Link>
-                : null}
+            {hayFiltros || busqueda
+              ? <Link href="/dashboard/library" className="bib-btn">Ver todas las clases</Link>
+              : null}
           </div>
         ) : (
           <Grilla className="bib-grilla">
             {visible.map((video) => {
               const pct = safePercent(progressMap.get(video.id)?.completion_percent);
               const title = resolveI18nText(video.title_i18n);
-              const isDraft = video.status !== "published";
               // Las miniaturas viven detras de la misma pull zone con token que
               // el video, asi que tambien se firman por request.
               const bunnyId = video.bunny_video_id ?? bunnyVideoIdFromUrl(video.stream_playback_id);
@@ -744,7 +689,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 
               return (
                 <Item key={video.id} className="bib-item">
-                  <article className={"bib-card" + (isDraft && !isAdmin ? " es-apagada" : "")}>
+                  <article className="bib-card">
                     {/* ⚠️ EL CANDADO ES POR CLASE, NO POR ALUMNA.
                         Lo decide `bloqueada()`, que sale de RLS: la misma regla
                         que usa el reproductor. Quien compro un pack sigue en
@@ -760,7 +705,6 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                         {thumbSrc && <img src={thumbSrc} alt="" loading="lazy" />}
                         {thumbSrc && <span className="bib-img-sombra" aria-hidden="true" />}
                         <span className="bib-chips">
-                          {isDraft && isAdmin && <span className="bib-chip bib-chip--borrador">Borrador</span>}
                           {video.is_featured && <span className="bib-chip bib-chip--dest"><Sparkles size={11} strokeWidth={2.4} aria-hidden="true" /> Destacada</span>}
                         </span>
                         {bloqueada(video.id) && (
@@ -796,48 +740,11 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                       </div>
                     </Link>
 
-                    {/* Acciones de admin. Son server actions con requireAdmin():
-                        esconderlas no protege nada, la guarda esta en la accion. */}
-                    {isAdmin && (
-                      <div className="bib-admin">
-                        <Link
-                          href={`/admin/videos?q=${encodeURIComponent(title)}` as never}
-                          title="Editar en el panel"
-                          aria-label={`Editar ${title}`}
-                          className="bib-admin-btn"
-                        >
-                          <Pencil size={14} strokeWidth={2.2} />
-                          <span>Editar</span>
-                        </Link>
-                        <form action={quickPublishToggleAction}>
-                          <input type="hidden" name="id" value={video.id} />
-                          <input type="hidden" name="status" value={video.status} />
-                          <button
-                            type="submit"
-                            title={isDraft ? "Publicar" : "Volver a borrador"}
-                            aria-label={isDraft ? `Publicar ${title}` : `Pasar ${title} a borrador`}
-                            className={"bib-admin-btn" + (isDraft ? " es-publicar" : "")}
-                          >
-                            {isDraft ? <Rocket size={14} strokeWidth={2.2} /> : <Archive size={14} strokeWidth={2.2} />}
-                            <span>{isDraft ? "Publicar" : "Despublicar"}</span>
-                          </button>
-                        </form>
-                      </div>
-                    )}
                   </article>
                 </Item>
               );
             })}
 
-            {isAdmin && (
-              <Item className="bib-item">
-                <Link href="/admin/videos" className="bib-nueva">
-                  <span className="bib-nueva-ico"><Plus size={24} strokeWidth={2.2} /></span>
-                  <span className="bib-nueva-titulo">Nueva clase</span>
-                  <span className="bib-nueva-sub">Subir un video al catálogo</span>
-                </Link>
-              </Item>
-            )}
           </Grilla>
         )}
 
@@ -904,7 +811,6 @@ const CSS_BIBLIOTECA = `
 }
 .bib-titulo em { font-style: normal; color: var(--pink-mid); }
 .bib-lede { margin-top: 10px; max-width: 56ch; font-size: 15.5px; line-height: 1.65; color: var(--muted); }
-.bib-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
 .bib-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
@@ -1007,7 +913,6 @@ const CSS_BIBLIOTECA = `
   transition: transform .35s var(--curva), box-shadow .35s var(--curva), border-color .35s;
 }
 .bib-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-alta); border-color: var(--pink-line); }
-.bib-card.es-apagada { opacity: 0.55; }
 .bib-card-link { display: block; flex: 1; text-decoration: none; color: inherit; border-radius: 20px; }
 .bib-img {
   position: relative; aspect-ratio: 16 / 11; border-radius: 20px; overflow: hidden; isolation: isolate;
@@ -1081,33 +986,6 @@ const CSS_BIBLIOTECA = `
 .bib-prog { display: block; margin-top: 12px; height: 7px; border-radius: 99px; background: var(--rubor); overflow: hidden; }
 .bib-prog span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F48A7A, var(--pink)); }
 
-.bib-admin { display: flex; gap: 8px; margin: 2px 6px 6px; padding-top: 12px; border-top: 1px solid var(--linea); }
-.bib-admin form { display: contents; }
-.bib-admin-btn {
-  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 99px;
-  border: 1px solid var(--linea-fuerte); background: #fff; color: var(--ink); cursor: pointer; text-decoration: none;
-  font: inherit; font-size: 13px; font-weight: 800; transition: border-color .2s, background .2s, color .2s, transform .3s var(--curva);
-}
-.bib-admin-btn:hover { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); transform: translateY(-1px); }
-.bib-admin-btn.es-publicar { border-color: var(--pink); background: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
-.bib-admin-btn.es-publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
-
-.bib-nueva {
-  height: 100%; min-height: 280px; border-radius: 28px; border: 2px dashed var(--linea-fuerte); background: var(--crema);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px;
-  text-decoration: none; color: var(--muted);
-  transition: border-color .3s, background .3s, color .3s, transform .35s var(--curva);
-}
-.bib-nueva:hover { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); transform: translateY(-4px); }
-.bib-nueva-ico {
-  width: 60px; height: 60px; border-radius: 20px; margin-bottom: 10px; background: #fff; color: var(--pink);
-  display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--sombra);
-  transition: transform .5s var(--curva);
-}
-.bib-nueva:hover .bib-nueva-ico { transform: rotate(90deg) scale(1.05); }
-.bib-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 18px; color: var(--ink); }
-.bib-nueva-sub { font-size: 13.5px; font-weight: 600; }
-
 .bib-vacio {
   display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
   padding: 48px 24px 52px; border-radius: 32px; border: 1px solid var(--linea);
@@ -1136,12 +1014,10 @@ const CSS_BIBLIOTECA = `
   .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
 }
 @media (max-width: 480px) {
-  .bib-mast-acciones { width: 100%; }
-  .bib-mast-acciones .bib-btn:not(.bib-btn--texto) { flex: 1; }
   .bib-grilla { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .bib-mast-mancha { animation: none; }
-  .bib-card, .bib-card:hover, .bib-nueva:hover { transform: none; }
+  .bib-card, .bib-card:hover { transform: none; }
 }
 `;

@@ -310,8 +310,8 @@ export default async function AdminChatPage({ searchParams }: {
       <style>{CSS}</style>
 
       <AdminCabecera
-        eyebrow="Moderación"
-        titulo="Chat"
+        eyebrow="Comunidad"
+        titulo="Moderación"
         lede="Salas, mensajes, muteos y baneos del estudio."
       />
 
@@ -484,15 +484,16 @@ export default async function AdminChatPage({ searchParams }: {
                *   Eran dos implementaciones del mismo chat, y la de Brunela era
                *   la peor de las dos.
                *
-               * `canModerate` sale de isAdmin dentro del componente, asi que
-               * eliminar, mutear y banear siguen estando -- pero al pasar el
-               * mouse, no como botones gritando en cada mensaje.
+               * `canModerate` va explicito (ya no sale de isAdmin): eliminar,
+               * mutear y banear siguen estando -- pero al pasar el mouse, no
+               * como botones gritando en cada mensaje.
                */
               <div className="ch-sala-abierta">
                 <ChatRoom
                   roomId={activeRoom.id}
                   userId={adminUserId}
                   isAdmin
+                  canModerate
                   initialMessages={messages as unknown as ChatMessage[]}
                   roomName={activeRoom.name}
                   placeholder="Escribí un mensaje como Brunela…"

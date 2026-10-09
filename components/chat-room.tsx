@@ -248,6 +248,7 @@ export function ChatRoom({
   roomId,
   userId,
   isAdmin,
+  canModerate = false,
   initialMessages,
   placeholder = 'Escribí un mensaje...',
   roomName,
@@ -255,7 +256,15 @@ export function ChatRoom({
 }: {
   roomId: string;
   userId: string;
+  /** Quien escribe ES la admin: solo decide como se pinta su propio mensaje. */
   isAdmin: boolean;
+  /**
+   * Muestra borrar / mutear / banear al pasar el mouse. Va APARTE de isAdmin a
+   * proposito: en /dashboard/** la admin ve la vista de alumna (sin moderar),
+   * y moderar vive en /admin/comunidad. Por defecto false: una pantalla nueva
+   * que se olvide de pasarlo no regala herramientas de admin.
+   */
+  canModerate?: boolean;
   initialMessages: ChatMessage[];
   placeholder?: string;
   roomName?: string;
@@ -637,7 +646,7 @@ export function ChatRoom({
             msg={m}
             isMe={m.user_id === userId}
             isAdmin={isAdmin}
-            canModerate={isAdmin}
+            canModerate={canModerate}
             onDelete={deleteMessage}
             onMute={(uid, name) => { setModo('mute'); setMuteTarget({ id: uid, name }); }}
             onBan={(uid, name) => { setModo('ban'); setMuteTarget({ id: uid, name }); }}

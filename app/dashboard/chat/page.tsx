@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
-import { AlertCircle, Lock, Mail, Search } from "lucide-react";
+import { AlertCircle, Lock, MessageCircleHeart } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 
-type Profile = { id: string; full_name: string | null; email: string; membership_tier: MembershipTier; is_admin: boolean };
 
 type DmRoom = {
   id: string;
@@ -18,8 +18,6 @@ type DmRoom = {
   participant_ids: string[];
 };
 
-/** Alumnas por tanda en la barra lateral de mensajes privados. */
-const POR_PAGINA_MIEMBROS = 40;
 
 export default async function ChatPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -27,199 +25,37 @@ export default async function ChatPage({ searchParams }: {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
+  // Los enlaces viejos del panel apuntaban a /dashboard/chat?user=<id>. Si una
+  // admin llega con uno, se la lleva a la conversacion en /admin/mensajes.
   const selectedUserId = typeof params.user === "string" ? params.user : null;
-  // Barra lateral de alumnas: acumulativa, como la biblioteca. Se recorre
-  // buscando a alguien, asi que perder las anteriores al pedir mas seria peor.
-  const paginaMiembros = Math.max(0, Math.min(200, Number(params.pmiembros) || 0));
-  // Buscador y filtro de plan de la barra de alumnas (vista admin).
-  const buscar = (typeof params.buscar === "string" ? params.buscar : "").trim().slice(0, 80);
-  const fPlan = ["none", "corps_de_ballet", "solista", "principal"].includes(String(params.plan)) ? String(params.plan) : "";
 
   const profile = await getCurrentProfile(user.id);
 
   const isAdmin = profile?.is_admin ?? false;
 
-  // ─── ADMIN VIEW ───────────────────────────────────────────────
+  if (isAdmin && selectedUserId) {
+    redirect(`/admin/mensajes?user=${encodeURIComponent(selectedUserId)}` as never);
+  }
+
+  // /dashboard/** ES LA VISTA DE ALUMNA, identica para todas -- admin incluida.
+  //
+  // Antes, si era admin, esta pantalla mostraba la bandeja con TODAS las
+  // alumnas. Esa bandeja se mudo entera a /admin/mensajes. Del lado de alumna
+  // la admin no tiene una "Brunela" con quien hablar, asi que se le dice donde
+  // estan sus mensajes en vez de abrirle un DM consigo misma.
   if (isAdmin) {
-    let consultaMiembros = supabase
-      .from("profiles")
-      .select("id, full_name, email, membership_tier, is_admin")
-      .eq("is_admin", false);
-    if (buscar) {
-      const t = buscar.replace(/[,()%]/g, " ");
-      consultaMiembros = consultaMiembros.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
-    }
-    if (fPlan) consultaMiembros = consultaMiembros.eq("membership_tier", fPlan as "none");
-    const { data: allProfiles } = await consultaMiembros
-      .order("created_at", { ascending: false })
-      // Fase D: la barra lateral traia TODAS las alumnas del estudio en cada
-      // carga. Se pide una de mas para saber si hay siguiente sin contar.
-      .range(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
-
-    const crudas = (allProfiles ?? []) as Profile[];
-    const hayMasMiembros = crudas.length > POR_PAGINA_MIEMBROS * (paginaMiembros + 1);
-    const members = crudas.slice(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
-    // La conversacion abierta sigue abierta aunque la busqueda no la incluya:
-    // si no, escribir en el buscador cerraba el chat que estaba leyendo.
-    if (selectedUserId && !members.some((m) => m.id === selectedUserId)) {
-      const { data: abierta } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, membership_tier, is_admin")
-        .eq("id", selectedUserId).eq("is_admin", false).maybeSingle();
-      if (abierta) members.push(abierta as Profile);
-    }
-    const filtrando = Boolean(buscar || fPlan);
-    const conFiltros = (extra: Record<string, string>) => {
-      const u = new URLSearchParams();
-      if (buscar) u.set("buscar", buscar);
-      if (fPlan) u.set("plan", fPlan);
-      for (const [k, v] of Object.entries(extra)) if (v) u.set(k, v);
-      const t = u.toString();
-      return "/dashboard/chat" + (t ? "?" + t : "");
-    };
-
-    const activeUserId = selectedUserId ?? (filtrando ? null : members[0]?.id ?? null);
-    let activeRoom: DmRoom | null = null;
-
-    if (activeUserId) {
-      // Antes se traian TODAS las salas de DM -- una por alumna -- y se buscaba
-      // la correcta en memoria. Ahora se pide directamente la que corresponde:
-      // `.contains()` es un `@>` que va contra idx_chat_rooms_participant_ids,
-      // el indice GIN que ya existe. Deja de importar cuantas salas haya.
-      const { data: encontrada } = await supabase
-        .from("chat_rooms")
-        .select("id, type, participant_ids")
-        .eq("type", "dm")
-        .contains("participant_ids", [user.id, activeUserId])
-        // Si hubiera duplicadas (se crearon al cargar la pagina en paralelo),
-        // siempre la mas vieja: es la que tiene la conversacion.
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle<DmRoom>();
-
-      activeRoom = encontrada ?? null;
-
-      if (!activeRoom) {
-        const activeMember = members.find((m) => m.id === activeUserId);
-        if (activeMember) {
-          const { data: newRoom } = await supabase
-            .from("chat_rooms")
-            .insert({
-              type: "dm",
-              name: `DM: Brunela — ${activeMember.full_name ?? activeMember.email}`,
-              participant_ids: [user.id, activeUserId],
-            })
-            .select("id, type, participant_ids")
-            .single<DmRoom>();
-          activeRoom = newRoom;
-        }
-      }
-    }
-
-    let initialMessages: ChatMessage[] = [];
-    if (activeRoom) {
-      // Newest 100, re-sorted oldest-first for display. Ordering ascending and
-      // then limiting would pin the room to its first 100 messages forever.
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("*, profiles(full_name, email, is_admin)")
-        .eq("room_id", activeRoom.id)
-        .eq("is_deleted", false)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
-    }
-
-    const activeMember = members.find((m) => m.id === activeUserId);
-
-    const TIER_BADGE: Record<string, string> = {
-      none: "Sin plan", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
-    };
-
     return (
-      <div className="dm">
+      <div className="dm dm--alumna">
         <style>{CSS_DM}</style>
-        <aside className="chat-col-sidebar dm-lateral" aria-label="Alumnas">
-          <div className="dm-lateral-cab">
-            <p className="dm-eyebrow">Mensajes directos</p>
-            <p className="dm-lateral-titulo">Alumnas</p>
-            {/* "cargadas" y no "alumnas" a secas: la lista esta paginada, asi
-                que este numero es lo que se ve, no el total del estudio. */}
-            <p className="dm-cuenta">{members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}{filtrando ? " encontradas" : ""}</p>
-            <form method="get" action="/dashboard/chat" className="dm-buscar" role="search">
-              {activeUserId && <input type="hidden" name="user" value={activeUserId} />}
-              {fPlan && <input type="hidden" name="plan" value={fPlan} />}
-              <Search size={16} strokeWidth={2} aria-hidden="true" />
-              <input type="search" name="buscar" defaultValue={buscar} placeholder="Buscar alumna o correo" aria-label="Buscar alumna" />
-            </form>
-            <nav className="dm-planes" aria-label="Filtrar por plan">
-              {[["", "Todas"], ["principal", "Principal"], ["solista", "Solista"], ["corps_de_ballet", "Corps"], ["none", "Sin plan"]].map(([k, l]) => {
-                const u = new URLSearchParams();
-                if (buscar) u.set("buscar", buscar);
-                if (k) u.set("plan", k);
-                if (activeUserId) u.set("user", activeUserId);
-                const t = u.toString();
-                return (
-                  <Link key={k || "todas"} href={("/dashboard/chat" + (t ? "?" + t : "")) as never} className={"dm-plan" + (fPlan === k ? " es-activo" : "")}>{l}</Link>
-                );
-              })}
-            </nav>
-          </div>
-          <nav className="dm-lista">
-            {members.length === 0 && (
-              <div className="dm-sin">
-                <p>Ninguna alumna coincide.</p>
-                <Link href="/dashboard/chat" className="dm-mas">Ver todas</Link>
-              </div>
-            )}
-            {members.map((m) => {
-              const active = m.id === activeUserId;
-              const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
-              return (
-                <Link key={m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
-                  <span className="dm-ini">{name[0]?.toUpperCase()}</span>
-                  <span className="dm-persona-txt">
-                    <span className="dm-persona-nombre">{name}</span>
-                    <span className="dm-persona-plan">{TIER_BADGE[m.membership_tier] ?? "Sin plan"}</span>
-                  </span>
-                </Link>
-              );
-            })}
-            {hayMasMiembros && (
-              <Link href={conFiltros({ pmiembros: String(paginaMiembros + 1), user: activeUserId ?? "" }) as never} className="dm-mas">
-                Ver más alumnas
-              </Link>
-            )}
-          </nav>
-        </aside>
-
         <div className="dm-chat">
-          {activeRoom && activeMember ? (
-            <>
-              <header className="dm-cab">
-                <span className="dm-cab-ini">{(activeMember.full_name ?? activeMember.email)[0]?.toUpperCase()}</span>
-                <div style={{ minWidth: 0 }}>
-                  <p className="dm-cab-nombre">{activeMember.full_name ?? activeMember.email.split("@")[0]}</p>
-                  <p className="dm-cab-sub">{activeMember.email} · {TIER_BADGE[activeMember.membership_tier] ?? "Sin plan"}</p>
-                </div>
-                {/* Su perfil: progreso, reservas, plan, invitaciones. */}
-                <Link href={`/admin/users/${activeMember.id}` as never} className="dm-perfil">Ver perfil</Link>
-              </header>
-              <ChatRoom
-                roomId={activeRoom.id}
-                userId={user.id}
-                isAdmin={true}
-                initialMessages={initialMessages}
-                placeholder={`Escribirle a ${activeMember.full_name?.split(" ")[0] ?? "alumna"}…`}
-              />
-            </>
-          ) : (
-            <div className="dm-vacio">
-              <span className="dm-vacio-ico"><Mail size={28} strokeWidth={1.6} aria-hidden="true" /></span>
-              <p className="dm-vacio-titulo">Elegí una alumna</p>
-              <p>Los mensajes son privados entre vos y cada alumna.</p>
+          <div className="dm-vacio">
+            <span className="dm-vacio-ico"><MessageCircleHeart size={28} strokeWidth={1.7} aria-hidden="true" /></span>
+            <h1 className="dm-vacio-titulo">Los mensajes con tus alumnas están en el panel</h1>
+            <p>Acá cada alumna habla con vos. Para leerlas y responderles, entrá a Mensajes en el panel de admin.</p>
+            <div className="dm-vacio-acciones">
+              <Link href={"/admin/mensajes" as never} className="ad-btn ad-btn--lleno"><MessageCircleHeart size={16} strokeWidth={2} aria-hidden="true" /> Ir a Mensajes</Link>
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
@@ -361,36 +197,9 @@ export default async function ChatPage({ searchParams }: {
 }
 
 const CSS_DM = `
-.dm-buscar { display: flex; align-items: center; gap: 8px; height: 42px; margin-top: 12px; padding: 0 14px; border-radius: 99px; background: #fff; border: 1.5px solid var(--linea-fuerte); color: var(--muted); transition: border-color .2s, box-shadow .2s; }
-.dm-buscar:focus-within { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); color: var(--pink-deep); }
-.dm-buscar input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 13.5px; color: var(--ink); }
-.dm-planes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-.dm-plan { padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; text-decoration: none; color: var(--muted); background: #fff; border: 1px solid var(--linea); transition: background .2s, color .2s; }
-.dm-plan:hover { background: var(--rubor); color: var(--pink-deep); }
-.dm-plan.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; }
-.dm-sin { padding: 18px 8px; text-align: center; font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
 .dm { display: flex; height: 100vh; overflow: hidden; background: #fff; }
-.dm-lateral { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--linea); background: linear-gradient(180deg, #FFF8F4 0%, #FFFCFA 100%); }
-.dm-lateral-cab { padding: 22px 18px 14px; }
-.dm-eyebrow { display: inline-flex; padding: 4px 11px; border-radius: 99px; background: #fff; box-shadow: var(--sombra); font-size: 12px; font-weight: 800; color: var(--pink-deep); }
-.dm-lateral-titulo { margin-top: 10px; font-weight: 900; font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.dm-cuenta { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-top: 2px; }
-.dm-lista { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
-.dm-persona { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 18px; text-decoration: none; transition: background .2s, box-shadow .3s, transform .3s var(--curva); }
-.dm-persona:hover { background: rgba(255, 226, 211, 0.45); }
-.dm-persona.es-activa { background: #fff; box-shadow: var(--sombra); }
-.dm-ini { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); font-weight: 900; color: var(--pink-deep); }
-.dm-persona.es-activa .dm-ini { background: var(--pink); color: #fff; box-shadow: 0 8px 16px -8px rgba(230,79,85,.8); }
-.dm-persona-txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.dm-persona-nombre { font-size: 14px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dm-persona.es-activa .dm-persona-nombre { font-weight: 900; }
-.dm-persona-plan { align-self: flex-start; padding: 1px 8px; border-radius: 99px; background: var(--rubor); font-size: 11.5px; font-weight: 800; color: var(--pink-deep); }
-.dm-mas { margin: 8px 4px 4px; height: 42px; display: grid; place-items: center; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: background .2s, border-color .2s; }
-.dm-mas:hover { background: var(--rubor); border-color: var(--pink-line); }
 .dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; background: radial-gradient(700px 300px at 100% 0%, rgba(255,226,211,.35), transparent 60%), #fff; }
 .dm-cab { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--linea); background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); flex-shrink: 0; }
-.dm-perfil { margin-left: auto; flex-shrink: 0; padding: 9px 16px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; text-decoration: none; transition: background .2s; }
-.dm-perfil:hover { background: var(--pink-wash); }
 .dm-cab-ini { width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep); font-weight: 900; font-size: 18px; border: 3px solid #fff; box-shadow: var(--sombra); }
 .dm-cab-ini--brunela { background: linear-gradient(135deg, #F38A6C, var(--pink)); color: #fff; box-shadow: 0 10px 20px -10px rgba(230,79,85,0.85); }
 .dm-cab-nombre { margin: 0; font-weight: 900; font-size: 18px; letter-spacing: -0.015em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

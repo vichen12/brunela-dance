@@ -201,7 +201,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
               <h2 className="fa-h2">Mensajes</h2>
               <p className="fa-sub">Le llega a su chat privado con vos.</p>
             </div>
-            {salaId && <Link href={`/dashboard/chat?user=${id}` as never} className="fa-mini">Abrir chat</Link>}
+            {salaId && <Link href={`/admin/mensajes?user=${id}` as never} className="fa-mini">Abrir chat</Link>}
           </div>
           {mensajes.length === 0 ? (
             <p className="fa-txt">Todavía no se escribieron. El primer mensaje abre la conversación.</p>

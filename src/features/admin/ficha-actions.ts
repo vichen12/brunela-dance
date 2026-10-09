@@ -77,6 +77,7 @@ export async function enviarMensajeDesdeFichaAction(fd: FormData) {
 
   revalidatePath(`/admin/users/${alumnaId}`);
   revalidatePath("/dashboard/chat");
+  revalidatePath("/admin/mensajes");
   volver(alumnaId, "success=" + encodeURIComponent("Mensaje enviado. Le aparece en Mi chat.") + "#mensajes");
 }
 

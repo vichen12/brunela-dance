@@ -7,7 +7,7 @@ import type { Route } from "next";
 import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
-  MessageSquare, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
+  MessageCircleHeart, Shield, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
 } from "lucide-react";
 
 /**
@@ -57,7 +57,12 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/users",         label: "Alumnas",          Icon: Users },
       { href: "/admin/live",          label: "Sesiones en vivo", Icon: CalendarDays },
-      { href: "/admin/chat",          label: "Chat",             Icon: MessageSquare },
+      // Mensajes y Comunidad vivian mezclados en /dashboard/chat y
+      // /dashboard/community (la admin veia ahi la bandeja y las herramientas).
+      // /dashboard es ahora solo la vista de alumna; gestionar vive aca.
+      { href: "/admin/mensajes",      label: "Mensajes",         Icon: MessageCircleHeart },
+      { href: "/admin/comunidad",     label: "Comunidad",        Icon: Users },
+      { href: "/admin/chat",          label: "Moderación",       Icon: Shield },
       { href: "/admin/announcements", label: "Anuncios",         Icon: Megaphone },
     ],
   },

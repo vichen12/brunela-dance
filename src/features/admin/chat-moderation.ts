@@ -82,5 +82,6 @@ export async function banearUsuarioAction(input: {
 
   revalidatePath("/dashboard/community");
   revalidatePath("/admin/chat");
+  revalidatePath("/admin/comunidad");
   return { ok: true };
 }

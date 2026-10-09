@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CalendarDays, CalendarHeart, Check, Clock, FileText, Flame, ListOrdered, Mail, Megaphone, Play, Sparkles, Timer } from "lucide-react";
 import { HoraSesion } from "@/components/hora-sesion";
-import { PanelControlAdmin } from "@/components/panel-control-admin";
-import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
 import { Saludo } from "@/components/saludo";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -108,25 +106,30 @@ export default async function DashboardPage() {
   const tier = profile?.membership_tier ?? "none";
   // El nombre de QUIEN entro. Antes toda cuenta admin leia "Brunela", y hay
   // tres admins: el saludo le hablaba a otra persona.
-  const nombreReal = profile?.full_name?.trim().split(/\s+/)[0] || null;
   const firstName =
     profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "alumna";
 
-  // La admin ve el panel del estudio y nada mas, y se resuelve ANTES de las
-  // consultas de alumna (progreso, sugerencias, invitaciones), que en su cuenta
-  // no se usan. La seccion personal eran ceros ocupando media pantalla.
-  if (isAdmin) {
-    const datos = await cargarPanelEstudio();
-    return (
-      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh", background: "#fff" }}>
-        <section style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px)" }}>
-          <PanelControlAdmin datos={{ ...datos, nombre: nombreReal, fecha: fechaDelPanel() }} />
-        </section>
-      </main>
-    );
-  }
+  // /dashboard ES LA VISTA DE ALUMNA, identica para todas -- admin incluida.
+  // Antes la admin veia aca el panel del estudio (atajos para subir clases,
+  // programar en vivo...): herramientas de gestion en el area de alumna. El
+  // panel vive en /admin.
+  //
+  // ⚠️ RLS le devuelve TODO a la admin (las policies llevan is_admin()). Donde
+  //    eso cambia lo que se ve, se recorta a mano con el plan de su perfil,
+  //    para que vea lo mismo que una alumna de ese plan.
+  const rangoDelPlan = TIER_ORDER[tier];
+  const anunciosDeSuPlan = ["all", ...(["corps_de_ballet", "solista", "principal"] as const).filter((t) => TIER_ORDER[t] <= rangoDelPlan)];
 
   const now = new Date().toISOString();
+
+  let consultaAnuncios = supabase.from("studio_announcements").select("id, title, content, tier_target");
+  if (isAdmin) consultaAnuncios = consultaAnuncios.in("tier_target", anunciosDeSuPlan);
+  // "Para hoy": las clases publicadas mas recientes a las que llega su plan.
+  // A la alumna la recorta RLS; a la admin, la lista de planes de la clase.
+  let consultaHoy = supabase.from("videos")
+    .select("id, slug, title_i18n, duration_seconds, category_slugs, thumbnail_url")
+    .eq("status", "published");
+  if (isAdmin) consultaHoy = consultaHoy.contains("planes_permitidos", [tier]);
 
   // Base queries — available to all authenticated users
   const [
@@ -143,15 +146,11 @@ export default async function DashboardPage() {
       .select("id, title_i18n, starts_at, membership_tier_required, cover_image_url")
       .in("status", ["scheduled"]).gte("starts_at", now)
       .order("starts_at", { ascending: true }).limit(1).maybeSingle<LiveSession>(),
-    supabase.from("studio_announcements")
-      .select("id, title, content, tier_target").eq("is_active", true)
+    consultaAnuncios
+      .eq("is_active", true)
       .or("expires_at.is.null,expires_at.gt." + now)
       .order("published_at", { ascending: false }).limit(3),
-    // "Para hoy": las clases publicadas mas recientes a las que llega su plan.
-    // La RLS ya filtra por tier, asi que no hace falta condicionarlo aca.
-    supabase.from("videos")
-      .select("id, slug, title_i18n, duration_seconds, category_slugs, thumbnail_url")
-      .eq("status", "published")
+    consultaHoy
       .order("published_at", { ascending: false })
       .limit(10)
       .returns<ClaseSugerida[]>(),

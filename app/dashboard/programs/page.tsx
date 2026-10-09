@@ -100,14 +100,12 @@ export default async function DashboardProgramsPage() {
        */
       supabase.from("programs").select("id"),
 
-      // La lista visible. Para una alumna, solo publicados; una admin ve
-      // tambien los borradores, que es como ya funcionaba.
-      (() => {
-        const c = admin.from("programs").select(COLUMNAS);
-        return (isAdmin ? c : c.eq("status", "published"))
-          .order("is_featured", { ascending: false })
-          .order("published_at", { ascending: false });
-      })(),
+      // La lista visible: solo publicados, para todas. /dashboard es la vista
+      // de alumna, admin incluida; los borradores se ven en /admin/programs.
+      admin.from("programs").select(COLUMNAS)
+        .eq("status", "published")
+        .order("is_featured", { ascending: false })
+        .order("published_at", { ascending: false }),
 
       // Nivel y foco salen del CONTENIDO real del plan, no de campos de
       // `programs`. Se piden con service_role para que los chips existan
@@ -125,7 +123,18 @@ export default async function DashboardProgramsPage() {
   const programs = (programsData ?? []) as unknown as ProgramRecord[];
   const days = (daysData ?? []) as unknown as ProgramDayRecord[];
 
-  const accesibles = new Set((accesiblesData ?? []).map((p: { id: string }) => p.id));
+  /**
+   * A la admin RLS le contesta "todos" (la policy lleva is_admin()), asi que
+   * para mostrarle la vista de alumna el candado sale del plan de su perfil:
+   * lo que veria una alumna con ese plan. Para la alumna decide RLS, siempre.
+   */
+  const RANGO: Record<string, number> = { none: 0, corps_de_ballet: 1, solista: 2, principal: 3 };
+  const rangoPropio = RANGO[profile?.membership_tier ?? "none"] ?? 0;
+  const accesibles = isAdmin
+    ? new Set(((programsData ?? []) as unknown as ProgramRecord[])
+        .filter((p) => (RANGO[p.membership_tier_required] ?? 0) <= rangoPropio)
+        .map((p) => p.id))
+    : new Set((accesiblesData ?? []).map((p: { id: string }) => p.id));
   const bloqueado = (id: string) => !accesibles.has(id);
   const hayBloqueados = programs.some((p) => bloqueado(p.id));
 
