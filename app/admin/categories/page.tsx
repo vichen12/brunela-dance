@@ -260,7 +260,8 @@ const CSS = `
 .cat-nueva > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; user-select: none; }
 .cat-nueva > summary::-webkit-details-marker, .cat-editar > summary::-webkit-details-marker { display: none; }
 .cat-nueva-ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink); color: #fff; transition: transform .35s cubic-bezier(.16,1,.3,1); }
-.cat-nueva[open] .cat-nueva-ico { transform: rotate(45deg); }
+.cat-nueva-ico svg { transition: transform .35s cubic-bezier(.16,1,.3,1); }
+.cat-nueva[open] .cat-nueva-ico svg { transform: rotate(45deg); }
 .cat-nueva-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .cat-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
 .cat-nueva-sub { font-size: 12.5px; color: #78716c; }

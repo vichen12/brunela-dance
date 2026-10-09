@@ -1,4 +1,5 @@
 "use client";
+import { Pencil } from "lucide-react";
 import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
@@ -75,7 +76,15 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
       <input name="id" type="hidden" value={program?.id ?? ""} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label={esNuevo ? "Dirección del plan" : "Dirección"}>
+        <F label="Título en español">
+          <input style={inp} defaultValue={program?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Fundamentos en 7 días" />
+        </F>
+
+        <F label="Título en inglés">
+          <input style={inp} defaultValue={program?.title_i18n?.en ?? ""} name="titleEn" placeholder="Fundamentals in 7 days" />
+        </F>
+
+        <F label={esNuevo ? "Dirección del plan (se completa sola)" : "Dirección"}>
           {/* Al editar es solo lectura: cambiarla rompe cualquier enlace ya
               compartido. Al crear hace falta, porque todavia no existe. */}
           <input
@@ -91,14 +100,6 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
 
         <F label="Cuántos días dura">
           <input style={inp} defaultValue={program?.duration_days ?? 14} min={1} name="durationDays" required type="number" />
-        </F>
-
-        <F label="Título en español">
-          <input style={inp} defaultValue={program?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Fundamentos en 7 días" />
-        </F>
-
-        <F label="Título en inglés">
-          <input style={inp} defaultValue={program?.title_i18n?.en ?? ""} name="titleEn" placeholder="Fundamentals in 7 days" />
         </F>
 
         <F label="Plan que lo puede ver">
@@ -201,14 +202,9 @@ export function EditarPrograma({
 
   return (
     <>
-      <button
-        onClick={() => setAbierto(true)}
-        style={{
-          padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-          border: "1px solid #f0eeec", background: "#fff",
-          color: "#57534e", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
-        }}
-      >Editar y días</button>
+      <button type="button" onClick={() => setAbierto(true)} className="ad-editar">
+        <Pencil size={14} strokeWidth={2} aria-hidden="true" /> Editar y días
+      </button>
 
       {guardado && (
         <span style={{
@@ -226,7 +222,7 @@ export function EditarPrograma({
       >
 
               <div style={{ borderTop: "1px solid #f0eeec", padding: "22px" }}>
-                <ProgramForm actionLabel="GUARDAR CAMBIOS" program={program} onGuardado={() => { setAbierto(false); setGuardado(true); }} />
+                <ProgramForm actionLabel="Guardar cambios" program={program} onGuardado={() => { setAbierto(false); setGuardado(true); }} />
 
                 {/* Días */}
                 <div style={{ marginTop: 26, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>

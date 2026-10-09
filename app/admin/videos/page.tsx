@@ -639,7 +639,8 @@ const CSS_CLASES = `
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
   background: var(--pink); color: #fff; transition: transform .35s cubic-bezier(.16,1,.3,1);
 }
-.acl-nueva[open] .acl-nueva-ico { transform: rotate(45deg); }
+.acl-nueva-ico svg { transition: transform .35s cubic-bezier(.16,1,.3,1); }
+.acl-nueva[open] .acl-nueva-ico svg { transform: rotate(45deg); }
 .acl-nueva-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .acl-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
 .acl-nueva-sub { font-size: 12.5px; color: #78716c; }

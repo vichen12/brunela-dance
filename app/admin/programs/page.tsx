@@ -1,4 +1,5 @@
-import { BotonEnviar } from "@/components/boton-enviar";
+import { Check, Eye, Plus, Star } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
 import {
@@ -43,56 +44,16 @@ type VideoLookup = { id: string; slug: string; title_i18n: Record<string, string
 // mientras las otras nueve usaban hero-stage y tarjetas blancas con borde
 // #f0eeec. Al entrar acá se notaba que era otro producto.
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  published: { bg: "#dcfce7", color: "#166534", label: "Publicado" },
-  draft:     { bg: "#fef9c3", color: "#854d0e", label: "Borrador" },
-  archived:  { bg: "#f1f5f9", color: "#475569", label: "Archivado" },
+const STATUS_STYLE: Record<string, { clase: string; label: string }> = {
+  published: { clase: "apl-estado--pub",  label: "Publicado" },
+  draft:     { clase: "apl-estado--borr", label: "Borrador" },
+  archived:  { clase: "apl-estado--arch", label: "Archivado" },
 };
 
-const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  solista:   { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal: { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
+const TIER_STYLE: Record<string, { label: string }> = {
+  solista:   { label: "Solista" },
+  principal: { label: "Principal" },
 };
-
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
-
-const tarjeta: React.CSSProperties = {
-  background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
-};
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
-
-function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label style={{ display: "flex", flexDirection: "column" }}><Lbl>{label}</Lbl>{children}</label>;
-}
-
-function Flash({ msg, tone }: { msg: string | null; tone: "ok" | "err" }) {
-  if (!msg) return null;
-  return (
-    <div style={{
-      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600, marginBottom: 20,
-      background: tone === "ok" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "ok" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "ok" ? "#bbf7d0" : "#fecaca"}`,
-    }}>{msg}</div>
-  );
-}
 
 const tituloDe = (v: VideoLookup | undefined, fallback: string) =>
   v ? (v.title_i18n?.es ?? v.title_i18n?.en ?? v.slug) : fallback;
@@ -171,132 +132,175 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   const videoById = new Map(videos.map((v) => [v.id, v]));
   const publicados = programs.filter((p) => p.status === "published").length;
 
+  const abrirNueva = params.nueva === "1";
+  const hayFiltro = Boolean(q || fEstadoProg);
+  const totalEmpezaron = [...usoPorPrograma.values()].reduce((a, u) => a + u.empezaron, 0);
+
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Gestión de contenido</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Planes de trabajo.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Recorridos de varios días. Cada día lleva una clase, y la alumna avanza en orden.
-        </p>
-      </header>
+    <main className="apl">
+      <style>{CSS_PLANES}</style>
 
-      <Flash msg={success} tone="ok" />
-      <Flash msg={error} tone="err" />
+      <AdminCabecera
+        eyebrow="Gestión de contenido"
+        titulo="Planes de trabajo"
+        lede="Recorridos de varios días: cada día lleva una clase y la alumna avanza en orden. Es lo que suma Solista sobre Corps de Ballet."
+        acciones={<>
+          <AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nuevo plan</AdminBoton>
+          <AdminBoton href="/dashboard/programs"><Eye size={15} strokeWidth={2} aria-hidden="true" /> Ver como alumna</AdminBoton>
+        </>}
+      />
 
-      {/* Resumen */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[
-          { value: programs.length, label: "Planes", sub: "creados" },
-          { value: publicados, label: "Publicados", sub: "visibles para las alumnas" },
-          { value: programDays.length, label: "Días", sub: "cargados en total" },
-        ].map((s) => (
-          <div key={s.label} style={{ ...tarjeta, padding: "20px 22px" }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#44403c", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>{s.sub}</p>
-          </div>
-        ))}
-      </div>
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
-      {/* Nuevo programa */}
-      <details style={{ ...tarjeta, marginBottom: 20, overflow: "hidden" }}>
-        <summary style={{
-          listStyle: "none", cursor: "pointer", userSelect: "none",
-          display: "flex", alignItems: "center", gap: 12, padding: "16px 22px",
-          fontSize: 13, fontWeight: 700, color: "#1c1917",
-        }}>
-          <span style={{
-            width: 26, height: 26, borderRadius: 8, background: "var(--pink)",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontSize: 16, fontWeight: 800, flexShrink: 0,
-          }}>+</span>
-          Nuevo programa
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#a8a29e", fontWeight: 500 }}>
-            Clic para desplegar
-          </span>
-        </summary>
-        <div style={{ borderTop: "1px solid #f0eeec", padding: "22px" }}>
-          <ProgramForm actionLabel="CREAR PROGRAMA" />
-        </div>
-      </details>
+      <AdminCifras items={[
+        { label: "Planes", value: totalProgramas ?? programs.length, sub: "creados" },
+        { label: "Publicados", value: publicados, sub: "visibles para las alumnas" },
+        { label: "Días cargados", value: programDays.length, sub: "en todos los planes" },
+        { label: "Alumnas", value: totalEmpezaron, sub: "empezaron alguno" },
+      ]} />
 
-      {/* Lista */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {programs.length === 0 && (
-          <div style={{ ...tarjeta, padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
-            Todavía no hay programas. Creá el primero arriba.
-          </div>
-        )}
+      <AdminNueva abierto={abrirNueva} titulo="Crear un plan de trabajo" sub="Título, cuántos días, plan que lo ve y portada. Los días se cargan después.">
+        <ProgramForm actionLabel="Crear plan" />
+      </AdminNueva>
 
-        <AdminBuscador
-          action="/admin/programs"
-          q={q}
-          placeholder="Buscar por título o dirección…"
-          filtros={[{ name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG }]}
-          total={totalProgramas ?? programs.length}
-          mostrando={programs.length}
-        />
-        {programs.map((program) => {
-          const days = programDays.filter((d) => d.program_id === program.id);
-          const st = STATUS_STYLE[program.status] ?? STATUS_STYLE.draft;
-          const tier = TIER_STYLE[program.membership_tier_required] ?? TIER_STYLE.solista;
+      <AdminBuscador
+        action="/admin/programs"
+        q={q}
+        placeholder="Buscar por título o dirección"
+        filtros={[{ name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG }]}
+        total={totalProgramas ?? programs.length}
+        mostrando={programs.length}
+      />
 
-          return (
-            <div key={program.id} style={{ ...tarjeta, overflow: "hidden" }}>
-              <div style={{
-                listStyle: "none", cursor: "pointer", userSelect: "none",
-                display: "flex", alignItems: "center", gap: 14, padding: "14px 20px",
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#1c1917" }}>
-                    {program.title_i18n?.es ?? program.slug}
-                  </p>
-                  <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>
-                    {days.length} de {program.duration_days} días cargados
-                    {(() => {
-                      const uso = usoPorPrograma.get(program.id);
-                      if (!uso || uso.empezaron === 0) return null;
-                      // "Lo empezaron", no "vistas": lo unico que se puede
-                      // contar hoy es cuantas alumnas tienen progreso en el.
-                      return (
-                        <span style={{ color: "var(--pink-deep)", fontWeight: 700 }}>
-                          {" · "}lo empezaron {uso.empezaron}, lo terminaron {uso.terminaron}
-                        </span>
-                      );
-                    })()}
-                  </p>
-                </div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: tier.bg, color: tier.color }}>
-                  {tier.label}
-                </span>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: st.bg, color: st.color }}>
-                  {st.label}
-                </span>
-                {program.is_featured && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: "var(--pink-wash)", color: "var(--pink-deep)" }}>
-                    Destacado
+      {programs.length === 0 ? (
+        <AdminVacio titulo={hayFiltro ? "Ningún plan coincide." : "Todavía no hay planes de trabajo."}>
+          {hayFiltro ? (
+            <AdminBoton href="/admin/programs">Ver todos</AdminBoton>
+          ) : (
+            <>
+              <p>Un plan es una serie de días en orden — «Trabajo de pies, 14 días». Creás el plan y después le asignás una clase a cada día.</p>
+              <AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primero</AdminBoton>
+            </>
+          )}
+        </AdminVacio>
+      ) : (
+        <ul className="apl-grilla">
+          {programs.map((program) => {
+            const days = programDays.filter((d) => d.program_id === program.id);
+            const st = STATUS_STYLE[program.status] ?? STATUS_STYLE.draft;
+            const tier = TIER_STYLE[program.membership_tier_required] ?? TIER_STYLE.solista;
+            const uso = usoPorPrograma.get(program.id);
+            const cargados = new Map(days.map((d) => [d.day_number, d]));
+            const total = Math.max(program.duration_days, ...days.map((d) => d.day_number), 0);
+            const faltan = Math.max(0, program.duration_days - days.length);
+
+            return (
+              <li key={program.id} className={"apl-card apl-card--" + program.status}>
+                <div className="apl-portada">
+                  {program.cover_image_url && <img src={program.cover_image_url} alt="" />}
+                  <span className="apl-dias-num">
+                    <strong>{program.duration_days}</strong> días
                   </span>
-                )}
-              </div>
-                <div style={{
-                  borderTop: "1px solid #f0eeec", padding: "12px 20px",
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
-                  <EditarPrograma
-                    program={program}
-                    days={days}
-                    videos={videos}
-                    videoById={videoById}
-                  />
+                  {program.is_featured && <span className="apl-dest"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacado</span>}
                 </div>
-            </div>
-          );
-        })}
-      </div>
+
+                <div className="apl-cuerpo">
+                  <div className="apl-linea">
+                    <span className={"apl-estado " + st.clase}><span className="apl-punto" aria-hidden="true" />{st.label}</span>
+                    <span className="apl-plan">Desde {tier.label}</span>
+                  </div>
+                  <h2 className="apl-titulo">{program.title_i18n?.es ?? program.slug}</h2>
+
+                  {/* Un cuadrito por dia: lleno si ya tiene clase. Es lo que
+                      hay que mirar para saber que falta cargar. */}
+                  <div className="apl-dias" aria-label={`${days.length} de ${program.duration_days} días con clase`}>
+                    {Array.from({ length: Math.min(total, 31) }, (_, i) => {
+                      const d = cargados.get(i + 1);
+                      return (
+                        <span
+                          key={i}
+                          className={"apl-dia" + (d ? " es-cargado" : "")}
+                          title={d ? `Día ${i + 1}: ${tituloDe(videoById.get(d.video_id), "clase")}` : `Día ${i + 1}: sin clase`}
+                        />
+                      );
+                    })}
+                    {total > 31 && <span className="apl-dias-mas">+{total - 31}</span>}
+                  </div>
+                  <p className={"apl-dias-txt" + (faltan > 0 ? " es-faltan" : "")}>
+                    {faltan > 0
+                      ? <><strong>{days.length}</strong> de {program.duration_days} días con clase · faltan {faltan}</>
+                      : <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Los {program.duration_days} días tienen clase</>}
+                  </p>
+
+                  {uso && uso.empezaron > 0 && (
+                    <p className="apl-uso">
+                      {/* "Lo empezaron", no "vistas": lo unico que se puede
+                          contar hoy es cuantas alumnas tienen progreso en el. */}
+                      Lo empezaron <strong>{uso.empezaron}</strong> · lo terminaron <strong>{uso.terminaron}</strong>
+                    </p>
+                  )}
+
+                  <div className="apl-pie">
+                    <EditarPrograma program={program} days={days} videos={videos} videoById={videoById} />
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </main>
   );
 }
+
+const CSS_PLANES = `
+.apl { display: flex; flex-direction: column; }
+.apl-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+.apl-card {
+  position: relative; display: flex; flex-direction: column; border: 1px solid #e7e5e4; border-radius: 22px; background: #fff; overflow: hidden;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+}
+.apl-card:hover { transform: translateY(-3px); border-color: var(--pink-line); box-shadow: 0 22px 40px -24px rgba(176,58,62,0.5); }
+.apl-card--archived { opacity: 0.6; }
+.apl-portada {
+  position: relative; aspect-ratio: 16 / 7; overflow: hidden;
+  background: linear-gradient(135deg, var(--pink-wash) 0%, var(--pink-soft) 55%, var(--rose) 130%);
+}
+.apl-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.16,1,.3,1); }
+.apl-card:hover .apl-portada img { transform: scale(1.05); }
+.apl-dias-num {
+  position: absolute; left: 16px; bottom: 12px; display: inline-flex; align-items: baseline; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--pink-deep);
+  padding: 4px 12px; border-radius: 99px; background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
+}
+.apl-dias-num strong { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.03em; color: var(--ink); }
+.apl-dest {
+  position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; color: #c2410c; padding: 4px 10px; border-radius: 99px; background: #fff;
+}
+.apl-cuerpo { display: flex; flex-direction: column; flex: 1; padding: 18px 20px 18px; }
+.apl-linea { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.apl-estado { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.apl-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.apl-estado--pub { color: #15803d; }
+.apl-estado--borr { color: var(--pink-deep); }
+.apl-estado--arch { color: #78716c; }
+.apl-plan { font-size: 11.5px; font-weight: 700; color: #57534e; padding: 2px 9px; border-radius: 99px; border: 1px solid #e7e5e4; }
+.apl-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 21px; line-height: 1.15; letter-spacing: -0.03em; color: var(--ink); }
+
+.apl-dias { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 14px; }
+.apl-dia { width: 14px; height: 14px; border-radius: 4px; background: #f0eeec; transition: transform .2s; }
+.apl-dia.es-cargado { background: var(--pink); }
+.apl-dia:hover { transform: scale(1.25); }
+.apl-dias-mas { font-size: 11px; font-weight: 700; color: #a8a29e; align-self: center; margin-left: 2px; }
+.apl-dias-txt { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12.5px; color: #15803d; font-weight: 600; }
+.apl-dias-txt.es-faltan { color: #57534e; font-weight: 400; }
+.apl-dias-txt strong { color: var(--ink); }
+.apl-uso { margin-top: 6px; font-size: 12.5px; color: #78716c; }
+.apl-uso strong { color: var(--ink); }
+.apl-pie { margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 8px; }
+`;
 
 // ── Formulario ────────────────────────────────────────────────────────────────
 
