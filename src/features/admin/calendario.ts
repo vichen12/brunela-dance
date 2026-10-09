@@ -1,8 +1,13 @@
 /**
- * Calendario de la admin: reglas puras (sin base, sin servidor).
+ * Calendario: reglas puras (sin base, sin servidor).
  *
- * Lo usan /admin/calendario, el bloque "Esta semana" de /admin y las pruebas
- * de tests/sistema/calendario-admin.test.ts.
+ * Lo usan /admin/calendario, el bloque "Esta semana" de /admin, "Mi agenda" de
+ * la alumna (/dashboard/agenda y la tarjeta del inicio) y las pruebas de
+ * tests/sistema/calendario-admin.test.ts y mi-agenda.test.ts.
+ *
+ * Vive en features/admin porque nacio ahi; no tiene NADA de admin (ni base, ni
+ * guardas): son fechas y cadenas. La alumna lo reusa en vez de tener una
+ * tercera implementacion de "en que dia de Madrid cae esto".
  *
  * TODO SE CUENTA EN HORA DE MADRID, que es la del estudio. El servidor corre en
  * UTC (Vercel): una clase a las 00:30 de Madrid cae ese dia aunque en UTC
@@ -14,7 +19,15 @@
 
 export const ZONA_CALENDARIO = "Europe/Madrid";
 
-export type TipoEvento = "vivo" | "privada";
+/**
+ * vivo / privada: los de la admin, y en la agenda de la alumna los SUYOS
+ * (clase en vivo reservada, sesion privada 1 a 1).
+ * Solo en la agenda de la alumna:
+ *   invitacion -> clase en vivo a la que Brunela la invito (y no reservo aun)
+ *   cuenta     -> fecha de su cuenta, de dia entero (fin del gratis, renovacion...)
+ *   disponible -> clase en vivo que su plan le deja reservar (opcional, aparte)
+ */
+export type TipoEvento = "vivo" | "privada" | "invitacion" | "cuenta" | "disponible";
 
 /**
  * Un evento del calendario, ya resuelto a cadenas: cruza a cualquier componente
@@ -36,6 +49,13 @@ export type EventoCalendario = {
   estado?: "borrador" | "cancelada" | "hecha" | null;
   /** Para resaltar un cupo lleno o un enlace que falta. */
   alerta?: boolean;
+  /** Marca de dia entero (sin hora): va primero en su dia y no muestra hora. */
+  todoElDia?: boolean;
+  /**
+   * Un boton aparte del enlace principal, ya resuelto ("Unirse" de una sesion
+   * privada con la ventana abierta). Cadenas, no funciones (trampa 6).
+   */
+  accion?: { href: string; texto: string; externo?: boolean } | null;
 };
 
 /** "2026-10-10" en Madrid. en-CA da el formato ISO de fecha. */
@@ -123,6 +143,9 @@ export function agruparPorDia(eventos: EventoCalendario[], soloDias?: (clave: st
     if (lista) lista.push(e);
     else porDia.set(k, [e]);
   }
+  // Las de dia entero, primero (sort estable: entre ellas sigue el orden por
+  // hora). Sin ninguna, como en el calendario de la admin, no cambia nada.
+  for (const lista of porDia.values()) lista.sort((x, y) => Number(!!y.todoElDia) - Number(!!x.todoElDia));
   return new Map([...porDia.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 

@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
+import {
+  AVISO_FALTA_MIGRACION_PACKS_POR_PLAN,
+  esFaltaDeColumnaPlanes,
+  leerPlanesDeCompra,
+} from "@/src/features/studio/packs-reglas";
 
 /**
  * Packs de clases.
@@ -80,6 +85,14 @@ export async function updatePackAction(fd: FormData) {
   const precio = leerCamposDePrecio(fd);
   if ("fallo" in precio) fallar(precio.fallo);
 
+  // "Quien lo puede comprar" (20261009_4). Solo se escribe si el formulario
+  // lo mando: sin la migracion el panel lo muestra apagado y no manda nada, y
+  // escribir una columna que no existe tiraria el guardado ENTERO (42703).
+  const planes = fd.has("quienCompra")
+    ? leerPlanesDeCompra(texto(fd, "quienCompra"), fd.getAll("planesCompra"))
+    : null;
+  if (planes && "fallo" in planes) fallar(planes.fallo);
+
   const { error } = await supabase
     .from("packs")
     .update({
@@ -89,10 +102,12 @@ export async function updatePackAction(fd: FormData) {
       cover_image_url: texto(fd, "portada") || null,
       display_order: Number(texto(fd, "orden")) || 0,
       ...precio,
+      ...(planes && "ok" in planes ? { planes_que_pueden_comprar: planes.ok } : {}),
     })
     .eq("id", id);
 
   if (error) {
+    if (esFaltaDeColumnaPlanes(error)) fallar(AVISO_FALTA_MIGRACION_PACKS_POR_PLAN);
     // El trigger packs_price_id_unico levanta un 23505 cuyo mensaje YA nombra al
     // otro pack. Se pasa tal cual: es mejor que cualquier cosa que pudieramos
     // escribir aca.

@@ -9,6 +9,7 @@ import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-pr
 import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
+import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, planesDeCompraEnTexto } from "@/src/features/studio/packs-reglas";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export default async function AdminPacksPage({
   const supabase = await createSupabaseServerClient();
 
   // Todo en paralelo: encadenarlas son cuatro viajes a Fráncfort en serie.
-  const [{ data: packsData }, { data: relaciones }, { data: videosData }, { data: comprasData }] =
+  const [{ data: packsData }, { data: relaciones }, { data: videosData }, { data: comprasData }, planesRes] =
     await Promise.all([
       supabase
         .from("packs")
@@ -64,7 +65,18 @@ export default async function AdminPacksPage({
       supabase.from("pack_videos").select("pack_id, video_id, display_order"),
       supabase.from("videos").select("id, slug, title_i18n").eq("status", "published").order("published_at", { ascending: false }),
       supabase.from("pack_purchases").select("pack_id"),
+      // "Quien lo puede comprar" (20261009_4). APARTE del select de packs: sin
+      // la migracion la columna no existe (42703) y, metida arriba, dejaria la
+      // pantalla sin ningun pack. Asi, sin ella, el control avisa y listo.
+      supabase.from("packs").select("id, planes_que_pueden_comprar"),
     ]);
+
+  const faltaMigracionPlanes = !!planesRes.error && esFaltaDeColumnaPlanes(planesRes.error);
+  if (planesRes.error && !faltaMigracionPlanes) console.error("[admin/packs] planes que pueden comprar:", planesRes.error.message);
+  const planesDe = new Map(
+    ((planesRes.data ?? []) as { id: string; planes_que_pueden_comprar: string[] | null }[])
+      .map((f) => [f.id, normalizarPlanesDeCompra(f.planes_que_pueden_comprar)])
+  );
 
   const videos = (videosData ?? []) as VideoFila[];
   const tituloDe = new Map(videos.map((v) => [v.id, v.title_i18n?.es ?? v.slug]));
@@ -93,7 +105,7 @@ export default async function AdminPacksPage({
   //    afirmaria a tsc que el dato ya viene de la base y no habria error: el
   //    aviso quedaria en undefined y simplemente no se dibujaria nunca. Un cast
   //    de mas es una comprobacion de menos.
-  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive">;
+  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive" | "planesQuePuedenComprar" | "faltaMigracionPlanes">;
 
   // Los avisos se resuelven ACA, en el servidor, y bajan como objeto plano.
   // Todos en paralelo: en serie serian dos viajes a Stripe por cada pack.
@@ -112,6 +124,8 @@ export default async function AdminPacksPage({
         compras: comprasPorPack[p.id] ?? 0,
         avisoTest: test ? leerVerificacion(test, p.price_cents, p.currency) : null,
         avisoLive: live ? leerVerificacion(live, p.price_cents, p.currency) : null,
+        planesQuePuedenComprar: planesDe.get(p.id) ?? null,
+        faltaMigracionPlanes,
       };
     })
   );
@@ -233,6 +247,7 @@ export default async function AdminPacksPage({
                     <div className="pk-linea">
                       <span className={"pk-estado" + (p.is_published ? " es-pub" : "")}><span className="pk-punto" aria-hidden="true" />{p.is_published ? "A la venta" : "Borrador"}</span>
                       {p.show_on_landing && <span className="pk-tag">En la portada</span>}
+                      {p.planesQuePuedenComprar && <span className="pk-tag pk-tag--solo">Solo {planesDeCompraEnTexto(p.planesQuePuedenComprar)}</span>}
                     </div>
                     <h2 className="pk-titulo">{p.name_i18n?.es ?? p.slug}</h2>
                     <ul className="pk-datos">
@@ -324,6 +339,7 @@ const CSS = `
 .pk-estado.es-pub { color: var(--pink-deep); background: var(--rubor); }
 .pk-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pk-tag { font-size: 12.5px; font-weight: 800; color: #A0472F; padding: 5px 12px; border-radius: 99px; background: #FFF0EA; }
+.pk-tag--solo { background: #FFF4E8; color: #7A3E24; border: 1px solid #FFE2D3; }
 .pk-titulo { font-weight: 900; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
 .pk-datos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .pk-datos li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px; border-radius: 99px; font-size: 13px; font-weight: 700; color: #6E5550; background: var(--crema); border: 1px solid var(--linea); }

@@ -17,6 +17,12 @@ import {
   parametrosCheckoutSuscripcion,
   type Destinos,
 } from "@/src/lib/stripe/parametros-checkout";
+import {
+  errorSoloPara,
+  esFaltaDeColumnaPlanes,
+  normalizarPlanesDeCompra,
+  puedeComprarPack,
+} from "@/src/features/studio/packs-reglas";
 
 /**
  * Crear una sesion de Stripe Checkout: UNA implementacion, tres entradas.
@@ -188,6 +194,46 @@ export async function crearCheckoutDePack(a: {
 
   if (yaLoTiene) {
     return { ok: false, status: 409, error: "Ya tenés este pack." };
+  }
+
+  // ¿Es un pack solo para algunos planes? (20261009_4_packs_por_plan.sql)
+  //
+  // ⚠️ AQUI SE IMPONE, no en la pantalla: la tienda, la portada y el registro
+  //    solo esconden el boton. Esta funcion es la unica puerta a Stripe para
+  //    un pack, asi que lo que no pasa aca no se cobra.
+  //
+  // ⚠️ CONSULTA APARTE, y no una columna mas en el select de arriba: antes de
+  //    correr la migracion la columna no existe (42703) y el select entero
+  //    fallaria -> `pack` null -> "Ese pack no existe" para TODOS los packs.
+  //    Sin la columna = sin restriccion, que es el comportamiento de siempre.
+  //
+  // El plan se lee con service_role del perfil de quien paga (a.user.id sale
+  // de la sesion, nunca del navegador). Ante cualquier otro error se frena:
+  // es el camino que cobra, y es mejor reintentar que vender lo que no va.
+  const { data: restriccion, error: errorRestriccion } = await admin
+    .from("packs")
+    .select("planes_que_pueden_comprar")
+    .eq("id", pack.id)
+    .maybeSingle<{ planes_que_pueden_comprar: string[] | null }>();
+
+  if (errorRestriccion && !esFaltaDeColumnaPlanes(errorRestriccion)) {
+    return { ok: false, status: 503, error: "No pudimos comprobar para quién es este pack. Probá de nuevo en un momento." };
+  }
+
+  const soloPara = errorRestriccion ? null : normalizarPlanesDeCompra(restriccion?.planes_que_pueden_comprar);
+  if (soloPara) {
+    const { data: perfil, error: errorPerfil } = await admin
+      .from("profiles")
+      .select("membership_tier")
+      .eq("id", a.user.id)
+      .maybeSingle<{ membership_tier: string | null }>();
+
+    if (errorPerfil) {
+      return { ok: false, status: 503, error: "No pudimos comprobar tu plan. Probá de nuevo en un momento." };
+    }
+    if (!puedeComprarPack(perfil?.membership_tier, soloPara)) {
+      return { ok: false, status: 403, error: errorSoloPara(soloPara) };
+    }
   }
 
   const env = getStripeServerEnv();

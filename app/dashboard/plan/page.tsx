@@ -6,6 +6,8 @@ import { PlanClient } from "@/components/plan-client";
 import { getAccesoGratis } from "@/src/features/studio/acceso-gratis";
 import { estaVencido } from "@/src/features/studio/acceso-gratis-reglas";
 import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
+import { getRestriccionesDePacks } from "@/src/features/studio/packs";
+import { puedeComprarPack, textoSoloPara } from "@/src/features/studio/packs-reglas";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default async function PlanPage() {
     { data: comprasData },
     { data: relaciones },
     acceso,
+    restricciones,
   ] =
     await Promise.all([
       getCurrentProfile(user.id),
@@ -44,6 +47,9 @@ export default async function PlanPage() {
       supabase.from("pack_videos").select("pack_id"),
       // Tolerante: sin la migracion 20261009 llega disponible = false.
       getAccesoGratis(user.id),
+      // Packs "solo para ..." (20261009_4). Consulta aparte y tolerante: sin la
+      // migracion llega vacia y todos los packs son para todas.
+      getRestriccionesDePacks(),
     ]);
 
   const compradosEl = new Map(
@@ -84,6 +90,9 @@ export default async function PlanPage() {
   const sePuedeCobrar = (p: PackFila) =>
     (modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test) !== null;
 
+  // El candado usa el plan del PERFIL, que es el mismo que mira el checkout
+  // (crearCheckoutDePack): mientras dura un acceso gratis, ese plan cuenta.
+  const tierPerfil = profile?.membership_tier ?? "none";
   const packs = ((packsData ?? []) as PackFila[]).filter(sePuedeCobrar).map((p) => ({
     slug: p.slug,
     nombre: p.name_i18n?.es ?? p.slug,
@@ -94,6 +103,8 @@ export default async function PlanPage() {
     destacado: p.is_featured,
     clases: clasesPorPack[p.id] ?? 0,
     compradoEl: compradosEl.get(p.id) ?? null,
+    soloPara: textoSoloPara(restricciones.get(p.id)),
+    puedeComprar: puedeComprarPack(tierPerfil, restricciones.get(p.id)),
   }));
 
   // ACCESO GRATIS. Mientras dura, su membership_tier es el plan regalado, pero

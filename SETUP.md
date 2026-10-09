@@ -70,7 +70,17 @@ no es el que devuelve `ls`:
 36. 20261009_3_correos_enviados.sql        <-- DESPUES de la 23: tabla nueva
                                                con su propio grant. No
                                                redefine nada
+37. 20261009_4_packs_por_plan.sql          <-- DESPUES de la 28 (agrega una
+                                               columna a `packs`). No
+                                               redefine nada
 ```
+
+> **La 37 (packs por plan) tambien se puede correr sola.** Agrega
+> `packs.planes_que_pueden_comprar` (NULL = lo compra cualquiera). Sin ella el
+> codigo ya desplegado sigue andando como siempre: todos los packs se venden a
+> todas, y el panel del pack muestra "falta correr la migracion" en lugar del
+> control. La regla la impone `crearCheckoutDePack`
+> (`src/lib/stripe/crear-checkout.ts`), no la pantalla.
 
 > **La 36 (correos enviados) tambien se puede correr sola.** Sin ella la
 > aplicacion NO MANDA los correos del estudio (bienvenida, acceso gratis,

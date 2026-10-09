@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import {
-  CalendarHeart, FileText, Flower2, House, LayoutGrid, ListOrdered,
+  CalendarDays, CalendarHeart, FileText, Flower2, House, LayoutGrid, ListOrdered,
   Lock, LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
 } from 'lucide-react';
 import { signOutAction } from '@/src/features/auth/actions';
@@ -35,6 +35,8 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: 'Tu práctica',
     items: [
       { href: '/dashboard', exact: true, label: 'Inicio', Icon: House },
+      // Lo SUYO con fecha: reservas, invitaciones, privadas y fechas de la cuenta.
+      { href: '/dashboard/agenda', label: 'Mi agenda', Icon: CalendarDays },
       { href: '/dashboard/library', label: 'Clases', Icon: Play },
       { href: '/dashboard/programs', label: 'Planes de trabajo', Icon: ListOrdered },
       { href: '/dashboard/live', label: 'Clases en vivo', Icon: CalendarHeart },

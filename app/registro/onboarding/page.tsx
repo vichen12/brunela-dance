@@ -82,7 +82,7 @@ export default async function OnboardingPage({ searchParams }: Props) {
   // MISMA que la compuerta del estudio (src/features/acceso/reglas.ts).
   const acceso = await leerAccesoAlEstudio(user.id);
   const pidePago = !!acceso && onboardingPideElPago(acceso);
-  const eleccion = pidePago ? await cargarEleccionDePlan({ plan, interval, pack }) : null;
+  const eleccion = pidePago ? await cargarEleccionDePlan({ plan, interval, pack, tierActual: acceso?.tier ?? "none" }) : null;
   const total = pidePago ? 3 : 2;
 
   return (

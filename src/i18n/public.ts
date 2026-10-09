@@ -182,6 +182,8 @@ export const publicMessages = {
     "packs.forever": "acceso permanente",
     "packs.oneTime": "pago único",
     "packs.cta": "Llevar este pack",
+    "packs.onlyFor": "Solo para alumnas de {planes}",
+    "packs.seePlans": "Ver los planes",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
@@ -413,6 +415,8 @@ export const publicMessages = {
     "packs.forever": "lifetime access",
     "packs.oneTime": "one-time payment",
     "packs.cta": "Get this pack",
+    "packs.onlyFor": "Only for {planes} members",
+    "packs.seePlans": "See the plans",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
@@ -644,6 +648,8 @@ export const publicMessages = {
     "packs.forever": "accès permanent",
     "packs.oneTime": "paiement unique",
     "packs.cta": "Prendre ce pack",
+    "packs.onlyFor": "Réservé aux élèves {planes}",
+    "packs.seePlans": "Voir les formules",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
@@ -875,6 +881,8 @@ export const publicMessages = {
     "packs.forever": "accesso permanente",
     "packs.oneTime": "pagamento unico",
     "packs.cta": "Prendi questo pacchetto",
+    "packs.onlyFor": "Solo per le allieve {planes}",
+    "packs.seePlans": "Vedi i piani",
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Balletto - PBT - PCT - Pilates - Stretching",

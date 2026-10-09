@@ -16,6 +16,9 @@ import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
 import { TarjetaSesionPrivada } from "@/components/sesion-privada-tarjeta";
 import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
 import { proximaDe } from "@/src/features/studio/sesiones-privadas-reglas";
+import { cargarMiAgenda } from "@/src/features/studio/agenda";
+import { proximosDeLaAgenda } from "@/src/features/studio/agenda-reglas";
+import { claveDia, horaMadrid, nombreDiaCorto } from "@/src/features/admin/calendario";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +152,7 @@ export default async function DashboardPage() {
     cercanas,
     acceso,
     privadas,
+    agenda,
   ] = await Promise.all([
     // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
     // veces y el layout una tercera. Ahora es una sola consulta por request.
@@ -184,6 +188,10 @@ export default async function DashboardPage() {
     // Memoizado: el layout ya lo pidio. Sin la migracion 20261009_2 llega
     // vacio y la tarjeta no aparece.
     getMisSesionesPrivadas(user.id),
+    // "Proximo en tu agenda": lo suyo de los proximos 45 dias, con SU cliente
+    // (las mismas lecturas que /dashboard/agenda). Desde ayer: una clase de
+    // esta manana temprano en Madrid puede caer antes de "ahora" en UTC.
+    cargarMiAgenda(user.id, new Date(Date.now() - 86400000).toISOString(), new Date(Date.now() + 45 * 86400000).toISOString()),
   ]);
   // Mientras dura: la tarjeta. Cuando termino: la franja (el aviso grande lo
   // pone el layout, una sola vez). Las admin no tienen prueba.
@@ -192,6 +200,12 @@ export default async function DashboardPage() {
   const inminente = cercanas.find((c) => esInminente(c)) ?? null;
   const ahoraMs = Date.now();
   const privadaProxima = proximaDe(privadas.sesiones, ahoraMs);
+  // Sin repetir la privada que ya tiene su tarjeta grande arriba.
+  const proximosAgenda = proximosDeLaAgenda(
+    agenda.eventos.filter((e) => !(e.tipo === "privada" && e.id === privadaProxima?.id)),
+    claveDia(ahoraMs),
+    (iso) => claveDia(iso),
+  );
 
 
   // "Continua viendo" sale de la misma lista, sin otra consulta.
@@ -290,6 +304,35 @@ export default async function DashboardPage() {
         {privadaProxima && <TarjetaSesionPrivada s={privadaProxima} ahora={ahoraMs} verTodas />}
 
         {gratisVigente && <TarjetaGratis plan={acceso.plan!} hasta={acceso.hasta!} desde={acceso.desde} />}
+
+        {/* Proximo en tu agenda: compacto, hasta tres cosas, y a la agenda. */}
+        {proximosAgenda.length > 0 && (
+          <div className="ini-card ini-ag">
+            <div className="ini-ag-cab">
+              <p className="ini-card-titulo" style={{ margin: 0 }}>
+                <span className="ini-burbuja" aria-hidden="true"><CalendarDays size={16} strokeWidth={2.2} /></span>
+                Próximo en tu agenda
+              </p>
+              <Link href={"/dashboard/agenda" as never} className="ini-ver">Ver mi agenda <ArrowRight size={14} strokeWidth={2.4} aria-hidden="true" /></Link>
+            </div>
+            <ul className="ini-ag-lista">
+              {proximosAgenda.map((e) => (
+                <li key={e.tipo + e.id}>
+                  <Link href={e.href as never} className={"ini-ag-fila es-" + e.tipo}>
+                    <span className="ini-ag-cuando">
+                      <b>{nombreDiaCorto(claveDia(e.inicio))}</b>
+                      {e.todoElDia ? "todo el día" : horaMadrid(e.inicio)}
+                    </span>
+                    <span className="ini-ag-txt">
+                      <span className="ini-ag-titulo">{e.titulo}</span>
+                      <span className="ini-ag-detalle">{e.detalle}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Personal stats */}
         <div className="ini-cifras">
@@ -533,6 +576,21 @@ const CSS_INICIO = `
   display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
   font-family: var(--font-display), sans-serif; font-size: 16.5px; font-weight: 900; color: var(--ink);
 }
+
+/* proximo en tu agenda */
+.ini-ag { padding: 16px 18px; }
+.ini-ag-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ini-ag-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ini-ag-fila { display: flex; align-items: center; gap: 14px; padding: 9px 12px; border-radius: 16px; text-decoration: none; color: var(--ink); background: var(--crema); border-left: 4px solid var(--pink); transition: background .2s; }
+.ini-ag-fila:hover { background: var(--rubor); }
+.ini-ag-fila.es-invitacion { border-left-style: dashed; }
+.ini-ag-fila.es-privada { border-left-color: var(--melocoton-deep); background: #FFF4EC; }
+.ini-ag-fila.es-cuenta { border-left-color: var(--pink-deep); }
+.ini-ag-cuando { width: 78px; flex-shrink: 0; display: flex; flex-direction: column; font-size: 12.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ini-ag-cuando b { font-size: 13.5px; font-weight: 900; color: var(--ink); text-transform: capitalize; }
+.ini-ag-txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ini-ag-titulo { font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ini-ag-detalle { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* continua viendo */
 .ini-seguir { display: flex; align-items: center; gap: 18px; text-decoration: none; color: inherit; border-radius: 20px; }

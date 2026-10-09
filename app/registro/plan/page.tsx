@@ -65,6 +65,7 @@ export default async function ElegirPlanPage({ searchParams }: Props) {
     plan: str("plan") ?? meta?.pending_tier ?? null,
     interval: str("interval") ?? meta?.pending_interval ?? null,
     pack: str("pack") ?? meta?.pending_pack ?? null,
+    tierActual: acceso.tier,
   });
 
   const motivo = motivoSinAcceso({ gratisHasta: acceso.gratisHasta, ultimaSuscripcion: ultima?.status ?? null });

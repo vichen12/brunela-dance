@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, Clock, Lock, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, Lock, Play } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
+import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getClasesDelPack, getPacksTienda, precio } from "@/src/features/studio/packs";
 import { ComprarPack } from "@/components/comprar-pack";
 import { CSS_PACKS } from "../estilos";
@@ -13,9 +14,10 @@ export const dynamic = "force-dynamic";
  * de compra. Si ya lo compro, las clases enlazan al reproductor (RLS decide).
  */
 export default async function PackPage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireUser();
+  const { user } = await requireUser();
   const { slug } = await params;
-  const pack = (await getPacksTienda()).find((p) => p.slug === slug);
+  const profile = await getCurrentProfile(user.id);
+  const pack = (await getPacksTienda(profile?.membership_tier ?? "none")).find((p) => p.slug === slug);
   if (!pack) notFound();
   const clases = await getClasesDelPack(pack.id);
   const minutos = clases.reduce((a, c) => a + c.minutos, 0);
@@ -44,6 +46,14 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
             <div className="pk-compra">
               {pack.compradoEl ? (
                 <span className="pk-tuyo"><Check size={17} strokeWidth={2.8} aria-hidden="true" /> Ya es tuyo</span>
+              ) : !pack.puedeComprar ? (
+                // Solo para otros planes: ni boton de pago (el checkout lo
+                // frenaria igual con 403), sino el camino para tenerlo.
+                <div className="pk-bloqueado">
+                  <span className="pk-precio">{precio(pack.precioCentimos, pack.moneda)}</span>
+                  <p className="pk-bloqueado-txt"><Lock size={16} strokeWidth={2.4} aria-hidden="true" /> {pack.soloPara}. Con uno de esos planes lo podés sumar cuando quieras.</p>
+                  <Link href={"/dashboard/plan" as never} className="pk-bloqueado-btn">Ver los planes <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" /></Link>
+                </div>
               ) : (
                 <>
                   <span className="pk-precio">{precio(pack.precioCentimos, pack.moneda)}</span>
@@ -51,7 +61,8 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
                 </>
               )}
             </div>
-            {!pack.compradoEl && <p className="pk-nota">Pagás una sola vez, sin suscripción. Las clases quedan en tu biblioteca.</p>}
+            {!pack.compradoEl && pack.puedeComprar && pack.soloPara && <span className="pk-solo">{pack.soloPara}</span>}
+            {!pack.compradoEl && pack.puedeComprar && <p className="pk-nota">Pagás una sola vez, sin suscripción. Las clases quedan en tu biblioteca.</p>}
           </div>
         </header>
 

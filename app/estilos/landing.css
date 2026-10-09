@@ -507,6 +507,9 @@
 .lp-pack-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .lp-pack-chip { padding: 4px 11px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 12.5px; font-weight: 800; }
 .lp-pack-chip.es-melocoton { background: var(--melocoton); color: var(--melocoton-deep); }
+/* Pack solo para algunos planes (20261009_4): una condicion, no un error. */
+.lp-pack-solo { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 4px 11px; border-radius: 99px; background: #FFF4E8; border: 1px solid #FFE2D3; color: #7A3E24; font-size: 12.5px; font-weight: 800; }
+.lp-pack-solo svg { color: #C25E3A; flex-shrink: 0; }
 .lp-pack-precio { margin-top: auto !important; padding-top: 6px; font-size: 30px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
 .lp-pack-precio span { margin-left: 8px; color: var(--muted); font-size: 13.5px; font-weight: 700; letter-spacing: 0; }
 .lp-pack-accion {

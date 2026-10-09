@@ -1,6 +1,12 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getSubscriptionCatalog, stripeMode } from "@/src/lib/stripe/catalog";
 import {
+  esFaltaDeColumnaPlanes,
+  normalizarPlanesDeCompra,
+  puedeComprarPack,
+  planesDeCompraEnTexto,
+} from "@/src/features/studio/packs-reglas";
+import {
   diasDePrueba,
   intervaloInicial,
   planInicial,
@@ -24,6 +30,12 @@ export type EleccionDePlan = {
   tier: PlanPago | null;
   intervalo: Intervalo;
   pack: PackResumen | null;
+  /**
+   * Venia por un pack que es SOLO PARA ALGUNOS PLANES y su plan no esta: no se
+   * le ofrece (no lo podria pagar: crearCheckoutDePack lo frena con 403) y se
+   * le explica por que ve los planes en vez del pack.
+   */
+  avisoPack: string | null;
 };
 
 function precioDePack(centimos: number, moneda: string) {
@@ -50,11 +62,14 @@ export async function cargarEleccionDePlan(pedido: {
   plan: string | null;
   interval: string | null;
   pack: string | null;
+  /** Su plan HOY, para los packs restringidos. Quien llega aca casi siempre no tiene ('none'). */
+  tierActual?: string | null;
 }): Promise<EleccionDePlan> {
   const catalogo = await getSubscriptionCatalog().catch(() => null);
   const tarjetas = tarjetasDePlanes(catalogo);
 
   let pack: PackResumen | null = null;
+  let avisoPack: string | null = null;
   if (pedido.pack && pedido.pack.length <= 120) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
@@ -72,7 +87,21 @@ export async function cargarEleccionDePlan(pedido: {
         stripe_price_id_live: string | null;
       }>();
     const live = stripeMode(process.env.STRIPE_SECRET_KEY) === "live";
-    if (data && (live ? data.stripe_price_id_live : data.stripe_price_id_test)) {
+    // ¿Solo para algunos planes? Consulta APARTE y tolerante: sin la migracion
+    // 20261009_4 la columna no existe (42703) y el pack se ofrece como siempre.
+    let soloPara: string[] | null = null;
+    if (data) {
+      const { data: r, error } = await supabase
+        .from("packs")
+        .select("planes_que_pueden_comprar")
+        .eq("id", data.id)
+        .maybeSingle<{ planes_que_pueden_comprar: string[] | null }>();
+      if (error && !esFaltaDeColumnaPlanes(error)) console.error("[eleccion] planes del pack:", error.message);
+      soloPara = error ? null : normalizarPlanesDeCompra(r?.planes_que_pueden_comprar);
+    }
+    if (data && soloPara && !puedeComprarPack(pedido.tierActual ?? "none", soloPara)) {
+      avisoPack = `«${data.name_i18n?.es ?? data.slug}» es solo para alumnas de ${planesDeCompraEnTexto(soloPara)}. Elegí tu plan para entrar: con uno de esos, después lo sumás desde Packs de clases.`;
+    } else if (data && (live ? data.stripe_price_id_live : data.stripe_price_id_test)) {
       const { count } = await supabase
         .from("pack_videos")
         .select("pack_id", { count: "exact", head: true })
@@ -93,5 +122,6 @@ export async function cargarEleccionDePlan(pedido: {
     tier: planInicial(pedido.plan, tarjetas),
     intervalo: intervaloInicial(pedido.interval),
     pack,
+    avisoPack,
   };
 }

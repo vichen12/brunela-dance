@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Check, Package } from "lucide-react";
+import { ArrowRight, Check, Lock, Package } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
+import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getPacksTienda, precio } from "@/src/features/studio/packs";
 import { AdminCabecera, AdminGuia, AdminBoton } from "@/components/admin-ui";
 import { CSS_PACKS } from "./estilos";
@@ -12,8 +13,12 @@ export const dynamic = "force-dynamic";
  * Antes los packs solo aparecian al fondo de Mi plan, y nadie los encontraba.
  */
 export default async function PacksPage() {
-  await requireUser();
-  const packs = await getPacksTienda();
+  const { user } = await requireUser();
+  const profile = await getCurrentProfile(user.id);
+  // Su plan de HOY decide el candado de los packs "solo para ...". La que
+  // manda de verdad es crearCheckoutDePack; esto es para no ofrecer lo que no
+  // le vamos a cobrar.
+  const packs = await getPacksTienda(profile?.membership_tier ?? "none");
 
   return (
     <main>
@@ -44,15 +49,18 @@ export default async function PacksPage() {
                   <div className="pk-portada">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {p.portada && <img src={p.portada} alt="" />}
-                    {p.compradoEl ? <span className="pk-cinta es-tuyo">Ya es tuyo</span> : p.destacado ? <span className="pk-cinta">Destacado</span> : null}
+                    {p.compradoEl ? <span className="pk-cinta es-tuyo">Ya es tuyo</span>
+                      : !p.puedeComprar ? <span className="pk-cinta es-candado"><Lock size={12} strokeWidth={2.6} aria-hidden="true" /> Con otro plan</span>
+                      : p.destacado ? <span className="pk-cinta">Destacado</span> : null}
                     <span className="pk-cuantas">{p.clases} {p.clases === 1 ? "clase" : "clases"}</span>
                   </div>
                   <div className="pk-cuerpo">
                     <p className="pk-nombre">{p.nombre}</p>
+                    {p.soloPara && !p.compradoEl && <span className="pk-solo">{!p.puedeComprar && <Lock size={12} strokeWidth={2.6} aria-hidden="true" />}{p.soloPara}</span>}
                     {p.descripcion && <p className="pk-desc">{p.descripcion}</p>}
                     <div className="pk-pie">
                       {p.compradoEl ? <span /> : <span className="pk-precio">{precio(p.precioCentimos, p.moneda)}<small>pago único</small></span>}
-                      <span className={"pk-ver" + (p.compradoEl ? " es-suave" : "")}>
+                      <span className={"pk-ver" + (p.compradoEl ? " es-suave" : !p.puedeComprar ? " es-plan" : "")}>
                         {p.compradoEl ? "Ver mis clases" : "Ver el pack"} <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" />
                       </span>
                     </div>

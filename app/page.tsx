@@ -16,6 +16,7 @@ import { PricingPlans } from "@/components/pricing-plans";
 import { PacksPublicos, type PackPublico } from "@/components/packs-publicos";
 import { getSubscriptionCatalog } from "@/src/lib/stripe/catalog";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { normalizarPlanesDeCompra, planesDeCompraEnTexto } from "@/src/features/studio/packs-reglas";
 import { VideoShowcase } from "@/components/video-showcase";
 import { UltimoEstudio } from "@/components/ultimo-estudio";
 import { T } from "@/components/language-provider";
@@ -329,16 +330,37 @@ async function packsDeLaPortada(): Promise<PackPublico[]> {
     const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
     const columna = modoEsLive ? "stripe_price_id_live" : "stripe_price_id_test";
 
-    const [{ data }, { data: vendibles }] = await Promise.all([
+    const [{ data }, { data: vendibles }, restringidos] = await Promise.all([
       supabase
         .from("packs_publicos")
         .select("slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, cantidad_clases")
         .order("display_order"),
       supabase.from("packs").select("slug").not(columna, "is", null),
+      // Packs "solo para ..." (20261009_4). Slug + lista de planes y nada
+      // mas, en una consulta APARTE: sin la migracion la columna no existe y,
+      // metida en la de arriba, se llevaria puesta toda la vitrina. Asi, sin
+      // ella, todos los packs son para todas. No se toco la vista a proposito:
+      // redefinirla es reescribirla entera (trampa 8) por un dato que no es
+      // sensible.
+      supabase
+        .from("packs")
+        .select("slug, planes_que_pueden_comprar")
+        .not("planes_que_pueden_comprar", "is", null)
+        .then(({ data: filas, error }) =>
+          error
+            ? new Map<string, string>()
+            : new Map(
+                ((filas ?? []) as { slug: string; planes_que_pueden_comprar: string[] | null }[])
+                  .filter((f) => normalizarPlanesDeCompra(f.planes_que_pueden_comprar))
+                  .map((f) => [f.slug, planesDeCompraEnTexto(f.planes_que_pueden_comprar)])
+              )
+        ),
     ]);
 
     const sePuedeCobrar = new Set(((vendibles ?? []) as { slug: string }[]).map((p) => p.slug));
-    return ((data ?? []) as PackPublico[]).filter((p) => sePuedeCobrar.has(p.slug));
+    return ((data ?? []) as PackPublico[])
+      .filter((p) => sePuedeCobrar.has(p.slug))
+      .map((p) => ({ ...p, solo_para: restringidos.get(p.slug) ?? null }));
   } catch {
     return [];
   }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Package } from "lucide-react";
+import { ArrowRight, Lock, Package } from "lucide-react";
 import { T } from "@/components/language-provider";
 
 /**
@@ -23,6 +23,12 @@ export type PackPublico = {
   cover_image_url: string | null;
   is_featured: boolean;
   cantidad_clases: number;
+  /**
+   * "Solista y Principal" si el pack es solo para algunos planes, o null.
+   * NO sale de la vista: lo arma app/page.tsx con una consulta aparte (slug +
+   * lista) que tolera que la migracion 20261009_4 no este corrida.
+   */
+  solo_para?: string | null;
 };
 
 function precio(centimos: number, moneda: string) {
@@ -87,6 +93,13 @@ export function PacksPublicos({ packs }: { packs: PackPublico[] }) {
                 </span>
               </p>
 
+              {p.solo_para && (
+                <span className="lp-pack-solo">
+                  <Lock size={12} strokeWidth={2.6} aria-hidden />
+                  <T id="packs.onlyFor" replacements={{ planes: p.solo_para }} />
+                </span>
+              )}
+
               <p className="lp-pack-precio">
                 {precio(p.price_cents, p.currency)}
                 <span>
@@ -96,10 +109,20 @@ export function PacksPublicos({ packs }: { packs: PackPublico[] }) {
 
               {/* Mismo camino que los planes: se reusa /registro, que valida el
                   parametro contra la base. El precio no viaja por la URL. */}
-              <Link href={`/registro?pack=${p.slug}` as never} className="lp-pack-accion">
-                <T id="packs.cta" />
-                <ArrowRight size={15} strokeWidth={2.4} aria-hidden />
-              </Link>
+              {/* Solo para algunos planes: quien llega desde la portada todavia
+                  no tiene ninguno, asi que no se la manda a pagar algo que el
+                  checkout le va a rechazar. Primero el plan. */}
+              {p.solo_para ? (
+                <Link href={"#planes" as never} className="lp-pack-accion">
+                  <T id="packs.seePlans" />
+                  <ArrowRight size={15} strokeWidth={2.4} aria-hidden />
+                </Link>
+              ) : (
+                <Link href={`/registro?pack=${p.slug}` as never} className="lp-pack-accion">
+                  <T id="packs.cta" />
+                  <ArrowRight size={15} strokeWidth={2.4} aria-hidden />
+                </Link>
+              )}
             </div>
           </article>
         ))}

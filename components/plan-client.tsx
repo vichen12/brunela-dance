@@ -1,5 +1,5 @@
 'use client';
-import { Check, Settings } from 'lucide-react';
+import { Check, Lock, Settings } from 'lucide-react';
 import { AdminCabecera } from '@/components/admin-ui';
 
 import Link from "next/link";
@@ -91,6 +91,10 @@ export type PackDeAlumna = {
   destacado: boolean;
   clases: number;
   compradoEl: string | null;
+  /** "Solo para alumnas de Solista y Principal", o null (20261009_4). */
+  soloPara?: string | null;
+  /** Con su plan de hoy, ¿lo puede pagar? El checkout lo impone igual. */
+  puedeComprar?: boolean;
 };
 
 export function PlanClient({
@@ -502,6 +506,9 @@ export function PlanClient({
                       <p className="mp-pack-clases">
                         {p.clases === 1 ? '1 clase' : `${p.clases} clases`} · acceso permanente
                       </p>
+                      {!comprado && p.soloPara && (
+                        <p className="mp-pack-solo">{p.puedeComprar === false && <Lock size={11} strokeWidth={2.6} aria-hidden="true" style={{ display: 'inline', verticalAlign: '-1px', marginRight: 4 }} />}{p.soloPara}</p>
+                      )}
 
                       <p className="mp-pack-precio">
                         {(p.precioCentimos / 100).toLocaleString('es-ES', {
@@ -513,6 +520,17 @@ export function PlanClient({
                       {comprado ? (
                         /* Comprado: el boton lleva a las clases, no a pagar de nuevo. */
                         <Link href="/dashboard/library" className="mp-pack-ver">Ver mis clases</Link>
+                      ) : p.puedeComprar === false ? (
+                        /* Solo para otros planes: los planes estan arriba en
+                           esta misma pantalla. Sin boton de pago: el checkout
+                           lo frenaria igual con 403. */
+                        <button
+                          type="button"
+                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                          className="mp-pack-boton mp-pack-boton--plan"
+                        >
+                          Elegí uno de esos planes
+                        </button>
                       ) : (
                         <button
                           onClick={() => void startPackCheckout(p.slug)}
@@ -676,6 +694,8 @@ const CSS = `
 .mp-pack:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
 .mp-pack.es-destacado { border-color: var(--pink-line); background: linear-gradient(170deg, #FFEDE8, #fff 55%); }
 .mp-pack.es-comprado { border-color: #CFE3C9; background: linear-gradient(170deg, #FFF4E8, #fff 55%); }
+.mp-pack-boton--plan { background: #fff !important; color: var(--pink-deep) !important; border: 1.5px solid var(--pink-line) !important; box-shadow: none !important; }
+.mp-pack-solo { margin: 0; align-self: flex-start; padding: 4px 11px; border-radius: 99px; background: #FFF4E8; border: 1px solid #FFE2D3; color: #7A3E24; font-size: 12px; font-weight: 800; }
 .mp-pack-tuyo { align-self: flex-start; padding: 4px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia); text-transform: lowercase; }
 .mp-pack-tuyo::first-letter { text-transform: uppercase; }
 .mp-pack-nombre { margin: 0; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }

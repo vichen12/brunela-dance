@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { CalendarDays, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
 
 /**
- * Los MISMOS ocho destinos que el sidebar de escritorio. Antes habia cinco y
+ * Los MISMOS destinos que el sidebar de escritorio. Antes habia cinco y
  * Planes de trabajo, En vivo y Documentos no se podian abrir desde el telefono.
  *
  * POR QUE NO ESTAN LOS OCHO EN LA BARRA DE ABAJO
@@ -18,6 +18,7 @@ import { CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleH
  */
 const NAV = [
   { href: '/dashboard',           label: 'Inicio',     exact: true,  Icon: House },
+  { href: '/dashboard/agenda',    label: 'Mi agenda',  exact: false, Icon: CalendarDays },
   { href: '/dashboard/library',   label: 'Clases',     exact: false, Icon: Play },
   { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false, Icon: ListOrdered },
   { href: '/dashboard/live',      label: 'Clases en vivo', exact: false, Icon: CalendarHeart },

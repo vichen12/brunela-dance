@@ -60,6 +60,17 @@ a.pk-clase:hover { transform: translateY(-2px); }
 .pk-clase { align-items: flex-start; }
 .pk-clase-titulo { white-space: normal; }
 .pk-clase-desc { font-size: 12.5px; line-height: 1.45; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Pack solo para algunos planes (20261009_4). Melocoton y no rojo: no es un
+   error, es una condicion; y se ve antes de tocar nada. */
+.pk-solo { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 99px; background: #FFF4E8; border: 1px solid #FFE2D3; color: #7A3E24; font-size: 12px; font-weight: 800; }
+.pk-solo svg { color: #C25E3A; flex-shrink: 0; }
+.pk-cinta.es-candado { display: inline-flex; align-items: center; gap: 5px; background: #FFF4E8; color: #7A3E24; }
+.pk-ver.es-plan { background: #fff; color: var(--pink-deep); border: 1.5px solid var(--pink-line); box-shadow: none; }
+.pk-bloqueado { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 20px; background: #FFF4E8; border: 1px solid #FFE2D3; }
+.pk-bloqueado-txt { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; font-weight: 700; line-height: 1.5; color: #7A3E24; }
+.pk-bloqueado-txt svg { flex-shrink: 0; margin-top: 2px; color: #C25E3A; }
+.pk-bloqueado-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 22px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 14.5px; font-weight: 800; text-decoration: none; box-shadow: 0 12px 24px -14px rgba(230,79,85,.9); transition: transform .3s var(--curva), background .2s; }
+.pk-bloqueado-btn:hover { transform: translateY(-2px); background: var(--pink-mid); }
 @media (max-width: 860px) { .pk-sobre { grid-template-columns: 1fr; padding: 20px; } }
 @media (max-width: 860px) { .pk-hero { grid-template-columns: 1fr; } }
 `;

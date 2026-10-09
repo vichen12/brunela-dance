@@ -358,6 +358,13 @@ async function irAlPago(
     if (resultado.status === 404) {
       return volverConError("Ese pack ya no está disponible. Podés elegir un plan.");
     }
+    // Pack solo para algunos planes y ella no tiene ninguno de esos: de vuelta
+    // al selector, CON el pack en la URL. cargarEleccionDePlan lo reconoce, no
+    // lo ofrece para su plan y muestra el motivo encima de los planes (sin
+    // ?error=, para no decirlo dos veces).
+    if (resultado.status === 403 && slug) {
+      redirect(`${RUTA_ELEGIR_PLAN}?${new URLSearchParams({ pack: slug }).toString()}` as never);
+    }
     // El detalle (price id que falta, catalogo viejo) es para nosotros, no
     // para la alumna.
     console.error("[registro] checkout rechazado:", resultado.status, resultado.error);

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
+import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, puedeComprarPack, textoSoloPara } from "@/src/features/studio/packs-reglas";
 
 /**
  * Packs como los ve la alumna: la tienda (/dashboard/packs) y la pagina de
@@ -24,13 +25,43 @@ export type PackTienda = {
   destacado: boolean;
   clases: number;
   compradoEl: string | null;
+  /** "Solo para alumnas de Solista y Principal", o null si es para todas. */
+  soloPara: string | null;
+  /**
+   * ¿Lo puede pagar con su plan de HOY? Es solo para la pantalla (candado y
+   * boton a Mi plan): quien lo impone es crearCheckoutDePack.
+   */
+  puedeComprar: boolean;
 };
+
+/**
+ * Para que planes es cada pack (id -> lista, solo los restringidos).
+ *
+ * CONSULTA APARTE Y TOLERANTE: antes de 20261009_4_packs_por_plan.sql la
+ * columna no existe (42703). Meterla en el select principal tiraria la tienda
+ * entera; asi, sin la columna, todos los packs son para todas -- que es lo que
+ * eran.
+ */
+export async function getRestriccionesDePacks(): Promise<Map<string, string[]>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("packs").select("id, planes_que_pueden_comprar");
+  if (error) {
+    if (!esFaltaDeColumnaPlanes(error)) console.error("[packs] planes que pueden comprar:", error.message);
+    return new Map();
+  }
+  const mapa = new Map<string, string[]>();
+  for (const f of (data ?? []) as { id: string; planes_que_pueden_comprar: string[] | null }[]) {
+    const planes = normalizarPlanesDeCompra(f.planes_que_pueden_comprar);
+    if (planes) mapa.set(f.id, planes);
+  }
+  return mapa;
+}
 
 const modoEsLive = () => /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
 
-export async function getPacksTienda(): Promise<PackTienda[]> {
+export async function getPacksTienda(tierActual: string | null = null): Promise<PackTienda[]> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: packs }, { data: compras }, { data: rel }] = await Promise.all([
+  const [{ data: packs }, { data: compras }, { data: rel }, restricciones] = await Promise.all([
     supabase
       .from("packs")
       .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, is_published, stripe_price_id_test, stripe_price_id_live")
@@ -38,6 +69,7 @@ export async function getPacksTienda(): Promise<PackTienda[]> {
       .order("display_order"),
     supabase.from("pack_purchases").select("pack_id, purchased_at"),
     supabase.from("pack_videos").select("pack_id"),
+    getRestriccionesDePacks(),
   ]);
   const comprado = new Map(((compras ?? []) as { pack_id: string; purchased_at: string }[]).map((c) => [c.pack_id, c.purchased_at]));
   const cuantas = ((rel ?? []) as { pack_id: string }[]).reduce<Record<string, number>>((a, r) => { a[r.pack_id] = (a[r.pack_id] ?? 0) + 1; return a; }, {});
@@ -57,6 +89,8 @@ export async function getPacksTienda(): Promise<PackTienda[]> {
       destacado: p.is_featured,
       clases: cuantas[p.id] ?? 0,
       compradoEl: comprado.get(p.id) ?? null,
+      soloPara: textoSoloPara(restricciones.get(p.id)),
+      puedeComprar: puedeComprarPack(tierActual, restricciones.get(p.id)),
     }));
 }
 

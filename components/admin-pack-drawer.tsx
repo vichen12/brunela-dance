@@ -1,5 +1,7 @@
 "use client";
-import { AlertTriangle, Check, CreditCard, PlayCircle, Plus, Pencil, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, CreditCard, PlayCircle, Plus, Pencil, Trash2, Users, X } from "lucide-react";
+import { SelectorMultiple } from "@/components/selector-multiple";
+import { PLANES } from "@/src/features/studio/catalogo-clases";
 
 import { Desplegable } from "@/components/desplegable";
 import { useEffect, useRef, useState } from "react";
@@ -51,6 +53,10 @@ export type PackAdmin = {
    */
   avisoTest: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
   avisoLive: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
+  /** null = lo compra cualquiera (por defecto). Lista = solo esos planes. */
+  planesQuePuedenComprar: string[] | null;
+  /** Falta 20261009_4_packs_por_plan.sql: el control se muestra apagado. */
+  faltaMigracionPlanes: boolean;
 };
 
 export type ClaseElegible = { id: string; titulo: string };
@@ -84,6 +90,81 @@ function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }
       color: c.fg, background: c.bg, border: `1px solid ${c.bd}`,
       borderRadius: 14, padding: "8px 12px",
     }}>{texto}</p>
+  );
+}
+
+/**
+ * "Quien lo puede comprar": Todas (por defecto) o solo algunos planes.
+ *
+ * Mismo estilo de fichas que el selector de planes de las clases
+ * (SelectorMultiple), pero SIN el aviso de "un plan mas caro quedo afuera":
+ * un pack solo para Corps (por ejemplo, de bienvenida) es un caso normal.
+ *
+ * Viaja como `quienCompra` = todas | planes, y un `planesCompra` por plan
+ * tildado. Lo interpreta leerPlanesDeCompra (packs-reglas.ts). Quien lo
+ * IMPONE es el checkout (crearCheckoutDePack), no esta pantalla.
+ */
+function QuienLoCompra({ pack }: { pack: PackAdmin }) {
+  const [modo, setModo] = useState<"todas" | "planes">(pack.planesQuePuedenComprar ? "planes" : "todas");
+  const sinMigracion = pack.faltaMigracionPlanes;
+
+  const opcion = (valor: "todas" | "planes", titulo: string, texto: string) => {
+    const on = modo === valor;
+    return (
+      <label style={{
+        flex: "1 1 200px", display: "flex", gap: 10, alignItems: "flex-start", cursor: sinMigracion ? "default" : "pointer",
+        padding: "12px 14px", borderRadius: 18, background: on ? "#FFEDE8" : "#fff",
+        border: `1.5px solid ${on ? "var(--pink)" : "#F3E3DC"}`, opacity: sinMigracion ? 0.6 : 1,
+      }}>
+        <input type="radio" name="quienCompra" value={valor} checked={on} disabled={sinMigracion}
+          onChange={() => setModo(valor)} style={{ marginTop: 3, accentColor: "#E64F55" }} />
+        <span>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: "#3B2A2C" }}>{titulo}</span>
+          <span style={{ display: "block", fontSize: 12.5, lineHeight: 1.45, color: "#8A6F68" }}>{texto}</span>
+        </span>
+      </label>
+    );
+  };
+
+  return (
+    <div className="adr-caja">
+      <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: "0 0 6px" }}>
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFE2D3", color: "#C25E3A" }}>
+          <Users size={17} strokeWidth={2} />
+        </span>
+        Quién lo puede comprar
+      </p>
+      <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.55, marginBottom: 12 }}>
+        Por defecto lo compra cualquiera, tenga plan o no. Si lo armaste para un
+        plan en particular, elegilo acá: las demás lo ven con candado y no lo pueden pagar.
+      </p>
+
+      {sinMigracion && (
+        <p style={{
+          marginBottom: 12, fontSize: 12.5, lineHeight: 1.5, fontWeight: 700, color: "#8A4A2E",
+          background: "#FFF4E8", border: "1px solid #FFE2D3", borderRadius: 14, padding: "8px 12px",
+        }}>
+          Falta correr la migración 20261009_4_packs_por_plan.sql. Hasta entonces, todos los packs se venden a todas.
+        </p>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        {opcion("todas", "Todas", "Cualquier alumna, también sin plan.")}
+        {opcion("planes", "Solo algunos planes", "Solo quien tiene hoy uno de los planes que elijas.")}
+      </div>
+
+      {modo === "planes" && !sinMigracion && (
+        <div style={{ marginTop: 12 }}>
+          <SelectorMultiple
+            name="planesCompra"
+            opciones={PLANES}
+            inicial={pack.planesQuePuedenComprar ?? []}
+            requerido
+            mensajeRequerido="Elegí al menos un plan, o dejá el pack para todas."
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -268,6 +349,8 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               el precio, en Stripe se crea uno nuevo y se pega acá.
             </p>
           </div>
+
+          <QuienLoCompra pack={pack} />
 
           <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>
             <F label="Nombre en inglés">

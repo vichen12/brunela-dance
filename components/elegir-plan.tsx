@@ -1,4 +1,4 @@
-import { Check, Gift, Package } from "lucide-react";
+import { Check, Gift, Lock, Package } from "lucide-react";
 import type { EleccionDePlan } from "@/src/features/planes/eleccion";
 
 /**
@@ -17,7 +17,7 @@ import type { EleccionDePlan } from "@/src/features/planes/eleccion";
  * una vez y no tiene plan que elegir.
  */
 export function ElegirPlan({ eleccion }: { eleccion: EleccionDePlan }) {
-  const { tarjetas, diasPrueba, tier, intervalo, pack } = eleccion;
+  const { tarjetas, diasPrueba, tier, intervalo, pack, avisoPack } = eleccion;
 
   if (pack) {
     return (
@@ -56,6 +56,14 @@ export function ElegirPlan({ eleccion }: { eleccion: EleccionDePlan }) {
   return (
     <div className="ep">
       <style>{CSS}</style>
+
+      {/* Venia por un pack solo para algunos planes: por que ve planes. */}
+      {avisoPack && (
+        <p className="ep-aviso-pack" role="status">
+          <span className="ep-aviso-pack-ico" aria-hidden="true"><Lock size={15} strokeWidth={2.4} /></span>
+          <span>{avisoPack}</span>
+        </p>
+      )}
 
       <div className="ep-periodo" role="radiogroup" aria-label="Forma de pago">
         <label className="ep-periodo-op">
@@ -152,6 +160,8 @@ const CSS = `
 .ep-pack-desc { font-size: 13px; color: var(--muted); line-height: 1.45; }
 .ep-pack-meta { font-size: 12.5px; font-weight: 700; color: var(--muted); }
 .ep-pack-precio { flex-shrink: 0; font-size: 22px; font-weight: 900; color: var(--ink); }
+.ep-aviso-pack { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 16px; background: #FFF4E8; border: 1px solid #FFE2D3; color: #7A3E24; font-size: 13.5px; font-weight: 700; line-height: 1.5; }
+.ep-aviso-pack-ico { flex-shrink: 0; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: #fff; color: #C25E3A; }
 .ep-vacio { margin: 0; padding: 14px 16px; border-radius: 16px; background: var(--crema); color: var(--muted); font-size: 14px; }
 
 @media (max-width: 620px) {
