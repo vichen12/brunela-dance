@@ -284,7 +284,7 @@ export function PlanClient({
                 <span style={{ fontSize: 15, fontWeight: 800, color: '#166534' }}>
                   {subscriptionStatus === 'trialing' ? 'Estás en tu prueba gratuita' : 'Tu suscripción está activa'}
                 </span>
-                <span style={{ fontSize: 13, color: '#57534e' }}>Desde «Gestionar» cambiás la tarjeta, ves tus facturas o cancelás.</span>
+                <span style={{ fontSize: 13, color: '#6E5550' }}>Desde «Gestionar» cambiás la tarjeta, ves tus facturas o cancelás.</span>
               </span>
             </span>
             <button

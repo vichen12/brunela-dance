@@ -48,12 +48,12 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
 const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps de Ballet" },
   solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
+  principal:       { bg: "#3B2A2C", color: "var(--pink-wash)", label: "Principal" },
 };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
@@ -65,7 +65,7 @@ const sel: React.CSSProperties = {
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -220,12 +220,12 @@ export default async function AdminLivePage({
           { value: upcoming,  label: "Próximas",          sub: "pendientes de dar" },
         ].map((s) => (
           <div key={s.label} style={{
-            background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+            background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
             padding: "20px 22px",
           }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#44403c", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>{s.sub}</p>
+            <p style={{ fontSize: 30, fontWeight: 800, color: "#3B2A2C", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#5A4440", marginTop: 6 }}>{s.label}</p>
+            <p style={{ fontSize: 11, color: "#B39189", marginTop: 2 }}>{s.sub}</p>
           </div>
         ))}
       </div>
@@ -234,9 +234,9 @@ export default async function AdminLivePage({
       <details style={{ marginBottom: 16 }}>
         <summary style={{
           listStyle: "none", cursor: "pointer",
-          background: "#fff", border: "1px solid #f0eeec", borderRadius: 14,
+          background: "#fff", border: "1px solid #F6E7E1", borderRadius: 14,
           padding: "14px 20px", display: "flex", alignItems: "center", gap: 10,
-          fontSize: 13, fontWeight: 700, color: "#1c1917",
+          fontSize: 13, fontWeight: 700, color: "#3B2A2C",
           userSelect: "none",
         }}>
           <span style={{
@@ -246,10 +246,10 @@ export default async function AdminLivePage({
             color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1, flexShrink: 0,
           }}>+</span>
           Nueva sesion en vivo
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#a8a29e", fontWeight: 500 }}>Clic para desplegar formulario</span>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "#B39189", fontWeight: 500 }}>Clic para desplegar formulario</span>
         </summary>
         <div style={{
-          background: "#fff", border: "1px solid #f0eeec", borderTop: "none",
+          background: "#fff", border: "1px solid #F6E7E1", borderTop: "none",
           borderRadius: "0 0 14px 14px", padding: "24px 22px",
         }}>
           <LiveForm />
@@ -258,7 +258,7 @@ export default async function AdminLivePage({
 
       {/* Session list */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 12 }}>
           Sesiones — {total}
         </p>
         <AdminBuscador
@@ -271,8 +271,8 @@ export default async function AdminLivePage({
         />
         {sessions.length === 0 ? (
           <div style={{
-            background: "#fff", border: "1.5px dashed #f0eeec", borderRadius: 16,
-            padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13,
+            background: "#fff", border: "1.5px dashed #F6E7E1", borderRadius: 16,
+            padding: "40px 24px", textAlign: "center", color: "#B39189", fontSize: 13,
           }}>
             {q || fEstado
               ? "Ninguna sesión coincide con la búsqueda."
@@ -287,7 +287,7 @@ export default async function AdminLivePage({
               const isPast = startDate < new Date();
 
               return (
-                <div key={session.id} style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, overflow: "hidden" }}>
+                <div key={session.id} style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16, overflow: "hidden" }}>
                   {/* Header row */}
                   <div style={{
                     display: "flex", alignItems: "center", gap: 14, padding: "16px 20px",
@@ -312,7 +312,7 @@ export default async function AdminLivePage({
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#1c1917" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>
                           {session.title_i18n.es ?? session.slug}
                         </span>
                         <span style={{
@@ -324,8 +324,8 @@ export default async function AdminLivePage({
                           background: tier.bg, color: tier.color,
                         }}>{tier.label}</span>
                       </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#a8a29e", flexWrap: "wrap" }}>
-                        <span style={{ color: isPast ? "#a8a29e" : "#1c1917", fontWeight: isPast ? 400 : 600 }}>
+                      <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#B39189", flexWrap: "wrap" }}>
+                        <span style={{ color: isPast ? "#B39189" : "#3B2A2C", fontWeight: isPast ? 400 : 600 }}>
                           {/* perspectiva="admin": Brunela ve primero la hora de
                               la zona en la que programo la clase, que es la que
                               tiene en la cabeza. */}

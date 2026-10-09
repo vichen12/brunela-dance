@@ -278,8 +278,8 @@ const CSS_FICHA = `
   font-weight: 700; color: var(--pink-deep); transition: gap .2s;
 }
 .fc-volver:hover { gap: 9px; }
-.fc-migas-sep { color: #d6d3d1; }
-.fc-migas-aca { color: #a8a29e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-migas-sep { color: #E6CCC2; }
+.fc-migas-aca { color: #B39189; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fc-aviso { display: flex; align-items: center; gap: 8px; border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; font-size: 13.5px; }
 .fc-aviso--ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .fc-aviso--error { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
@@ -295,7 +295,7 @@ const CSS_FICHA = `
 .fc-preparando img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; filter: saturate(0.8); }
 .fc-preparando-txt {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; padding: 24px; text-align: center; font-size: 14px; color: #57534e;
+  gap: 8px; padding: 24px; text-align: center; font-size: 14px; color: #6E5550;
   background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(6px);
 }
 .fc-preparando-ico {
@@ -308,7 +308,7 @@ const CSS_FICHA = `
   font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; color: var(--ink);
 }
 
-.fc-cab { padding: 28px 0 24px; border-bottom: 1px solid #e7e5e4; }
+.fc-cab { padding: 28px 0 24px; border-bottom: 1px solid #F0DED6; }
 .fc-eyebrow {
   display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: var(--pink-deep);
@@ -321,14 +321,14 @@ const CSS_FICHA = `
 .fc-datos { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .fc-datos li {
   display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 99px;
-  background: #fafaf9; border: 1px solid #f0eeec; font-size: 13px; font-weight: 600; color: #57534e;
+  background: #FFFAF6; border: 1px solid #F6E7E1; font-size: 13px; font-weight: 600; color: #6E5550;
 }
 .fc-datos svg { color: var(--pink-mid); }
-.fc-desc { margin-top: 18px; max-width: 66ch; font-size: 15.5px; line-height: 1.75; color: #57534e; white-space: pre-line; }
+.fc-desc { margin-top: 18px; max-width: 66ch; font-size: 15.5px; line-height: 1.75; color: #6E5550; white-space: pre-line; }
 
 .fc-contexto {
   display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 16px 18px; border-radius: 16px;
-  background: var(--pink-wash); border: 1px solid var(--pink-line); font-size: 14px; color: #57534e;
+  background: var(--pink-wash); border: 1px solid var(--pink-line); font-size: 14px; color: #6E5550;
 }
 .fc-contexto strong { color: var(--ink); }
 .fc-contexto-dia {
@@ -341,17 +341,17 @@ const CSS_FICHA = `
   width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
   background: var(--pink); color: #fff; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px;
 }
-.fc-profe-rol { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #a8a29e; }
+.fc-profe-rol { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #B39189; }
 .fc-profe-nombre { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; color: var(--ink); letter-spacing: -0.01em; }
-.fc-profe-sub { font-size: 12.5px; color: #78716c; }
+.fc-profe-sub { font-size: 12.5px; color: #8A6F68; }
 
 .fc-lateral { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
-.fc-card { background: #fff; border: 1px solid #e7e5e4; border-radius: 22px; padding: 22px; }
-.fc-card-titulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #78716c; margin-bottom: 16px; }
+.fc-card { background: #fff; border: 1px solid #F0DED6; border-radius: 22px; padding: 22px; }
+.fc-card-titulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8A6F68; margin-bottom: 16px; }
 .fc-progreso { text-align: center; }
 .fc-anillo { position: relative; width: 132px; height: 132px; margin: 0 auto 14px; }
 .fc-anillo svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.fc-anillo-fondo { fill: none; stroke: #f5f5f4; stroke-width: 9; }
+.fc-anillo-fondo { fill: none; stroke: #FBF0EB; stroke-width: 9; }
 .fc-anillo-valor {
   fill: none; stroke: var(--pink); stroke-width: 9; stroke-linecap: round;
   stroke-dashoffset: var(--fc-hasta); animation: fc-llena 1.4s cubic-bezier(.16,1,.3,1) both 0.2s;
@@ -361,14 +361,14 @@ const CSS_FICHA = `
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -0.04em; color: var(--ink);
 }
-.fc-anillo-num small { font-size: 15px; margin-left: 1px; color: #a8a29e; }
+.fc-anillo-num small { font-size: 15px; margin-left: 1px; color: #B39189; }
 .fc-progreso-estado { font-weight: 700; font-size: 14px; color: var(--ink); }
-.fc-progreso-nota { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: #a8a29e; }
+.fc-progreso-nota { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: #B39189; }
 
 .fc-planes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .fc-plan {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; text-decoration: none;
-  background: #fafaf9; border: 1px solid #f0eeec; transition: background .2s, border-color .2s;
+  background: #FFFAF6; border: 1px solid #F6E7E1; transition: background .2s, border-color .2s;
 }
 .fc-plan:hover { background: var(--pink-wash); border-color: var(--pink-line); }
 .fc-plan-dia { flex-shrink: 0; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pink-deep); }
@@ -377,7 +377,7 @@ const CSS_FICHA = `
 .fc-plan:hover .fc-plan-flecha { transform: translateX(3px); }
 .fc-mas {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 99px;
-  border: 1.5px solid #d6d3d1; text-decoration: none; font-size: 13.5px; font-weight: 700; color: var(--ink);
+  border: 1.5px solid #E6CCC2; text-decoration: none; font-size: 13.5px; font-weight: 700; color: var(--ink);
   transition: border-color .2s, transform .2s;
 }
 .fc-mas:hover { border-color: var(--ink); transform: translateY(-1px); }

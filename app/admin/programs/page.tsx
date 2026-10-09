@@ -42,7 +42,7 @@ type VideoLookup = { id: string; slug: string; title_i18n: Record<string, string
 // Esta pantalla era la unica que seguia con el lenguaje visual viejo: cabecera
 // `panel rounded-[36px]`, tarjetas `bg-white/76` y clases de Tailwind sueltas,
 // mientras las otras nueve usaban hero-stage y tarjetas blancas con borde
-// #f0eeec. Al entrar acá se notaba que era otro producto.
+// #F6E7E1. Al entrar acá se notaba que era otro producto.
 
 const STATUS_STYLE: Record<string, { clase: string; label: string }> = {
   published: { clase: "apl-estado--pub",  label: "Publicado" },
@@ -302,7 +302,7 @@ const CSS_PLANES = `
 .apl { display: flex; flex-direction: column; }
 .apl-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .apl-card {
-  position: relative; display: flex; flex-direction: column; border: 1px solid #e7e5e4; border-radius: 22px; background: #fff; overflow: hidden;
+  position: relative; display: flex; flex-direction: column; border: 1px solid #F0DED6; border-radius: 22px; background: #fff; overflow: hidden;
   transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
 }
 .apl-card:hover { transform: translateY(-3px); border-color: var(--pink-line); box-shadow: 0 22px 40px -24px rgba(176,58,62,0.5); }
@@ -329,19 +329,19 @@ const CSS_PLANES = `
 .apl-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .apl-estado--pub { color: #15803d; }
 .apl-estado--borr { color: var(--pink-deep); }
-.apl-estado--arch { color: #78716c; }
-.apl-plan { font-size: 11.5px; font-weight: 700; color: #57534e; padding: 2px 9px; border-radius: 99px; border: 1px solid #e7e5e4; }
+.apl-estado--arch { color: #8A6F68; }
+.apl-plan { font-size: 11.5px; font-weight: 700; color: #6E5550; padding: 2px 9px; border-radius: 99px; border: 1px solid #F0DED6; }
 .apl-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 21px; line-height: 1.15; letter-spacing: -0.03em; color: var(--ink); }
 
 .apl-dias { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 14px; }
-.apl-dia { width: 14px; height: 14px; border-radius: 4px; background: #f0eeec; transition: transform .2s; }
+.apl-dia { width: 14px; height: 14px; border-radius: 4px; background: #F6E7E1; transition: transform .2s; }
 .apl-dia.es-cargado { background: var(--pink); }
 .apl-dia:hover { transform: scale(1.25); }
-.apl-dias-mas { font-size: 11px; font-weight: 700; color: #a8a29e; align-self: center; margin-left: 2px; }
+.apl-dias-mas { font-size: 11px; font-weight: 700; color: #B39189; align-self: center; margin-left: 2px; }
 .apl-dias-txt { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12.5px; color: #15803d; font-weight: 600; }
-.apl-dias-txt.es-faltan { color: #57534e; font-weight: 400; }
+.apl-dias-txt.es-faltan { color: #6E5550; font-weight: 400; }
 .apl-dias-txt strong { color: var(--ink); }
-.apl-uso { margin-top: 6px; font-size: 12.5px; color: #78716c; }
+.apl-uso { margin-top: 6px; font-size: 12.5px; color: #8A6F68; }
 .apl-uso strong { color: var(--ink); }
 .apl-pie { margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 8px; }
 
@@ -353,13 +353,13 @@ const CSS_PLANES = `
 .apl-ejemplo-cuerpo { padding: 16px 18px 18px; }
 .apl-ejemplo-titulo { margin-top: 6px; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
 .apl-ejemplo-dias { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
-.apl-ejemplo-dia { width: 16px; height: 16px; border-radius: 4px; background: #f0eeec; animation: apl-llena 0.4s ease both; }
+.apl-ejemplo-dia { width: 16px; height: 16px; border-radius: 4px; background: #F6E7E1; animation: apl-llena 0.4s ease both; }
 .apl-ejemplo-dia:nth-child(-n+3) { animation-name: apl-llena-hecho; }
 .apl-ejemplo-dia:nth-child(3) { animation-name: apl-llena-hoy; }
 @keyframes apl-llena { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink-soft); } }
 @keyframes apl-llena-hecho { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink); } }
 @keyframes apl-llena-hoy { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink); box-shadow: 0 0 0 3px var(--pink-wash), 0 0 0 4.5px var(--pink); } }
-.apl-ejemplo-hoy { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 600; color: #57534e; }
+.apl-ejemplo-hoy { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 600; color: #6E5550; }
 .apl-ejemplo-hoy span {
   font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
   background: var(--pink); padding: 3px 8px; border-radius: 99px;

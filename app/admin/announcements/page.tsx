@@ -78,19 +78,19 @@ const TIER_STYLE: Record<string, { bg: string; color: string }> = {
   all:             { bg: "#f1f5f9", color: "#475569" },
   corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)" },
   solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)" },
-  principal:       { bg: "#1c1917", color: "var(--pink-wash)" },
+  principal:       { bg: "#3B2A2C", color: "var(--pink-wash)" },
 };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -151,21 +151,21 @@ export default async function AdminAnnouncementsPage({
           { value: announcements.length - active, label: "Inactivos", sub: "desactivados o vencidos" },
         ].map((s) => (
           <div key={s.label} style={{
-            background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "20px 22px",
+            background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16, padding: "20px 22px",
           }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#44403c", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>{s.sub}</p>
+            <p style={{ fontSize: 30, fontWeight: 800, color: "#3B2A2C", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#5A4440", marginTop: 6 }}>{s.label}</p>
+            <p style={{ fontSize: 11, color: "#B39189", marginTop: 2 }}>{s.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Create form */}
       <div style={{
-        background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+        background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
         padding: "24px 22px", marginBottom: 20,
       }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 18 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 18 }}>
           Nuevo anuncio
         </p>
         <form action={createAnnouncementAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -213,13 +213,13 @@ export default async function AdminAnnouncementsPage({
 
       {/* Announcement list */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 12 }}>
           Historial — {announcements.length}
         </p>
         {announcements.length === 0 ? (
           <div style={{
-            background: "#fff", border: "1.5px dashed #f0eeec", borderRadius: 16,
-            padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13,
+            background: "#fff", border: "1.5px dashed #F6E7E1", borderRadius: 16,
+            padding: "40px 24px", textAlign: "center", color: "#B39189", fontSize: 13,
           }}>
             No hay anuncios. Crea el primero arriba.
           </div>
@@ -232,7 +232,7 @@ export default async function AdminAnnouncementsPage({
 
               return (
                 <div key={a.id} style={{
-                  background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+                  background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
                   padding: "18px 20px", opacity: !a.is_active ? 0.6 : 1,
                 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -240,7 +240,7 @@ export default async function AdminAnnouncementsPage({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
                         {a.title && (
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "#1c1917" }}>{a.title}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>{a.title}</span>
                         )}
                         <span style={{
                           fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99,
@@ -254,8 +254,8 @@ export default async function AdminAnnouncementsPage({
                           </span>
                         )}
                       </div>
-                      <p style={{ fontSize: 13, color: "#44403c", lineHeight: 1.5, marginBottom: 8 }}>{a.content}</p>
-                      <p style={{ fontSize: 11, color: "#a8a29e" }}>
+                      <p style={{ fontSize: 13, color: "#5A4440", lineHeight: 1.5, marginBottom: 8 }}>{a.content}</p>
+                      <p style={{ fontSize: 11, color: "#B39189" }}>
                         Publicado: {pubDate}
                         {a.expires_at && ` · Vence: ${new Date(a.expires_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}`}
                       </p>

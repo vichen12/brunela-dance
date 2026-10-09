@@ -102,8 +102,8 @@ export function SelectorMultiple({
                 // --pink-mid y no --pink: aca hay texto que se lee, no una
                 // superficie que se mira de reojo. Ver CLAUDE.md, decisiones.
                 background: activo ? "var(--pink-mid)" : "#fff",
-                color: activo ? "#fff" : "#57534e",
-                border: `1px solid ${activo ? "var(--pink-mid)" : "#e7e5e4"}`,
+                color: activo ? "#fff" : "#6E5550",
+                border: `1px solid ${activo ? "var(--pink-mid)" : "#F0DED6"}`,
                 transition: "background 0.12s, border-color 0.12s",
               }}
             >
@@ -118,7 +118,7 @@ export function SelectorMultiple({
                   borderRadius: 4,
                   flexShrink: 0,
                   background: activo ? "#fff" : "transparent",
-                  border: `1px solid ${activo ? "#fff" : "#d6d3d1"}`,
+                  border: `1px solid ${activo ? "#fff" : "#E6CCC2"}`,
                 }}
               >
                 {activo && (

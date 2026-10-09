@@ -15,13 +15,13 @@ function fecha(iso: string | null): string {
 }
 
 const tarjeta: React.CSSProperties = {
-  background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20, padding: "22px 24px",
+  background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 20, padding: "22px 24px",
 };
 
 function Dato({ valor, etiqueta }: { valor: string | number; etiqueta: string }) {
   return (
     <div>
-      <p className="display" style={{ fontSize: 30, lineHeight: 1, margin: 0, color: "#1c1917" }}>{valor}</p>
+      <p className="display" style={{ fontSize: 30, lineHeight: 1, margin: 0, color: "#3B2A2C" }}>{valor}</p>
       <p style={{ fontSize: 11.5, color: "var(--muted)", margin: "4px 0 0" }}>{etiqueta}</p>
     </div>
   );
@@ -66,12 +66,12 @@ export default async function FichaAlumnaPage({ params }: Props) {
             }}>{f.perfil.plan}</span>
             <span style={{
               fontSize: 11.5, fontWeight: 700, padding: "6px 13px", borderRadius: 99,
-              background: "#f5f5f4", color: "#57534e",
+              background: "#FBF0EB", color: "#6E5550",
             }}>{f.perfil.nivel}</span>
             {inactiva && (
               <span style={{
                 fontSize: 11.5, fontWeight: 700, padding: "6px 13px", borderRadius: 99,
-                background: "#1c1917", color: "var(--pink-wash)",
+                background: "#3B2A2C", color: "var(--pink-wash)",
               }}>Sin entrar hace {f.actividad.diasSinEntrar} días</span>
             )}
           </div>
@@ -100,14 +100,14 @@ export default async function FichaAlumnaPage({ params }: Props) {
 
         {/* Suscripcion */}
         <div style={tarjeta}>
-          <h2 className="display" style={{ fontSize: 19, margin: "0 0 14px", color: "#1c1917" }}>Su plan</h2>
+          <h2 className="display" style={{ fontSize: 19, margin: "0 0 14px", color: "#3B2A2C" }}>Su plan</h2>
           {!f.suscripcion ? (
             <p style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.65, margin: 0 }}>
               No tiene ninguna suscripción registrada. Se registró el {fecha(f.perfil.registradaEl)}
               {!f.perfil.onboardingCompleto && " y no llegó a terminar el registro"}.
             </p>
           ) : (
-            <div style={{ display: "grid", gap: 8, fontSize: 12.5, color: "#57534e", lineHeight: 1.7 }}>
+            <div style={{ display: "grid", gap: 8, fontSize: 12.5, color: "#6E5550", lineHeight: 1.7 }}>
               <p style={{ margin: 0 }}>
                 <strong>{f.suscripcion.plan}</strong> — {f.suscripcion.etiquetaEstado}
               </p>
@@ -119,7 +119,7 @@ export default async function FichaAlumnaPage({ params }: Props) {
               {f.suscripcion.canceladaEl && (
                 <p style={{ margin: 0 }}>Se dio de baja el {fecha(f.suscripcion.canceladaEl)}.</p>
               )}
-              <p style={{ margin: 0, color: "#a8a29e" }}>
+              <p style={{ margin: 0, color: "#B39189" }}>
                 Alumna desde el {fecha(f.perfil.registradaEl)}.
               </p>
             </div>
@@ -128,7 +128,7 @@ export default async function FichaAlumnaPage({ params }: Props) {
 
         {/* Objetivos: lo que ella dijo que buscaba */}
         <div style={tarjeta}>
-          <h2 className="display" style={{ fontSize: 19, margin: "0 0 6px", color: "#1c1917" }}>Qué buscaba</h2>
+          <h2 className="display" style={{ fontSize: 19, margin: "0 0 6px", color: "#3B2A2C" }}>Qué buscaba</h2>
           <p style={{ fontSize: 11.5, color: "var(--muted)", margin: "0 0 14px" }}>
             Lo eligió ella cuando se registró.
           </p>
@@ -148,7 +148,7 @@ export default async function FichaAlumnaPage({ params }: Props) {
 
         {/* Clases */}
         <div style={tarjeta}>
-          <h2 className="display" style={{ fontSize: 19, margin: "0 0 14px", color: "#1c1917" }}>
+          <h2 className="display" style={{ fontSize: 19, margin: "0 0 14px", color: "#3B2A2C" }}>
             Sus últimas clases
           </h2>
           {f.clases.length === 0 ? (
@@ -162,11 +162,11 @@ export default async function FichaAlumnaPage({ params }: Props) {
                 <div key={c.videoId} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   gap: 14, padding: "12px 16px", borderRadius: 14,
-                  background: "#fafaf9", border: "1.5px solid #f0eeec",
+                  background: "#FFFAF6", border: "1.5px solid #F6E7E1",
                 }}>
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#1c1917", margin: 0 }}>{c.titulo}</p>
-                    <p style={{ fontSize: 11, color: "#a8a29e", margin: "2px 0 0" }}>{fecha(c.cuando)}</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#3B2A2C", margin: 0 }}>{c.titulo}</p>
+                    <p style={{ fontSize: 11, color: "#B39189", margin: "2px 0 0" }}>{fecha(c.cuando)}</p>
                   </div>
                   <span style={{
                     fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap",

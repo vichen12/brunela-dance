@@ -171,11 +171,11 @@ const CSS_ERROR = `
 .perr-titulo em { font-style: normal; color: var(--pink-mid); }
 .perr-linea { display: block; overflow: hidden; padding-bottom: 0.1em; }
 .perr-linea-in { display: block; }
-.perr-texto { margin: 18px auto 0; max-width: 46ch; font-size: 15px; line-height: 1.7; color: #57534e; }
+.perr-texto { margin: 18px auto 0; max-width: 46ch; font-size: 15px; line-height: 1.7; color: #6E5550; }
 .perr-acciones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
 .perr-btn {
   display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px;
-  border-radius: 99px; border: 1.5px solid #d6d3d1; background: #fff; color: var(--ink);
+  border-radius: 99px; border: 1.5px solid #E6CCC2; background: #fff; color: var(--ink);
   font: inherit; font-size: 13.5px; font-weight: 700; text-decoration: none; cursor: pointer;
   transition: border-color .2s, background .2s, transform .2s;
 }
@@ -183,15 +183,15 @@ const CSS_ERROR = `
 .perr-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
 .perr-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
 .perr-btn:focus-visible { outline: 2px solid var(--pink); outline-offset: 3px; }
-.perr-detalle { margin-top: 30px; text-align: left; border-top: 1px solid #f0eeec; padding-top: 14px; }
+.perr-detalle { margin-top: 30px; text-align: left; border-top: 1px solid #F6E7E1; padding-top: 14px; }
 .perr-detalle summary {
   cursor: pointer; text-align: center; list-style: none;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #a8a29e;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #B39189;
 }
 .perr-detalle summary::-webkit-details-marker { display: none; }
 .perr-detalle summary:hover { color: var(--pink-deep); }
 .perr-detalle pre {
-  margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #fafaf9; border: 1px solid #f0eeec;
-  font-size: 11.5px; line-height: 1.5; color: #57534e; white-space: pre-wrap; word-break: break-word;
+  margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #FFFAF6; border: 1px solid #F6E7E1;
+  font-size: 11.5px; line-height: 1.5; color: #6E5550; white-space: pre-wrap; word-break: break-word;
 }
 `;

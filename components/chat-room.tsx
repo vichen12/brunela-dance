@@ -576,7 +576,7 @@ export function ChatRoom({
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px,3vw,20px) clamp(12px,3vw,20px) 8px' }}>
         {messages.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', padding: '56px 20px', color: '#78716c', fontSize: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', padding: '56px 20px', color: '#8A6F68', fontSize: 14 }}>
             <span style={{ width: 58, height: 58, borderRadius: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pink-wash)', color: 'var(--pink-deep)', marginBottom: 6 }}>
               <MessageCircle size={26} strokeWidth={1.7} aria-hidden="true" />
             </span>
@@ -648,7 +648,7 @@ export function ChatRoom({
 
       {/* Input */}
       <div className="cr-composer" style={{
-        padding: '14px 20px', borderTop: '1px solid #f0eeec', flexShrink: 0,
+        padding: '14px 20px', borderTop: '1px solid #F6E7E1', flexShrink: 0,
         display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(8px)',
       }}>
@@ -660,7 +660,7 @@ export function ChatRoom({
           placeholder={placeholder}
           aria-label={placeholder}
           style={{
-            flex: 1, height: 48, border: '1.5px solid #e7e5e4', borderRadius: 24,
+            flex: 1, height: 48, border: '1.5px solid #F0DED6', borderRadius: 24,
             padding: '0 18px', fontSize: 14.5, color: 'var(--ink)',
             background: '#fff', outline: 'none', transition: 'border-color .2s, box-shadow .2s',
             fontFamily: 'var(--font-body), sans-serif',
@@ -673,8 +673,8 @@ export function ChatRoom({
           title="Enviar"
           style={{
             width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-            background: input.trim() ? 'var(--pink)' : '#f5f5f4',
-            color: input.trim() ? '#fff' : '#c4c0bd',
+            background: input.trim() ? 'var(--pink)' : '#FBF0EB',
+            color: input.trim() ? '#fff' : '#D9BCB2',
             border: 'none', cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: input.trim() ? '0 8px 18px -10px rgba(230,79,85,0.8)' : 'none',

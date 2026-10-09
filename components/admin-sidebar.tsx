@@ -7,7 +7,7 @@ import type { Route } from "next";
 import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
-  MessageSquare, Megaphone, Settings, Eye, LogOut, Tag, Package, Home,
+  MessageSquare, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
 } from "lucide-react";
 
 /**
@@ -88,135 +88,56 @@ export function AdminSidebar({ nombre }: { nombre: string }) {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  const fila: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 13,
-    padding: "11px 14px",
-    borderRadius: 12,
-    textDecoration: "none",
-    fontSize: 14,
-    minHeight: 44,
-  };
-
   return (
-    <aside style={{
-      width: 268,
-      flexShrink: 0,
-      background: "#FDFBFA",
-      borderRight: "1px solid #F1E9E7",
-      display: "flex",
-      flexDirection: "column",
-      height: "100vh",
-      position: "sticky",
-      top: 0,
-    }}>
-      {/* Marca — mismo wordmark y escala que el menú de miembro */}
-      <div style={{ padding: "34px 22px 22px" }}>
-        <Link href={"/admin" as Route} style={{ textDecoration: "none", display: "block" }}>
-          <p style={{
-            fontFamily: "var(--font-display), sans-serif",
-            fontSize: 30, fontWeight: 800, letterSpacing: "0.1em",
-            color: "var(--pink)", lineHeight: 1,
-          }}>
-            BRUNELA
-          </p>
-          <p style={{
-            fontSize: 10, fontWeight: 500, letterSpacing: "0.34em",
-            color: "var(--ink)", marginTop: 9, opacity: 0.75,
-          }}>
-            DANCE TRAINER
-          </p>
-        </Link>
-      </div>
+    <aside className="sb" aria-label="Menú de administración">
+      <Link href={"/admin" as Route} className="sb-marca">
+        <span className="sb-marca-ico">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/isologo-icon.png" alt="" />
+        </span>
+        <span>
+          <span className="sb-marca-nombre" style={{ display: "block" }}>Brunela</span>
+          <span className="sb-marca-sub" style={{ display: "block" }}>Panel del estudio</span>
+        </span>
+      </Link>
 
-      {/* Acción principal: el equivalente a "Explorar clases" del lado alumna */}
-      <div style={{ padding: "0 20px 20px" }}>
-        <Link
-          href={"/admin/videos" as Route}
-          style={{
-            ...fila,
-            justifyContent: "center", gap: 11,
-            padding: "15px 18px", borderRadius: 999,
-            background: "var(--pink)", color: "#fff",
-            fontWeight: 700, fontSize: 13.5, letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          <Play size={16} strokeWidth={2.2} />
-          Subir una clase
-        </Link>
-      </div>
+      {/* Accion principal: el equivalente a "Explorar clases" del lado alumna */}
+      <Link href={"/admin/videos?nueva=1#nueva" as Route} className="sb-cta">
+        <span className="sb-cta-ico"><Plus size={15} strokeWidth={2.8} aria-hidden="true" /></span>
+        Subir una clase
+      </Link>
 
-      {/* Navegación */}
-      <nav style={{ flex: 1, padding: "0 20px", overflowY: "auto", overflowX: "hidden" }}>
-        {NAV.map((grupo, gi) => (
-          <div key={grupo.label} style={{ marginTop: gi === 0 ? 0 : 18 }}>
-            <p style={{
-              fontSize: 9.5, fontWeight: 700, letterSpacing: "0.18em",
-              color: "var(--pink-muted)", textTransform: "uppercase",
-              padding: "0 14px", marginBottom: 7,
-            }}>
-              {grupo.label}
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {grupo.items.map(({ href, exact, label, Icon }) => {
-                const active = isActive(href, exact);
-                return (
-                  <Link key={href} href={href as Route} style={{
-                    ...fila,
-                    background: active ? "var(--pink-wash)" : "transparent",
-                    color: active ? "var(--pink)" : "var(--ink)",
-                    fontWeight: active ? 700 : 500,
-                    transition: "background 0.14s, color 0.14s",
-                  }}>
-                    <Icon size={17} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
+      <nav className="sb-nav">
+        {NAV.map((grupo) => (
+          <div key={grupo.label} className="sb-grupo">
+            <p className="sb-grupo-titulo">{grupo.label}</p>
+            {grupo.items.map(({ href, exact, label, Icon }) => {
+              const active = isActive(href, exact);
+              return (
+                <Link key={href} href={href as Route} className={"sb-item" + (active ? " es-activo" : "")} aria-current={active ? "page" : undefined}>
+                  <span className="sb-item-ico"><Icon size={18} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" /></span>
+                  {label}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>
 
-      {/* Identidad y salida */}
-      <div style={{ padding: "18px 20px 22px", display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ borderTop: "1px solid #F1E9E7", marginBottom: 12 }} />
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 4px 12px" }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-            background: "var(--pink-wash)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, fontWeight: 700, color: "var(--pink)",
-          }}>{(nombre.trim()[0] ?? "A").toUpperCase()}</div>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {nombre.toUpperCase()}
-            </p>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Administración</p>
+      <div className="sb-pie">
+        {/* "Ver como alumna" vive en la cabecera: aca restaba alto a un menu de 14 items. */}
+        <div className="sb-perfil">
+          <span className="sb-avatar" aria-hidden="true">{(nombre.trim()[0] ?? "A").toUpperCase()}</span>
+          <div className="sb-perfil-txt">
+            <p className="sb-perfil-nombre" style={{ textTransform: "capitalize" }}>{nombre}</p>
+            <span className="sb-perfil-plan">Administración</span>
           </div>
+          <form action={signOutAction}>
+            <button type="submit" className="sb-salir" aria-label="Cerrar sesión" title="Cerrar sesión">
+              <LogOut size={17} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </form>
         </div>
-
-        <Link href={"/dashboard" as Route} style={{
-          ...fila, color: "var(--ink)", fontWeight: 500, background: "var(--pink-wash)",
-        }}>
-          <Eye size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-          Vista alumna
-        </Link>
-
-        <form action={signOutAction}>
-          <button type="submit" style={{
-            ...fila,
-            width: "100%", background: "none", border: "none", cursor: "pointer",
-            color: "var(--pink)", fontWeight: 600, textAlign: "left",
-            fontFamily: "inherit",
-          }}>
-            <LogOut size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-            Cerrar sesión
-          </button>
-        </form>
       </div>
     </aside>
   );

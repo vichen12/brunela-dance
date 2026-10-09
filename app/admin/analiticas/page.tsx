@@ -37,14 +37,14 @@ function Tarjeta({
 }) {
   return (
     <div style={{
-      background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20,
+      background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 20,
       padding: "22px 24px", display: "flex", flexDirection: "column", gap: 6,
     }}>
       <p className="display" style={{
         fontSize: 40, lineHeight: 1, margin: 0,
-        color: tono === "alerta" ? "var(--pink-deep)" : "#1c1917",
+        color: tono === "alerta" ? "var(--pink-deep)" : "#3B2A2C",
       }}>{valor}</p>
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917", margin: 0 }}>{etiqueta}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#3B2A2C", margin: 0 }}>{etiqueta}</p>
       <p style={{ fontSize: 11.5, color: "var(--muted)", lineHeight: 1.55, margin: 0 }}>{ayuda}</p>
     </div>
   );
@@ -78,11 +78,11 @@ function Bloque({
 }) {
   return (
     <section style={{
-      background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20,
+      background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 20,
       padding: "24px 26px",
     }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
-        <h2 className="display" style={{ fontSize: 21, color: "#1c1917", margin: 0, lineHeight: 1.25 }}>
+        <h2 className="display" style={{ fontSize: 21, color: "#3B2A2C", margin: 0, lineHeight: 1.25 }}>
           {pregunta}
         </h2>
         {accion && (
@@ -103,14 +103,14 @@ function Barras({ filas }: { filas: { etiqueta: string; cantidad: number }[] }) 
     <div style={{ display: "grid", gap: 10 }}>
       {filas.map((f) => (
         <div key={f.etiqueta} style={{ display: "grid", gridTemplateColumns: "130px 1fr 44px", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 12.5, color: "#57534e" }}>{f.etiqueta}</span>
+          <span style={{ fontSize: 12.5, color: "#6E5550" }}>{f.etiqueta}</span>
           <div style={{ height: 10, borderRadius: 99, background: "var(--pink-wash)", overflow: "hidden" }}>
             <div style={{
               width: `${Math.round((f.cantidad / total) * 100)}%`, height: "100%",
               background: "var(--pink)", borderRadius: 99,
             }} />
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#1c1917", textAlign: "right" }}>{f.cantidad}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#3B2A2C", textAlign: "right" }}>{f.cantidad}</span>
         </div>
       ))}
     </div>
@@ -224,11 +224,11 @@ export default async function AnaliticasPage() {
                 <Link key={al.id} href={`/admin/users/${al.id}` as never} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   gap: 14, padding: "13px 16px", borderRadius: 14,
-                  background: "#fafaf9", border: "1.5px solid #f0eeec", textDecoration: "none",
+                  background: "#FFFAF6", border: "1.5px solid #F6E7E1", textDecoration: "none",
                 }}>
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917", margin: 0 }}>{al.nombre}</p>
-                    <p style={{ fontSize: 11, color: "#a8a29e", margin: "2px 0 0" }}>{al.plan}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#3B2A2C", margin: 0 }}>{al.nombre}</p>
+                    <p style={{ fontSize: 11, color: "#B39189", margin: "2px 0 0" }}>{al.plan}</p>
                   </div>
                   <span style={{
                     fontSize: 11.5, fontWeight: 700, color: "var(--pink-deep)",
@@ -274,10 +274,10 @@ export default async function AnaliticasPage() {
                   <div key={c.id} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     gap: 14, padding: "12px 16px", borderRadius: 14,
-                    background: "#fafaf9", border: "1.5px solid #f0eeec",
+                    background: "#FFFAF6", border: "1.5px solid #F6E7E1",
                   }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#1c1917", margin: 0 }}>{c.titulo}</p>
-                    <span style={{ fontSize: 11, color: "#a8a29e", whiteSpace: "nowrap" }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#3B2A2C", margin: 0 }}>{c.titulo}</p>
+                    <span style={{ fontSize: 11, color: "#B39189", whiteSpace: "nowrap" }}>
                       {c.publicadaHace !== null ? `publicada hace ${c.publicadaHace} días` : "sin fecha"}
                     </span>
                   </div>
@@ -317,11 +317,11 @@ export default async function AnaliticasPage() {
               {a.programas.map((p) => (
                 <div key={p.id} style={{
                   padding: "14px 16px", borderRadius: 14,
-                  background: "#fafaf9", border: "1.5px solid #f0eeec",
+                  background: "#FFFAF6", border: "1.5px solid #F6E7E1",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "baseline" }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#1c1917", margin: 0 }}>{p.titulo}</p>
-                    <span style={{ fontSize: 11, color: "#a8a29e" }}>{p.dias} días</span>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#3B2A2C", margin: 0 }}>{p.titulo}</p>
+                    <span style={{ fontSize: 11, color: "#B39189" }}>{p.dias} días</span>
                   </div>
                   {!p.umbral.suficiente ? (
                     <p style={{ ...vacio, marginTop: 8, fontSize: 11.5 }}>

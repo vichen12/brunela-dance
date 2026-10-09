@@ -289,7 +289,9 @@ export function Desplegable({
             </motion.ul>
           )}
         </AnimatePresence>,
-        document.body
+        // Dentro de .sistema y no en body: ahi viven la fuente y los colores del
+        // sistema, y un panel en body los perdia (salia en Montserrat y gris frio).
+        (document.querySelector(".sistema") ?? document.body)
       )}
     </span>
   );

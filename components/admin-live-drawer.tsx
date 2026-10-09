@@ -43,15 +43,15 @@ export type LiveSession = {
 };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -196,7 +196,7 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
 
       <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
         <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#1c1917",
+          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#3B2A2C",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",
@@ -232,11 +232,11 @@ function Invitaciones({ session }: { session: LiveSession }) {
   const hay = session.invitations.length;
 
   return (
-    <section style={{ marginTop: 22, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 6 }}>
+    <section style={{ marginTop: 22, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
+      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 6 }}>
         Invitar a alguien en particular
       </p>
-      <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.5, marginBottom: 14 }}>
+      <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
         Quien invites entra a <strong>esta</strong> clase aunque su plan no le alcance.
         Sigue teniendo que reservar, y si el cupo está lleno queda en lista de espera.
       </p>
@@ -250,7 +250,7 @@ function Invitaciones({ session }: { session: LiveSession }) {
           <input style={inp} name="alumna" required placeholder="ana@ejemplo.com" autoComplete="off" />
         </F>
         <BotonEnviar pendingLabel="Invitando…" style={{
-          background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,
+          background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer", whiteSpace: "nowrap",
         }}>INVITAR</BotonEnviar>
@@ -263,20 +263,20 @@ function Invitaciones({ session }: { session: LiveSession }) {
               key={i.user_id}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                background: "#fafaf9", border: "1px solid #f0eeec", borderRadius: 10, padding: "8px 12px",
+                background: "#FFFAF6", border: "1px solid #F6E7E1", borderRadius: 10, padding: "8px 12px",
               }}
             >
-              <span style={{ fontSize: 12.5, color: "#1c1917", minWidth: 0 }}>
+              <span style={{ fontSize: 12.5, color: "#3B2A2C", minWidth: 0 }}>
                 <strong style={{ fontWeight: 700 }}>{i.full_name || i.email}</strong>
                 {i.full_name && (
-                  <span style={{ color: "#a8a29e", marginLeft: 8, fontSize: 11.5 }}>{i.email}</span>
+                  <span style={{ color: "#B39189", marginLeft: 8, fontSize: 11.5 }}>{i.email}</span>
                 )}
               </span>
               <form action={uninviteFromLiveSessionAction}>
                 <input type="hidden" name="liveSessionId" value={session.id} />
                 <input type="hidden" name="userId" value={i.user_id} />
                 <BotonEnviar pendingLabel="…" style={{
-                  background: "transparent", border: "none", color: "#a8a29e",
+                  background: "transparent", border: "none", color: "#B39189",
                   fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                   padding: "4px 6px",
                 }}>Quitar</BotonEnviar>
@@ -306,8 +306,8 @@ export function EditarSesion({ session }: { session: LiveSession }) {
         onClick={() => setAbierto(true)}
         style={{
           padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-          border: "1px solid #f0eeec", background: "#fff",
-          color: "#57534e", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
+          border: "1px solid #F6E7E1", background: "#fff",
+          color: "#6E5550", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
         }}
       >Editar</button>
 

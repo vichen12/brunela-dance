@@ -120,7 +120,7 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
           font-weight: 900;
           line-height: 0.92;
           letter-spacing: -0.045em;
-          color: var(--ink, #1c1917);
+          color: var(--ink, #3B2A2C);
           /* Tabular: sin esto los numeros cambian de ancho cada segundo y toda
              la fila tiembla. */
           font-variant-numeric: tabular-nums;

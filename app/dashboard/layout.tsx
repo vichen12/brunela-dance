@@ -6,6 +6,7 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario, paraRetomar } from "@/src/features/studio/progress";
 import { StudioSidebar } from "@/components/studio-sidebar";
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav";
+import { fuenteSistema } from "@/src/lib/fuente-sistema";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
@@ -62,12 +63,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         @media (max-width: 767px) {
           .studio-sidebar-wrapper { display: none !important; }
           .mobile-dash-nav { display: block !important; }
-          .dashboard-content { padding-bottom: 74px !important; }
+          .dashboard-content { padding-bottom: 96px !important; }
           .chat-col-sidebar { display: none !important; }
         }
       `}</style>
       {/* overflow-x: clip y no hidden: hidden rompe position: sticky de adentro. */}
-      <div style={{ display: "flex", minHeight: "100vh", background: "#fafaf9", overflowX: "clip" }}>
+      <div className={`sistema ${fuenteSistema.variable}`} style={{ display: "flex", minHeight: "100vh", overflowX: "clip" }}>
         <div className="studio-sidebar-wrapper">
           <StudioSidebar
             userName={userName}
@@ -79,8 +80,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
           {children}
         </div>
+        <MobileDashboardNav isAdmin={isAdmin} />
       </div>
-      <MobileDashboardNav isAdmin={isAdmin} />
     </>
   );
 }

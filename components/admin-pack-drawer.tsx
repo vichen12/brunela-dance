@@ -56,15 +56,15 @@ export type PackAdmin = {
 export type ClaseElegible = { id: string; titulo: string };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -83,7 +83,7 @@ function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }
   const c =
     tono === "ok" ? { fg: "#166534", bg: "#f0fdf4", bd: "#bbf7d0" }
     : tono === "aviso" ? { fg: "#92400e", bg: "#fffbeb", bd: "#fde68a" }
-    : { fg: "#78716c", bg: "#fafaf9", bd: "#f0eeec" };
+    : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F6E7E1" };
   return (
     <p style={{
       marginTop: 6, fontSize: 11.5, lineHeight: 1.45, fontWeight: 600,
@@ -116,11 +116,11 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
   const disponibles = elegibles.filter((c) => !yaEstan.has(c.id));
 
   return (
-    <section style={{ marginTop: 22, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 6 }}>
+    <section style={{ marginTop: 22, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
+      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 6 }}>
         Clases del pack ({pack.clases.length})
       </p>
-      <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.5, marginBottom: 14 }}>
+      <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
         Quien compre este pack va a poder ver estas clases para siempre, tenga el
         plan que tenga.
       </p>
@@ -138,7 +138,7 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
             />
           </F>
           <BotonEnviar pendingLabel="Agregando…" style={{
-            background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,
+            background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
             padding: "10px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
             cursor: "pointer", whiteSpace: "nowrap",
           }}>AGREGAR</BotonEnviar>
@@ -146,7 +146,7 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
       )}
 
       {pack.clases.length === 0 ? (
-        <p style={{ fontSize: 12.5, color: "#a8a29e" }}>
+        <p style={{ fontSize: 12.5, color: "#B39189" }}>
           Todavía no tiene ninguna clase. Sin al menos una, no se puede publicar.
         </p>
       ) : (
@@ -154,14 +154,14 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
           {pack.clases.map((c) => (
             <li key={c.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-              background: "#fafaf9", border: "1px solid #f0eeec", borderRadius: 10, padding: "8px 12px",
+              background: "#FFFAF6", border: "1px solid #F6E7E1", borderRadius: 10, padding: "8px 12px",
             }}>
-              <span style={{ fontSize: 12.5, color: "#1c1917", minWidth: 0 }}>{c.titulo}</span>
+              <span style={{ fontSize: 12.5, color: "#3B2A2C", minWidth: 0 }}>{c.titulo}</span>
               <form action={removeVideoFromPackAction}>
                 <input type="hidden" name="packId" value={pack.id} />
                 <input type="hidden" name="videoId" value={c.id} />
                 <BotonEnviar pendingLabel="…" style={{
-                  background: "transparent", border: "none", color: "#a8a29e",
+                  background: "transparent", border: "none", color: "#B39189",
                   fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "4px 6px",
                 }}>Quitar</BotonEnviar>
               </form>
@@ -224,11 +224,11 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               vuelta sin motivo: se carga donde se crea. En /admin/precios
               siguen viendose todos juntos para revisar de un vistazo, y las dos
               pantallas guardan con el MISMO interprete. */}
-          <div style={{ borderRadius: 12, border: "1px solid #f0eeec", padding: "16px 18px", background: "#fafaf9" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#78716c", textTransform: "uppercase", marginBottom: 4 }}>
+          <div style={{ borderRadius: 12, border: "1px solid #F6E7E1", padding: "16px 18px", background: "#FFFAF6" }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 4 }}>
               Precio y cobro
             </p>
-            <p style={{ fontSize: 12, color: "#78716c", lineHeight: 1.5, marginBottom: 14 }}>
+            <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
               El importe es lo que se anuncia. El identificador es lo que cobra
               Stripe. Abajo de cada uno te digo cuánto vale ahí de verdad.
             </p>
@@ -254,7 +254,7 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               </label>
             </div>
 
-            <p style={{ fontSize: 11.5, color: "#a8a29e", lineHeight: 1.5, marginTop: 12 }}>
+            <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.5, marginTop: 12 }}>
               Un identificador de Stripe no se edita: se reemplaza. Para cambiar
               el precio, en Stripe se crea uno nuevo y se pega acá.
             </p>
@@ -281,7 +281,7 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
 
           <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
             <button type="submit" style={{
-              background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,
+              background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
               padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
             }}>GUARDAR CAMBIOS</button>
 

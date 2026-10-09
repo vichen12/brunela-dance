@@ -307,7 +307,7 @@ export default async function DashboardPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {ann.title && <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink-deep)", marginBottom: 3 }}>{ann.title}</p>}
-                  <p style={{ fontSize: 13, color: "#44403c", lineHeight: 1.5 }}>{ann.content}</p>
+                  <p style={{ fontSize: 13, color: "#5A4440", lineHeight: 1.5 }}>{ann.content}</p>
                 </div>
               </div>
             ))}
@@ -327,7 +327,7 @@ export default async function DashboardPage() {
             <Saludo />,{" "}
             <span style={{ color: "var(--pink)", fontStyle: "italic" }}>{firstName}.</span>
           </h2>
-          <p style={{ marginTop: 6, fontSize: 13, color: "#78716c", lineHeight: 1.5 }}>
+          <p style={{ marginTop: 6, fontSize: 13, color: "#8A6F68", lineHeight: 1.5 }}>
             Tu cuerpo te espera. Seguí donde lo dejaste.
           </p>
         </div>
@@ -343,7 +343,7 @@ export default async function DashboardPage() {
               d: "M8 14c2.5 0 4.5-1.9 4.5-4.3 0-3-2.6-4.3-3.4-7.2-1.3 1-2.1 2.3-2 3.8-1-.3-1.5-1-1.7-1.9C4.2 5.6 3.5 7.2 3.5 9.7 3.5 12.1 5.5 14 8 14z" },
           ].map((s, i) => (
             <div key={i} style={{
-              background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+              background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
               padding: "18px 20px", display: "flex", alignItems: "center", gap: 14,
             }}>
               <IcoCaja d={s.d} d2={s.d2} />
@@ -356,7 +356,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Continua viendo */}
-        <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, padding: "18px 20px" }}>
+        <div style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 20, padding: "18px 20px" }}>
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 14 }}>
             Continua viendo
           </p>
@@ -412,7 +412,7 @@ export default async function DashboardPage() {
             <div style={{
               position: "relative", borderRadius: 20, overflow: "hidden",
               minHeight: 190, background: "var(--ink)",
-              border: canAccessLive ? "none" : "1px solid #f0eeec",
+              border: canAccessLive ? "none" : "1px solid #F6E7E1",
             }}>
               {liveData.cover_image_url && (
                 <img src={liveData.cover_image_url} alt="" style={{
@@ -463,7 +463,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, padding: "20px 22px" }}>
+          <div style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 20, padding: "20px 22px" }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 14 }}>
               Accesos rapidos
             </p>
@@ -472,7 +472,7 @@ export default async function DashboardPage() {
                 <Link key={link.href} href={link.href} style={{
                   display: "flex", alignItems: "center", gap: 12, textDecoration: "none",
                   padding: "12px 14px", borderRadius: 14, background: "#fff",
-                  border: "1px solid #f0eeec",
+                  border: "1px solid #F6E7E1",
                 }}>
                   <IcoCaja d={link.d} d2={link.d2} />
                   <div style={{ minWidth: 0 }}>
@@ -501,7 +501,7 @@ export default async function DashboardPage() {
 
           {sugeridas.length === 0 ? (
             <div style={{
-              background: "#fff", border: "1px dashed #e7e5e4", borderRadius: 18,
+              background: "#fff", border: "1px dashed #F0DED6", borderRadius: 18,
               padding: "26px 22px", fontSize: 13, color: "var(--muted)",
             }}>
               Todavia no hay clases publicadas para tu plan.

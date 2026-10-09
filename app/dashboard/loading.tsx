@@ -17,7 +17,7 @@ export default function DashboardLoading() {
           {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {[1, 2, 3].map((i) => (
-              <div key={i} style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "20px 22px" }}>
+              <div key={i} style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16, padding: "20px 22px" }}>
                 <div className="sk" style={{ ...pulse, height: 28, width: 60, marginBottom: 10 }} />
                 <div className="sk" style={{ ...pulse, height: 12, width: 120 }} />
               </div>
@@ -25,7 +25,7 @@ export default function DashboardLoading() {
           </div>
 
           {/* Continue watching */}
-          <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 20, overflow: "hidden" }}>
+          <div style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 20, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #f9f7f6" }}>
               <div className="sk" style={{ ...pulse, height: 10, width: 120 }} />
             </div>

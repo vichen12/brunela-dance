@@ -55,8 +55,8 @@ const MODOS: { modo: StripeMode; label: string; ayuda: string }[] = [
 ];
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
@@ -67,7 +67,7 @@ const caja: React.CSSProperties = {
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -78,7 +78,7 @@ function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }
   const c =
     tono === "ok" ? { fg: "#166534", bg: "#f0fdf4", bd: "#bbf7d0" }
     : tono === "aviso" ? { fg: "#92400e", bg: "#fffbeb", bd: "#fde68a" }
-    : { fg: "#78716c", bg: "#fafaf9", bd: "#f0eeec" };
+    : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F6E7E1" };
 
   return (
     <p style={{
@@ -192,7 +192,7 @@ export default async function AdminPreciosPage({
             </div>
 
             {catalogo.tiers.map((t) => (
-              <div key={t.tier} style={{ borderTop: "1px solid #f0eeec", paddingTop: 18 }}>
+              <div key={t.tier} style={{ borderTop: "1px solid #F6E7E1", paddingTop: 18 }}>
                 <p style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>
                   {t.tier === "corps_de_ballet" ? "Corps de Ballet" : t.tier === "solista" ? "Solista" : "Principal"}
                 </p>
@@ -210,9 +210,9 @@ export default async function AdminPreciosPage({
 
                 {MODOS.map(({ modo, label, ayuda }) => (
                   <div key={modo} style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#57534e", marginBottom: 8 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "#6E5550", marginBottom: 8 }}>
                       {label}{" "}
-                      <span style={{ fontWeight: 500, color: "#a8a29e" }}>— {ayuda}</span>
+                      <span style={{ fontWeight: 500, color: "#B39189" }}>— {ayuda}</span>
                       {modo === modoActivo && (
                         <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--pink-mid)" }}>EN USO</span>
                       )}
@@ -242,7 +242,7 @@ export default async function AdminPreciosPage({
 
             <div>
               <BotonEnviar pendingLabel="Guardando…" style={{
-                background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,
+                background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
                 padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
               }}>GUARDAR PRECIOS</BotonEnviar>
             </div>
@@ -259,7 +259,7 @@ export default async function AdminPreciosPage({
           </p>
 
           {packs.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#a8a29e" }}>
+            <p style={{ fontSize: 13, color: "#B39189" }}>
               Todavía no hay ningún pack.
             </p>
           ) : (
@@ -268,14 +268,14 @@ export default async function AdminPreciosPage({
                 <form
                   key={p.id}
                   action={guardarPrecioDePackAction}
-                  style={{ borderTop: "1px solid #f0eeec", paddingTop: 16 }}
+                  style={{ borderTop: "1px solid #F6E7E1", paddingTop: 16 }}
                 >
                   <input type="hidden" name="id" value={p.id} />
 
                   <p style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>
                     {p.name_i18n?.es ?? p.slug}
                     {!p.is_published && (
-                      <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#a8a29e" }}>SIN PUBLICAR</span>
+                      <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#B39189" }}>SIN PUBLICAR</span>
                     )}
                   </p>
 
@@ -304,7 +304,7 @@ export default async function AdminPreciosPage({
 
                   <div style={{ marginTop: 12 }}>
                     <BotonEnviar pendingLabel="Guardando…" style={{
-                      background: "transparent", color: "#1c1917", border: "1px solid #e7e5e4",
+                      background: "transparent", color: "#3B2A2C", border: "1px solid #F0DED6",
                       borderRadius: 99, padding: "8px 18px", fontSize: 11, fontWeight: 700,
                       letterSpacing: "0.08em", cursor: "pointer",
                     }}>GUARDAR ESTE PACK</BotonEnviar>

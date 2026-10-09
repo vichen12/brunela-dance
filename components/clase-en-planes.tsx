@@ -30,9 +30,9 @@ import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/plane
 const inp: React.CSSProperties = {
   width: "100%",
   borderRadius: 10,
-  border: "1px solid #e7e5e4",
+  border: "1px solid #F0DED6",
   background: "#fff",
-  color: "#1c1917",
+  color: "#3B2A2C",
   padding: "9px 13px",
   fontSize: 13,
   outline: "none",
@@ -45,7 +45,7 @@ const lbl: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
   letterSpacing: "0.09em",
-  color: "#78716c",
+  color: "#8A6F68",
   textTransform: "uppercase",
   marginBottom: 5,
 };
@@ -67,11 +67,11 @@ export function ClaseEnPlanes({
   const yaEstaAhi = ubicaciones.some((u) => u.programId === programId && String(u.dia) === dia);
 
   return (
-    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e7e5e4" }}>
+    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F0DED6" }}>
       <span style={lbl}>Agregar a un plan de trabajo</span>
 
       {planes.length === 0 ? (
-        <p style={{ fontSize: 11.5, color: "#78716c", lineHeight: 1.7, marginTop: 6 }}>
+        <p style={{ fontSize: 11.5, color: "#8A6F68", lineHeight: 1.7, marginTop: 6 }}>
           Todavía no hay ningún plan de trabajo armado. Se crean en{" "}
           <a href="/admin/programs" style={{ color: "var(--pink-mid)", fontWeight: 700 }}>
             Planes de trabajo
@@ -82,7 +82,7 @@ export function ClaseEnPlanes({
         <>
           {/* Donde ya esta puesta */}
           {ubicaciones.length === 0 ? (
-            <p style={{ fontSize: 11.5, color: "#a8a29e", lineHeight: 1.7, margin: "4px 0 12px" }}>
+            <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.7, margin: "4px 0 12px" }}>
               Esta clase no está en ningún plan: se ve suelta en la biblioteca.
             </p>
           ) : (
@@ -96,14 +96,14 @@ export function ClaseEnPlanes({
                     justifyContent: "space-between",
                     gap: 12,
                     borderRadius: 10,
-                    border: "1px solid #e7e5e4",
+                    border: "1px solid #F0DED6",
                     background: "#fff",
                     padding: "8px 12px",
                   }}
                 >
-                  <span style={{ fontSize: 12.5, color: "#1c1917", lineHeight: 1.5 }}>
+                  <span style={{ fontSize: 12.5, color: "#3B2A2C", lineHeight: 1.5 }}>
                     <strong style={{ fontWeight: 700 }}>{u.titulo}</strong>
-                    <span style={{ color: "#78716c" }}> — Día {u.dia}</span>
+                    <span style={{ color: "#8A6F68" }}> — Día {u.dia}</span>
                   </span>
                   {/*
                     🔴 EL ID VA EN EL BOTON, NO EN UN <input type="hidden">.
@@ -157,7 +157,7 @@ export function ClaseEnPlanes({
             <label style={{ display: "flex", flexDirection: "column" }}>
               <span style={lbl}>Día</span>
               <input
-                style={{ ...inp, ...(programId ? null : { background: "#f5f5f4", color: "#a8a29e" }) }}
+                style={{ ...inp, ...(programId ? null : { background: "#FBF0EB", color: "#B39189" }) }}
                 type="number"
                 min={1}
                 value={dia}
@@ -181,7 +181,7 @@ export function ClaseEnPlanes({
               formAction={agregarClaseAPlanAction}
               disabled={!programId || !dia || yaEstaAhi}
               style={{
-                background: !programId || !dia || yaEstaAhi ? "#d6d3d1" : "var(--pink)",
+                background: !programId || !dia || yaEstaAhi ? "#E6CCC2" : "var(--pink)",
                 color: "#fff",
                 border: "none",
                 borderRadius: 99,
@@ -197,7 +197,7 @@ export function ClaseEnPlanes({
             </BotonEnviar>
           </div>
 
-          <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 8, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 11, color: "#B39189", marginTop: 8, lineHeight: 1.6 }}>
             {yaEstaAhi
               ? "Esta clase ya está en ese día."
               : elegido

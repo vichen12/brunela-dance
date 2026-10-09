@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { CalendarHeart, FileText, House, ListOrdered, Menu, MessageCircleHeart, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
 
 /**
  * Los MISMOS ocho destinos que el sidebar de escritorio. Antes habia cinco y
@@ -16,14 +17,14 @@ import { useState, useEffect } from 'react';
  *   comodos.
  */
 const NAV = [
-  { href: '/dashboard',           label: 'Inicio',     exact: true  },
-  { href: '/dashboard/library',   label: 'Clases',     exact: false },
-  { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false },
-  { href: '/dashboard/live',      label: 'En vivo',    exact: false },
-  { href: '/dashboard/chat',      label: 'Mi chat',    exact: false },
-  { href: '/dashboard/community', label: 'Comunidad',  exact: false },
-  { href: '/dashboard/documents', label: 'Documentos', exact: false },
-  { href: '/dashboard/plan',      label: 'Mi plan',    exact: false },
+  { href: '/dashboard',           label: 'Inicio',     exact: true,  Icon: House },
+  { href: '/dashboard/library',   label: 'Clases',     exact: false, Icon: Play },
+  { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false, Icon: ListOrdered },
+  { href: '/dashboard/live',      label: 'En vivo',    exact: false, Icon: CalendarHeart },
+  { href: '/dashboard/chat',      label: 'Mi chat',    exact: false, Icon: MessageCircleHeart },
+  { href: '/dashboard/community', label: 'Comunidad',  exact: false, Icon: Users },
+  { href: '/dashboard/documents', label: 'Documentos', exact: false, Icon: FileText },
+  { href: '/dashboard/plan',      label: 'Mi plan',    exact: false, Icon: Sparkles },
 ];
 
 /** Los que quedan a un toque en la barra. El resto, en la hoja. */
@@ -46,81 +47,29 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
   // asi la navegacion nunca aparece sin ningun item seleccionado.
   const menuActivo = !enBarra.some((i) => active(i.href, i.exact)) && !pathname.startsWith('/admin');
 
-  const itemBase: React.CSSProperties = {
-    flex: 1, display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', gap: 2,
-    textDecoration: 'none', fontSize: 9, fontWeight: 700,
-    letterSpacing: '0.06em', transition: 'color 150ms',
-    minHeight: 48,
-  };
-
+  // Estilos en globals.css (.mn-*).
   return (
     <>
       {abierto && (
         <>
-          <button
-            aria-label="Cerrar menú"
-            onClick={() => setAbierto(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 210,
-              background: 'rgba(28,25,23,0.45)', backdropFilter: 'blur(3px)',
-              border: 'none', cursor: 'pointer',
-            }}
-          />
-          <div
-            role="dialog"
-            aria-label="Menú"
-            style={{
-              position: 'fixed', left: 0, right: 0, bottom: 58, zIndex: 220,
-              background: '#fff',
-              borderRadius: '22px 22px 0 0',
-              padding: '20px 16px calc(18px + env(safe-area-inset-bottom, 0px))',
-              boxShadow: '0 -12px 40px rgba(28,25,23,0.18)',
-            }}
-          >
-            <p style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.18em',
-              color: 'var(--pink)', textTransform: 'uppercase', marginBottom: 14,
-              paddingLeft: 6,
-            }}>
-              Menú
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <button aria-label="Cerrar menú" onClick={() => setAbierto(false)} className="mn-velo" />
+          <div role="dialog" aria-label="Menú" className="mn-hoja">
+            <span className="mn-asa" aria-hidden="true" />
+            <p className="mn-hoja-titulo">¿A dónde vamos?</p>
+            <div className="mn-grilla">
               {enHoja.map((item) => {
                 const on = active(item.href, item.exact);
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href as never}
-                    style={{
-                      display: 'flex', alignItems: 'center', minHeight: 48,
-                      padding: '0 14px', borderRadius: 14, textDecoration: 'none',
-                      fontSize: 13, fontWeight: 700,
-                      background: on ? 'var(--pink-wash)' : 'transparent',
-                      color: on ? 'var(--pink-deep)' : 'var(--ink)',
-                      border: on ? '1.5px solid var(--pink-line)' : '1.5px solid transparent',
-                    }}
-                  >
+                  <Link key={item.href} href={item.href as never} className={'mn-op' + (on ? ' es-activo' : '')}>
+                    <span className="mn-op-ico"><item.Icon size={18} strokeWidth={2} aria-hidden="true" /></span>
                     {item.label}
                   </Link>
                 );
               })}
-
               {isAdmin && (
-                <Link
-                  href={'/admin' as never}
-                  style={{
-                    display: 'flex', alignItems: 'center', minHeight: 48,
-                    padding: '0 14px', borderRadius: 14, textDecoration: 'none',
-                    fontSize: 13, fontWeight: 700,
-                    background: pathname.startsWith('/admin') ? '#1c1917' : 'transparent',
-                    color: pathname.startsWith('/admin') ? '#fff' : 'var(--ink)',
-                    border: '1.5px solid #1c1917',
-                    gridColumn: '1 / -1',
-                  }}
-                >
-                  Backstage
+                <Link href={'/admin' as never} className="mn-op mn-op--admin">
+                  <span className="mn-op-ico"><Settings2 size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  Panel de admin
                 </Link>
               )}
             </div>
@@ -128,49 +77,26 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
         </>
       )}
 
-      <nav
-        className="mobile-dash-nav"
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 230,
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '1px solid var(--pink-soft)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          boxShadow: '0 -4px 24px rgba(230,79,85,0.07)',
-        }}
-      >
-        <div style={{ display: 'flex', height: 58 }}>
+      <nav className="mobile-dash-nav mn-barra" aria-label="Navegación">
+        <div className="mn-fila">
           {enBarra.map((item) => {
             const on = active(item.href, item.exact);
             return (
-              <Link
-                key={item.href}
-                href={item.href as never}
-                style={{
-                  ...itemBase,
-                  color: on ? 'var(--pink)' : 'var(--muted)',
-                  borderTop: on ? '2px solid var(--pink)' : '2px solid transparent',
-                }}
-              >
+              <Link key={item.href} href={item.href as never} className={'mn-item' + (on ? ' es-activo' : '')} aria-current={on ? 'page' : undefined}>
+                <span className="mn-item-ico"><item.Icon size={19} strokeWidth={on ? 2.4 : 2} aria-hidden="true" /></span>
                 {item.label}
               </Link>
             );
           })}
-
           <button
+            type="button"
             onClick={() => setAbierto((v) => !v)}
             aria-expanded={abierto}
             aria-label="Abrir menú completo"
-            style={{
-              ...itemBase,
-              background: 'none', cursor: 'pointer',
-              fontFamily: 'inherit',
-              color: abierto || menuActivo ? 'var(--pink)' : 'var(--muted)',
-              borderTop: abierto || menuActivo ? '2px solid var(--pink)' : '2px solid transparent',
-              borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
-            }}
+            className={'mn-item' + (abierto || menuActivo ? ' es-activo' : '')}
           >
-            {abierto ? 'Cerrar' : 'Menú'}
+            <span className="mn-item-ico">{abierto ? <X size={19} strokeWidth={2.2} aria-hidden="true" /> : <Menu size={19} strokeWidth={2} aria-hidden="true" />}</span>
+            {abierto ? 'Cerrar' : 'Más'}
           </button>
         </div>
       </nav>

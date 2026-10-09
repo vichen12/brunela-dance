@@ -301,29 +301,29 @@ export default async function ChatPage({ searchParams }: {
 
 const CSS_DM = `
 .dm { display: flex; height: 100vh; overflow: hidden; background: #fff; }
-.dm-lateral { width: 270px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid #f0eeec; background: #fcfbfa; }
-.dm-lateral-cab { padding: 22px 18px 16px; border-bottom: 1px solid #f0eeec; }
+.dm-lateral { width: 270px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid #F6E7E1; background: #FFFAF6; }
+.dm-lateral-cab { padding: 22px 18px 16px; border-bottom: 1px solid #F6E7E1; }
 .dm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pink-deep); }
 .dm-lateral-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
-.dm-cuenta { font-size: 12px; color: #a8a29e; margin-top: 2px; }
+.dm-cuenta { font-size: 12px; color: #B39189; margin-top: 2px; }
 .dm-lista { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
 .dm-persona { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px; text-decoration: none; transition: background .2s; }
-.dm-persona:hover { background: #f5f5f4; }
+.dm-persona:hover { background: #FBF0EB; }
 .dm-persona.es-activa { background: var(--pink-wash); }
-.dm-ini { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #f0eeec; font-weight: 800; color: var(--pink-deep); }
+.dm-ini { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #F6E7E1; font-weight: 800; color: var(--pink-deep); }
 .dm-persona.es-activa .dm-ini { background: var(--pink); border-color: var(--pink); color: #fff; }
 .dm-persona-txt { min-width: 0; display: flex; flex-direction: column; }
 .dm-persona-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dm-persona.es-activa .dm-persona-nombre { font-weight: 800; color: var(--pink-deep); }
-.dm-persona-plan { font-size: 11.5px; color: #a8a29e; }
+.dm-persona-plan { font-size: 11.5px; color: #B39189; }
 .dm-mas { margin: 8px 4px 4px; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 700; color: var(--pink-deep); border: 1.5px solid var(--pink-line); }
 .dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.dm-cab { display: flex; align-items: center; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #f0eeec; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); flex-shrink: 0; }
+.dm-cab { display: flex; align-items: center; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #F6E7E1; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); flex-shrink: 0; }
 .dm-cab-ini { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; }
 .dm-cab-ini--brunela { background: var(--pink); color: #fff; box-shadow: 0 8px 18px -10px rgba(230,79,85,0.8); }
 .dm-cab-nombre { margin: 0; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dm-cab-sub { font-size: 12.5px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dm-vacio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px; text-align: center; color: #78716c; font-size: 14px; line-height: 1.6; }
+.dm-cab-sub { font-size: 12.5px; color: #8A6F68; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-vacio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px; text-align: center; color: #8A6F68; font-size: 14px; line-height: 1.6; }
 .dm-vacio > p:not(.dm-vacio-titulo) { max-width: 44ch; }
 .dm-vacio-ico { width: 64px; height: 64px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); margin-bottom: 8px; }
 .dm-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }

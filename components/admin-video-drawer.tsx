@@ -71,8 +71,8 @@ export type VideoRecord = {
 };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
@@ -80,7 +80,7 @@ const inp: React.CSSProperties = {
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -258,7 +258,7 @@ function VideoForm({
           <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
               <input defaultChecked={video.is_featured} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#5A4440" }}>Destacar este video</span>
             </label>
           </div>
         </div>
@@ -272,24 +272,24 @@ function VideoForm({
           {/* Solo lectura: cambiar el slug de una clase publicada rompe
               cualquier enlace que alguien haya guardado o compartido. Se muestra
               porque es la direccion de esa clase y a Brunela le sirve verla. */}
-          <input style={{ ...inp, background: "#fafaf9", color: "#78716c" }} defaultValue={video.slug} name="slug" readOnly />
+          <input style={{ ...inp, background: "#FFFAF6", color: "#8A6F68" }} defaultValue={video.slug} name="slug" readOnly />
         </F>
       </div>
 
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>
+      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#FFFAF6", border: "1px solid #F6E7E1" }}>
         <Lbl>Pistas de audio por idioma</Lbl>
-        <div style={{ fontSize: 11, color: "#78716c", marginTop: 8, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 11, color: "#8A6F68", marginTop: 8, lineHeight: 1.7 }}>
           {muxedLocales.length > 0 ? (
             <>
               Idiomas ya integrados en el video:{" "}
-              <strong style={{ color: "#1c1917" }}>
+              <strong style={{ color: "#3B2A2C" }}>
                 {["es", ...muxedLocales].join(", ").toUpperCase()}
               </strong>
             </>
           ) : (
             <>Solo espanol. Los idiomas extra se cargan al subir la clase, como un mp3 por idioma.</>
           )}
-          <div style={{ marginTop: 6, color: "#a8a29e" }}>
+          <div style={{ marginTop: 6, color: "#B39189" }}>
             Esto no se edita a mano: el worker de muxeo lo escribe cuando verifica que el
             idioma quedo dentro del video.
           </div>
@@ -313,7 +313,7 @@ function VideoForm({
 
       <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
         <BotonEnviar style={{
-          background: "#1c1917",
+          background: "#3B2A2C",
           color: "#fff", border: "none", borderRadius: 99,
           padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
           cursor: "pointer",

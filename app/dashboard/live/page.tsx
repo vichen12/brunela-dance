@@ -243,7 +243,7 @@ const CSS = `
 .sv .ad-mast { padding-bottom: 4px; }
 .sv-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .sv-card {
-  display: flex; gap: 22px; padding: 20px 22px; border-radius: 22px; border: 1px solid #e7e5e4; background: #fff;
+  display: flex; gap: 22px; padding: 20px 22px; border-radius: 22px; border: 1px solid #F0DED6; background: #fff;
   transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
 }
 .sv-card:hover { transform: translateY(-2px); border-color: var(--pink-line); box-shadow: 0 22px 40px -26px rgba(176,58,62,0.5); }
@@ -255,7 +255,7 @@ const CSS = `
 }
 .sv-fecha-semana { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pink-deep); }
 .sv-fecha-dia { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 38px; line-height: 1; letter-spacing: -0.04em; color: var(--ink); }
-.sv-fecha-mes { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #78716c; }
+.sv-fecha-mes { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #8A6F68; }
 .sv-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .sv-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sv-proxima { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -264,11 +264,11 @@ const CSS = `
 .sv-estado { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
 .sv-estado.es-ok { background: #dcfce7; color: #166534; }
 .sv-estado.es-invitada { background: var(--pink-mid); color: #fff; }
-.sv-plan { padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: #57534e; border: 1px solid #e7e5e4; }
+.sv-plan { padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: #6E5550; border: 1px solid #F0DED6; }
 .sv-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 23px; line-height: 1.15; letter-spacing: -0.03em; color: var(--ink); }
-.sv-desc { font-size: 14px; line-height: 1.6; color: #57534e; max-width: 72ch; }
+.sv-desc { font-size: 14px; line-height: 1.6; color: #6E5550; max-width: 72ch; }
 .sv-datos { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
-.sv-datos li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57534e; }
+.sv-datos li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #6E5550; }
 .sv-datos svg { color: var(--pink-mid); }
 .sv-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .sv-acciones form { display: contents; }
@@ -282,18 +282,18 @@ const CSS = `
 .sv-entrar:hover { background: #166534; }
 .sv-cancelar {
   display: inline-flex; align-items: center; height: 46px; padding: 0 20px; border-radius: 99px; cursor: pointer;
-  border: 1.5px solid #d6d3d1; background: #fff; color: #57534e; font: inherit; font-size: 13.5px; font-weight: 700; transition: border-color .2s, color .2s;
+  border: 1.5px solid #E6CCC2; background: #fff; color: #6E5550; font: inherit; font-size: 13.5px; font-weight: 700; transition: border-color .2s, color .2s;
 }
 .sv-cancelar:hover { border-color: var(--pink); color: var(--pink-deep); }
-.sv-pass { font-size: 13px; color: #57534e; }
+.sv-pass { font-size: 13px; color: #6E5550; }
 .sv-pass strong { color: var(--ink); letter-spacing: 0.04em; }
 .sv-pasadas { margin-top: 6px; }
 .sv-pasadas > summary {
   list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;
-  font-size: 13px; font-weight: 700; color: #78716c;
+  font-size: 13px; font-weight: 700; color: #8A6F68;
 }
 .sv-pasadas > summary::-webkit-details-marker { display: none; }
-.sv-pasadas > summary span { padding: 1px 8px; border-radius: 99px; background: #f5f5f4; font-size: 12px; }
+.sv-pasadas > summary span { padding: 1px 8px; border-radius: 99px; background: #FBF0EB; font-size: 12px; }
 .sv-ejemplo { display: flex; gap: 16px; padding: 18px; align-items: center; }
 .sv-ejemplo .sv-cuerpo { gap: 8px; align-items: flex-start; }
 .sv-ejemplo .sv-entrar { height: 40px; font-size: 13px; padding: 0 16px; }

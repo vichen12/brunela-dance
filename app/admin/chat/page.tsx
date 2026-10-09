@@ -555,7 +555,7 @@ export default async function AdminChatPage({ searchParams }: {
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "14px 18px", borderRadius: 16,
                     background: enabled ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "#fafafa",
-                    border: `1px solid ${enabled ? "var(--pink-line)" : "#f0eeec"}`,
+                    border: `1px solid ${enabled ? "var(--pink-line)" : "#F6E7E1"}`,
                     cursor: "pointer",
                   }}
                 >

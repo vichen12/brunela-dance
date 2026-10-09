@@ -95,12 +95,12 @@ export function AdminDrawer({
         }}
       >
         <div style={{
-          padding: "20px 24px", borderBottom: "1.5px solid #f0eeec",
+          padding: "20px 24px", borderBottom: "1.5px solid #F6E7E1",
           display: "flex", alignItems: "flex-start", justifyContent: "space-between",
           gap: 16, flexShrink: 0,
         }}>
           <div style={{ minWidth: 0 }}>
-            <h2 className="display" style={{ fontSize: 22, margin: 0, color: "#1c1917", lineHeight: 1.25 }}>
+            <h2 className="display" style={{ fontSize: 22, margin: 0, color: "#3B2A2C", lineHeight: 1.25 }}>
               {titulo}
             </h2>
             {subtitulo && (
@@ -112,7 +112,7 @@ export function AdminDrawer({
             aria-label="Cerrar"
             style={{
               flexShrink: 0, width: 34, height: 34, borderRadius: 10,
-              border: "1.5px solid #f0eeec", background: "#fff",
+              border: "1.5px solid #F6E7E1", background: "#fff",
               color: "var(--muted)", cursor: "pointer", fontSize: 17, lineHeight: 1,
             }}
           >×</button>
@@ -150,17 +150,17 @@ export function BloqueAvanzado({
 }) {
   return (
     <details style={{
-      border: "1.5px solid #f0eeec", borderRadius: 14,
+      border: "1.5px solid #F6E7E1", borderRadius: 14,
       padding: "12px 16px", marginTop: 14,
     }}>
       <summary style={{
         listStyle: "none", cursor: "pointer", display: "flex",
         alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 28,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#57534e" }}>{titulo}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#6E5550" }}>{titulo}</span>
         <span style={{
           fontSize: 10, fontWeight: 700, color: "var(--muted)",
-          background: "#fafaf9", padding: "3px 9px", borderRadius: 99,
+          background: "#FFFAF6", padding: "3px 9px", borderRadius: 99,
         }}>{cantidad} campos</span>
       </summary>
       <div style={{ marginTop: 14, display: "grid", gap: 12 }}>{children}</div>

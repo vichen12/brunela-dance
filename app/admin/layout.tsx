@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/src/features/auth/guards";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminHeader } from "@/components/admin-header";
+import { fuenteSistema } from "@/src/lib/fuente-sistema";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // checkbox (#menu-admin) que la cabecera abre y el velo cierra: CSS puro,
   // sin volver de cliente este layout. Estilos en globals.css (.adm-*).
   return (
-    <div className="adm-raiz" style={{ display: "flex", minHeight: "100vh", background: "#faf9f8", overflowX: "clip" }}>
+    <div className={`adm-raiz sistema ${fuenteSistema.variable}`} style={{ display: "flex", minHeight: "100vh", overflowX: "clip" }}>
       <input type="checkbox" id="menu-admin" className="adm-toggle" tabIndex={-1} aria-hidden="true" />
       <label htmlFor="menu-admin" className="adm-velo" aria-hidden="true" />
       <div className="adm-lateral">

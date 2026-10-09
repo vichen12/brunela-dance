@@ -42,19 +42,19 @@ export type ProgramDayRecord = { id: string; program_id: string; day_number: num
 export type VideoLookup = { id: string; slug: string; title_i18n: Record<string, string> | null };
 
 const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "9px 13px",
+  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
+  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
 
 const tarjeta: React.CSSProperties = {
-  background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
+  background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
 };
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#78716c", textTransform: "uppercase", marginBottom: 5 }}>
+    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
       {children}
     </span>
   );
@@ -290,30 +290,30 @@ export function EditarPrograma({
         onCerrar={() => setAbierto(false)}
       >
 
-              <div style={{ borderTop: "1px solid #f0eeec", padding: "22px" }}>
+              <div style={{ borderTop: "1px solid #F6E7E1", padding: "22px" }}>
                 <ProgramForm actionLabel="Guardar cambios" program={program} onGuardado={() => { setAbierto(false); setGuardado(true); }} />
 
                 {/* Días */}
-                <div style={{ marginTop: 26, borderTop: "1px solid #f0eeec", paddingTop: 20 }}>
+                <div style={{ marginTop: 26, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
                   <Lbl>Días del plan</Lbl>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
                     {days.length === 0 && (
-                      <p style={{ fontSize: 12.5, color: "#a8a29e" }}>
+                      <p style={{ fontSize: 12.5, color: "#B39189" }}>
                         Todavía no hay días. Agregá el primero abajo.
                       </p>
                     )}
                     {days.map((day) => (
                       <div key={day.id} style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        gap: 14, borderRadius: 12, border: "1px solid #f0eeec",
-                        background: "#fafaf9", padding: "10px 14px",
+                        gap: 14, borderRadius: 12, border: "1px solid #F6E7E1",
+                        background: "#FFFAF6", padding: "10px 14px",
                       }}>
-                        <span style={{ fontSize: 13, color: "#1c1917" }}>
+                        <span style={{ fontSize: 13, color: "#3B2A2C" }}>
                           <strong style={{ fontWeight: 700 }}>Día {day.day_number}</strong>
                           {/* El titulo, no el slug: Brunela no tiene por que saber
                               que "demo-barra-suelo-i" es "Barra de suelo I". */}
-                          <span style={{ color: "#78716c" }}> — {tituloDe(videoById.get(day.video_id), day.video_id)}</span>
+                          <span style={{ color: "#8A6F68" }}> — {tituloDe(videoById.get(day.video_id), day.video_id)}</span>
                         </span>
                         <form action={deleteProgramDayAction}>
                           <input name="id" type="hidden" value={day.id} />

@@ -31,7 +31,7 @@ export function SkTarjeta({
 }) {
   return (
     <div style={{
-      background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 20,
+      background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 20,
       padding: "22px 24px", ...style,
     }}>{children}</div>
   );
@@ -71,7 +71,7 @@ export function SkMetricas({ n = 4 }: { n?: number }) {
 /** Listado de filas, como los de /admin. */
 export function SkFilas({ n = 6, alto = 62 }: { n?: number; alto?: number }) {
   return (
-    <div style={{ background: "#fff", border: "1.5px solid #f0eeec", borderRadius: 18, overflow: "hidden" }}>
+    <div style={{ background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 18, overflow: "hidden" }}>
       {Array.from({ length: n }, (_, i) => (
         <div key={i} style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",

@@ -134,9 +134,9 @@ function xhrSend(
 const inp: React.CSSProperties = {
   width: "100%",
   borderRadius: 10,
-  border: "1px solid #e7e5e4",
+  border: "1px solid #F0DED6",
   background: "#fff",
-  color: "#1c1917",
+  color: "#3B2A2C",
   padding: "9px 13px",
   fontSize: 13,
   outline: "none",
@@ -147,7 +147,7 @@ const lbl: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
   letterSpacing: "0.09em",
-  color: "#78716c",
+  color: "#8A6F68",
   textTransform: "uppercase",
   marginBottom: 5
 };
@@ -547,11 +547,11 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
             Es opcional a proposito: una clase suelta (lo que ve Corps de
             Ballet) no pertenece a ningun plan, y ese es el caso normal.
         */}
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e7e5e4" }}>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F0DED6" }}>
           <span style={lbl}>Agregar a un plan de trabajo (opcional)</span>
 
           {programas.length === 0 ? (
-            <p style={{ fontSize: 11.5, color: "#78716c", lineHeight: 1.7, marginTop: 6 }}>
+            <p style={{ fontSize: 11.5, color: "#8A6F68", lineHeight: 1.7, marginTop: 6 }}>
               Todavía no hay ningún plan de trabajo armado. Se crean en{" "}
               <a href="/admin/programs" style={{ color: "var(--pink-mid)", fontWeight: 700 }}>
                 Planes de trabajo
@@ -560,7 +560,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 11.5, color: "#a8a29e", lineHeight: 1.7, margin: "4px 0 10px" }}>
+              <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.7, margin: "4px 0 10px" }}>
                 Un plan de trabajo es una serie de días en orden — «Trabajo de pies, 14 días».
                 Si esta clase es uno de esos días, elegí cuál.
               </p>
@@ -584,7 +584,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
                 </Field>
                 <Field label="Día del plan">
                   <input
-                    style={{ ...inp, ...(programId ? null : { background: "#f5f5f4", color: "#a8a29e" }) }}
+                    style={{ ...inp, ...(programId ? null : { background: "#FBF0EB", color: "#B39189" }) }}
                     type="number"
                     min={1}
                     name="programDayNumber"
@@ -597,7 +597,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
                 </Field>
               </div>
               {programId && (
-                <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 8, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 11, color: "#B39189", marginTop: 8, lineHeight: 1.6 }}>
                   Si ese día ya tenía otra clase, esta la reemplaza.
                 </p>
               )}
@@ -607,19 +607,19 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       </BloqueSoloParaVos>
 
       {/* Video file */}
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>
+      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#FFFAF6", border: "1px solid #F6E7E1" }}>
         <span style={lbl}>Archivo de video (obligatorio)</span>
         <input type="file" name="videoFile" accept="video/*" required disabled={busy} style={{ fontSize: 13, marginTop: 6 }} />
-        <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 6, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: "#B39189", marginTop: 6, lineHeight: 1.6 }}>
           Va del navegador directo a Bunny, sin pasar por el servidor. El audio de este archivo es el
           idioma original (Espanol).
         </p>
       </div>
 
       {/* Per-language audio */}
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#fafaf9", border: "1px solid #f0eeec" }}>
+      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#FFFAF6", border: "1px solid #F6E7E1" }}>
         <span style={lbl}>Idiomas adicionales (opcional)</span>
-        <p style={{ fontSize: 11, color: "#a8a29e", margin: "4px 0 10px", lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, color: "#B39189", margin: "4px 0 10px", lineHeight: 1.6 }}>
           Un mp3 por idioma, a {AUDIO_BITRATE_KBPS} kbps (hasta {maxAudioMinutes()} minutos, maximo{" "}
           {Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB). Se unen al video automaticamente; puede tardar
           una o dos horas. Mientras tanto la clase se ve normal en Espanol.
@@ -627,7 +627,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
           {AUDIO_LOCALES.map((entry) => (
             <label key={entry.locale} style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", marginBottom: 5 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#8A6F68", marginBottom: 5 }}>
                 {entry.locale.toUpperCase()} {entry.label}
               </span>
               <input
@@ -650,7 +650,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
 
       <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, cursor: "pointer" }}>
         <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este video</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#5A4440" }}>Destacar este video</span>
       </label>
 
       {(busy || phase === "done" || phase === "error") && (
@@ -679,7 +679,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
               <div style={{ height: 6, background: "var(--pink-soft)", borderRadius: 99, marginTop: 10, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${progress}%`, borderRadius: 99, background: phase === "done" ? "#22c55e" : "linear-gradient(90deg, var(--pink), var(--pink-mid))", transition: "width 0.2s" }} />
               </div>
-              <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 6 }}>{progress}%</p>
+              <p style={{ fontSize: 11, color: "#B39189", marginTop: 6 }}>{progress}%</p>
             </>
           )}
         </div>
@@ -690,7 +690,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
           type="submit"
           disabled={busy || hasSizeError}
           style={{
-            background: busy || hasSizeError ? "#d6d3d1" : "linear-gradient(135deg, var(--pink), var(--pink-mid))",
+            background: busy || hasSizeError ? "#E6CCC2" : "linear-gradient(135deg, var(--pink), var(--pink-mid))",
             color: "#fff",
             border: "none",
             borderRadius: 99,

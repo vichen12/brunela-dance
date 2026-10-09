@@ -22,8 +22,8 @@ export function BloqueSoloParaVos({ children }: { children: React.ReactNode }) {
       style={{
         marginTop: 18,
         borderRadius: 14,
-        border: "1px solid #e7e5e4",
-        background: "#fafaf9",
+        border: "1px solid #F0DED6",
+        background: "#FFFAF6",
         padding: "16px 18px",
       }}
     >
@@ -34,12 +34,12 @@ export function BloqueSoloParaVos({ children }: { children: React.ReactNode }) {
             fontWeight: 700,
             letterSpacing: "0.09em",
             textTransform: "uppercase",
-            color: "#44403c",
+            color: "#5A4440",
           }}
         >
           Solo para vos
         </span>
-        <span style={{ fontSize: 11, color: "#a8a29e", lineHeight: 1.6 }}>
+        <span style={{ fontSize: 11, color: "#B39189", lineHeight: 1.6 }}>
           Nada de esto se muestra en la ficha de la clase.
         </span>
       </header>
