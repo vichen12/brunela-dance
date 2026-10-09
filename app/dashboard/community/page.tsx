@@ -1,7 +1,9 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
-import { Users, Gem } from "lucide-react";
+import { Archive, ArchiveRestore, Gem, MessageCircle, Plus, Shield, Users } from "lucide-react";
+import { BotonEnviar } from "@/components/boton-enviar";
+import { AdminBoton, AdminCabecera, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -73,9 +75,6 @@ async function archiveRoomAction(formData: FormData) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-const inp = "w-full rounded-xl border border-black/8 bg-white/80 px-3 py-2 text-xs outline-none focus:border-pink-400 transition";
-const lbl = "block text-[9px] font-bold uppercase tracking-widest text-[color:var(--muted)] mb-1";
-
 const TIER_LABEL: Record<string, string> = {
   none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
 };
@@ -126,205 +125,151 @@ export default async function CommunityPage({ searchParams }: {
 
   if (!isAdmin && accessibleRooms.length === 0) {
     return (
-      <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-        <section className="page-shell space-y-6">
-          <div className="hero-stage">
-            <p className="eyebrow">Comunidad</p>
-            <h1 className="display mt-5 text-5xl leading-none md:text-6xl">
-              Chat <span style={{ color: "var(--pink)", fontStyle: "italic" }}>del estudio.</span>
-            </h1>
-            {/* El chat de comunidad ESTA construido y funcionando: salas, tiempo
-                real y moderacion. Lo unico que falta son los canales, que los
-                abre Brunela desde /admin/chat. Decir "estara disponible pronto"
-                era mentirle a la alumna sobre la causa. */}
-            <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-              Todavía no hay canales abiertos para tu plan.
-            </p>
-          </div>
-
-          <div style={{
-            borderRadius: 26, border: "1.5px dashed var(--pink-soft)",
-            background: "#fff", padding: "56px 32px", textAlign: "center",
-          }}>
-            <div style={{
-              width: 96, height: 96, borderRadius: "50%", margin: "0 auto 26px",
-              background: "var(--pink-wash)", color: "var(--pink)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg width="42" height="42" viewBox="0 0 16 16" fill="none">
-                <path d="M2.5 3.5h11c.28 0 .5.22.5.5v6c0 .28-.22.5-.5.5H7L4 13V10.5H2.5c-.28 0-.5-.22-.5-.5V4c0-.28.22-.5.5-.5z"
-                  stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-              </svg>
-            </div>
-
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 14 }}>
-              Sin canales
-            </p>
-            <h2 className="display" style={{ fontSize: 30, lineHeight: 1.25, color: "var(--ink)" }}>
-              Acá van a estar<br />
-              <span style={{ color: "var(--pink)", fontStyle: "italic" }}>los canales del estudio.</span>
-            </h2>
-            <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 14, lineHeight: 1.7 }}>
-              Cuando Brunela abra un canal para tu plan, lo vas a ver acá<br />
-              y vas a poder escribir con las demás alumnas.
-            </p>
-
-            {/* En vez de "te avisaremos": una salida que SI existe hoy. */}
-            <Link href={"/dashboard/chat" as never} style={{
-              display: "inline-flex", alignItems: "center", gap: 9, marginTop: 26,
-              background: "var(--pink)", color: "#fff", textDecoration: "none",
-              padding: "13px 26px", borderRadius: 999, fontSize: 13.5, fontWeight: 700,
-            }}>
-              Mientras tanto, escribile a Brunela
-            </Link>
-          </div>
+      <main className="cm-vacio">
+        <style>{CSS}</style>
+        <section className="cm-shell">
+          {/* El chat de comunidad ESTA construido y funcionando: salas, tiempo
+              real y moderacion. Lo unico que falta son los canales, que los
+              abre Brunela desde /admin/chat. Decir "estara disponible pronto"
+              era mentirle a la alumna sobre la causa. */}
+          <AdminCabecera
+            eyebrow="Comunidad"
+            titulo="El chat del estudio"
+            lede="Canales para escribir con las demás alumnas de tu plan. Todavía no hay ninguno abierto para el tuyo."
+          />
+          <AdminGuia
+            rotuloEjemplo="Así se ve un canal"
+            ejemplo={
+              <div className="ad-guia-flota cm-ejemplo">
+                <div className="cm-ejemplo-cab"><Users size={15} strokeWidth={2} /> General · Ballet</div>
+                <div className="cm-burbuja" style={{ animationDelay: "0.3s" }}><strong>Sofía</strong>¿Alguien más con el día 3 de pies? Me cuesta el relevé 😅</div>
+                <div className="cm-burbuja es-brunela" style={{ animationDelay: "0.6s" }}><strong>Brunela</strong>Apoyá bien el metatarso antes de subir, sin apuro.</div>
+                <div className="cm-burbuja es-mia" style={{ animationDelay: "0.9s" }}>¡Gracias! Mañana lo pruebo.</div>
+              </div>
+            }
+            eyebrow="Sin canales todavía"
+            titulo="Cuando Brunela abra uno, aparece acá."
+            pasos={[
+              { icono: <Users size={18} strokeWidth={2} />, titulo: "Canales por plan", texto: "Escribís con las alumnas que entrenan en tu mismo nivel." },
+              { icono: <MessageCircle size={18} strokeWidth={2} />, titulo: "En tiempo real", texto: "Los mensajes llegan al instante, sin recargar." },
+              { icono: <Shield size={18} strokeWidth={2} />, titulo: "Moderado por Brunela", texto: "Un espacio cuidado para entrenar en compañía." },
+            ]}
+            cta={<AdminBoton href="/dashboard/chat" lleno><MessageCircle size={16} strokeWidth={2} aria-hidden="true" /> Mientras tanto, escribile a Brunela</AdminBoton>}
+          />
         </section>
       </main>
     );
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body), sans-serif" }}>
+    <div className="cm">
+      <style>{CSS}</style>
 
-      {/* Sidebar */}
-      <div className="chat-col-sidebar" style={{
-        width: 230, flexShrink: 0, borderRight: "1px solid var(--pink-soft)",
-        background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
-        display: "flex", flexDirection: "column",
-      }}>
-        <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--pink-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>CANALES</p>
+      {/* ── Canales ── */}
+      <aside className="chat-col-sidebar cm-lateral" aria-label="Canales">
+        <div className="cm-lateral-cab">
+          <div>
+            <p className="cm-eyebrow">Comunidad</p>
+            <p className="cm-lateral-titulo">Canales</p>
+          </div>
           {isAdmin && (
             <Link
-              href={showCreate ? "/dashboard/community" : "/dashboard/community?create=1"}
-              style={{
-                width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
-                background: showCreate ? "var(--pink)" : "var(--pink-wash)", color: showCreate ? "#fff" : "var(--pink)",
-                fontSize: 14, fontWeight: 700, textDecoration: "none", border: "1px solid var(--pink-soft)",
-              }}
-            >{showCreate ? "×" : "+"}</Link>
+              href={(showCreate ? "/dashboard/community" : "/dashboard/community?create=1") as never}
+              className={"cm-nuevo" + (showCreate ? " es-abierto" : "")}
+              aria-label={showCreate ? "Cerrar" : "Crear un canal"}
+              title={showCreate ? "Cerrar" : "Crear un canal"}
+            >
+              <Plus size={16} strokeWidth={2.4} />
+            </Link>
           )}
         </div>
 
-        {/* Admin create form */}
         {isAdmin && showCreate && (
-          <form action={createRoomAction} style={{ padding: "12px 12px 8px", borderBottom: "1px solid var(--pink-soft)", background: "var(--pink-wash)" }}>
-            <div style={{ marginBottom: 8 }}>
-              <label className={lbl}>Nombre</label>
-              <input className={inp} name="name" required placeholder="General Ballet..." autoFocus/>
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <label className={lbl}>Tipo</label>
-              <Desplegable
-                className={inp} name="type" defaultValue="community"
-                opciones={[
-                  { value: "community", label: "Comunidad" },
-                  { value: "tier", label: "Exclusiva" },
-                ]}
-              />
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <label className={lbl}>Plan mínimo</label>
-              <Desplegable
-                className={inp} name="tier_required" defaultValue="none"
-                opciones={[
-                  { value: "none", label: "Sin restricción" },
-                  { value: "corps_de_ballet", label: "Corps de Ballet" },
-                  { value: "solista", label: "Solista" },
-                  { value: "principal", label: "Principal" },
-                ]}
-              />
-            </div>
-            <button type="submit" style={{
-              width: "100%", padding: "7px 0", borderRadius: 10, border: "none", cursor: "pointer",
-              background: "var(--pink)", color: "#fff", fontSize: 11, fontWeight: 700,
-            }}>Crear sala</button>
+          <form action={createRoomAction} className="cm-crear">
+            <label className="cm-campo">
+              <span>Nombre</span>
+              <input name="name" required placeholder="General · Ballet" autoFocus />
+            </label>
+            <label className="cm-campo">
+              <span>Tipo</span>
+              <Desplegable name="type" defaultValue="community" opciones={[
+                { value: "community", label: "Comunidad (todas)" },
+                { value: "tier", label: "Exclusiva de un plan" },
+              ]} />
+            </label>
+            <label className="cm-campo">
+              <span>Plan mínimo</span>
+              <Desplegable name="tier_required" defaultValue="none" opciones={[
+                { value: "none", label: "Sin restricción" },
+                { value: "corps_de_ballet", label: "Corps de Ballet" },
+                { value: "solista", label: "Solista" },
+                { value: "principal", label: "Principal" },
+              ]} />
+            </label>
+            <BotonEnviar className="cm-crear-btn" pendingLabel="Creando…"><Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Crear canal</BotonEnviar>
           </form>
         )}
 
-        {/* Room list */}
-        <nav style={{ padding: "8px", flex: 1, overflowY: "auto" }}>
+        <nav className="cm-salas">
           {accessibleRooms.map((room) => {
             const active = room.id === currentRoom?.id;
             return (
-              <div key={room.id} style={{ marginBottom: 2 }}>
-                <Link
-                  href={`/dashboard/community?room=${room.id}` as never}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "9px 10px", borderRadius: 10,
-                    background: active ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "transparent",
-                    border: active ? "1px solid var(--pink-line)" : "1px solid transparent",
-                    textDecoration: "none",
-                    opacity: room.is_archived ? 0.5 : 1,
-                  }}
-                >
-                  {room.type === "community" ? <Users size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} /> : <Gem size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      color: active ? "var(--pink)" : "var(--ink)",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block",
-                    }}>{room.name}</span>
-                    {isAdmin && room.tier_required !== "none" && (
-                      <span style={{ fontSize: 9, color: "var(--muted)" }}>{TIER_LABEL[room.tier_required]}</span>
-                    )}
-                  </div>
-                  {isAdmin && room.is_archived && (
-                    <span style={{ fontSize: 8, background: "#fef3c7", color: "#92400e", padding: "1px 5px", borderRadius: 99, fontWeight: 700, flexShrink: 0 }}>ARC</span>
-                  )}
+              <div key={room.id} className={"cm-sala" + (active ? " es-activa" : "") + (room.is_archived ? " es-archivada" : "")}>
+                <Link href={`/dashboard/community?room=${room.id}` as never} className="cm-sala-link" aria-current={active ? "page" : undefined}>
+                  <span className="cm-sala-ico">
+                    {room.type === "community" ? <Users size={15} strokeWidth={1.9} /> : <Gem size={15} strokeWidth={1.9} />}
+                  </span>
+                  <span className="cm-sala-txt">
+                    <span className="cm-sala-nombre">{room.name}</span>
+                    {(isAdmin && room.tier_required !== "none") || room.is_archived ? (
+                      <span className="cm-sala-sub">
+                        {room.is_archived ? "Archivado" : `Desde ${TIER_LABEL[room.tier_required]}`}
+                      </span>
+                    ) : null}
+                  </span>
                 </Link>
-                {/* Admin archive toggle */}
                 {isAdmin && (
-                  <form action={archiveRoomAction} style={{ paddingLeft: 34 }}>
-                    <input type="hidden" name="id" value={room.id}/>
-                    <input type="hidden" name="archived" value={String(room.is_archived)}/>
-                    <button type="submit" style={{
-                      fontSize: 9, color: "#a8a29e", background: "none", border: "none",
-                      cursor: "pointer", padding: "2px 0 4px", fontWeight: 600,
-                    }}>{room.is_archived ? "Desarchivar" : "Archivar"}</button>
+                  <form action={archiveRoomAction}>
+                    <input type="hidden" name="id" value={room.id} />
+                    <input type="hidden" name="archived" value={String(room.is_archived)} />
+                    <BotonEnviar className="cm-archivar" pendingLabel="…" title={room.is_archived ? "Desarchivar" : "Archivar"}>
+                      {room.is_archived ? <ArchiveRestore size={14} strokeWidth={2} /> : <Archive size={14} strokeWidth={2} />}
+                    </BotonEnviar>
                   </form>
                 )}
               </div>
             );
           })}
           {isAdmin && accessibleRooms.length === 0 && (
-            <p style={{ fontSize: 11, color: "var(--muted)", padding: "8px 10px" }}>Tocá + para crear la primera sala.</p>
+            <p className="cm-sin">Todavía no hay canales. Creá el primero con el <strong>+</strong>.</p>
           )}
         </nav>
-      </div>
+      </aside>
 
-      {/* Chat area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Header */}
-        <div style={{
-          padding: "16px 24px", borderBottom: "1px solid var(--pink-soft)",
-          background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
-          display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: "linear-gradient(135deg, var(--pink-soft), var(--rose))",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-          }}>
-            {currentRoom?.type === "community" ? <Users size={16} strokeWidth={1.8} /> : <Gem size={16} strokeWidth={1.8} />}
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{currentRoom?.name ?? "Comunidad"}</p>
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
-              {currentRoom?.type === "community"
-                ? "Canal abierto a todas las alumnas"
-                : `Exclusivo ${TIER_LABEL[currentRoom?.tier_required ?? "none"]}`}
+      {/* ── Conversación ── */}
+      <div className="cm-chat">
+        <header className="cm-chat-cab">
+          <span className="cm-chat-ico">
+            {currentRoom?.type === "tier" ? <Gem size={18} strokeWidth={1.9} /> : <Users size={18} strokeWidth={1.9} />}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="cm-chat-titulo">{currentRoom?.name ?? "Comunidad"}</p>
+            {/* Sin canal elegido decia "Exclusivo Todas": tomaba el plan de un
+                canal que no existe. */}
+            <p className="cm-chat-sub">
+              {!currentRoom
+                ? "Elegí un canal para empezar"
+                : currentRoom.type === "community"
+                  ? "Canal abierto a todas las alumnas"
+                  : `Exclusivo para ${TIER_LABEL[currentRoom.tier_required]}`}
             </p>
           </div>
           {isAdmin && (
-            <Link href={"/admin/chat" as never} style={{
-              padding: "6px 14px", borderRadius: 99, textDecoration: "none",
-              fontSize: 10, fontWeight: 700, background: "var(--pink-wash)", color: "var(--pink)",
-              border: "1px solid var(--pink-soft)",
-            }}>Panel de moderación →</Link>
+            <Link href={"/admin/chat" as never} className="cm-moderar">
+              <Shield size={14} strokeWidth={2} aria-hidden="true" /> Moderación
+            </Link>
           )}
-        </div>
+        </header>
 
         {currentRoom ? (
           <ChatRoom
@@ -332,17 +277,83 @@ export default async function CommunityPage({ searchParams }: {
             userId={user.id}
             isAdmin={isAdmin}
             initialMessages={initialMessages}
-            placeholder={`Escribir en ${currentRoom.name}...`}
+            placeholder={`Escribir en ${currentRoom.name}…`}
           />
         ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10 }}>
-            <Users size={30} strokeWidth={1.5} style={{ color: "var(--pink)" }} />
-            <p style={{ color: "var(--ink)", fontSize: 14, fontWeight: 600 }}>
-              {isAdmin ? "Creá la primera sala con el botón +" : "Seleccioná un canal"}
-            </p>
+          <div className="cm-chat-vacio">
+            <span className="cm-chat-vacio-ico"><Users size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+            <p className="cm-chat-vacio-titulo">{isAdmin ? "Abrí el primer canal" : "Elegí un canal"}</p>
+            <p>{isAdmin ? "Con el + de la izquierda: un canal para todas, o uno exclusivo de un plan." : "A la izquierda están los canales de tu plan."}</p>
+            {isAdmin && (
+              <Link href={"/dashboard/community?create=1" as never} className="ad-btn ad-btn--lleno"><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear canal</Link>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
+
+const CSS = `
+.cm { display: flex; height: 100vh; overflow: hidden; background: #fff; }
+.cm-lateral { width: 270px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid #f0eeec; background: #fcfbfa; }
+.cm-lateral-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 22px 18px 16px; border-bottom: 1px solid #f0eeec; }
+.cm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pink-deep); }
+.cm-lateral-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
+.cm-nuevo {
+  width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+  background: var(--pink); color: #fff; box-shadow: 0 8px 16px -10px rgba(230,79,85,0.8); transition: transform .3s cubic-bezier(.16,1,.3,1), background .2s;
+}
+.cm-nuevo:hover { background: var(--pink-mid); }
+.cm-nuevo.es-abierto { transform: rotate(45deg); background: var(--ink); }
+.cm-crear { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; border-bottom: 1px solid #f0eeec; background: #fff; }
+.cm-campo { display: flex; flex-direction: column; gap: 5px; }
+.cm-campo > span { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #78716c; }
+.cm-campo input { border-radius: 11px; border: 1.5px solid #e7e5e4; padding: 0.6rem 0.8rem; font-size: 13.5px; }
+.cm-campo input:focus { border-color: var(--pink); }
+.cm-campo .dsp-boton { min-height: 40px; border-color: #e7e5e4; font-size: 13.5px; }
+.cm-crear-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border-radius: 99px; border: 0; cursor: pointer;
+  background: var(--pink); color: #fff; font: inherit; font-size: 13.5px; font-weight: 700; margin-top: 2px;
+}
+.cm-salas { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.cm-sala { display: flex; align-items: center; gap: 4px; border-radius: 14px; transition: background .2s; }
+.cm-sala:hover { background: #f5f5f4; }
+.cm-sala.es-activa { background: var(--pink-wash); }
+.cm-sala.es-archivada { opacity: 0.55; }
+.cm-sala form { display: contents; }
+.cm-sala-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 9px 10px; text-decoration: none; }
+.cm-sala-ico { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #78716c; border: 1px solid #f0eeec; }
+.cm-sala.es-activa .cm-sala-ico { background: var(--pink); color: #fff; border-color: var(--pink); }
+.cm-sala-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cm-sala-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-sala.es-activa .cm-sala-nombre { font-weight: 800; color: var(--pink-deep); }
+.cm-sala-sub { font-size: 11.5px; color: #a8a29e; }
+.cm-archivar { width: 30px; height: 30px; margin-right: 6px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; border: 0; background: transparent; color: #a8a29e; cursor: pointer; opacity: 0; transition: opacity .2s, background .2s, color .2s; }
+.cm-sala:hover .cm-archivar, .cm-archivar:focus-visible { opacity: 1; }
+.cm-archivar:hover { background: #fff; color: var(--ink); }
+.cm-sin { font-size: 13px; line-height: 1.55; color: #78716c; padding: 10px; }
+
+.cm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cm-chat-cab { display: flex; align-items: center; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #f0eeec; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); flex-shrink: 0; }
+.cm-chat-ico { width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); }
+.cm-chat-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-chat-sub { font-size: 12.5px; color: #78716c; }
+.cm-moderar { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 99px; text-decoration: none; font-size: 12.5px; font-weight: 700; color: var(--ink); border: 1.5px solid #e7e5e4; transition: border-color .2s; }
+.cm-moderar:hover { border-color: var(--ink); }
+.cm-chat-vacio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; color: #78716c; font-size: 14px; }
+.cm-chat-vacio-ico { width: 64px; height: 64px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); margin-bottom: 6px; }
+.cm-chat-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
+.cm-chat-vacio .ad-btn { margin-top: 8px; }
+
+.cm-vacio { padding-bottom: 80px; }
+.cm-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
+.cm-ejemplo { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.cm-ejemplo-cab { display: flex; align-items: center; gap: 7px; padding-bottom: 10px; border-bottom: 1px solid #f5f5f4; font-weight: 800; font-size: 13px; color: var(--ink); }
+.cm-burbuja { max-width: 85%; padding: 9px 13px; border-radius: 16px 16px 16px 4px; background: #f5f5f4; font-size: 13px; line-height: 1.45; color: var(--ink); animation: ad-entra .5s cubic-bezier(.16,1,.3,1) both; }
+.cm-burbuja strong { display: block; font-size: 11px; color: #78716c; margin-bottom: 2px; }
+.cm-burbuja.es-brunela { background: var(--pink-wash); }
+.cm-burbuja.es-brunela strong { color: var(--pink-deep); }
+.cm-burbuja.es-mia { align-self: flex-end; border-radius: 16px 16px 4px 16px; background: var(--pink-mid); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .cm-burbuja { animation: none; } }
+`;
