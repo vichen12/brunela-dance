@@ -13,6 +13,8 @@ const ROUTES: Record<string, string> = {
   "/admin/documents":     "Documentos",
   "/admin/users":         "Alumnas",
   "/admin/live":          "Sesiones en vivo",
+  "/admin/calendario":    "Calendario",
+  "/admin/sesiones-privadas": "Sesiones privadas",
   "/admin/mensajes":      "Mensajes",
   "/admin/comunidad":     "Comunidad",
   "/admin/chat":          "Moderación",
