@@ -3,6 +3,9 @@ import { Bodoni_Moda, Great_Vibes, Montserrat, Roboto } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { PublicLanguageProvider } from "@/components/language-provider";
 import "./globals.css";
+import "./estilos/landing.css";
+import "./estilos/acceso.css";
+import { fuenteSistema } from "@/src/lib/fuente-sistema";
 
 const bodyFont = Roboto({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "700", "900"] });
 const displayFont = Montserrat({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700", "800", "900"] });
@@ -49,7 +52,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable} ${serifFont.variable}`} suppressHydrationWarning>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable} ${serifFont.variable} ${fuenteSistema.variable}`} suppressHydrationWarning>
         <PublicLanguageProvider>
           {children}
         </PublicLanguageProvider>
