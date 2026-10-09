@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
@@ -101,8 +102,9 @@ export default async function AdminLivePage({
     consultaSesiones.order("starts_at", { ascending: false }),
     supabase
       .from("live_session_bookings")
-      .select("live_session_id, status")
-      .in("status", ["reserved", "attended"]),
+      // Con nombre: Brunela tiene que ver QUIEN se anoto, no solo cuantas.
+      .select("live_session_id, user_id, status, profiles(full_name, email, membership_tier)")
+      .in("status", ["reserved", "waitlisted", "attended"]),
     supabase
       .from("live_session_access_links")
       .select("live_session_id, join_url, passcode"),
@@ -114,10 +116,21 @@ export default async function AdminLivePage({
       .select("live_session_id, user_id, profiles(full_name, email)"),
   ]);
 
-  const bookingsBySession = (bookingsData ?? []).reduce<Record<string, number>>((acc, b) => {
-    acc[b.live_session_id] = (acc[b.live_session_id] ?? 0) + 1;
-    return acc;
-  }, {});
+  type Inscripta = { id: string; nombre: string; estado: string; tier: string };
+  const inscriptasPorSesion: Record<string, Inscripta[]> = {};
+  for (const b of (bookingsData ?? []) as unknown as { live_session_id: string; user_id: string; status: string; profiles: { full_name: string | null; email: string; membership_tier: string } | { full_name: string | null; email: string; membership_tier: string }[] | null }[]) {
+    const p = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
+    (inscriptasPorSesion[b.live_session_id] ??= []).push({
+      id: b.user_id,
+      nombre: p?.full_name?.trim() || p?.email?.split("@")[0] || "Alumna",
+      estado: b.status,
+      tier: p?.membership_tier ?? "none",
+    });
+  }
+  // La cuenta de reservas no incluye la lista de espera: es lo que ocupa cupo.
+  const bookingsBySession = Object.fromEntries(
+    Object.entries(inscriptasPorSesion).map(([k, v]) => [k, v.filter((i) => i.estado !== "waitlisted").length])
+  ) as Record<string, number>;
 
   const accessLinksBySession = (accessLinksData ?? []).reduce<Record<string, { join_url: string; passcode: string | null }>>((acc, a) => {
     acc[a.live_session_id] = { join_url: a.join_url, passcode: a.passcode };
@@ -299,6 +312,31 @@ export default async function AdminLivePage({
                     </div>
                   </div>
 
+                  {/* Quienes se inscribieron: nombre, plan y estado, cada una
+                      con enlace a su perfil. */}
+                  {(inscriptasPorSesion[session.id]?.length ?? 0) > 0 && (
+                    <details className="lv-inscriptas">
+                      <summary>
+                        <Users size={14} strokeWidth={2.2} aria-hidden="true" />
+                        Ver inscriptas <span>{inscriptasPorSesion[session.id].length}</span>
+                      </summary>
+                      <ul>
+                        {inscriptasPorSesion[session.id].map((i) => (
+                          <li key={i.id}>
+                            <Link href={`/admin/users/${i.id}` as never} className="lv-inscripta">
+                              <span className="lv-inscripta-ini" aria-hidden="true">{i.nombre[0]?.toUpperCase()}</span>
+                              <span className="lv-inscripta-nombre">{i.nombre}</span>
+                              <span className="lv-inscripta-plan">{TIER_NOMBRE[i.tier] ?? "Sin plan"}</span>
+                              <span className={"lv-inscripta-estado es-" + i.estado}>
+                                {i.estado === "waitlisted" ? "En espera" : i.estado === "attended" ? "Asistió" : "Reservó"}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+
                   {/* Edicion en panel lateral. Antes el formulario de 17
                       campos de CADA sesion vivia aca dentro de un <details>:
                       oculto, pero renderizado igual. */}
@@ -315,7 +353,21 @@ export default async function AdminLivePage({
   );
 }
 
+const TIER_NOMBRE: Record<string, string> = { none: "Sin plan", corps_de_ballet: "Corps de Ballet", solista: "Solista", principal: "Principal" };
+
 const CSS = `
+.lv-inscriptas { margin: 0 20px 12px; border-top: 1px solid var(--linea); padding-top: 10px; }
+.lv-inscriptas > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; user-select: none; }
+.lv-inscriptas > summary::-webkit-details-marker { display: none; }
+.lv-inscriptas > summary span { background: #fff; border-radius: 99px; padding: 0 8px; font-size: 12px; }
+.lv-inscriptas ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.lv-inscripta { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--crema); border: 1px solid #F6EAE4; text-decoration: none; color: var(--ink); transition: background .2s, border-color .2s; }
+.lv-inscripta:hover { background: var(--rubor); border-color: var(--pink-line); }
+.lv-inscripta-ini { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep); font-weight: 900; font-size: 13px; }
+.lv-inscripta-nombre { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-inscripta-plan { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.lv-inscripta-estado { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: #fff; color: var(--pink-deep); white-space: nowrap; }
+.lv-inscripta-estado.es-waitlisted { color: var(--melocoton-deep); background: #FFF4E8; }
 .lv { display: flex; flex-direction: column; }
 .lv .ad-nueva { margin-bottom: 26px; }
 .lv-seccion { display: flex; flex-direction: column; }

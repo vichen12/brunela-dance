@@ -7,6 +7,7 @@ import {
   puertaActiva,
   rutaConPuerta,
   tokenDeAcceso,
+  esApiConPuerta,
 } from "@/src/lib/acceso-anticipado";
 
 export async function middleware(request: NextRequest) {
@@ -34,6 +35,14 @@ export async function middleware(request: NextRequest) {
     const esperado = await tokenDeAcceso();
 
     if (!igualEnTiempoConstante(cookie, esperado)) {
+      // Una API no se reescribe a una pagina: quien la llama espera JSON.
+      if (esApiConPuerta(ruta)) {
+        return NextResponse.json(
+          { error: "El estudio todavía no abrió. Volvé el día de la apertura." },
+          { status: 403 }
+        );
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = RUTA_PUERTA;
       url.search = "";

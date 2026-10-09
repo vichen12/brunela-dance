@@ -141,6 +141,22 @@ export function rutaConPuerta(pathname: string): boolean {
     pathname === "/registro" ||
     pathname.startsWith("/registro/") ||
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    // La vuelta de Google: sin esto, una cuenta podia crearse armando el
+    // enlace de OAuth a mano, sin pasar por /sign-in.
+    pathname.startsWith("/auth/") ||
+    esApiConPuerta(pathname)
   );
+}
+
+/**
+ * Las rutas de COBRO tambien quedan detras de la puerta: el formulario cerrado
+ * no alcanza si el endpoint que crea la sesion de pago sigue abierto (pedido de
+ * la duena: "que no se puedan inscribir ni pagar").
+ *
+ * ⚠️ El WEBHOOK NO: lo llama Stripe, que no tiene la cookie. Cerrarlo dejaria
+ *    pagos cobrados sin acceso (la trampa 1 con otro disfraz).
+ */
+export function esApiConPuerta(pathname: string): boolean {
+  return pathname === "/api/stripe/checkout" || pathname === "/api/stripe/checkout-pack";
 }
