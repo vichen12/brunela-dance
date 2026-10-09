@@ -1,4 +1,5 @@
 "use client";
+import { Pencil } from "lucide-react";
 
 import { Desplegable } from "@/components/desplegable";
 import { useEffect, useRef, useState } from "react";
@@ -188,14 +189,9 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
 
   return (
     <>
-      <button
-        onClick={() => setAbierto(true)}
-        style={{
-          padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-          border: "1px solid #f0eeec", background: "#fff",
-          color: "#57534e", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
-        }}
-      >Editar y clases</button>
+      <button type="button" onClick={() => setAbierto(true)} className="ad-editar">
+        <Pencil size={14} strokeWidth={2} aria-hidden="true" /> Editar y clases
+      </button>
 
       <AdminDrawer
         abierto={abierto}
