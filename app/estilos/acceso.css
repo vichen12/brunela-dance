@@ -1967,3 +1967,29 @@ body:has(.auth-page) {
 .pa-cuenta .cr-l { font-size: 13px !important; font-weight: 800; color: #8A6F68 !important; margin-top: 6px; }
 @media (max-width: 420px) { .pa-cuenta { padding: 14px; } .pa-cuenta .cr-fila { gap: 7px; } }
 @media (prefers-reduced-motion: reduce) { .pa-cuenta::after { animation: none; } }
+
+/* ── Ingreso responsive (arreglo 2026-10-09) ──
+   Antes la pagina era position: fixed con overflow hidden: en pantallas bajas
+   el panel izquierdo se cortaba (no se veia "En vivo") y no habia forma de
+   bajar. Ahora la pagina scrollea, el panel crece con su contenido y los
+   enlaces de arriba no se salen de la pantalla. */
+html:has(.auth-page), body:has(.auth-page) { height: auto !important; overflow: auto !important; }
+.auth-page { position: relative !important; inset: auto !important; height: auto !important; max-height: none !important; min-height: 100dvh; overflow: visible !important; }
+.auth-left { place-items: start center; align-self: stretch; min-height: calc(100dvh - 32px); overflow: visible; padding: clamp(1.75rem, 3.5vw, 3.5rem); }
+.auth-left > * { max-width: 520px; width: 100%; }
+.auth-left h1 { font-size: clamp(36px, 4.2vw, 64px) !important; }
+.auth-right { overflow: visible; min-height: 100dvh; padding-top: 92px; }
+.auth-top-links { position: absolute; top: 18px; right: 18px; left: auto; max-width: calc(100% - 36px); flex-wrap: wrap; }
+.auth-top-links a { height: 38px; padding: 0 14px; font-size: 13.5px; }
+@media (max-width: 1180px) and (min-width: 901px) {
+  .auth-page { grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr); }
+  .auth-left .auth-feature-list { display: none; }
+}
+@media (max-width: 900px) {
+  .auth-right { min-height: auto; padding: 84px 16px 40px; }
+  .auth-top-links { position: absolute; top: 12px; left: 12px; right: 12px; max-width: none; }
+}
+@media (max-height: 760px) and (min-width: 901px) {
+  .auth-left .auth-feature-list { display: none; }
+}
+@media (max-width: 900px) { .auth-right { height: auto !important; min-height: 100dvh; } }
