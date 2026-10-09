@@ -1,4 +1,6 @@
-import { ArrowDown, ArrowUp, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ExternalLink, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
+import { CertificadosDePortada } from "@/components/admin-portada-certificados";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { SubidorDePortada } from "@/components/admin-portada-media";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -46,29 +48,6 @@ type FilaFaq = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-function Flash({ ok, err }: { ok?: string; err?: string }) {
-  const msg = ok ?? err;
-  if (!msg) return null;
-  const bien = Boolean(ok);
-  return (
-    <div
-      role="status"
-      style={{
-        borderRadius: 12,
-        padding: "11px 16px",
-        marginBottom: 20,
-        fontSize: 13,
-        fontWeight: 600,
-        background: bien ? "#f0fdf4" : "#fef2f2",
-        color: bien ? "#166534" : "#991b1b",
-        border: `1px solid ${bien ? "#bbf7d0" : "#fecaca"}`,
-      }}
-    >
-      {msg}
-    </div>
-  );
-}
-
 export default async function PortadaAdminPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const ok = typeof params.success === "string" ? params.success : undefined;
@@ -94,136 +73,122 @@ export default async function PortadaAdminPage({ searchParams }: { searchParams:
 
   const preguntas = (faq ?? []) as FilaFaq[];
   const publicadas = preguntas.filter((p) => p.is_published).length;
+  const certificados = campo("about.highlights");
 
   return (
-    <div className="pa-wrap">
-      <header className="pa-head">
-        <h1>Portada</h1>
-        <p>
-          Lo que ve alguien que entra a <strong>bruneladance.com</strong> sin tener cuenta.
-        </p>
-      </header>
+    <main className="pa">
+      <style>{CSS}</style>
 
-      <Flash ok={ok} err={err} />
+      <AdminCabecera
+        eyebrow="Sitio público"
+        titulo="Portada"
+        lede={<>Lo que ve alguien que entra a <strong>bruneladance.com</strong> sin tener cuenta: el tráiler, los certificados y las preguntas frecuentes.</>}
+        acciones={<a href="/" target="_blank" rel="noopener noreferrer" className="ad-btn"><ExternalLink size={15} strokeWidth={2} aria-hidden="true" /> Ver la portada</a>}
+      />
 
-      {/* ── El tráiler y los certificados ── */}
-      <form action={guardarCamposDePortadaAction} className="pa-card">
-        <h2>El tráiler y los certificados</h2>
+      <AdminAviso mensaje={ok ?? null} tono="ok" />
+      <AdminAviso mensaje={err ?? null} tono="error" />
 
-        {CAMPOS.filter((c) => c.tipo === "url").map((c) => (
-          <SubidorDePortada
-            key={c.clave}
-            name={c.clave}
-            etiqueta={c.etiqueta}
-            ayuda={c.ayuda}
-            valorActual={valor(c.clave)}
-            accept={c.clave === "video.src" ? "video/mp4,video/webm" : "image/*"}
-          />
-        ))}
+      {/* ── 01 y 02: el tráiler y los certificados, un solo formulario ── */}
+      <form action={guardarCamposDePortadaAction} className="pa-bloque">
+        <div className="pa-bloque-cab">
+          <span className="pf-num">01</span>
+          <div>
+            <h2>El tráiler</h2>
+            <p>El video de fondo de la portada y la imagen que se ve mientras carga.</p>
+          </div>
+        </div>
+        <div className="pa-medios">
+          {CAMPOS.filter((c) => c.tipo === "url").map((c) => (
+            <SubidorDePortada
+              key={c.clave}
+              name={c.clave}
+              etiqueta={c.etiqueta}
+              ayuda={c.ayuda}
+              valorActual={valor(c.clave)}
+              accept={c.clave === "video.src" ? "video/mp4,video/webm" : "image/*"}
+            />
+          ))}
+        </div>
 
-        {(() => {
-          const c = campo("about.highlights");
-          if (!c) return null;
-          return (
-            <div className="pa-campo">
-              <label className="pa-label" htmlFor="highlights">
-                {c.etiqueta}
-              </label>
-              <p className="pa-ayuda">{c.ayuda}</p>
-              <textarea
-                id="highlights"
-                name={c.clave}
-                rows={6}
-                className="pa-textarea"
-                defaultValue={valor(c.clave)}
-                placeholder={"Ballet\nPilates\nPBT\nPCT\nRAD CPD Credits"}
-              />
+        {certificados && (
+          <>
+            <div className="pa-bloque-cab pa-bloque-cab--sep">
+              <span className="pf-num">02</span>
+              <div>
+                <h2>{certificados.etiqueta}</h2>
+                <p>{certificados.ayuda}</p>
+              </div>
             </div>
-          );
-        })()}
+            <CertificadosDePortada name={certificados.clave} valorActual={valor(certificados.clave)} />
+          </>
+        )}
 
-        <div className="pa-acciones">
-          <BotonEnviar>Guardar</BotonEnviar>
+        <div className="pa-pie">
+          <BotonEnviar className="pf-guardar" pendingLabel="Guardando…">
+            <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar tráiler y certificados
+          </BotonEnviar>
         </div>
       </form>
 
-      {/* ── El FAQ ── */}
-      <section className="pa-card">
-        <h2>Preguntas frecuentes</h2>
-        <p className="pa-ayuda">
-          Se escriben <strong>en español</strong> y se ven igual en los cuatro idiomas hasta que
-          alguien las traduzca. Una pregunta nace sin publicar: se ve acá, no en la portada.
+      {/* ── 03: el FAQ ──
+          Va FUERA del form de arriba: cada pregunta tiene sus propios
+          formularios y no se pueden anidar. */}
+      <section className="pa-bloque">
+        <div className="pa-bloque-cab">
+          <span className="pf-num">03</span>
+          <div>
+            <h2>Preguntas frecuentes</h2>
+            <p>
+              Se escriben <strong>en español</strong> y se ven igual en los cuatro idiomas hasta que alguien las traduzca.
+              Una pregunta nace sin publicar.
+            </p>
+          </div>
           {preguntas.length > 0 && (
-            <>
-              {" "}
-              Hay <strong>{preguntas.length}</strong> y {publicadas === 0 ? "ninguna" : publicadas}{" "}
-              {publicadas === 1 ? "está publicada" : "están publicadas"}.
-            </>
+            <span className="pa-conteo"><strong>{publicadas}</strong> de {preguntas.length} en la portada</span>
           )}
-        </p>
+        </div>
 
         {preguntas.length === 0 ? (
           <p className="pa-vacio">
-            Todavía no hay ninguna. Mientras no haya al menos una publicada, la sección no aparece
-            en la portada.
+            Todavía no hay ninguna. Mientras no haya al menos una publicada, la sección no aparece en la portada.
           </p>
         ) : (
-          <ul className="pa-faq">
+          <ol className="pa-faq">
             {preguntas.map((p, i) => (
-              <li key={p.id} className={p.is_published ? "pa-faq-item" : "pa-faq-item pa-borrador"}>
+              <li key={p.id} className={"pa-faq-item" + (p.is_published ? " es-pub" : "")}>
+                <span className="pa-faq-num" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
                 <form action={editarPreguntaAction} className="pa-faq-form">
                   <input type="hidden" name="id" value={p.id} />
-                  <input
-                    className="pa-input"
-                    name="pregunta"
-                    defaultValue={p.question_i18n?.es ?? ""}
-                    placeholder="¿Necesito experiencia previa?"
-                    aria-label="Pregunta"
-                  />
-                  <textarea
-                    className="pa-textarea"
-                    name="respuesta"
-                    rows={3}
-                    defaultValue={p.answer_i18n?.es ?? ""}
-                    placeholder="La respuesta, en español."
-                    aria-label="Respuesta"
-                  />
-                  <BotonEnviar>Guardar</BotonEnviar>
+                  <input className="pa-pregunta" name="pregunta" defaultValue={p.question_i18n?.es ?? ""} placeholder="¿Necesito experiencia previa?" aria-label="Pregunta" />
+                  <textarea className="pa-respuesta" name="respuesta" rows={3} defaultValue={p.answer_i18n?.es ?? ""} placeholder="La respuesta, en español." aria-label="Respuesta" />
+                  <div className="pa-faq-pie">
+                    <span className={"pa-estado" + (p.is_published ? " es-pub" : "")}>
+                      <span className="pa-punto" aria-hidden="true" />{p.is_published ? "En la portada" : "Borrador"}
+                    </span>
+                    <BotonEnviar className="pa-guardar" pendingLabel="Guardando…">Guardar</BotonEnviar>
+                  </div>
                 </form>
 
                 {/* Fuera del form de arriba: no se pueden anidar. */}
                 <div className="pa-faq-botones">
-                  <span className="pa-estado">{p.is_published ? "En la portada" : "Borrador"}</span>
-
                   <form action={publicarPreguntaAction}>
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="publicar" value={p.is_published ? "0" : "1"} />
-                    <button className="pa-icono" type="submit" title={p.is_published ? "Despublicar" : "Publicar"}>
+                    <BotonEnviar className={"pa-icono" + (p.is_published ? "" : " pa-icono--publicar")} title={p.is_published ? "Sacar de la portada" : "Publicar en la portada"} pendingLabel="…">
                       {p.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                    </BotonEnviar>
                   </form>
-
                   <form action={moverPreguntaAction}>
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="direccion" value="arriba" />
-                    <button className="pa-icono" type="submit" title="Subir" disabled={i === 0}>
-                      <ArrowUp size={15} />
-                    </button>
+                    <BotonEnviar className="pa-icono" title="Subir" disabled={i === 0} pendingLabel="…"><ArrowUp size={15} /></BotonEnviar>
                   </form>
-
                   <form action={moverPreguntaAction}>
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="direccion" value="abajo" />
-                    <button
-                      className="pa-icono"
-                      type="submit"
-                      title="Bajar"
-                      disabled={i === preguntas.length - 1}
-                    >
-                      <ArrowDown size={15} />
-                    </button>
+                    <BotonEnviar className="pa-icono" title="Bajar" disabled={i === preguntas.length - 1} pendingLabel="…"><ArrowDown size={15} /></BotonEnviar>
                   </form>
-
                   <form action={borrarPreguntaAction}>
                     <input type="hidden" name="id" value={p.id} />
                     <BotonEnviar className="pa-icono pa-borrar" title="Borrar" pendingLabel="…" confirmar="¿Borrar esta pregunta del FAQ?">
@@ -233,179 +198,126 @@ export default async function PortadaAdminPage({ searchParams }: { searchParams:
                 </div>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
 
         <form action={crearPreguntaAction} className="pa-nueva">
-          <h3>
-            <Plus size={15} aria-hidden /> Agregar una pregunta
-          </h3>
-          <input
-            className="pa-input"
-            name="pregunta"
-            placeholder="¿Necesito experiencia previa?"
-            aria-label="Pregunta nueva"
-            required
-          />
-          <textarea
-            className="pa-textarea"
-            name="respuesta"
-            rows={3}
-            placeholder="La respuesta, en español."
-            aria-label="Respuesta nueva"
-            required
-          />
-          <BotonEnviar>Crear</BotonEnviar>
+          <p className="pa-nueva-titulo"><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Agregar una pregunta</p>
+          <input className="pa-pregunta" name="pregunta" placeholder="¿Necesito experiencia previa?" aria-label="Pregunta nueva" required />
+          <textarea className="pa-respuesta" name="respuesta" rows={3} placeholder="La respuesta, en español." aria-label="Respuesta nueva" required />
+          <div className="pa-faq-pie">
+            <span className="pa-nota">Nace sin publicar: la publicás después con el ojo.</span>
+            <BotonEnviar className="pf-guardar" pendingLabel="Creando…"><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear pregunta</BotonEnviar>
+          </div>
         </form>
       </section>
-
-      <style>{`
-        .pa-wrap { max-width: 860px; }
-
-        .pa-head { margin-bottom: 22px; }
-        .pa-head h1 {
-          margin: 0 0 4px;
-          font-family: var(--font-display), sans-serif;
-          font-size: 1.6rem;
-          font-weight: 900;
-          color: var(--ink, #1c1917);
-        }
-        .pa-head p { margin: 0; font-size: 0.86rem; color: var(--pink-muted, #8C5F5F); }
-
-        .pa-card {
-          display: grid;
-          gap: 1.1rem;
-          padding: 22px;
-          margin-bottom: 20px;
-          border: 1px solid #FFDADA;
-          border-radius: 14px;
-          background: #fff;
-        }
-
-        .pa-card h2 {
-          margin: 0;
-          font-size: 1rem;
-          font-weight: 800;
-          color: var(--ink, #1c1917);
-        }
-
-        .pa-campo { display: grid; gap: 0.35rem; }
-
-        .pa-label { font-size: 0.8rem; font-weight: 800; color: var(--ink, #1c1917); }
-
-        .pa-ayuda {
-          margin: 0;
-          font-size: 0.78rem;
-          line-height: 1.55;
-          color: var(--pink-muted, #8C5F5F);
-        }
-
-        .pa-input, .pa-textarea {
-          width: 100%;
-          padding: 0.6rem 0.75rem;
-          border: 1px solid var(--pink-line, #F2C6C6);
-          border-radius: 10px;
-          background: #fff;
-          font-family: var(--font-body), sans-serif;
-          font-size: 0.85rem;
-          line-height: 1.5;
-          color: var(--ink, #1c1917);
-        }
-
-        .pa-textarea { resize: vertical; }
-
-        .pa-input:focus-visible, .pa-textarea:focus-visible {
-          outline: 2px solid var(--pink-deep, #B03A3E);
-          outline-offset: 1px;
-          border-color: transparent;
-        }
-
-        .pa-acciones { display: flex; justify-content: flex-end; }
-
-        .pa-vacio {
-          margin: 0;
-          padding: 14px 16px;
-          border-radius: 10px;
-          background: var(--pink-wash, #FDECEC);
-          font-size: 0.82rem;
-          color: var(--pink-muted, #8C5F5F);
-        }
-
-        .pa-faq { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
-
-        .pa-faq-item {
-          display: grid;
-          gap: 0.6rem;
-          padding: 14px;
-          border: 1px solid var(--pink-line, #F2C6C6);
-          border-radius: 12px;
-          background: #fffdfd;
-        }
-
-        /* Un borrador se distingue de lo publicado sin leer la etiqueta. */
-        .pa-borrador { background: #fafafa; border-style: dashed; }
-
-        .pa-faq-form { display: grid; gap: 0.5rem; justify-items: end; }
-        .pa-faq-form .pa-input, .pa-faq-form .pa-textarea { justify-self: stretch; }
-
-        .pa-faq-botones {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          padding-top: 0.6rem;
-          border-top: 1px solid #F6E6E6;
-        }
-
-        .pa-estado {
-          margin-right: auto;
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          color: var(--pink-deep, #B03A3E);
-        }
-
-        .pa-borrador .pa-estado { color: #78716c; }
-
-        .pa-icono {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 34px;
-          height: 34px;
-          border: 1px solid var(--pink-line, #F2C6C6);
-          border-radius: 9px;
-          background: #fff;
-          color: var(--pink-deep, #B03A3E);
-          cursor: pointer;
-        }
-
-        .pa-icono:hover:not(:disabled) { background: var(--pink-wash, #FDECEC); }
-        .pa-icono:disabled { opacity: 0.35; cursor: default; }
-        .pa-borrar { color: #b91c1c; }
-        .pa-borrar:hover:not(:disabled) { background: #fef2f2; }
-
-        .pa-nueva {
-          display: grid;
-          gap: 0.55rem;
-          justify-items: end;
-          padding-top: 1rem;
-          border-top: 1px solid #F6E6E6;
-        }
-
-        .pa-nueva .pa-input, .pa-nueva .pa-textarea { justify-self: stretch; }
-
-        .pa-nueva h3 {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          justify-self: start;
-          margin: 0;
-          font-size: 0.85rem;
-          font-weight: 800;
-          color: var(--ink, #1c1917);
-        }
-      `}</style>
-    </div>
+    </main>
   );
 }
+
+const CSS = `
+.pa { display: flex; flex-direction: column; gap: 18px; }
+.pa .ad-mast { padding-bottom: 6px; }
+.pa-bloque { border: 1px solid #e7e5e4; border-radius: 24px; background: #fff; padding: clamp(18px, 2.4vw, 28px); }
+.pa-bloque-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.pa-bloque-cab--sep { margin-top: 26px; padding-top: 24px; border-top: 1px solid #f0eeec; }
+.pa-bloque-cab .pf-num { margin-top: 3px; }
+.pa-bloque-cab h2 { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
+.pa-bloque-cab p { margin-top: 3px; max-width: 64ch; font-size: 13.5px; line-height: 1.6; color: #78716c; }
+.pa-bloque-cab p strong { color: var(--ink); }
+.pa-conteo { margin-left: auto; flex-shrink: 0; font-size: 12.5px; color: #78716c; padding: 6px 12px; border-radius: 99px; background: #fafaf9; }
+.pa-conteo strong { color: var(--ink); }
+.pa-pie { display: flex; justify-content: flex-end; margin-top: 22px; padding-top: 18px; border-top: 1px solid #f0eeec; }
+
+/* tráiler: SubidorDePortada */
+.pa-medios { display: grid; gap: 14px; }
+.pm { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; padding: 14px; border-radius: 18px; background: #fafaf9; }
+.pm-vista {
+  position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1.5px dashed transparent;
+  background: linear-gradient(135deg, var(--pink-wash) 0%, var(--pink-soft) 55%, var(--rose) 130%); transition: border-color .2s, transform .2s;
+}
+.pm-vista.es-arrastre { border-color: var(--pink); transform: scale(1.01); }
+.pm-vista video, .pm-vista img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: pf-aparece .5s ease both; }
+.pm-vacia { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--pink-deep); }
+.pm-cargando { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); color: var(--pink-deep); }
+.pm-datos { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.pm-label { font-weight: 800; font-size: 15px; color: var(--ink); }
+.pm-ayuda { font-size: 12.5px; line-height: 1.55; color: #78716c; }
+.pm-input { border-radius: 12px; border: 1.5px solid #e7e5e4; padding: 0.7rem 0.9rem; font-size: 13.5px; background: #fff; }
+.pm-input:focus { border-color: var(--pink); }
+.pm-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 2px; }
+.pm-subir {
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid var(--ink); background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; transition: background .2s, color .2s;
+}
+.pm-subir:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.pm-subir:disabled { opacity: 0.6; cursor: progress; }
+.pm-ver { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--pink-deep); text-decoration: none; }
+.pm-ver:hover { text-decoration: underline; }
+.pm-msg { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.pm-subiendo { color: #78716c; }
+.pm-listo { color: #15803d; }
+.pm-error { color: var(--pink-deep); }
+
+/* certificados */
+.pt-cert { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.pt-cert-texto { border-radius: 14px; border: 1.5px solid #e7e5e4; padding: 0.85rem 1rem; font-size: 14px; line-height: 1.7; resize: vertical; }
+.pt-cert-texto:focus { border-color: var(--pink); }
+.pt-cert-vista { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-radius: 16px; background: #fafaf9; }
+.pt-cert-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #a8a29e; }
+.pt-cert-vacio { font-size: 13px; color: #a8a29e; }
+.pt-cert-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pt-cert-chip {
+  padding: 7px 14px; border-radius: 99px; background: #fff; border: 1px solid var(--pink-line);
+  font-size: 13px; font-weight: 700; color: var(--pink-deep); animation: ad-entra .35s ease both;
+}
+
+/* FAQ */
+.pa-vacio { padding: 16px 18px; border-radius: 14px; background: #fafaf9; font-size: 13.5px; color: #78716c; }
+.pa-faq { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.pa-faq-item {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start;
+  padding: 16px; border-radius: 18px; border: 1.5px dashed #e7e5e4; background: #fafaf9;
+  transition: border-color .2s, box-shadow .25s;
+}
+.pa-faq-item.es-pub { border-style: solid; background: #fff; }
+.pa-faq-item:hover { border-color: var(--pink-line); box-shadow: 0 16px 30px -24px rgba(176,58,62,0.5); }
+.pa-faq-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--pink-line); padding-top: 4px; }
+.pa-faq-item.es-pub .pa-faq-num { color: var(--pink-mid); }
+.pa-faq-form { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pa-pregunta { border-radius: 12px; border: 1.5px solid #e7e5e4; padding: 0.65rem 0.85rem; font-size: 14.5px; font-weight: 700; background: #fff; }
+.pa-respuesta { border-radius: 12px; border: 1.5px solid #e7e5e4; padding: 0.65rem 0.85rem; font-size: 13.5px; line-height: 1.6; background: #fff; resize: vertical; }
+.pa-pregunta:focus, .pa-respuesta:focus { border-color: var(--pink); }
+.pa-faq-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pa-estado { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #78716c; }
+.pa-estado.es-pub { color: #15803d; }
+.pa-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pa-guardar {
+  height: 36px; padding: 0 16px; border-radius: 99px; cursor: pointer; border: 1.5px solid var(--ink); background: #fff; color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700; transition: background .2s, color .2s;
+}
+.pa-guardar:hover { background: var(--ink); color: #fff; }
+.pa-faq-botones { display: flex; flex-direction: column; gap: 6px; }
+.pa-faq-botones form { display: contents; }
+.pa-icono {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer;
+  border: 1px solid #e7e5e4; background: #fff; color: #57534e; transition: background .2s, color .2s, border-color .2s;
+}
+.pa-icono:hover:not(:disabled) { background: var(--pink-wash); color: var(--pink-deep); border-color: var(--pink-line); }
+.pa-icono:disabled { opacity: 0.3; cursor: default; }
+.pa-icono--publicar { background: var(--pink); border-color: var(--pink); color: #fff; }
+.pa-icono--publicar:hover:not(:disabled) { background: var(--pink-mid); color: #fff; }
+.pa-borrar:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.pa-nueva { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; padding: 18px; border-radius: 18px; border: 1.5px dashed var(--pink-line); }
+.pa-nueva-titulo { display: flex; align-items: center; gap: 7px; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 4px; }
+.pa-nota { font-size: 12.5px; color: #a8a29e; }
+
+@media (max-width: 760px) {
+  .pm, .pt-cert { grid-template-columns: minmax(0, 1fr); }
+  .pa-faq-item { grid-template-columns: minmax(0, 1fr); }
+  .pa-faq-num { display: none; }
+  .pa-faq-botones { flex-direction: row; }
+  .pa-bloque-cab { flex-wrap: wrap; }
+  .pa-conteo { margin-left: 0; }
+}
+`;

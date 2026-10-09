@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, Check, AlertCircle } from "lucide-react";
+import { Upload, Check, AlertCircle, ExternalLink, ImageIcon, Film, Loader2 } from "lucide-react";
 
 type Props = {
   /** El name del input que viaja en el formulario. Es la clave de campos.ts. */
@@ -28,16 +28,23 @@ type Props = {
  *    -- o si algún día Storage se queda sin cuota -- pegar una dirección tiene
  *    que seguir funcionando. Un widget que sólo sabe subir es un widget que un
  *    día deja a alguien sin salida.
+ *
+ * La vista previa muestra lo que va a ver la visitante: el video corre mudo y
+ * en bucle, como en la portada. Se puede soltar el archivo encima.
  */
 export function SubidorDePortada({ name, etiqueta, ayuda, valorActual, accept }: Props) {
   const inputArchivo = useRef<HTMLInputElement>(null);
   const [valor, setValor] = useState(valorActual);
   const [estado, setEstado] = useState<"quieto" | "subiendo" | "listo" | "error">("quieto");
   const [mensaje, setMensaje] = useState("");
+  const [arrastrando, setArrastrando] = useState(false);
+  const [rota, setRota] = useState(false);
+  const esVideo = accept.startsWith("video");
+  const hayUrl = /^https?:\/\/\S+$/.test(valor.trim());
 
   async function subir(file: File) {
     setEstado("subiendo");
-    setMensaje(`Subiendo ${file.name}...`);
+    setMensaje(`Subiendo ${file.name}…`);
 
     try {
       const init = await fetch("/api/admin/portada/upload-init", {
@@ -58,8 +65,9 @@ export function SubidorDePortada({ name, etiqueta, ayuda, valorActual, accept }:
       if (!puesta.ok) throw new Error("La subida falló a mitad de camino.");
 
       setValor(datos.publicUrl);
+      setRota(false);
       setEstado("listo");
-      setMensaje("Subido. Falta guardar el formulario para que se vea en la portada.");
+      setMensaje("Subido. Falta guardar para que se vea en la portada.");
     } catch (e) {
       setEstado("error");
       setMensaje(e instanceof Error ? e.message : "No se pudo subir.");
@@ -67,46 +75,75 @@ export function SubidorDePortada({ name, etiqueta, ayuda, valorActual, accept }:
   }
 
   return (
-    <div className="pm-campo">
-      <label className="pm-label" htmlFor={`pm-${name}`}>
-        {etiqueta}
-      </label>
-      <p className="pm-ayuda">{ayuda}</p>
-
-      {/* Lo que viaja en el formulario es SIEMPRE esto: la URL, no el archivo. */}
-      <input
-        id={`pm-${name}`}
-        className="pm-input"
-        type="url"
-        name={name}
-        value={valor}
-        onChange={(e) => setValor(e.target.value)}
-        placeholder="https://..."
-      />
-
-      <div className="pm-fila">
-        <button
-          type="button"
-          className="pm-subir"
-          onClick={() => inputArchivo.current?.click()}
-          disabled={estado === "subiendo"}
-        >
-          <Upload size={15} aria-hidden />
-          {estado === "subiendo" ? "Subiendo..." : "Subir un archivo"}
-        </button>
-
-        {valor !== "" && estado !== "subiendo" && (
-          <a className="pm-ver" href={valor} target="_blank" rel="noopener noreferrer">
-            Ver el actual
-          </a>
+    <div className="pm">
+      {/* Vista previa: tambien es zona para soltar el archivo. */}
+      <div
+        className={"pm-vista" + (arrastrando ? " es-arrastre" : "")}
+        onDragOver={(e) => { e.preventDefault(); if (estado !== "subiendo") setArrastrando(true); }}
+        onDragLeave={() => setArrastrando(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setArrastrando(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f && estado !== "subiendo") void subir(f);
+        }}
+      >
+        {hayUrl && !rota ? (
+          esVideo ? (
+            <video key={valor} src={valor} muted loop autoPlay playsInline onError={() => setRota(true)} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={valor} src={valor} alt="" onError={() => setRota(true)} />
+          )
+        ) : (
+          <span className="pm-vacia">
+            {esVideo ? <Film size={24} strokeWidth={1.6} aria-hidden /> : <ImageIcon size={24} strokeWidth={1.6} aria-hidden />}
+            {rota ? "No se pudo cargar esa dirección" : "Soltá el archivo acá"}
+          </span>
+        )}
+        {estado === "subiendo" && (
+          <span className="pm-cargando"><Loader2 size={22} className="dup-gira" aria-hidden /></span>
         )}
       </div>
 
-      {/*
-        type="button" en el de arriba no es un detalle: sin eso, un <button>
-        dentro de un <form> envía el formulario, y tocar "Subir" guardaría la
-        portada a medias.
-      */}
+      <div className="pm-datos">
+        <label className="pm-label" htmlFor={`pm-${name}`}>{etiqueta}</label>
+        <p className="pm-ayuda">{ayuda}</p>
+
+        {/* Lo que viaja en el formulario es SIEMPRE esto: la URL, no el archivo. */}
+        <input
+          id={`pm-${name}`}
+          className="pm-input"
+          type="url"
+          name={name}
+          value={valor}
+          onChange={(e) => { setValor(e.target.value); setRota(false); }}
+          placeholder="https://…"
+        />
+
+        <div className="pm-fila">
+          {/* type="button": sin eso, un <button> dentro de un <form> envía el
+              formulario, y tocar "Subir" guardaría la portada a medias. */}
+          <button type="button" className="pm-subir" onClick={() => inputArchivo.current?.click()} disabled={estado === "subiendo"}>
+            <Upload size={15} aria-hidden />
+            {estado === "subiendo" ? "Subiendo…" : hayUrl ? "Reemplazar" : "Subir un archivo"}
+          </button>
+          {hayUrl && estado !== "subiendo" && (
+            <a className="pm-ver" href={valor} target="_blank" rel="noopener noreferrer">
+              Abrir <ExternalLink size={13} aria-hidden />
+            </a>
+          )}
+        </div>
+
+        {mensaje !== "" && (
+          <p className={`pm-msg pm-${estado}`} role="status">
+            {estado === "listo" && <Check size={14} aria-hidden />}
+            {estado === "error" && <AlertCircle size={14} aria-hidden />}
+            {mensaje}
+          </p>
+        )}
+      </div>
+
       <input
         ref={inputArchivo}
         type="file"
@@ -120,89 +157,6 @@ export function SubidorDePortada({ name, etiqueta, ayuda, valorActual, accept }:
           e.target.value = "";
         }}
       />
-
-      {mensaje !== "" && (
-        <p className={`pm-msg pm-${estado}`} role="status">
-          {estado === "listo" && <Check size={14} aria-hidden />}
-          {estado === "error" && <AlertCircle size={14} aria-hidden />}
-          {mensaje}
-        </p>
-      )}
-
-      <style>{`
-        .pm-campo { display: grid; gap: 0.35rem; }
-
-        .pm-label {
-          font-size: 0.8rem;
-          font-weight: 800;
-          color: var(--ink, #1c1917);
-        }
-
-        .pm-ayuda {
-          margin: 0;
-          font-size: 0.78rem;
-          line-height: 1.5;
-          color: var(--pink-muted, #8C5F5F);
-        }
-
-        .pm-input {
-          min-height: 42px;
-          padding: 0 0.75rem;
-          border: 1px solid var(--pink-line, #F2C6C6);
-          border-radius: 10px;
-          background: #fff;
-          font-family: var(--font-body), sans-serif;
-          font-size: 0.85rem;
-          color: var(--ink, #1c1917);
-        }
-
-        .pm-input:focus-visible {
-          outline: 2px solid var(--pink-deep, #B03A3E);
-          outline-offset: 1px;
-          border-color: transparent;
-        }
-
-        .pm-fila { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-
-        .pm-subir {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          min-height: 38px;
-          padding: 0 0.85rem;
-          border: 1px solid var(--pink-line, #F2C6C6);
-          border-radius: 999px;
-          background: var(--pink-wash, #FDECEC);
-          color: var(--pink-deep, #B03A3E);
-          font-size: 0.75rem;
-          font-weight: 800;
-          cursor: pointer;
-        }
-
-        .pm-subir:hover:not(:disabled) { background: var(--pink-soft, #FFDADA); }
-        .pm-subir:disabled { opacity: 0.6; cursor: progress; }
-
-        .pm-ver {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--pink-muted, #8C5F5F);
-          text-decoration: underline;
-          text-underline-offset: 3px;
-        }
-
-        .pm-msg {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          margin: 0.1rem 0 0;
-          font-size: 0.76rem;
-          font-weight: 600;
-        }
-
-        .pm-subiendo { color: var(--pink-muted, #8C5F5F); }
-        .pm-listo    { color: #166534; }
-        .pm-error    { color: var(--pink-deep, #B03A3E); }
-      `}</style>
     </div>
   );
 }
