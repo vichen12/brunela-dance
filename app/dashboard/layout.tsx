@@ -54,8 +54,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // el perfil memoizado de esta request ya traia el plan viejo, y la pagina
   // pintaria clases abiertas que la base ya no le deja ver. En la recarga el
   // plan ya es 'none' y esta rama no vuelve a entrar.
+  //
+  // SIN redirect: redirigir desde el layout en medio de la navegacion que viene
+  // del login dejaba al navegador recargando en bucle (pantalla en blanco, se
+  // vio probandolo). En vez de eso se corrige el perfil de ESTA request: es el
+  // mismo objeto memoizado que leen las paginas, asi que el aviso de fin y los
+  // candados salen ya en esta carga. Lo que se reproduce lo decide igual la
+  // base (RLS), que ya tiene el plan en 'none'.
   if (profile && await aplicarBajaSiVencio(user.id, profile.membership_tier, profile.is_admin, acceso)) {
-    redirect("/dashboard" as never);
+    profile.membership_tier = "none";
   }
 
   // COMPUERTA DE ONBOARDING
