@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowRight, Check, Euro, Lock } from "lucide-react";
+import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -64,33 +67,11 @@ const TITULOS: Record<string, { titulo: string; ayuda: string }> = {
 };
 
 const PLANES = [
-  { key: "none", label: "Sin plan" },
-  { key: "corps_de_ballet", label: "Corps de Ballet" },
-  { key: "solista", label: "Solista" },
-  { key: "principal", label: "Principal" },
+  { key: "none", label: "Sin plan", sub: "Cuentas que todavía no pagan" },
+  { key: "corps_de_ballet", label: "Corps de Ballet", sub: "El plan de entrada" },
+  { key: "solista", label: "Solista", sub: "Con planes de trabajo" },
+  { key: "principal", label: "Principal", sub: "La experiencia completa" },
 ] as const;
-
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
-  return (
-    <div style={{
-      borderRadius: 14, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-      background: tone === "success" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "success" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "success" ? "#bbf7d0" : "#fecaca"}`,
-    }}>{message}</div>
-  );
-}
-
-const caja: React.CSSProperties = {
-  borderRadius: 22, border: "1.5px solid var(--pink-line)",
-  background: "#fff", padding: "22px 24px",
-};
-
-const filaCheck: React.CSSProperties = {
-  display: "flex", gap: 12, alignItems: "flex-start",
-  cursor: "pointer", minHeight: 44,
-};
 
 export default async function AdminSettingsPage({ searchParams }: { searchParams?: SearchParams }) {
   await requireAdmin();
@@ -120,126 +101,142 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   );
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Configuración</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Ajustes del estudio.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Lo que podés cambiar vos, y lo que conviene que toque tu equipo técnico.
-        </p>
-      </header>
+    <main className="cf">
+      <style>{CSS}</style>
 
-      <div style={{ display: "grid", gap: 14, marginTop: 22 }}>
-        <Flash message={success} tone="success" />
-        <Flash message={error} tone="error" />
+      <AdminCabecera
+        eyebrow="Ajustes"
+        titulo="Configuración"
+        lede="Lo que podés cambiar vos, y lo que conviene que toque tu equipo técnico."
+      />
 
-        {/* ── Reservas ─────────────────────────────────────────────────── */}
-        <section style={caja}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
-            {TITULOS["live_sessions.booking"].titulo}
-          </h2>
-          <p style={{ fontSize: 13, color: "var(--muted)", margin: "6px 0 18px", lineHeight: 1.6 }}>
-            {TITULOS["live_sessions.booking"].ayuda}
-          </p>
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
-          <form action={guardarAjusteDeReservasAction} style={{ display: "grid", gap: 12 }}>
-            <label style={filaCheck}>
-              <input type="checkbox" name="allowWaitlist" defaultChecked={reservas.allow_waitlist !== false}
-                style={{ accentColor: "var(--pink)", width: 17, height: 17, marginTop: 2 }} />
-              <span>
-                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
-                  Lista de espera cuando se llena
-                </span>
-                <span style={{ display: "block", fontSize: 12.5, color: "var(--muted)", lineHeight: 1.55 }}>
-                  Si lo apagás, al completarse el cupo nadie más puede anotarse.
-                </span>
-              </span>
-            </label>
-
-            <label style={filaCheck}>
-              <input type="checkbox" name="revealOnlyToBooked" defaultChecked={reservas.reveal_link_only_to_booked_users !== false}
-                style={{ accentColor: "var(--pink)", width: 17, height: 17, marginTop: 2 }} />
-              <span>
-                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
-                  El link de la clase sólo lo ve quien reservó
-                </span>
-                <span style={{ display: "block", fontSize: 12.5, color: "var(--muted)", lineHeight: 1.55 }}>
-                  Recomendado. Si lo apagás, cualquier alumna con acceso a la clase ve el enlace.
-                </span>
-              </span>
-            </label>
-
-            <BotonEnviar className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>Guardar</BotonEnviar>
-          </form>
-        </section>
-
-        {/* ── Chat privado ─────────────────────────────────────────────── */}
-        <section style={caja}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
-            {TITULOS["chat.dm_access"].titulo}
-          </h2>
-          <p style={{ fontSize: 13, color: "var(--muted)", margin: "6px 0 18px", lineHeight: 1.6 }}>
-            {TITULOS["chat.dm_access"].ayuda}
-          </p>
-
-          <form action={guardarAjusteDeChatAction} style={{ display: "grid", gap: 10 }}>
-            {PLANES.map((p) => (
-              <label key={p.key} style={{ ...filaCheck, alignItems: "center" }}>
-                <input type="checkbox" name={`dm_${p.key}`} defaultChecked={dm[p.key] === true}
-                  style={{ accentColor: "var(--pink)", width: 17, height: 17 }} />
-                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{p.label}</span>
-              </label>
-            ))}
-            <BotonEnviar className="button-primary" style={{ justifySelf: "start", marginTop: 4 }}>Guardar</BotonEnviar>
-          </form>
-        </section>
-
-        {/* ── Solo lectura ─────────────────────────────────────────────── */}
-        <section style={{ ...caja, background: "var(--pink-wash)", borderStyle: "dashed" }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
-            Ajustes técnicos
-          </h2>
-          <p style={{ fontSize: 13, color: "var(--muted)", margin: "6px 0 4px", lineHeight: 1.6 }}>
-            Esto lo cambia tu equipo técnico. Te lo mostramos para que sepas qué
-            hay configurado, pero no se edita desde acá: un error en las reglas
-            de acceso puede dejar a una alumna sin sus clases.
-          </p>
-
-          <a href="/admin/precios" style={{
-            display: "block", marginTop: 16, textDecoration: "none",
-            borderRadius: 14, border: "1.5px solid var(--pink-line)",
-            background: "#fff", padding: "13px 16px",
-          }}>
-            <p style={{ fontSize: 13.5, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
-              Planes y precios →
-            </p>
-            <p style={{ fontSize: 12, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1.5 }}>
-              Los importes y los identificadores de cobro se cambian en <strong>Precios</strong>.
-            </p>
-          </a>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
-            {bloqueadas.map((s) => {
-              const meta = TITULOS[s.setting_key];
-              return (
-                <div key={s.setting_key} style={{
-                  borderRadius: 14, border: "1px solid var(--pink-line)",
-                  background: "rgba(255,255,255,0.7)", padding: "13px 16px",
-                }}>
-                  <p style={{ fontSize: 13.5, fontWeight: 800, color: "var(--ink)", margin: 0 }}>
-                    {meta?.titulo ?? s.setting_key}
-                  </p>
-                  {/* La `description` de la base esta en ingles y se veia tal
-                      cual en pantalla. Se usa la de aca, en el idioma del panel. */}
-                  <p style={{ fontSize: 12, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1.5 }}>
-                    {meta?.ayuda ?? s.setting_key}
-                  </p>
-                </div>
-              );
-            })}
+      {/* ── 01 Reservas ── */}
+      <form action={guardarAjusteDeReservasAction} className="cf-bloque">
+        <div className="cf-cab">
+          <span className="pf-num">01</span>
+          <div>
+            <h2>{TITULOS["live_sessions.booking"].titulo}</h2>
+            <p>{TITULOS["live_sessions.booking"].ayuda}</p>
           </div>
-        </section>
-      </div>
+        </div>
+        <div className="cf-filas">
+          {[
+            { name: "allowWaitlist", activo: reservas.allow_waitlist !== false, titulo: "Lista de espera cuando se llena", texto: "Si lo apagás, al completarse el cupo nadie más puede anotarse." },
+            { name: "revealOnlyToBooked", activo: reservas.reveal_link_only_to_booked_users !== false, titulo: "El enlace de la clase solo lo ve quien reservó", texto: "Recomendado. Si lo apagás, cualquier alumna con acceso a la clase ve el enlace de Zoom." },
+          ].map((f) => (
+            <label key={f.name} className="cf-fila">
+              <span className="cf-fila-txt">
+                <span className="cf-fila-titulo">{f.titulo}</span>
+                <span className="cf-fila-sub">{f.texto}</span>
+              </span>
+              <span className="pf-switch">
+                <input type="checkbox" role="switch" name={f.name} defaultChecked={f.activo} />
+                <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="cf-pie">
+          <BotonEnviar className="pf-guardar" pendingLabel="Guardando…"><Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar reservas</BotonEnviar>
+        </div>
+      </form>
+
+      {/* ── 02 Chat privado ── */}
+      <form action={guardarAjusteDeChatAction} className="cf-bloque">
+        <div className="cf-cab">
+          <span className="pf-num">02</span>
+          <div>
+            <h2>{TITULOS["chat.dm_access"].titulo}</h2>
+            <p>{TITULOS["chat.dm_access"].ayuda} Podés elegir varios.</p>
+          </div>
+        </div>
+        <div className="pf-planes cf-planes" role="group" aria-label="Planes que pueden escribirte">
+          {PLANES.map((p) => (
+            <label key={p.key} className="pf-plan">
+              <input type="checkbox" name={`dm_${p.key}`} defaultChecked={dm[p.key] === true} />
+              <span className="pf-plan-caja">
+                <span className="pf-plan-titulo">{p.label}</span>
+                <span className="pf-plan-sub">{p.sub}</span>
+                <span className="pf-plan-tilde" aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="cf-pie">
+          <BotonEnviar className="pf-guardar" pendingLabel="Guardando…"><Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar chat</BotonEnviar>
+        </div>
+      </form>
+
+      {/* ── 03 Solo lectura ── */}
+      <section className="cf-bloque cf-bloque--tecnico">
+        <div className="cf-cab">
+          <span className="pf-num">03</span>
+          <div>
+            <h2>Ajustes técnicos</h2>
+            <p>
+              Los cambia tu equipo técnico. Se muestran para que sepas qué hay configurado, pero no se editan
+              desde acá: un error en las reglas de acceso puede dejar a una alumna sin sus clases.
+            </p>
+          </div>
+        </div>
+
+        <Link href="/admin/precios" className="cf-precios">
+          <span className="cf-precios-ico"><Euro size={18} strokeWidth={2} aria-hidden="true" /></span>
+          <span className="cf-fila-txt">
+            <span className="cf-fila-titulo">Planes y precios</span>
+            <span className="cf-fila-sub">Los importes y los identificadores de cobro se cambian en Precios.</span>
+          </span>
+          <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
+        </Link>
+
+        <ul className="cf-tecnicos">
+          {bloqueadas.map((s) => {
+            const meta = TITULOS[s.setting_key];
+            return (
+              <li key={s.setting_key}>
+                <Lock size={14} strokeWidth={2} aria-hidden="true" />
+                {/* La `description` de la base esta en ingles y se veia tal
+                    cual en pantalla. Se usa la de aca, en el idioma del panel. */}
+                <span className="cf-fila-txt">
+                  <span className="cf-fila-titulo">{meta?.titulo ?? s.setting_key}</span>
+                  <span className="cf-fila-sub">{meta?.ayuda ?? s.setting_key}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     </main>
   );
 }
+
+const CSS = `
+.cf { display: flex; flex-direction: column; gap: 18px; }
+.cf .ad-mast { padding-bottom: 6px; }
+.cf-bloque { border: 1px solid #e7e5e4; border-radius: 24px; background: #fff; padding: clamp(18px, 2.4vw, 28px); }
+.cf-bloque--tecnico { background: #fafaf9; border-style: dashed; }
+.cf-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+.cf-cab .pf-num { margin-top: 3px; }
+.cf-cab h2 { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
+.cf-cab p { margin-top: 3px; max-width: 68ch; font-size: 13.5px; line-height: 1.6; color: #78716c; }
+.cf-filas { display: flex; flex-direction: column; border-top: 1px solid #f0eeec; }
+.cf-fila { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid #f0eeec; cursor: pointer; }
+.cf-fila-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-fila-titulo { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.cf-fila-sub { font-size: 13px; line-height: 1.5; color: #78716c; }
+.cf-planes { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 0; }
+.cf-pie { display: flex; justify-content: flex-end; margin-top: 20px; }
+.cf-precios {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; margin-bottom: 12px; border-radius: 16px; text-decoration: none;
+  background: #fff; border: 1.5px solid var(--pink-line); color: var(--pink-deep); transition: border-color .2s, transform .2s;
+}
+.cf-precios:hover { border-color: var(--pink); transform: translateY(-1px); }
+.cf-precios .cf-fila-txt { flex: 1; }
+.cf-precios-ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); }
+.cf-tecnicos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.cf-tecnicos li { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 14px; background: #fff; border: 1px solid #f0eeec; }
+.cf-tecnicos li > svg { color: #a8a29e; margin-top: 3px; flex-shrink: 0; }
+`;
