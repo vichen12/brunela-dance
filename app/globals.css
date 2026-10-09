@@ -3597,3 +3597,69 @@ body {
 .dsp-op svg { color: var(--pink); flex-shrink: 0; }
 .dsp-op.es-deshabilitada { color: #c4c0bd; cursor: default; background: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   ZONA APP: el area privada y el panel de admin
+   ────────────────────────────────────────────────────────────────────────
+   Las mismas clases (.display, .eyebrow, .hero-stage...) las usa tambien la
+   landing, asi que el rediseño editorial se aplica SOLO dentro de .zona-app,
+   que ponen app/dashboard/layout.tsx y app/admin/layout.tsx.
+
+   Direccion: la del panel del estudio y la biblioteca. Montserrat negrita
+   con el espaciado cerrado (la del logo), filetes finos en vez de cajas,
+   coral de la landing, fondo blanco.
+   ════════════════════════════════════════════════════════════════════════ */
+.zona-app { background: #fff; }
+.zona-app .page-shell { width: min(1320px, calc(100% - 48px)); }
+
+.zona-app .display {
+  font-family: var(--font-display), sans-serif; font-style: normal; font-weight: 800;
+  letter-spacing: -0.04em; line-height: 1.02;
+}
+/* Los acentos de color se escribieron con fontStyle italic en linea. */
+.zona-app .display [style*="italic"] { font-style: normal !important; }
+
+.zona-app .eyebrow {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: var(--pink-deep);
+}
+.zona-app .eyebrow::before {
+  content: ""; display: inline-block; width: 28px; height: 1.5px; background: var(--pink); flex-shrink: 0;
+}
+
+.zona-app .hero-stage {
+  background: transparent; border: 0; border-radius: 0;
+  padding: clamp(6px, 1.5vw, 14px) 0 clamp(24px, 3vw, 34px);
+  border-bottom: 1px solid var(--ink);
+}
+
+.zona-app .feature-tile {
+  border: 1px solid #e7e5e4; border-radius: 18px; background: #fff;
+  transition: transform 0.35s cubic-bezier(.16,1,.3,1), box-shadow 0.35s, border-color 0.25s;
+}
+.zona-app .feature-tile:hover {
+  transform: translateY(-3px); border-color: var(--pink-line);
+  box-shadow: 0 20px 36px -22px rgba(176, 58, 62, 0.45);
+}
+
+.zona-app .studio-chip { letter-spacing: 0.14em; }
+
+/* Entrada escalonada de los bloques de cada pantalla. Solo CSS: sirve
+   igual en las paginas de servidor, sin convertirlas en componentes de
+   cliente. */
+@keyframes zona-sube {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.zona-app main > section > *,
+.zona-app > main > *:not(section) {
+  animation: zona-sube 0.7s cubic-bezier(.16,1,.3,1) both;
+}
+.zona-app main > section > *:nth-child(2) { animation-delay: 0.06s; }
+.zona-app main > section > *:nth-child(3) { animation-delay: 0.12s; }
+.zona-app main > section > *:nth-child(4) { animation-delay: 0.18s; }
+.zona-app main > section > *:nth-child(5) { animation-delay: 0.24s; }
+.zona-app main > section > *:nth-child(n+6) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .zona-app main > section > *, .zona-app > main > * { animation: none; }
+}

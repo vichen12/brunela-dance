@@ -1,192 +1,26 @@
 import { requireAdmin } from "@/src/features/auth/guards";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { MetricCard, QuickLinksGrid } from "@/components/admin-overview-client";
-import { Saludo } from "@/components/saludo";
+import { PanelControlAdmin } from "@/components/panel-control-admin";
+import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
 
 export const dynamic = "force-dynamic";
 
-function TierBlock({ count, label, pct, bg, color, borderColor }: {
-  count: number; label: string; pct: number; bg: string; color: string; borderColor?: string;
-}) {
-  return (
-    <div style={{
-      borderRadius: 18, padding: "22px 24px",
-      background: bg, border: borderColor ? `1px solid ${borderColor}` : "none",
-    }}>
-      <p style={{ fontSize: 36, fontWeight: 800, color, lineHeight: 1, fontFamily: "var(--font-display), serif" }}>{count}</p>
-      <p style={{ marginTop: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color, opacity: 0.75, textTransform: "uppercase" }}>{label}</p>
-      <div style={{ marginTop: 12, background: "rgba(0,0,0,0.08)", borderRadius: 99, height: 4 }}>
-        <div style={{ height: "100%", width: `${Math.max(pct, 3)}%`, background: color, borderRadius: 99, opacity: 0.7 }} />
-      </div>
-      <p style={{ marginTop: 5, fontSize: 10, color, opacity: 0.55 }}>{pct}% del total</p>
-    </div>
-  );
-}
-
+/**
+ * Resumen del panel de admin. Es el MISMO panel del estudio que ve una cuenta
+ * admin en /dashboard, con los mismos datos (src/features/admin/panel-estudio).
+ *
+ * Antes era una pantalla aparte con ocho tarjetas que dibujaban graficos de
+ * tendencia escritos a mano: la linea subia aunque la cifra fuera 0. Un
+ * grafico que no sale de los datos es peor que no tener grafico.
+ */
 export default async function AdminOverviewPage() {
   const { profile } = await requireAdmin();
-  // El nombre de quien entro: hay tres admins y todas leian "Brunela".
-  const nombre = profile?.full_name?.trim().split(/s+/)[0] || null;
-  const supabase = await createSupabaseServerClient();
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-  const [
-    { count: totalUsers },
-    { count: newUsersMonth },
-    { count: publishedVideos },
-    { count: totalVideos },
-    { count: completedClasses },
-    { count: liveSessions },
-    { count: activeBookings },
-    { count: totalDocs },
-    { count: totalPrograms },
-    { data: tierBreakdown },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_admin", false),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_admin", false).gte("created_at", monthStart),
-    supabase.from("videos").select("*", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("videos").select("*", { count: "exact", head: true }),
-    supabase.from("user_progress").select("*", { count: "exact", head: true }).eq("completion_percent", 100),
-    supabase.from("live_sessions").select("*", { count: "exact", head: true }).gte("starts_at", now.toISOString()),
-    supabase.from("live_session_bookings").select("*", { count: "exact", head: true }).eq("status", "reserved"),
-    supabase.from("documents").select("*", { count: "exact", head: true }).eq("is_published", true),
-    supabase.from("programs").select("*", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("profiles").select("membership_tier").eq("is_admin", false),
-  ]);
-
-  const tiers = (tierBreakdown ?? []) as { membership_tier: string }[];
-  const total = tiers.length || 1;
-  const tierCount = tiers.reduce<Record<string, number>>((acc, p) => {
-    acc[p.membership_tier] = (acc[p.membership_tier] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const dateLabel = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-  const row1 = [
-    {
-      label: "Alumnas totales", sub: "perfiles registrados", value: totalUsers ?? 0,
-      sparkPoints: "0,24 10,20 20,22 30,16 40,18 50,13 60,10 70,8 80,5",
-      trend: `+${newUsersMonth ?? 0} este mes`, trendUp: true, href: "/admin/users",
-    },
-    {
-      label: "Videos publicados", sub: `${totalVideos ?? 0} totales en catálogo`, value: publishedVideos ?? 0,
-      sparkPoints: "0,28 10,22 20,26 30,18 40,20 50,14 60,16 70,10 80,8",
-      trend: undefined, trendUp: true, href: "/admin/videos",
-    },
-    {
-      label: "Clases completadas", sub: "por todas las alumnas", value: completedClasses ?? 0,
-      sparkPoints: "0,26 10,22 20,20 30,18 40,20 50,15 60,14 70,11 80,9",
-      trend: undefined, trendUp: true,
-    },
-    {
-      label: "Planes activos", sub: "planes de trabajo publicados", value: totalPrograms ?? 0,
-      sparkPoints: "0,20 10,18 20,20 30,16 40,18 50,16 60,14 70,14 80,12",
-      trend: undefined, trendUp: true, href: "/admin/programs",
-    },
-  ];
-
-  const row2 = [
-    {
-      label: "Sesiones en vivo", sub: "próximas reservables", value: liveSessions ?? 0,
-      sparkPoints: "0,16 10,18 20,14 30,20 40,12 50,18 60,14 70,10 80,12",
-      trend: undefined, trendUp: true,
-    },
-    {
-      label: "Reservas activas", sub: "en clases en vivo", value: activeBookings ?? 0,
-      sparkPoints: "0,20 10,16 20,18 30,14 40,16 50,12 60,14 70,10 80,8",
-      trend: undefined, trendUp: true,
-    },
-    {
-      label: "Documentos", sub: "publicados y accesibles", value: totalDocs ?? 0,
-      sparkPoints: "0,24 10,22 20,20 30,22 40,18 50,20 60,16 70,14 80,12",
-      trend: undefined, trendUp: true, href: "/admin/documents",
-    },
-    {
-      label: "Nuevas alumnas", sub: "ingresaron este mes", value: newUsersMonth ?? 0,
-      sparkPoints: "0,26 10,24 20,22 30,18 40,20 50,14 60,12 70,8 80,6",
-      trend: newUsersMonth ? "+100%" : "sin cambios", trendUp: (newUsersMonth ?? 0) > 0,
-    },
-  ];
-
-  // Iconos de lucide en vez de emojis: los emojis los dibuja cada sistema
-  // operativo a su manera, no heredan el color de la marca y en un panel de
-  // trabajo se leen como decoracion, no como interfaz.
-  // Solo cadenas: QuickLinksGrid es un componente de CLIENTE y no se le puede
-  // pasar un componente de lucide como prop (ver el comentario en ese archivo).
-  const quickLinks = [
-    { href: "/admin/videos",     icono: "videos",     label: "Clases",        desc: "Subir y publicar clases" },
-    { href: "/admin/categories", icono: "categorias", label: "Categorías",    desc: "Crear y configurar" },
-    { href: "/admin/programs",   icono: "programas",  label: "Planes de trabajo", desc: "Secuencias día a día" },
-    { href: "/admin/users",      icono: "alumnas",    label: "Alumnas",       desc: "Planes y permisos" },
-    { href: "/admin/documents",  icono: "documentos", label: "Documentos",    desc: "PDF y archivos" },
-    { href: "/admin/chat",       icono: "chat",       label: "Chat",          desc: "Salas y moderación" },
-    { href: "/admin/settings",   icono: "ajustes",    label: "Configuración", desc: "Ajustes del estudio" },
-    { href: "/dashboard",        icono: "alumna",     label: "Vista alumna",  desc: "Ver como estudiante" },
-  ];
+  const nombre = profile?.full_name?.trim().split(/\s+/)[0] || null;
+  const datos = await cargarPanelEstudio();
 
   return (
-    <main className="space-y-8">
-
-      {/* Greeting header */}
-      <div style={{
-        borderRadius: 24, padding: "28px 32px",
-        background: "linear-gradient(135deg, var(--pink-wash) 0%, #fff 50%, var(--pink-soft) 100%)",
-        border: "1px solid var(--pink-soft)",
-        boxShadow: "0 4px 24px rgba(230, 79, 85,0.06)",
-      }}>
-        <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase" }}>
-          {dateLabel}
-        </p>
-        <h1 style={{
-          fontFamily: "var(--font-display), serif",
-          fontSize: 42, fontWeight: 700, lineHeight: 1.1,
-          color: "#1c1917", marginTop: 8, letterSpacing: "-0.01em",
-        }}>
-          <Saludo />{nombre ? `, ${nombre}.` : "."}<span style={{ color: "var(--pink)" }}>✦</span>
-        </h1>
-        <p style={{ marginTop: 8, fontSize: 13, color: "#78716c", lineHeight: 1.6 }}>
-          Aquí está el resumen del estudio. Todo listo para gestionar.
-        </p>
-      </div>
-
-      {/* Row 1 metrics */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
-          Resumen del estudio
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-          {row1.map((m) => <MetricCard key={m.label} {...m} />)}
-        </div>
-      </div>
-
-      {/* Row 2 metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-        {row2.map((m) => <MetricCard key={m.label} {...m} />)}
-      </div>
-
-      {/* Tier breakdown */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
-          Alumnas por suscripción
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-          <TierBlock count={tierCount["principal"] ?? 0}       label="Principal"       pct={Math.round(((tierCount["principal"] ?? 0) / total) * 100)}       bg="#1c1917" color="var(--pink-wash)" />
-          <TierBlock count={tierCount["solista"] ?? 0}         label="Solista"         pct={Math.round(((tierCount["solista"] ?? 0) / total) * 100)}         bg="linear-gradient(135deg,var(--pink-wash),var(--pink-soft))" color="var(--pink-mid)" />
-          <TierBlock count={tierCount["corps_de_ballet"] ?? 0} label="Corps de Ballet" pct={Math.round(((tierCount["corps_de_ballet"] ?? 0) / total) * 100)} bg="linear-gradient(135deg,#fff0f9,var(--pink-soft))" color="var(--pink-mid)" borderColor="var(--pink-soft)" />
-          <TierBlock count={tierCount["none"] ?? 0}            label="Sin plan"        pct={Math.round(((tierCount["none"] ?? 0) / total) * 100)}            bg="#f5f5f4" color="#78716c" borderColor="#e7e5e4" />
-        </div>
-      </div>
-
-      {/* Quick access */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.18em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 14 }}>
-          Accesos rápidos
-        </p>
-        <QuickLinksGrid links={quickLinks} />
-      </div>
-    </main>
+    <PanelControlAdmin
+      datos={{ ...datos, nombre, fecha: fechaDelPanel() }}
+      secundario={{ href: "/admin/analiticas", label: "Analíticas" }}
+    />
   );
 }

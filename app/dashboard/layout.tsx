@@ -75,7 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             seguirViendo={seguirViendo}
           />
         </div>
-        <div className="dashboard-content" style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
+        <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
           {children}
         </div>
       </div>

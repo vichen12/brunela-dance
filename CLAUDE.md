@@ -201,7 +201,7 @@ Ocho cosas que fallan **en silencio**. Ninguna da error.
    tiempo de ejecución**. `tsc` pasa y `next build` pasa: `/admin` compiló
    perfecto y reventó en producción con un 500.
    Por la frontera va una **cadena**, y el mapa de íconos vive del lado del
-   cliente (`components/admin-overview-client.tsx`). Renderizar el ícono dentro
+   cliente (`components/panel-control-admin.tsx`). Renderizar el ícono dentro
    del mismo server component sí es válido — lo que no se puede es pasarlo.
 
 7. **`begin;`/`commit;` propios en el SQL Editor de Supabase.** El editor ya

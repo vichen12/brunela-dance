@@ -69,7 +69,11 @@ const NAV: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-export function AdminSidebar() {
+/**
+ * `nombre` es el de quien entro: hay tres cuentas admin y antes las tres
+ * leian "BRUNELA" al pie del menu.
+ */
+export function AdminSidebar({ nombre }: { nombre: string }) {
   const pathname = usePathname();
 
   const isActive = (href: string, exact?: boolean) => {
@@ -179,12 +183,12 @@ export function AdminSidebar() {
             background: "var(--pink-wash)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 17, fontWeight: 700, color: "var(--pink)",
-          }}>B</div>
+          }}>{(nombre.trim()[0] ?? "A").toUpperCase()}</div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.01em" }}>
-              BRUNELA
+            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "0.01em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {nombre.toUpperCase()}
             </p>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Backstage</p>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Administración</p>
           </div>
         </div>
 

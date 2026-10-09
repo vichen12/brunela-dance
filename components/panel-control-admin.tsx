@@ -156,7 +156,17 @@ function partesFecha(iso: string, zona: string) {
   }
 }
 
-export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
+/**
+ * `secundario`: el segundo boton de la cabecera. Desde /dashboard lleva a
+ * /admin; dentro de /admin eso seria un enlace a si mismo, y ahi va otro.
+ */
+export function PanelControlAdmin({
+  datos,
+  secundario = { href: "/admin", label: "Panel completo" },
+}: {
+  datos: DatosPanel;
+  secundario?: { href: string; label: string };
+}) {
   const m = datos.metricas;
   const total = datos.porPlan.reduce((a, p) => a + p.cantidad, 0);
   const huecos = Math.max(0, 4 - datos.clases.length);
@@ -212,8 +222,8 @@ export function PanelControlAdmin({ datos }: { datos: DatosPanel }) {
             <Link href="/admin/videos" className="pc-btn pc-btn--lleno">
               <Upload size={15} strokeWidth={2.2} /> Subir clase
             </Link>
-            <Link href="/admin" className="pc-btn">
-              Panel completo <ArrowUpRight size={15} strokeWidth={2.2} />
+            <Link href={secundario.href as never} className="pc-btn">
+              {secundario.label} <ArrowUpRight size={15} strokeWidth={2.2} />
             </Link>
           </motion.div>
         </header>

@@ -17,7 +17,7 @@ const ROUTES: Record<string, string> = {
   "/admin/settings":      "Configuración",
 };
 
-export function AdminHeader() {
+export function AdminHeader({ inicial }: { inicial: string }) {
   const pathname = usePathname();
   const title = ROUTES[pathname] ?? "Backstage";
 
@@ -51,7 +51,7 @@ export function AdminHeader() {
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}>
-          <span style={{ color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "var(--font-display), serif" }}>B</span>
+          <span style={{ color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "var(--font-display), serif" }}>{inicial}</span>
         </div>
       </div>
     </header>

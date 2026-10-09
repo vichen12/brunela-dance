@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HoraSesion } from "@/components/hora-sesion";
 import { PanelControlAdmin } from "@/components/panel-control-admin";
+import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
 import { Saludo } from "@/components/saludo";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -45,30 +46,6 @@ type LiveSession = {
 };
 
 type Announcement = { id: string; title: string; content: string; tier_target: string };
-
-type ClaseReciente = {
-  id: string;
-  slug: string;
-  title_i18n: Record<string, string>;
-  status: string;
-  thumbnail_url: string | null;
-  duration_seconds: number | null;
-};
-
-type SesionProxima = {
-  id: string;
-  title_i18n: Record<string, string>;
-  starts_at: string;
-  session_timezone: string;
-  live_session_bookings: { count: number }[] | null;
-};
-
-type RecentUser = {
-  id: string;
-  full_name: string | null;
-  membership_tier: MembershipTier;
-  created_at: string;
-};
 
 const TIER_ORDER: Record<MembershipTier, number> = {
   none: 0, corps_de_ballet: 1, solista: 2, principal: 3,
@@ -145,18 +122,6 @@ function formatDuracion(segundos: number) {
   return `${Math.round(segundos / 60)} min`;
 }
 
-function timeAgo(iso: string) {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (days === 0) return "hoy";
-  if (days === 1) return "ayer";
-  if (days < 7) return `hace ${days} días`;
-  if (days < 30) return `hace ${Math.floor(days / 7)} sem`;
-  // "hace 5m" se leia como cinco MINUTOS. Se escribe la palabra entera.
-  if (days < 365) { const m = Math.floor(days / 30); return `hace ${m} ${m === 1 ? "mes" : "meses"}`; }
-  const a = Math.floor(days / 365);
-  return `hace ${a} ${a === 1 ? "año" : "años"}`;
-}
-
 export default async function DashboardPage() {
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
@@ -171,8 +136,21 @@ export default async function DashboardPage() {
   const firstName =
     profile?.full_name?.trim().split(/s+/)[0] || user.email?.split("@")[0] || "alumna";
 
+  // La admin ve el panel del estudio y nada mas, y se resuelve ANTES de las
+  // consultas de alumna (progreso, sugerencias, invitaciones), que en su cuenta
+  // no se usan. La seccion personal eran ceros ocupando media pantalla.
+  if (isAdmin) {
+    const datos = await cargarPanelEstudio();
+    return (
+      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh", background: "#fff" }}>
+        <section style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px)" }}>
+          <PanelControlAdmin datos={{ ...datos, nombre: nombreReal, fecha: fechaDelPanel() }} />
+        </section>
+      </main>
+    );
+  }
+
   const now = new Date().toISOString();
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
   // Base queries — available to all authenticated users
   const [
@@ -213,81 +191,6 @@ export default async function DashboardPage() {
       .select("live_session_id, live_sessions(id, slug, title_i18n, starts_at, status, session_timezone)"),
   ]);
 
-  // Admin-only queries — only run when the user is an admin and the admin client is available
-  let totalUsers: number | null = null;
-  let corpsCount: number | null = null;
-  let solistaCount: number | null = null;
-  let principalCount: number | null = null;
-  let noPlanCount: number | null = null;
-  let totalVideos: number | null = null;
-  let publishedVideos: number | null = null;
-  let draftVideos: number | null = null;
-  let scheduledLive: number | null = null;
-  let totalBookings: number | null = null;
-  let newUsersMonth: number | null = null;
-  let activeAnnouncements: number | null = null;
-  let recentUsersRaw: RecentUser[] | null = null;
-  let clasesRecientesRaw: ClaseReciente[] = [];
-  let proximasEnVivoRaw: SesionProxima[] = [];
-
-  if (isAdmin) {
-    try {
-      const { createSupabaseAdminClient } = await import("@/src/lib/supabase/admin");
-      const supabaseAdmin = createSupabaseAdminClient();
-
-      const [
-        r0, r1, r2, r3, r4,
-        r5, r6, r7, r8, r9,
-        r10, r11, r12, r13, r14,
-      ] = await Promise.all([
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "corps_de_ballet"),
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "solista"),
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "principal"),
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).eq("membership_tier", "none"),
-        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }),
-        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "published"),
-        supabaseAdmin.from("videos").select("*", { count: "exact", head: true }).eq("status", "draft"),
-        supabaseAdmin.from("live_sessions").select("*", { count: "exact", head: true })
-          .eq("status", "scheduled").gte("starts_at", now),
-        supabaseAdmin.from("live_session_bookings").select("*", { count: "exact", head: true }).eq("status", "reserved"),
-        supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", startOfMonth),
-        supabaseAdmin.from("studio_announcements").select("*", { count: "exact", head: true })
-          .eq("is_active", true).or("expires_at.is.null,expires_at.gt." + now),
-        supabaseAdmin.from("profiles")
-          .select("id, full_name, membership_tier, created_at")
-          .order("created_at", { ascending: false }).limit(6),
-        // Lo ultimo que se subio, en cualquier estado: un borrador olvidado es
-        // justo lo que la admin tiene que ver al entrar.
-        supabaseAdmin.from("videos")
-          .select("id, slug, title_i18n, status, thumbnail_url, duration_seconds")
-          .order("created_at", { ascending: false }).limit(4),
-        supabaseAdmin.from("live_sessions")
-          .select("id, title_i18n, starts_at, session_timezone, live_session_bookings(count)")
-          .eq("status", "scheduled").gte("starts_at", now)
-          .eq("live_session_bookings.status", "reserved")
-          .order("starts_at", { ascending: true }).limit(3),
-      ]);
-
-      totalUsers = r0.count;
-      corpsCount = r1.count;
-      solistaCount = r2.count;
-      principalCount = r3.count;
-      noPlanCount = r4.count;
-      totalVideos = r5.count;
-      publishedVideos = r6.count;
-      draftVideos = r7.count;
-      scheduledLive = r8.count;
-      totalBookings = r9.count;
-      newUsersMonth = r10.count;
-      activeAnnouncements = r11.count;
-      recentUsersRaw = (r12.data ?? []) as RecentUser[];
-      clasesRecientesRaw = (r13.data ?? []) as ClaseReciente[];
-      proximasEnVivoRaw = (r14.data ?? []) as SesionProxima[];
-    } catch {
-      // Admin client unavailable (missing SUPABASE_SERVICE_ROLE_KEY) — degrade gracefully
-    }
-  }
 
   // "Continua viendo" sale de la misma lista, sin otra consulta.
   const resume = ultimaVista(progressList);
@@ -332,64 +235,6 @@ export default async function DashboardPage() {
     .filter((s): s is NonNullable<typeof s> => !!s && s.status === "scheduled" && s.starts_at >= now)
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
-  const recentUsers = (recentUsersRaw ?? []) as RecentUser[];
-  const paidUsers = (corpsCount ?? 0) + (solistaCount ?? 0) + (principalCount ?? 0);
-
-
-  // La admin ve el panel del estudio y nada mas. La seccion personal (clases
-  // vistas, racha, "continua viendo") es la vista de una alumna: en la cuenta de
-  // la profesora eran ceros ocupando media pantalla.
-  if (isAdmin) {
-    return (
-      <main className="pb-20 md:pb-10" style={{ minHeight: "100vh", background: "#fff" }}>
-        <section style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px)" }}>
-          <PanelControlAdmin datos={{
-            nombre: nombreReal,
-            fecha: formatDate(),
-            metricas: {
-              alumnas: totalUsers ?? 0,
-              altasDelMes: newUsersMonth ?? 0,
-              conPlan: paidUsers,
-              principal: principalCount ?? 0,
-              sinPlan: noPlanCount ?? 0,
-              reservas: totalBookings ?? 0,
-              sesiones: scheduledLive ?? 0,
-              publicadas: publishedVideos ?? 0,
-              borradores: draftVideos ?? 0,
-              totales: totalVideos ?? 0,
-              anuncios: activeAnnouncements ?? 0,
-            },
-            porPlan: [
-              { tier: "principal", cantidad: principalCount ?? 0 },
-              { tier: "solista", cantidad: solistaCount ?? 0 },
-              { tier: "corps_de_ballet", cantidad: corpsCount ?? 0 },
-              { tier: "none", cantidad: noPlanCount ?? 0 },
-            ],
-            ultimas: recentUsers.map((u) => ({
-              id: u.id,
-              nombre: u.full_name?.trim() || null,
-              tier: u.membership_tier,
-              cuando: timeAgo(u.created_at),
-            })),
-            clases: clasesRecientesRaw.map((v) => ({
-              id: v.id,
-              titulo: resolveI18nText(v.title_i18n) || "Sin título",
-              estado: v.status,
-              portada: v.thumbnail_url,
-              minutos: v.duration_seconds ? Math.round(v.duration_seconds / 60) : null,
-            })),
-            enVivo: proximasEnVivoRaw.map((s) => ({
-              id: s.id,
-              titulo: resolveI18nText(s.title_i18n) || "Clase en vivo",
-              iso: s.starts_at,
-              zona: s.session_timezone,
-              reservas: s.live_session_bookings?.[0]?.count ?? 0,
-            })),
-          }} />
-        </section>
-      </main>
-    );
-  }
 
   return (
     <main className="pb-20 md:pb-10" style={{ minHeight: "100vh" }}>
