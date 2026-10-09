@@ -83,6 +83,17 @@ export function AdminSidebar({ nombre }: { nombre: string }) {
     if (t) t.checked = false;
   }, [pathname]);
 
+  // Y con Escape, como cualquier cajon.
+  useEffect(() => {
+    const cerrar = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const t = document.getElementById("menu-admin") as HTMLInputElement | null;
+      if (t?.checked) t.checked = false;
+    };
+    window.addEventListener("keydown", cerrar);
+    return () => window.removeEventListener("keydown", cerrar);
+  }, []);
+
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");

@@ -4110,7 +4110,7 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .sb-cta:hover { transform: translateY(-2px); box-shadow: 0 18px 30px -14px rgba(230,79,85,.9); }
 .sb-cta-ico { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.22); }
 
-.sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 14px 18px; display: flex; flex-direction: column; scrollbar-width: thin;
+.sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 14px 18px; display: flex; flex-direction: column; scrollbar-width: none;
   -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); }
 .sb-grupo + .sb-grupo { margin-top: 10px; }
 .sb-grupo-titulo { font-size: 11.5px; font-weight: 800; color: var(--pink-muted); padding: 0 12px; margin-bottom: 6px; }
@@ -4272,3 +4272,13 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .mn-op--admin .mn-op-ico { background: #fff; color: var(--melocoton-deep); }
 @keyframes mn-sube { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes mn-funde { from { opacity: 0; } to { opacity: 1; } }
+
+/* Barra de desplazamiento del menu: invisible en reposo (el degrade de abajo
+   ya avisa que hay mas), y fina, redonda y en la paleta al pasar el mouse.
+   Antes se veia la barra gris del sistema pegada al borde. */
+.sb-nav::-webkit-scrollbar { width: 0; }
+.sb-nav:hover { scrollbar-width: thin; scrollbar-color: var(--linea-fuerte) transparent; }
+.sb-nav:hover::-webkit-scrollbar { width: 6px; }
+.sb-nav::-webkit-scrollbar-track { background: transparent; }
+.sb-nav::-webkit-scrollbar-thumb { background: var(--linea-fuerte); border-radius: 99px; }
+.sb-nav::-webkit-scrollbar-thumb:hover { background: var(--pink-line); }
