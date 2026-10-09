@@ -2,6 +2,7 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { PanelControlAdmin } from "@/components/panel-control-admin";
 import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
 import { cargarRecordatoriosAdmin } from "@/src/features/admin/recordatorios";
+import { AdminEstaSemana } from "@/components/admin-esta-semana";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,13 @@ export default async function AdminOverviewPage() {
   const [datos, recordatorios] = await Promise.all([cargarPanelEstudio(), cargarRecordatoriosAdmin()]);
 
   return (
-    <PanelControlAdmin
-      datos={{ ...datos, recordatorios, nombre, fecha: fechaDelPanel() }}
-      secundario={{ href: "/admin/analiticas", label: "Analíticas" }}
-    />
+    <>
+      <PanelControlAdmin
+        datos={{ ...datos, recordatorios, nombre, fecha: fechaDelPanel() }}
+        secundario={{ href: "/admin/analiticas", label: "Analíticas" }}
+      />
+      {/* Clases en vivo y sesiones privadas de los proximos 7 dias. */}
+      <AdminEstaSemana />
+    </>
   );
 }

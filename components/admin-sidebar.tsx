@@ -36,6 +36,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: "Estudio",
     items: [
       { href: "/admin", exact: true, label: "Resumen", Icon: LayoutGrid },
+      { href: "/admin/calendario", label: "Calendario", Icon: CalendarDays },
       { href: "/admin/analiticas", label: "Analíticas", Icon: ChartColumn },
     ],
   },

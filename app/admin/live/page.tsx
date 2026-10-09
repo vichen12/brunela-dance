@@ -253,7 +253,7 @@ export default async function AdminLivePage({
       ]} />
 
       {/* Create new session */}
-      <AdminNueva titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom o Meet">
+      <AdminNueva abierto={params.nueva === "1"} titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom o Meet">
         <LiveForm />
       </AdminNueva>
 
