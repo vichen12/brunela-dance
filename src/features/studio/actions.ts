@@ -17,7 +17,10 @@ const progressSchema = z.object({
 
 const liveBookingSchema = z.object({
   sessionId: z.string().uuid(),
-  redirectTo: z.string().min(1)
+  // Solo de vuelta a la agenda o al perfil de una sesion. Antes aceptaba
+  // cualquier texto: un enlace armado podia mandar a la alumna a otro sitio
+  // despues de reservar (open redirect).
+  redirectTo: z.string().regex(/^\/dashboard\/live(\/[a-z0-9-]{1,120})?$/).catch("/dashboard/live")
 });
 
 function redirectWithMessage(path: string, kind: "success" | "error", message: string): never {

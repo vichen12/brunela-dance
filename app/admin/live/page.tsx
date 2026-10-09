@@ -13,7 +13,7 @@ import { HoraSesion } from "@/components/hora-sesion";
 import { EditarSesion, LiveForm, type LiveSession } from "@/components/admin-live-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { AdminAviso, AdminCabecera, AdminCifras, AdminNueva } from "@/components/admin-ui";
-import { CalendarDays, Check, Clock, Users, Video } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clock, Users, Video } from "lucide-react";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -26,6 +26,22 @@ const ESTADOS_LIVE = [
   { key: "completed", label: "Terminadas" },
   { key: "canceled", label: "Canceladas" },
 ];
+
+const PLANES_LIVE = [
+  { key: "", label: "Todos los planes" },
+  { key: "corps_de_ballet", label: "Corps de Ballet" },
+  { key: "solista", label: "Solista" },
+  { key: "principal", label: "Principal" },
+];
+
+// Sin valor = Proximas: es la vista por defecto.
+const CUANDO_LIVE = [
+  { key: "", label: "Próximas" },
+  { key: "pasadas", label: "Pasadas" },
+  { key: "todas", label: "Todas" },
+];
+
+const POR_PAGINA = 8;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -80,26 +96,47 @@ export default async function AdminLivePage({
   // paginacion seria directamente incorrecto.
   const q = (typeof params.q === "string" ? params.q : "").trim();
   const fEstado = ESTADOS_LIVE.some((e) => e.key === params.estado) ? (params.estado as string) : "";
+  const fPlan = PLANES_LIVE.some((e) => e.key === params.plan) ? (params.plan as string) : "";
+  // "" = Proximas, que es lo que Brunela mira casi siempre.
+  const fCuando = CUANDO_LIVE.some((e) => e.key === params.cuando) ? (params.cuando as string) : "";
+  const pagina = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina) || 0)));
+  const ahoraIso = new Date().toISOString();
 
+  // Paginacion EN LA BASE (range + count exact): filtrar o cortar en memoria
+  // haria mentir al contador de "X de Y".
+  // Proxima = todavia no termino (ends_at): una clase en curso no salta a
+  // pasadas a los cinco minutos de empezar.
   let consultaSesiones = supabase
     .from("live_sessions")
-    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at");
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at", { count: "exact" });
   if (fEstado) consultaSesiones = consultaSesiones.eq("status", fEstado);
+  if (fPlan) consultaSesiones = consultaSesiones.eq("membership_tier_required", fPlan);
+  if (fCuando === "") consultaSesiones = consultaSesiones.gte("ends_at", ahoraIso);
+  if (fCuando === "pasadas") consultaSesiones = consultaSesiones.lt("ends_at", ahoraIso);
   if (q) {
     const t = q.replace(/[,()]/g, " ");
     consultaSesiones = consultaSesiones.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
   }
-
-  const { count: totalSesiones } = await supabase
-    .from("live_sessions").select("*", { count: "exact", head: true });
+  // Proximas: de la mas cercana a la mas lejana. Pasadas y "todas": de la mas
+  // reciente a la mas vieja.
+  consultaSesiones = consultaSesiones
+    .order("starts_at", { ascending: fCuando === "" })
+    .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1);
 
   const [
-    { data: sessionsData },
+    { data: sessionsData, count: filtradasCount },
+    { count: totalSesiones },
+    { count: publicadasCount },
+    { count: proximasCount },
     { data: bookingsData },
     { data: accessLinksData },
     { data: invitationsData },
   ] = await Promise.all([
-    consultaSesiones.order("starts_at", { ascending: false }),
+    consultaSesiones,
+    // Las cifras de arriba son del estudio entero, no de la pagina.
+    supabase.from("live_sessions").select("id", { count: "exact", head: true }),
+    supabase.from("live_sessions").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
+    supabase.from("live_sessions").select("id", { count: "exact", head: true }).eq("status", "scheduled").gte("starts_at", ahoraIso),
     supabase
       .from("live_session_bookings")
       // Con nombre: Brunela tiene que ver QUIEN se anoto, no solo cuantas.
@@ -168,9 +205,22 @@ export default async function AdminLivePage({
     invitations: invitationsBySession[s.id] ?? [],
   }));
 
-  const scheduled = sessions.filter((s) => s.status === "scheduled").length;
-  const upcoming = sessions.filter((s) => s.status === "scheduled" && new Date(s.starts_at) > new Date()).length;
-  const total = sessions.length;
+  const total = totalSesiones ?? 0;
+  const scheduled = publicadasCount ?? 0;
+  const upcoming = proximasCount ?? 0;
+  const coinciden = filtradasCount ?? sessions.length;
+  const totalPaginas = Math.max(1, Math.ceil(coinciden / POR_PAGINA));
+  const paginaReal = Math.min(pagina, totalPaginas - 1);
+  const conPagina = (p: number) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (fEstado) u.set("estado", fEstado);
+    if (fPlan) u.set("plan", fPlan);
+    if (fCuando) u.set("cuando", fCuando);
+    if (p > 0) u.set("pagina", String(p));
+    const t = u.toString();
+    return "/admin/live" + (t ? "?" + t : "") + "#sesiones";
+  };
 
   return (
     <main className="lv">
@@ -198,15 +248,21 @@ export default async function AdminLivePage({
       </AdminNueva>
 
       {/* Session list */}
-      <section className="lv-seccion">
-        <h2 className="lv-h2">Sesiones <span>{total}</span></h2>
+      <section id="sesiones" className="lv-seccion">
+        <h2 className="lv-h2">Sesiones <span>{coinciden}</span></h2>
         <AdminBuscador
           action="/admin/live"
           q={q}
           placeholder="Buscar por título o dirección…"
-          filtros={[{ name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS_LIVE }]}
-          total={totalSesiones ?? sessions.length}
-          mostrando={sessions.length}
+          filtros={[
+            { name: "cuando", valor: fCuando, etiqueta: "Cuándo", opciones: CUANDO_LIVE },
+            { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES_LIVE },
+            { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS_LIVE },
+          ]}
+          // Sin filtros elegidos la vista igual es "Proximas": el contador
+          // cuenta esas, no las del estudio entero (esas estan en las cifras).
+          total={q || fEstado || fPlan || fCuando ? total : coinciden}
+          mostrando={coinciden}
         />
         {sessions.length === 0 ? (
           <div className="lv-vacio">
@@ -216,11 +272,13 @@ export default async function AdminLivePage({
               <span><Users size={20} strokeWidth={2.2} /></span>
             </div>
             <p className="lv-vacio-titulo">
-              {q || fEstado ? "Ninguna sesión coincide." : "Todavía no hay sesiones."}
+              {q || fEstado || fPlan || fCuando ? "Ninguna sesión coincide." : total > 0 ? "No hay sesiones próximas." : "Todavía no hay sesiones."}
             </p>
             <p className="lv-vacio-txt">
-              {q || fEstado
-                ? "Probá con otra palabra o con otro estado."
+              {q || fEstado || fPlan || fCuando
+                ? "Probá con otra palabra o sacá algún filtro."
+                : total > 0
+                ? "Las que ya pasaron están en «Cuándo: Pasadas». Para programar otra, usá «Nueva sesión en vivo», arriba."
                 : "Creá la primera desde «Nueva sesión en vivo», arriba: fecha, cupo y el enlace de Zoom."}
             </p>
           </div>
@@ -248,9 +306,9 @@ export default async function AdminLivePage({
                     {/* Info */}
                     <div className="lv-info">
                       <div className="lv-titulo-fila">
-                        <span className="lv-titulo">
+                        <Link href={`/admin/live/${session.id}` as never} className="lv-titulo">
                           {session.title_i18n.es ?? session.slug}
-                        </span>
+                        </Link>
                         <span className={"lv-chip " + st.clase}>{st.label}</span>
                         <span className={"lv-chip " + tier.clase}>{tier.label}</span>
                       </div>
@@ -341,12 +399,22 @@ export default async function AdminLivePage({
                       campos de CADA sesion vivia aca dentro de un <details>:
                       oculto, pero renderizado igual. */}
                   <div className="lv-pie">
+                    <Link href={`/admin/live/${session.id}` as never} className="lv-perfil">
+                      Ver perfil <ArrowRight size={14} strokeWidth={2.4} aria-hidden="true" />
+                    </Link>
                     <EditarSesion session={session} />
                   </div>
                 </li>
               );
             })}
           </ul>
+        )}
+        {totalPaginas > 1 && (
+          <nav className="lv-paginas" aria-label="Páginas">
+            {paginaReal > 0 ? <Link href={conPagina(paginaReal - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
+            <span className="lv-paginas-txt">Página {paginaReal + 1} de {totalPaginas}</span>
+            {paginaReal < totalPaginas - 1 ? <Link href={conPagina(paginaReal + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
+          </nav>
         )}
       </section>
     </main>
@@ -377,17 +445,30 @@ const CSS = `
 .lv-lista { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .lv-fila { background: #fff; border: 1px solid var(--linea); border-radius: var(--radio); box-shadow: var(--sombra); transition: transform .35s var(--curva), box-shadow .35s var(--curva), border-color .2s; }
 .lv-fila:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); border-color: var(--linea-fuerte); }
-.lv-fila-cuerpo { display: flex; align-items: center; gap: 16px; padding: 16px 20px; flex-wrap: wrap; }
+.lv-fila-cuerpo { position: relative; display: flex; align-items: center; gap: 16px; padding: 16px 20px; flex-wrap: wrap; }
 .lv-portada { width: 84px; height: 58px; border-radius: 18px; flex-shrink: 0; overflow: hidden; display: grid; place-items: center; background: linear-gradient(140deg, #FFE2D3, #FDECEC); color: var(--pink-deep); }
 .lv-portada img { width: 100%; height: 100%; object-fit: cover; }
 .lv-info { flex: 1 1 280px; min-width: 0; }
 .lv-titulo-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-.lv-titulo { font-size: 16px; font-weight: 800; color: var(--ink); }
+.lv-titulo { font-size: 16px; font-weight: 800; color: var(--ink); text-decoration: none; transition: color .2s; }
+/* La fila entera (portada, titulo, datos) lleva al perfil: el enlace del
+   titulo se estira con ::after. Los botones de estado van encima. */
+a.lv-titulo::after { content: ""; position: absolute; inset: 0; border-radius: var(--radio) var(--radio) 0 0; }
+a.lv-titulo:focus-visible { outline: 0; }
+a.lv-titulo:focus-visible::after { box-shadow: inset 0 0 0 3px rgba(230,79,85,.3); }
+.lv-fila-cuerpo:hover a.lv-titulo { color: var(--pink-deep); }
+.lv-rapido { position: relative; z-index: 1; }
+a.lv-titulo:hover { color: var(--pink-deep); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; text-decoration-color: var(--pink-line); }
+.lv-perfil { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 13px; font-weight: 800; text-decoration: none; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); transition: background .2s, transform .3s var(--curva), gap .25s var(--curva); }
+.lv-perfil:hover { background: var(--pink-mid); transform: translateY(-1px); gap: 10px; }
+.lv-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; }
+.lv-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); white-space: nowrap; }
+.lv-seccion { scroll-margin-top: 20px; }
 .lv-chip { padding: 4px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; }
-.lv-chip--ok { background: var(--salvia); color: var(--salvia-deep); }
+.lv-chip--ok { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .lv-chip--borrador { background: #FFF4E8; color: var(--melocoton-deep); }
 .lv-chip--hecha { background: #FFF0EA; color: #B4533A; }
-.lv-chip--cancelada { background: var(--rubor); color: var(--pink-deep); }
+.lv-chip--cancelada { background: #fff; color: var(--muted); border: 1px solid var(--linea-fuerte); }
 .lv-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .lv-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .lv-plan--principal { background: var(--pink); color: #fff; }
@@ -396,11 +477,11 @@ const CSS = `
 .lv-hora { color: var(--ink); font-weight: 700; }
 .lv-hora.es-pasada { color: var(--muted); font-weight: 500; }
 .lv-dato--inv { color: var(--pink-deep); font-weight: 700; }
-.lv-dato--ok { padding: 2px 10px; border-radius: 99px; background: var(--salvia); color: var(--salvia-deep); font-weight: 800; font-size: 12px; }
+.lv-dato--ok { padding: 2px 10px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-weight: 800; font-size: 12px; }
 .lv-rapido { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 .lv-accion { height: 34px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), filter .2s; }
 .lv-accion:hover { transform: translateY(-1px); filter: brightness(.97); }
-.lv-accion--publicar { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
+.lv-accion--publicar { background: var(--pink); color: #fff; border-color: var(--pink); box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .lv-accion--dar { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: var(--pink); color: #fff; border-color: var(--pink); box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .lv-accion--completar { background: #FFF0EA; color: #B4533A; border-color: #F6D9CF; }
 .lv-accion--cancelar { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }

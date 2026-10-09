@@ -7,6 +7,8 @@ import { getProgresoDelUsuario, paraRetomar } from "@/src/features/studio/progre
 import { StudioSidebar } from "@/components/studio-sidebar";
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
+import { getNotificaciones } from "@/src/features/studio/notificaciones";
+import { Notificaciones } from "@/components/notificaciones";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
@@ -60,6 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Sin mayusculas: el redisenio suave muestra el nombre como se escribe.
 
   const isAdmin = profile?.is_admin ?? false;
+  const notificaciones = await getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin);
 
   return (
     <>
@@ -83,7 +86,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             seguirViendo={seguirViendo}
           />
         </div>
-        <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
+        <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden", position: "relative" }}>
+          {/* Campanita: invitaciones y anuncios, arriba a la derecha. */}
+          <div className="nt-barra"><Notificaciones items={notificaciones} /></div>
           {children}
         </div>
         <MobileDashboardNav isAdmin={isAdmin} />

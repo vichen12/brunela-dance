@@ -125,7 +125,7 @@ function CerrarAlGuardar({ onExito }: { onExito: () => void }) {
  * drawer). Tener una copia por camino garantiza que en unos meses uno tenga un
  * campo que el otro no.
  */
-export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGuardado?: () => void }) {
+export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSession; onGuardado?: () => void; redirectTo?: string }) {
   const isNew = !session;
   const tz = session?.session_timezone ?? "America/Buenos_Aires";
 
@@ -134,6 +134,9 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
       <style>{CSS}</style>
         {onGuardado && <CerrarAlGuardar onExito={onGuardado} />}
       {!isNew && <input type="hidden" name="id" value={session.id} />}
+      {/* A donde volver al guardar: el listado o el perfil de la sesion. La
+          accion lo valida, esto es solo la preferencia de la pantalla. */}
+      {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
 
       <div className="lvf-grilla">
         <F label="Dirección">
@@ -255,11 +258,12 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
  *    ELIMINAR terminaba llamando a updateLiveSessionAction. Cada invitacion es
  *    su propio formulario, asi que van todos como hermanos del principal.
  */
-function Invitaciones({ session }: { session: LiveSession }) {
+export function Invitaciones({ session, redirectTo }: { session: LiveSession; redirectTo?: string }) {
   const hay = session.invitations.length;
 
   return (
     <section className="lvi">
+      <style>{CSS}</style>
       <div className="lvi-cab">
         <span className="lvi-ico" aria-hidden="true"><UserPlus size={18} strokeWidth={2.2} /></span>
         <p className="lvi-titulo">Invitar a alguien en particular</p>
@@ -271,6 +275,7 @@ function Invitaciones({ session }: { session: LiveSession }) {
 
       <form action={inviteToLiveSessionAction} className="lvi-form">
         <input type="hidden" name="liveSessionId" value={session.id} />
+        {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
         <F label="Correo o nombre de la alumna">
           <input name="alumna" required placeholder="ana@ejemplo.com" autoComplete="off" />
         </F>
@@ -291,6 +296,7 @@ function Invitaciones({ session }: { session: LiveSession }) {
               <form action={uninviteFromLiveSessionAction}>
                 <input type="hidden" name="liveSessionId" value={session.id} />
                 <input type="hidden" name="userId" value={i.user_id} />
+                {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
                 <BotonEnviar pendingLabel="…" className="lvi-quitar">Quitar</BotonEnviar>
               </form>
             </li>
@@ -302,7 +308,16 @@ function Invitaciones({ session }: { session: LiveSession }) {
 }
 
 /** El boton de la fila y su panel. */
-export function EditarSesion({ session }: { session: LiveSession }) {
+export function EditarSesion({
+  session,
+  redirectTo,
+  conInvitaciones = true,
+}: {
+  session: LiveSession;
+  redirectTo?: string;
+  /** En el perfil de la sesion las invitaciones tienen su propio bloque. */
+  conInvitaciones?: boolean;
+}) {
   const [abierto, setAbierto] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
@@ -332,8 +347,9 @@ export function EditarSesion({ session }: { session: LiveSession }) {
         <LiveForm
           session={session}
           onGuardado={() => { setAbierto(false); setGuardado(true); }}
+          redirectTo={redirectTo}
         />
-        <Invitaciones session={session} />
+        {conInvitaciones && <Invitaciones session={session} redirectTo={redirectTo} />}
       </AdminDrawer>
     </>
   );

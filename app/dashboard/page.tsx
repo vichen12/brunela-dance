@@ -226,49 +226,8 @@ export default async function DashboardPage() {
 
         {/* ── PERSONAL SECTION ── */}
 
-        {/* Invitaciones de Brunela. Van ARRIBA de los anuncios: un anuncio es
-            para todas, esto es para ella sola y ademas tiene fecha. */}
-        {invitaciones.length > 0 && (
-          <div className="ini-pila">
-            {invitaciones.map((s) => (
-              <Link key={s.id} href="/dashboard/live" className="ini-aviso ini-aviso--invita">
-                <span className="ini-burbuja ini-burbuja--blanca" aria-hidden="true">
-                  <Mail size={18} strokeWidth={2.2} />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="ini-aviso-titulo">Brunela te invitó a una clase en vivo</p>
-                  <p className="ini-aviso-txt">
-                    <strong>{s.title_i18n?.es ?? s.slug}</strong>
-                    {" — "}
-                    <HoraSesion iso={s.starts_at} zonaEstudio={s.session_timezone} />
-                  </p>
-                  {/* Lo mas importante del cartel: sin reservar no entra. */}
-                  <p className="ini-aviso-nota">
-                    Entrás aunque no tengas ese plan, pero tenés que reservar tu lugar.
-                  </p>
-                </div>
-                <ArrowRight size={18} strokeWidth={2.4} className="ini-aviso-flecha" aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {/* Announcements */}
-        {announcements.length > 0 && (
-          <div className="ini-pila">
-            {announcements.map((ann) => (
-              <div key={ann.id} className="ini-aviso ini-aviso--anuncio">
-                <span className="ini-burbuja ini-burbuja--blanca" aria-hidden="true">
-                  <Megaphone size={18} strokeWidth={2.2} />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {ann.title && <p className="ini-aviso-titulo">{ann.title}</p>}
-                  <p className="ini-aviso-txt">{ann.content}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Invitaciones y anuncios viven en la campanita de arriba (layout):
+            apilados aca empujaban el saludo hasta la mitad de la pantalla. */}
 
         {/* Saludo */}
         <header className="ini-hola">

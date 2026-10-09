@@ -238,7 +238,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
             {pasada && <span className="sv-plan">{liveSessionStatusLabel(session.status)}</span>}
           </div>
 
-          <h3 className="sv-titulo">{resolveI18nText(session.title_i18n)}</h3>
+          <h3 className="sv-titulo">
+            <Link href={`/dashboard/live/${session.slug}` as never} className="sv-titulo-link">{resolveI18nText(session.title_i18n)}</Link>
+          </h3>
           {resolveI18nText(session.description_i18n) && <p className="sv-desc">{resolveI18nText(session.description_i18n)}</p>}
 
           <ul className="sv-datos">
@@ -335,7 +337,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                       <span>{fm.mes}</span>
                     </div>
                     <div className="mis-txt">
-                      <p className="mis-nombre">{resolveI18nText(sesion.title_i18n)}</p>
+                      <p className="mis-nombre"><Link href={`/dashboard/live/${sesion.slug}` as never}>{resolveI18nText(sesion.title_i18n)}</Link></p>
                       <p className="mis-meta">
                         <Clock size={12} strokeWidth={2.4} aria-hidden="true" /> {hora} (Madrid)
                         <span className={"mis-estado" + (espera ? " es-espera" : "")}>{espera ? "En lista de espera" : "Lugar reservado"}</span>
@@ -346,7 +348,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                         <Video size={15} strokeWidth={2.2} aria-hidden="true" /> Entrar
                       </a>
                     ) : (
-                      <a href={"#sesion-" + sesion.id} className="mis-ver">Ver</a>
+                      <Link href={`/dashboard/live/${sesion.slug}` as never} className="mis-ver">Ver</Link>
                     )}
                   </li>
                 );
@@ -380,22 +382,36 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                 const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length ? " tiene" : "") + (delK.some((x) => reservada(x.id)) ? " tiene-mia" : "");
                 const num = <span className="cal-num">{Number(k.slice(8))}</span>;
                 if (!delK.length) return <span key={k} className={clases} role="gridcell">{num}</span>;
+                // La celda NO es un enlace: adentro hay varios, y un <a> dentro
+                // de otro <a> lo descarta el parser. El numero filtra por dia
+                // y se estira a toda la celda (::after); cada evento va encima,
+                // con su propio enlace al perfil de la sesion.
                 return (
-                  <Link key={k} href={(k === dia ? urlCal(mes) : urlCal(mes, k)) as never} className={clases} role="gridcell" aria-label={`${Number(k.slice(8))}: ${delK.length} ${delK.length === 1 ? "clase" : "clases"}`}>
-                    {num}
+                  <div key={k} className={clases + " con-eventos"} role="gridcell">
+                    <Link href={(k === dia ? urlCal(mes) : urlCal(mes, k)) as never} className="cal-dia-link" aria-label={`${Number(k.slice(8))}: ${delK.length} ${delK.length === 1 ? "clase" : "clases"}. Ver las clases del día`}>
+                      {num}
+                    </Link>
                     <span className="cal-eventos">
-                      {delK.slice(0, 3).map((sesion) => (
-                        <span key={sesion.id} className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "") + (bloqueadas.has(sesion.id) ? " es-bloqueada" : "")}>
-                          {reservada(sesion.id) && <Check size={11} strokeWidth={3.4} aria-hidden="true" className="cal-ev-tilde" />}<b>{new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at))}</b> {resolveI18nText(sesion.title_i18n)}
-                        </span>
-                      ))}
-                      {delK.length > 3 && <span className="cal-mas">+{delK.length - 3} más</span>}
+                      {delK.slice(0, 3).map((sesion) => {
+                        const hora = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at));
+                        return (
+                          <Link
+                            key={sesion.id}
+                            href={`/dashboard/live/${sesion.slug}` as never}
+                            title={`${hora} · ${resolveI18nText(sesion.title_i18n)}`}
+                            className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "") + (bloqueadas.has(sesion.id) ? " es-bloqueada" : "")}
+                          >
+                            {reservada(sesion.id) && <Check size={11} strokeWidth={3.4} aria-hidden="true" className="cal-ev-tilde" />}<b>{hora}</b> {resolveI18nText(sesion.title_i18n)}
+                          </Link>
+                        );
+                      })}
+                      {delK.length > 3 && <Link href={urlCal(mes, k) as never} className="cal-mas">+{delK.length - 3} más</Link>}
                     </span>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
-            <p className="cal-pie">Horarios de Madrid. Tocá un día para ver sus clases.</p>
+            <p className="cal-pie">Horarios de Madrid. Tocá una clase para ver su página, o el número del día para ver todas las de ese día.</p>
           </section>
         )}
 
@@ -506,7 +522,7 @@ const CSS = `
 .mis-titulo { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
 .mis-cuenta { padding: 2px 10px; border-radius: 99px; background: #fff; color: var(--pink-deep); font-size: 13px; font-weight: 900; }
 .mis-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
-.mis-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px; border-radius: 22px; background: #fff; border: 1px solid var(--linea); box-shadow: 0 8px 20px -16px rgba(176,70,70,.6); transition: transform .3s var(--curva), box-shadow .3s; }
+.mis-item { position: relative; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px; border-radius: 22px; background: #fff; border: 1px solid var(--linea); box-shadow: 0 8px 20px -16px rgba(176,70,70,.6); transition: transform .3s var(--curva), box-shadow .3s; }
 .mis-item:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
 .mis-fecha { width: 54px; flex-shrink: 0; padding: 6px 0; border-radius: 16px; background: var(--rubor); display: flex; flex-direction: column; align-items: center; line-height: 1.1; color: var(--pink-deep); }
 .mis-fecha span { font-size: 10.5px; font-weight: 800; text-transform: capitalize; }
@@ -546,7 +562,31 @@ const CSS = `
 .cal-celda.es-vacia { background: transparent; border-color: transparent; }
 .cal-celda.es-pasado { background: #FFFCFA; }
 .cal-celda.es-pasado .cal-num { color: #CDB3AB; }
-a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); transform: translateY(-2px); }
+.cal-celda.con-eventos:hover { border-color: var(--pink-line); box-shadow: var(--sombra); transform: translateY(-2px); }
+.cal-dia-link { align-self: flex-start; border-radius: 50%; color: inherit; text-decoration: none; }
+.cal-dia-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.cal-celda.con-eventos { border-radius: 18px; }
+.cal-dia-link:hover .cal-num, .cal-dia-link:focus-visible .cal-num { background: var(--rubor); color: var(--pink-deep); }
+.cal-dia-link:focus-visible { outline: 0; }
+.cal-dia-link:focus-visible::after { box-shadow: 0 0 0 3px rgba(230,79,85,.25); border-radius: 18px; }
+.cal-eventos { position: relative; z-index: 1; }
+a.cal-ev { text-decoration: none; transition: filter .2s, transform .2s var(--curva); }
+a.cal-ev:hover { filter: brightness(.96); transform: translateX(1px); }
+a.cal-ev:focus-visible { outline: 0; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pink); }
+a.cal-mas { position: relative; text-decoration: none; }
+a.cal-mas:hover { text-decoration: underline; }
+.sv-titulo-link { color: inherit; text-decoration: none; background-image: linear-gradient(var(--pink-line), var(--pink-line)); background-size: 0 2px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size .35s var(--curva), color .2s; }
+.sv-titulo-link:hover { color: var(--pink-deep); background-size: 100% 2px; }
+/* Toda la tarjeta de "Mis inscripciones" lleva al perfil: el enlace del
+   nombre se estira a la tarjeta entera (::after). "Entrar" va encima y sigue
+   yendo al Zoom. Sin <a> anidados. */
+.mis-nombre a { color: inherit; text-decoration: none; }
+.mis-nombre a::after { content: ""; position: absolute; inset: 0; border-radius: 22px; }
+.mis-nombre a:focus-visible { outline: 0; }
+.mis-nombre a:focus-visible::after { box-shadow: 0 0 0 3px rgba(230,79,85,.3); }
+.mis-item:hover .mis-nombre { color: var(--pink-deep); }
+.mis-entrar, .mis-ver { position: relative; z-index: 1; }
+.mis-nombre a:hover { color: var(--pink-deep); }
 .cal-celda.es-hoy { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(230,79,85,.12); }
 .cal-celda.es-elegido { background: var(--rubor); border-color: var(--pink); }
 .cal-num { font-size: 13px; font-weight: 900; color: var(--ink); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; }
@@ -583,7 +623,7 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
   .cal-ev.es-corps { background: #F2B9A5; } .cal-ev.es-solista { background: #F3C795; } .cal-ev.es-principal { background: var(--pink); }
   .cal-ev.es-mia { width: 10px; height: 10px; background: var(--pink) !important; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--pink); }
   .cal-ev-tilde { display: none; }
-  .cal-eventos { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
+  .cal-eventos { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; pointer-events: none; }
   .cal-mas { font-size: 9px; padding: 0; }
   .cal-sem { font-size: 10.5px; }
 }

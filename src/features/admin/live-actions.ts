@@ -18,6 +18,25 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
  *    que ya venia asi y hay que mantener.
  */
 
+/**
+ * A donde volver despues de una accion: el listado o el perfil de UNA sesion.
+ *
+ * ⚠️ El valor llega del formulario, o sea de quien manda el POST. Se acepta
+ *    solo `/admin/live` o `/admin/live/<uuid>`: cualquier otra cosa (otra ruta,
+ *    `//sitio.com`, un protocolo) vuelve al listado. Un redirect abierto en el
+ *    panel de admin seria un enlace de phishing con el dominio del estudio.
+ */
+function volverA(fd: FormData): string {
+  const pedido = String(fd.get("redirectTo") ?? "");
+  return /^\/admin\/live(\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(pedido)
+    ? pedido
+    : "/admin/live";
+}
+
+function conMensaje(ruta: string, tipo: "success" | "error", msg: string): never {
+  redirect(`${ruta}?${tipo}=${encodeURIComponent(msg)}` as never);
+}
+
 export async function createLiveSessionAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
@@ -60,7 +79,7 @@ export async function createLiveSessionAction(fd: FormData) {
     });
   }
 
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
   redirect("/admin/live?success=Sesión+creada" as never);
 }
@@ -91,7 +110,7 @@ export async function updateLiveSessionAction(fd: FormData) {
     })
     .eq("id", id);
 
-  if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+  if (error) conMensaje(volverA(fd), "error", error.message);
 
   const joinUrl = (fd.get("zoomJoinUrl") as string).trim();
   if (joinUrl) {
@@ -106,9 +125,9 @@ export async function updateLiveSessionAction(fd: FormData) {
     );
   }
 
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Sesión+actualizada" as never);
+  conMensaje(volverA(fd), "success", "Sesión actualizada");
 }
 
 export async function deleteLiveSessionAction(fd: FormData) {
@@ -116,7 +135,7 @@ export async function deleteLiveSessionAction(fd: FormData) {
   const supabase = createSupabaseAdminClient();
   const id = fd.get("id") as string;
   await supabase.from("live_sessions").delete().eq("id", id);
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   redirect("/admin/live?success=Sesión+eliminada" as never);
 }
 
@@ -185,7 +204,7 @@ export async function inviteToLiveSessionAction(fd: FormData) {
   const alumna = await resolverAlumna(supabase, (fd.get("alumna") as string) ?? "");
 
   if ("fallo" in alumna) {
-    redirect(`/admin/live?error=${encodeURIComponent(alumna.fallo)}` as never);
+    conMensaje(volverA(fd), "error", alumna.fallo);
   }
 
   const { error } = await supabase.from("live_session_invitations").insert({
@@ -201,10 +220,10 @@ export async function inviteToLiveSessionAction(fd: FormData) {
   // 23505 es el unique (live_session_id, user_id). Ya estaba invitada: no es un
   // fallo, es el estado que se queria.
   if (error && error.code !== "23505") {
-    redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+    conMensaje(volverA(fd), "error", error.message);
   }
 
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
 }
 
@@ -222,7 +241,7 @@ export async function uninviteFromLiveSessionAction(fd: FormData) {
     .eq("user_id", userId);
 
   if (error) {
-    redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+    conMensaje(volverA(fd), "error", error.message);
   }
 
   // ⚠️ La reserva que la alumna ya hizo NO se toca. Sacarle la invitacion le
@@ -230,7 +249,7 @@ export async function uninviteFromLiveSessionAction(fd: FormData) {
   //    ademas quiere sacarla, eso es cancelar la reserva: otra accion, visible
   //    y aparte. Borrarla en silencio aca dejaria a alguien afuera de una clase
   //    que creia tener.
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
 }
 
@@ -242,7 +261,7 @@ export async function updateStatusAction(fd: FormData) {
   const update: Record<string, unknown> = { status };
   if (status === "scheduled") update.published_at = new Date().toISOString();
   await supabase.from("live_sessions").update(update).eq("id", id);
-  revalidatePath("/admin/live");
+  revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
-  redirect("/admin/live?success=Estado+actualizado" as never);
+  conMensaje(volverA(fd), "success", "Estado actualizado");
 }

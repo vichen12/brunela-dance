@@ -4308,3 +4308,33 @@ a.sb-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-lin
 .ah-avatar, .sb-avatar { overflow: hidden; }
 .ah-avatar-img, .sb-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
 a.sb-avatar { text-decoration: none; }
+
+/* ── Campanita de notificaciones del area de alumna (components/notificaciones.tsx) ── */
+.nt-barra { position: sticky; top: 0; z-index: 40; height: 0; display: flex; justify-content: flex-end; padding: 0 clamp(16px, 3vw, 40px); pointer-events: none; }
+.nt { position: relative; pointer-events: auto; margin-top: 18px; }
+.nt-campana { position: relative; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--linea); background: rgba(255,255,255,.92); backdrop-filter: blur(10px); color: var(--ink); display: grid; place-items: center; cursor: pointer; box-shadow: var(--sombra); transition: transform .3s var(--curva), background .2s; }
+.nt-campana:hover, .nt-campana.es-abierta { background: var(--rubor); transform: translateY(-1px); }
+.nt-cuenta { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 3px #fff; animation: nt-late 2.4s ease-in-out infinite; }
+@keyframes nt-late { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.nt-panel { position: absolute; right: 0; top: 56px; width: min(400px, calc(100vw - 32px)); max-height: min(560px, 75vh); display: flex; flex-direction: column; background: #fff; border: 1px solid var(--linea); border-radius: 24px; box-shadow: 0 30px 60px -24px rgba(176,70,70,.45); overflow: hidden; animation: nt-abre .3s var(--curva) both; }
+@keyframes nt-abre { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: none; } }
+.nt-cab { display: flex; align-items: center; gap: 8px; padding: 16px 16px 12px 20px; border-bottom: 1px solid var(--linea); background: linear-gradient(160deg, #FFF1EC, #fff); }
+.nt-titulo { flex: 1; font-size: 17px; font-weight: 900; color: var(--ink); }
+.nt-leer { display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 99px; border: 0; background: var(--rubor); color: var(--pink-deep); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.nt-cerrar { width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.nt-cerrar:hover { background: var(--rubor); }
+.nt-lista { list-style: none; margin: 0; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.nt-item { position: relative; display: flex; gap: 12px; padding: 12px; border-radius: 16px; text-decoration: none; color: inherit; transition: background .2s; }
+a.nt-item:hover { background: var(--crema); }
+.nt-item.es-nueva { background: #FFF6F2; }
+.nt-ico { width: 38px; height: 38px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; }
+.nt-ico--invitacion { background: var(--pink); color: #fff; }
+.nt-ico--anuncio { background: #FFF4E8; color: var(--melocoton-deep); }
+.nt-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nt-item-titulo { font-size: 13.5px; font-weight: 800; color: var(--ink); padding-right: 14px; }
+.nt-item-texto { font-size: 13px; line-height: 1.45; color: #6E5550; }
+.nt-item-cuando { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.nt-punto { position: absolute; top: 16px; right: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--pink); }
+.nt-vacio { padding: 30px 24px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.5; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.nt-vacio-ico { width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
+@media (max-width: 767px) { .nt { margin-top: 12px; } }
