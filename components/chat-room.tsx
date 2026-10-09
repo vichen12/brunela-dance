@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { MessageCircle, SendHorizontal } from 'lucide-react';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -116,6 +117,7 @@ function MessageBubble({
     ? esDeAdmin(msg)
     : msg.profiles?.is_admin ??
       (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
+  const verPerfil = canModerate && !senderIsAdmin && msg.user_id ? `/admin/users/${msg.user_id}` : null;
 
   if (isMe) return (
     <div className="crm-fila crm-fila--mia" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
@@ -181,12 +183,26 @@ function MessageBubble({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <Avatar name={name} isAdmin={senderIsAdmin} />
+      {/* La admin llega al perfil de la alumna desde el chat: nombre y avatar
+          llevan a su ficha, donde puede escribirle, invitarla o cambiarle el plan. */}
+      {verPerfil ? (
+        <Link href={verPerfil as never} title={`Ver el perfil de ${name}`} aria-label={`Ver el perfil de ${name}`} className="crm-perfil">
+          <Avatar name={name} isAdmin={senderIsAdmin} />
+        </Link>
+      ) : (
+        <Avatar name={name} isAdmin={senderIsAdmin} />
+      )}
       <div style={{ maxWidth: '72%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5, paddingLeft: 4 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 800, color: senderIsAdmin ? 'var(--pink-deep)' : 'var(--ink)' }}>
-            {name}
-          </span>
+          {verPerfil ? (
+            <Link href={verPerfil as never} className="crm-perfil-nombre" style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', textDecoration: 'none' }}>
+              {name}
+            </Link>
+          ) : (
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: senderIsAdmin ? 'var(--pink-deep)' : 'var(--ink)' }}>
+              {name}
+            </span>
+          )}
           {senderIsAdmin && (
             <span style={{ fontSize: 11, background: 'var(--rubor)', color: 'var(--pink-deep)', padding: '2px 9px', borderRadius: 99, fontWeight: 800 }}>
               Instructora
@@ -799,6 +815,9 @@ const CSS_CHAT = `
 @keyframes crm-entra { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
 .crm-fila { animation: crm-entra .45s var(--curva, ease) both; }
 .crm-fila--mia { transform-origin: right bottom; }
+.crm-perfil { border-radius: 50%; transition: transform .3s var(--curva, ease), box-shadow .3s; }
+.crm-perfil:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-line); }
+.crm-perfil-nombre:hover { color: var(--pink-deep) !important; text-decoration: underline !important; text-underline-offset: 3px; }
 .crm .cr-composer input:focus { border-color: var(--pink-line) !important; background: #fff !important; box-shadow: 0 0 0 4px rgba(230,79,85,0.1); }
 .crm-mod { font: inherit; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; border: 0; cursor: pointer; transition: background .2s; }
 .crm-mod--borrar { color: #B03A3E; background: #FDECEC; }

@@ -64,6 +64,9 @@ export default async function ChatPage({ searchParams }: {
         .select("id, type, participant_ids")
         .eq("type", "dm")
         .contains("participant_ids", [user.id, activeUserId])
+        // Si hubiera duplicadas (se crearon al cargar la pagina en paralelo),
+        // siempre la mas vieja: es la que tiene la conversacion.
+        .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle<DmRoom>();
 
@@ -148,6 +151,8 @@ export default async function ChatPage({ searchParams }: {
                   <p className="dm-cab-nombre">{activeMember.full_name ?? activeMember.email.split("@")[0]}</p>
                   <p className="dm-cab-sub">{activeMember.email} · {TIER_BADGE[activeMember.membership_tier] ?? "Sin plan"}</p>
                 </div>
+                {/* Su perfil: progreso, reservas, plan, invitaciones. */}
+                <Link href={`/admin/users/${activeMember.id}` as never} className="dm-perfil">Ver perfil</Link>
               </header>
               <ChatRoom
                 roomId={activeRoom.id}
@@ -205,6 +210,11 @@ export default async function ChatPage({ searchParams }: {
       .select("id, type, participant_ids")
       .eq("type", "dm")
       .contains("participant_ids", [user.id, adminProfile.id])
+      // limit(1) y la mas vieja. Con maybeSingle() a secas, si ya habia DOS
+      // salas la consulta daba error, se leia como "no hay sala" y se creaba
+      // una TERCERA: cada visita agrandaba el problema.
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle<DmRoom>();
 
     if (existingRoom) {
@@ -320,6 +330,8 @@ const CSS_DM = `
 .dm-mas:hover { background: var(--rubor); border-color: var(--pink-line); }
 .dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; background: radial-gradient(700px 300px at 100% 0%, rgba(255,226,211,.35), transparent 60%), #fff; }
 .dm-cab { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--linea); background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); flex-shrink: 0; }
+.dm-perfil { margin-left: auto; flex-shrink: 0; padding: 9px 16px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; text-decoration: none; transition: background .2s; }
+.dm-perfil:hover { background: var(--pink-wash); }
 .dm-cab-ini { width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep); font-weight: 900; font-size: 18px; border: 3px solid #fff; box-shadow: var(--sombra); }
 .dm-cab-ini--brunela { background: linear-gradient(135deg, #F38A6C, var(--pink)); color: #fff; box-shadow: 0 10px 20px -10px rgba(230,79,85,0.85); }
 .dm-cab-nombre { margin: 0; font-weight: 900; font-size: 18px; letter-spacing: -0.015em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
