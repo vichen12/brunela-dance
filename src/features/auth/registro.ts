@@ -115,18 +115,43 @@ export async function signUpAction(formData: FormData) {
   // alumna quedaria sin poder pasar al onboarding y pareceria que el registro
   // fallo. Se detecta aca y se le dice la verdad en vez de dejarla en un limbo.
   if (!data.session) {
-    volverAlRegistro(
-      "Te mandamos un correo para confirmar la cuenta. Abrilo y volvé a entrar.",
-      plan,
-      interval,
-      emailCrudo
-    );
+    redirect(`/registro/revisa-tu-correo?email=${encodeURIComponent(parsed.data.email)}` as never);
   }
 
   const q = new URLSearchParams();
   if (parsed.data.plan) q.set("plan", parsed.data.plan);
   if (parsed.data.interval) q.set("interval", parsed.data.interval);
   redirect(`/registro/onboarding${q.size ? `?${q.toString()}` : ""}` as never);
+}
+
+/**
+ * "Reenviar el correo" de /registro/revisa-tu-correo.
+ *
+ * Supabase ya limita el ritmo (el intervalo minimo del SMTP y su propio
+ * rate limit), asi que esto no abre una via para mandar correos en masa: un
+ * pedido muy seguido vuelve con su error y se muestra tal cual.
+ */
+export async function reenviarConfirmacionAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  const volver = (q: string) =>
+    redirect(`/registro/revisa-tu-correo?email=${encodeURIComponent(email)}&${q}` as never);
+
+  if (!hasSupabaseAuthEnv() || !z.string().email().safeParse(email).success) {
+    volver(`error=${encodeURIComponent("Revisá el correo.")}`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${getAppUrl()}/registro/onboarding` },
+  });
+
+  if (error) {
+    const esperar = /seconds|rate|security purposes/i.test(error.message);
+    volver(`error=${encodeURIComponent(esperar ? "Esperá un minuto antes de pedirlo de nuevo." : error.message)}`);
+  }
+  volver("enviado=1");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

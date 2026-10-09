@@ -49,6 +49,7 @@ const ACTIONS_PUBLICAS = new Map([
   ["requestPasswordResetAction", "quien la usa perdio el acceso"],
   ["updatePasswordAction", "corre con el token del correo, no con sesion"],
   ["signUpAction", "es el alta"],
+  ["reenviarConfirmacionAction", "reenvia la confirmacion a quien todavia no puede iniciar sesion; usa el cliente anonimo y Supabase limita el ritmo"],
   ["darDeBajaAction", "baja de correos desde un enlace, sin iniciar sesion"],
 ]);
 
