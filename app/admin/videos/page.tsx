@@ -1,6 +1,6 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
 import Link from "next/link";
-import { AlertCircle, Archive, CheckCircle2, ChevronDown, Eye, Languages, Play, Plus, Rocket, Star } from "lucide-react";
+import { Archive, BarChart3, Check, ChevronDown, Clock, Eye, EyeOff, Languages, Play, Plus, Rocket, Star, Tag, Users, X } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { EditarClase } from "@/components/admin-video-drawer";
@@ -479,79 +479,108 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
             const miniatura = adminThumb(video);
             const titulo = video.title_i18n.es ?? video.slug;
 
+            // Lo que una alumna nota si falta. Se muestra en la tarjeta para
+            // saber que le falta a una clase SIN abrirla.
+            const listo = [
+              { clave: "Video", ok: tieneVideo },
+              { clave: "Portada", ok: Boolean(miniatura) },
+              { clave: "Descripción", ok: Boolean(video.description_i18n?.es?.trim()) },
+              { clave: "Categoría", ok: (video.category_slugs?.length ?? 0) > 0 },
+            ];
+            const cuantosListos = listo.filter((l) => l.ok).length;
+            const categorias = (video.category_slugs ?? []).map((c) => CATEGORIA_LABEL[c] ?? c).join(", ");
+            const usoN = alumnasPorClase.get(video.id)?.size ?? 0;
+
             return (
-              <li key={video.id} className="acl-fila">
-                <div className="acl-fila-cuerpo">
+              <li key={video.id} className={"acl-card acl-card--" + video.status}>
+                <div className="acl-card-cuerpo">
                   <div className="acl-mini">
-                    {miniatura ? <img src={miniatura} alt="" /> : <Play size={18} strokeWidth={2} aria-hidden="true" />}
-                    <span className="acl-mini-dur">{durMin} min</span>
+                    {miniatura ? <img src={miniatura} alt="" /> : <span className="acl-mini-vacia"><Play size={22} strokeWidth={1.8} aria-hidden="true" /></span>}
+                    <span className="acl-mini-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {durMin} min</span>
+                    {video.is_featured && <span className="acl-mini-dest" title="Destacada"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /></span>}
                   </div>
 
                   <div className="acl-info">
-                    <div className="acl-chips">
-                      <span className={"acl-chip " + st.clase}>{st.label}</span>
-                      <span className="acl-chip acl-chip--plan">{planesTexto}</span>
-                      {video.is_featured && <span className="acl-chip acl-chip--dest"><Star size={11} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacada</span>}
-                      {video.content_type === "mini_training" && <span className="acl-chip acl-chip--plan">Mini Training</span>}
-                    </div>
-                    <h2 className="acl-titulo-clase">{titulo}</h2>
-                    <p className="acl-meta">
-                      {video.category_slugs?.length > 0 && <span>{video.category_slugs.map((c) => CATEGORIA_LABEL[c] ?? c).join(", ")}</span>}
-                      <span>{nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}</span>
-                      <span className="acl-meta-slug">/{video.slug}</span>
-                    </p>
-                    <p className="acl-estado-video">
-                      {tieneVideo
-                        ? <span className="acl-ok"><CheckCircle2 size={13} strokeWidth={2.2} aria-hidden="true" /> Video listo</span>
-                        : <span className="acl-falta"><AlertCircle size={13} strokeWidth={2.2} aria-hidden="true" /> Sin video</span>}
-                      {allLocales.length > 0 && (
-                        <span className="acl-idiomas"><Languages size={13} strokeWidth={2} aria-hidden="true" /> {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
+                    <div className="acl-linea-estado">
+                      <span className={"acl-estado " + st.clase}><span className="acl-punto" aria-hidden="true" />{st.label}</span>
+                      {video.content_type === "mini_training" && <span className="acl-tipo">Mini Training</span>}
+                      {mostrarUso && video.status === "published" && (
+                        <span className={usoN === 0 ? "acl-uso acl-uso--cero" : "acl-uso"}>
+                          {usoN === 0 ? "No la empezó nadie" : `La empezaron ${usoN}`}
+                        </span>
                       )}
-                      {/* Solo en clases PUBLICADAS: una en borrador no tiene
-                          por que tener uso, y marcarla seria ruido. */}
-                      {mostrarUso && video.status === "published" && (() => {
-                        const n = alumnasPorClase.get(video.id)?.size ?? 0;
-                        return n === 0
-                          ? <span className="acl-falta">No la empezó nadie</span>
-                          : <span>La empezaron {n}</span>;
-                      })()}
-                    </p>
+                    </div>
+                    <h2 className="acl-titulo-clase" title={titulo}>{titulo}</h2>
+                    <ul className="acl-datos">
+                      <li title="Quién la ve"><Users size={14} strokeWidth={2} aria-hidden="true" /> {planesTexto}</li>
+                      <li title="Nivel"><BarChart3 size={14} strokeWidth={2} aria-hidden="true" /> {nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}</li>
+                      {categorias && <li title="Categoría"><Tag size={14} strokeWidth={2} aria-hidden="true" /> {categorias}</li>}
+                      {allLocales.length > 0 && <li title="Idiomas"><Languages size={14} strokeWidth={2} aria-hidden="true" /> {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</li>}
+                    </ul>
+
+                    <div className="acl-listo" aria-label={`Lista para publicar: ${cuantosListos} de ${listo.length}`}>
+                      <span className="acl-listo-barra" aria-hidden="true">
+                        <span style={{ width: `${(cuantosListos / listo.length) * 100}%` }} className={cuantosListos === listo.length ? "es-completa" : ""} />
+                      </span>
+                      {listo.map((l) => (
+                        <span key={l.clave} className={"acl-check" + (l.ok ? " es-ok" : "")}>
+                          {l.ok ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <X size={12} strokeWidth={3} aria-hidden="true" />}
+                          {l.clave}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="acl-acciones">
-                    {/* Edicion en panel lateral: el formulario no existe en el
-                        DOM hasta que se abre (con 19 clases eran ~250 controles). */}
-                    <EditarClase
-                      video={video}
-                      planes={programas}
-                      ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
-                    />
-                    {video.status !== "published" && (
-                      <form action={quickStatusAction}>
+                    <div className="acl-acciones-fila">
+                      {/* Edicion en panel lateral: el formulario no existe en el
+                          DOM hasta que se abre (con 19 clases eran ~250 controles). */}
+                      <EditarClase
+                        video={video}
+                        planes={programas}
+                        ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
+                      />
+                      {video.status !== "published" && (
+                        <form action={quickStatusAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value="published" />
+                          <BotonEnviar
+                            className="acl-accion acl-accion--publicar"
+                            pendingLabel="Publicando…"
+                            confirmar={tieneVideo ? undefined : "Esta clase todavía no tiene video: una alumna la abriría y no vería nada. ¿Publicarla igual?"}
+                          >
+                            <Rocket size={14} strokeWidth={2} aria-hidden="true" /> Publicar
+                          </BotonEnviar>
+                        </form>
+                      )}
+                    </div>
+                    <div className="acl-acciones-fila acl-acciones-fila--iconos">
+                      <form action={quickFeaturedAction}>
                         <input type="hidden" name="id" value={video.id} />
-                        <input type="hidden" name="status" value="published" />
-                        <BotonEnviar className="acl-accion acl-accion--publicar" pendingLabel="Publicando…">
-                          <Rocket size={14} strokeWidth={2} aria-hidden="true" /> Publicar
+                        <input type="hidden" name="current" value={String(video.is_featured)} />
+                        <BotonEnviar className={"acl-icono" + (video.is_featured ? " es-activo" : "")} title={video.is_featured ? "Quitar de destacadas" : "Destacar en la biblioteca"} pendingLabel="…">
+                          <Star size={15} strokeWidth={2} fill={video.is_featured ? "currentColor" : "none"} aria-hidden="true" />
                         </BotonEnviar>
                       </form>
-                    )}
-                    <form action={quickFeaturedAction}>
-                      <input type="hidden" name="id" value={video.id} />
-                      <input type="hidden" name="current" value={String(video.is_featured)} />
-                      <BotonEnviar className="acl-accion" title={video.is_featured ? "Quitar de destacadas" : "Destacar en la biblioteca"}>
-                        <Star size={14} strokeWidth={2} fill={video.is_featured ? "currentColor" : "none"} aria-hidden="true" />
-                        {video.is_featured ? "Quitar destaque" : "Destacar"}
-                      </BotonEnviar>
-                    </form>
-                    {video.status !== "archived" && (
-                      <form action={quickStatusAction}>
-                        <input type="hidden" name="id" value={video.id} />
-                        <input type="hidden" name="status" value="archived" />
-                        <BotonEnviar className="acl-accion acl-accion--suave" title="Archivar: deja de verse, no se borra">
-                          <Archive size={14} strokeWidth={2} aria-hidden="true" /> Archivar
-                        </BotonEnviar>
-                      </form>
-                    )}
+                      {video.status === "published" && (
+                        <form action={quickStatusAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value="draft" />
+                          <BotonEnviar className="acl-icono" title="Pasar a borrador: deja de verse hasta que la vuelvas a publicar" pendingLabel="…">
+                            <EyeOff size={15} strokeWidth={2} aria-hidden="true" />
+                          </BotonEnviar>
+                        </form>
+                      )}
+                      {video.status !== "archived" && (
+                        <form action={quickStatusAction}>
+                          <input type="hidden" name="id" value={video.id} />
+                          <input type="hidden" name="status" value="archived" />
+                          <BotonEnviar className="acl-icono" title="Archivar: deja de verse, no se borra" pendingLabel="…">
+                            <Archive size={15} strokeWidth={2} aria-hidden="true" />
+                          </BotonEnviar>
+                        </form>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -618,54 +647,97 @@ const CSS_CLASES = `
 .acl-nueva[open] .acl-nueva-flecha { transform: rotate(180deg); }
 .acl-nueva-cuerpo { padding: 4px 22px 24px; border-top: 1px solid #f0eeec; }
 
-.acl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.acl-fila { border-bottom: 1px solid #f0eeec; }
-.acl-fila-cuerpo { display: flex; align-items: center; gap: 18px; padding: 16px 8px; margin: 0 -8px; border-radius: 16px; transition: background .2s; }
-.acl-fila-cuerpo:hover { background: #fafaf9; }
+.acl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.acl-card {
+  position: relative; border: 1px solid #e7e5e4; border-radius: 20px; background: #fff; overflow: hidden;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+}
+.acl-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #e7e5e4;
+}
+.acl-card--published::before { background: var(--pink); }
+.acl-card--draft::before { background: var(--pink-line); }
+.acl-card:hover { transform: translateY(-2px); border-color: var(--pink-line); box-shadow: 0 22px 40px -26px rgba(176,58,62,0.5); }
+.acl-card-cuerpo { display: grid; grid-template-columns: 196px minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 16px 18px 16px 22px; }
+
 .acl-mini {
-  position: relative; width: 132px; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(145deg, var(--pink-wash), var(--pink-soft)); color: var(--pink-mid);
+  position: relative; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(145deg, var(--pink-wash), var(--pink-soft));
 }
-.acl-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.acl-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.16,1,.3,1); }
+.acl-card:hover .acl-mini img { transform: scale(1.05); }
+.acl-mini-vacia { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--pink-mid); }
 .acl-mini-dur {
-  position: absolute; right: 6px; bottom: 6px; font-size: 10.5px; font-weight: 700; color: #fff;
-  padding: 2px 7px; border-radius: 6px; background: rgba(28,25,23,0.55);
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; color: #fff; padding: 3px 8px; border-radius: 8px;
+  background: rgba(28,25,23,0.55); backdrop-filter: blur(6px);
 }
-.acl-info { flex: 1; min-width: 0; }
-.acl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
-.acl-chip {
-  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+.acl-mini-dest {
+  position: absolute; left: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #ea580c;
+  box-shadow: 0 4px 10px -4px rgba(28,25,23,0.3);
 }
-.acl-chip--pub { background: var(--ink); color: #fff; }
-.acl-chip--borr { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
-.acl-chip--arch { background: #f5f5f4; color: #78716c; }
-.acl-chip--plan { background: #fff; color: #57534e; border: 1px solid #e7e5e4; }
-.acl-chip--dest { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+
+.acl-info { min-width: 0; }
+.acl-linea-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.acl-estado { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.acl-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.acl-chip--pub { color: #15803d; }
+.acl-chip--pub .acl-punto { box-shadow: 0 0 0 4px rgba(21,128,61,0.14); animation: acl-latido 2.4s ease-in-out infinite; }
+.acl-chip--borr { color: var(--pink-deep); }
+.acl-chip--arch { color: #78716c; }
+@keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 3px rgba(21,128,61,0.16); } 50% { box-shadow: 0 0 0 6px rgba(21,128,61,0.04); } }
+.acl-tipo, .acl-uso { font-size: 11.5px; font-weight: 600; color: #78716c; padding: 2px 9px; border-radius: 99px; background: #f5f5f4; }
+.acl-uso--cero { color: var(--pink-deep); background: var(--pink-wash); }
 .acl-titulo-clase {
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.025em;
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 21px; line-height: 1.15; letter-spacing: -0.03em;
   color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.acl-meta, .acl-estado-video { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 12.5px; color: #78716c; }
-.acl-meta-slug { color: #a8a29e; }
-.acl-estado-video span { display: inline-flex; align-items: center; gap: 5px; }
-.acl-ok { color: #15803d; font-weight: 600; }
-.acl-falta { color: var(--pink-deep); font-weight: 600; }
-.acl-idiomas { color: #57534e; font-weight: 600; }
+.acl-datos { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.acl-datos li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57534e; }
+.acl-datos svg { color: #a8a29e; flex-shrink: 0; }
 
-.acl-acciones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.acl-listo { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.acl-listo-barra { width: 56px; height: 5px; border-radius: 99px; background: #f0eeec; overflow: hidden; margin-right: 4px; }
+.acl-listo-barra span { display: block; height: 100%; border-radius: 99px; background: var(--pink); transition: width .6s; }
+.acl-listo-barra span.es-completa { background: #16a34a; }
+.acl-check {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 600; color: var(--pink-deep); background: var(--pink-wash);
+}
+.acl-check.es-ok { color: #57534e; background: #f5f5f4; }
+.acl-check.es-ok svg { color: #16a34a; }
+
+.acl-acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.acl-acciones-fila { display: flex; align-items: center; gap: 6px; }
 .acl-acciones form { display: contents; }
 .acl-accion, .acl-editar {
-  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 13px; border-radius: 10px; cursor: pointer;
-  border: 1px solid #e7e5e4; background: #fff; color: #44403c; font: inherit; font-size: 12.5px; font-weight: 700;
-  white-space: nowrap; transition: border-color .2s, background .2s, color .2s;
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border-radius: 11px; cursor: pointer;
+  border: 1.5px solid #e7e5e4; background: #fff; color: #44403c; font: inherit; font-size: 13px; font-weight: 700;
+  white-space: nowrap; transition: border-color .2s, background .2s, color .2s, transform .2s;
 }
-.acl-accion:hover, .acl-editar:hover { border-color: var(--pink-line); background: var(--pink-wash); color: var(--pink-deep); }
 .acl-editar { border-color: var(--ink); color: var(--ink); }
-.acl-accion--publicar { background: var(--pink); border-color: var(--pink); color: #fff; }
-.acl-accion--publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
-.acl-accion--suave { color: #78716c; }
+.acl-editar:hover { background: var(--ink); color: #fff; }
+.acl-accion--publicar { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 18px -10px rgba(230,79,85,0.8); }
+.acl-accion--publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); transform: translateY(-1px); }
+.acl-icono {
+  width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; background: transparent; color: #a8a29e; transition: background .2s, color .2s, border-color .2s;
+}
+.acl-icono:hover { background: #f5f5f4; color: var(--ink); border-color: #e7e5e4; }
+.acl-icono.es-activo { color: #ea580c; }
+
+@media (max-width: 1080px) {
+  .acl-card-cuerpo { grid-template-columns: 160px minmax(0, 1fr); }
+  .acl-acciones { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+}
+@media (max-width: 640px) {
+  .acl-card-cuerpo { grid-template-columns: minmax(0, 1fr); padding: 14px 14px 14px 18px; }
+  .acl-titulo-clase { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .acl-chip--pub .acl-punto { animation: none; }
+}
 
 .acl-vacio {
   display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 52px 24px; text-align: center;
@@ -673,17 +745,10 @@ const CSS_CLASES = `
 }
 .acl-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.025em; color: var(--ink); }
 
-@media (max-width: 980px) {
-  .acl-fila-cuerpo { flex-wrap: wrap; }
-  .acl-info { flex-basis: calc(100% - 150px); }
-  .acl-acciones { width: 100%; justify-content: flex-start; }
-}
 @media (max-width: 640px) {
   .acl-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .acl-cifra:nth-child(3) { border-left: 0; padding-left: 0; }
   .acl-cifra:nth-child(n+3) { border-top: 1px solid #e7e5e4; }
-  .acl-mini { width: 100%; }
-  .acl-info { flex-basis: 100%; }
 }
 `;
 
