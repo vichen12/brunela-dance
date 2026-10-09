@@ -57,7 +57,7 @@ const SUPABASE = {
       parrafos: [
         "Qué alegría que quieras entrenar conmigo. Para terminar de crear tu cuenta solo falta confirmar que **{{ .Email }}** es tu correo.",
       ],
-      boton: { texto: "Confirmar mi correo", url: "{{ .ConfirmationURL }}" },
+      boton: { texto: "Confirmar mi correo", url: "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email" },
       nota: "El enlace es personal y sirve una sola vez. Si no creaste una cuenta en Brunela Dance, ignorá este correo y no pasa nada.",
       motivo: "Recibiste este correo porque alguien quiso crear una cuenta en Brunela Dance con esta dirección.",
     },
@@ -72,7 +72,7 @@ const SUPABASE = {
       parrafos: [
         "Recibimos un pedido para cambiar la contraseña de **{{ .Email }}**. Tocá el botón y elegí una nueva; vas a volver directo al estudio.",
       ],
-      boton: { texto: "Elegir contraseña nueva", url: "{{ .ConfirmationURL }}" },
+      boton: { texto: "Elegir contraseña nueva", url: "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery" },
       nota: "**¿No fuiste vos?** Ignorá este correo: tu contraseña actual sigue funcionando y nadie puede cambiarla sin este enlace.",
       motivo: "Recibiste este correo porque se pidió cambiar la contraseña de tu cuenta en Brunela Dance.",
     },
@@ -85,7 +85,7 @@ const SUPABASE = {
       titulo: "Tu enlace para entrar",
       saludo: "¡Hola!",
       parrafos: ["Tocá el botón para entrar al estudio con **{{ .Email }}**. No hace falta contraseña."],
-      boton: { texto: "Entrar al estudio", url: "{{ .ConfirmationURL }}" },
+      boton: { texto: "Entrar al estudio", url: "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email" },
       nota: "El enlace sirve **una sola vez** y vence en poco tiempo. Si no lo pediste, ignorá este correo.",
       motivo: "Recibiste este correo porque se pidió un enlace de acceso para tu cuenta en Brunela Dance.",
     },
@@ -101,7 +101,7 @@ const SUPABASE = {
         "Te abrí un lugar en **Brunela Dance**, mi estudio online de ballet y preparación integral. Clases, planes de trabajo y sesiones en vivo, para que entrenes desde donde estés.",
         "Tocá el botón para aceptar la invitación y elegir tu contraseña.",
       ],
-      boton: { texto: "Aceptar invitación", url: "{{ .ConfirmationURL }}" },
+      boton: { texto: "Aceptar invitación", url: "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite" },
       nota: "La invitación es para **{{ .Email }}**. Si no esperabas este correo, podés ignorarlo.",
       motivo: "Recibiste este correo porque Brunela te invitó a su estudio online.",
     },
@@ -118,7 +118,7 @@ const SUPABASE = {
         { etiqueta: "Correo actual", valor: "{{ .Email }}" },
         { etiqueta: "Correo nuevo", valor: "{{ .NewEmail }}" },
       ],
-      boton: { texto: "Confirmar el cambio", url: "{{ .ConfirmationURL }}" },
+      boton: { texto: "Confirmar el cambio", url: "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change" },
       nota: "**¿No pediste este cambio?** No toques nada y escribinos a info@bruneladance.com: tu cuenta sigue con el correo de siempre.",
       motivo: "Recibiste este correo porque se pidió cambiar el correo de tu cuenta en Brunela Dance.",
     },
@@ -150,6 +150,7 @@ if (regenerar) {
 const EJEMPLO = {
   "{{ .ConfirmationURL }}":
     "https://howtuhfdxgyluskrlkze.supabase.co/auth/v1/verify?token=pkce_3f9a1c&type=signup&redirect_to=https://bruneladance.com/auth/callback",
+  "{{ .TokenHash }}": "pkce_3f9a1c7e",
   "{{ .Email }}": "lucia.fernandez@gmail.com",
   "{{ .NewEmail }}": "lucia.baila@gmail.com",
   "{{ .SiteURL }}": "https://bruneladance.com",
