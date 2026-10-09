@@ -37,7 +37,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard', exact: true, label: 'Inicio', Icon: House },
       { href: '/dashboard/library', label: 'Clases', Icon: Play },
       { href: '/dashboard/programs', label: 'Planes de trabajo', Icon: ListOrdered },
-      { href: '/dashboard/live', label: 'En vivo', Icon: CalendarHeart },
+      { href: '/dashboard/live', label: 'Clases en vivo', Icon: CalendarHeart },
     ],
   },
   {

@@ -20,7 +20,7 @@ const NAV = [
   { href: '/dashboard',           label: 'Inicio',     exact: true,  Icon: House },
   { href: '/dashboard/library',   label: 'Clases',     exact: false, Icon: Play },
   { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false, Icon: ListOrdered },
-  { href: '/dashboard/live',      label: 'En vivo',    exact: false, Icon: CalendarHeart },
+  { href: '/dashboard/live',      label: 'Clases en vivo', exact: false, Icon: CalendarHeart },
   { href: '/dashboard/chat',      label: 'Mi chat',    exact: false, Icon: MessageCircleHeart },
   { href: '/dashboard/community', label: 'Comunidad',  exact: false, Icon: Users },
   { href: '/dashboard/documents', label: 'Documentos', exact: false, Icon: FileText },
