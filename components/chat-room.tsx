@@ -1,4 +1,5 @@
 'use client';
+import { MessageCircle, SendHorizontal } from 'lucide-react';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/src/lib/supabase/client';
@@ -575,8 +576,14 @@ export function ChatRoom({
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px,3vw,20px) clamp(12px,3vw,20px) 8px' }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)', fontSize: 13 }}>
-            Todavía no hay mensajes. Sé la primera en escribir.
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', padding: '56px 20px', color: '#78716c', fontSize: 14 }}>
+            <span style={{ width: 58, height: 58, borderRadius: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pink-wash)', color: 'var(--pink-deep)', marginBottom: 6 }}>
+              <MessageCircle size={26} strokeWidth={1.7} aria-hidden="true" />
+            </span>
+            <span style={{ fontFamily: 'var(--font-display), sans-serif', fontWeight: 800, fontSize: 19, letterSpacing: '-0.025em', color: 'var(--ink)' }}>
+              Todavía no hay mensajes
+            </span>
+            Sé la primera en escribir.
           </div>
         )}
 
@@ -640,37 +647,41 @@ export function ChatRoom({
       )}
 
       {/* Input */}
-      <div style={{
-        padding: '12px 20px', borderTop: '1px solid var(--pink-soft)', flexShrink: 0,
-        display: 'flex', gap: 10, background: 'rgba(255,255,255,0.9)',
+      <div className="cr-composer" style={{
+        padding: '14px 20px', borderTop: '1px solid #f0eeec', flexShrink: 0,
+        display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(8px)',
       }}>
+        <style>{'.cr-composer input:focus { border-color: var(--pink) !important; box-shadow: 0 0 0 4px rgba(230,79,85,0.1); }'}</style>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send()}
           placeholder={placeholder}
+          aria-label={placeholder}
           style={{
-            flex: 1, border: '1.5px solid var(--pink-soft)', borderRadius: 24,
-            padding: '10px 16px', fontSize: 13, color: 'var(--ink)',
-            background: 'var(--pink-wash)', outline: 'none',
+            flex: 1, height: 48, border: '1.5px solid #e7e5e4', borderRadius: 24,
+            padding: '0 18px', fontSize: 14.5, color: 'var(--ink)',
+            background: '#fff', outline: 'none', transition: 'border-color .2s, box-shadow .2s',
             fontFamily: 'var(--font-body), sans-serif',
           }}
         />
         <button
           onClick={send}
           disabled={sending || !input.trim()}
+          aria-label="Enviar mensaje"
+          title="Enviar"
           style={{
-            width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-            background: input.trim() ? 'var(--pink)' : 'var(--pink-soft)',
+            width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+            background: input.trim() ? 'var(--pink)' : '#f5f5f4',
+            color: input.trim() ? '#fff' : '#c4c0bd',
             border: 'none', cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.15s',
+            boxShadow: input.trim() ? '0 8px 18px -10px rgba(230,79,85,0.8)' : 'none',
+            transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M14 8L2 3l3 5-3 5 12-5z" fill={input.trim() ? '#fff' : 'var(--pink-line)'} />
-          </svg>
+          <SendHorizontal size={19} strokeWidth={2.2} aria-hidden="true" />
         </button>
       </div>
 
