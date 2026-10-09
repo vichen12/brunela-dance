@@ -1,3 +1,4 @@
+import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -135,7 +136,7 @@ export default async function DocumentsPage({ searchParams }: {
         {/* Filters */}
         {categories.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: c }))].map((f) => (
+            {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: CATEGORIA_LABEL[c] ?? c }))].map((f) => (
               <Link
                 key={f.key}
                 href={f.key === "all" ? "/dashboard/documents" : `/dashboard/documents?cat=${f.key}`}

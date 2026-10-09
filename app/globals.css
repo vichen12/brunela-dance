@@ -3570,6 +3570,9 @@ body {
 .dsp .dsp-valor {
   position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0;
   opacity: 0; pointer-events: none; box-shadow: none;
+  /* No se puede seleccionar: si no, al copiar la pagina aparecia el valor
+     crudo ("none") al lado de la opcion elegida. */
+  user-select: none; clip-path: inset(50%);
 }
 
 .dsp--pildora { display: inline-block; width: auto; }
