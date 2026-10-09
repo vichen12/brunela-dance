@@ -6,6 +6,7 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarPortada } from "@/src/lib/portada";
 import { campo, validar } from "./campos";
+import { armarTraducciones, type FilaFaqIdiomas } from "./faq-idiomas";
 
 /**
  * Lo que Brunela edita de la portada: el tráiler, los certificados y el FAQ.
@@ -114,12 +115,15 @@ export async function crearPreguntaAction(formData: FormData) {
     .limit(1)
     .maybeSingle<{ display_order: number }>();
 
+  // Las traducciones que Brunela haya escrito en EN / FR / IT. Ver faq-idiomas.ts.
+  const traducciones = armarTraducciones(formData, pregunta, respuesta, null);
+  if ("error" in traducciones) volver("error", traducciones.error);
+
   const { error } = await supabase.from("landing_faq").insert({
     display_order: (ultima?.display_order ?? 0) + 1,
     // Nace SIN publicar: se escribe, se lee, y recién ahí se muestra.
     is_published: false,
-    question_i18n: { es: pregunta },
-    answer_i18n: { es: respuesta },
+    ...traducciones,
   });
   if (error) volver("error", error.message);
 
@@ -139,9 +143,26 @@ export async function editarPreguntaAction(formData: FormData) {
   }
 
   const supabase = createSupabaseAdminClient();
+
+  /**
+   * Se lee la fila antes de escribir: lo que no vino en el formulario se
+   * conserva (traducciones automáticas incluidas). Antes esto pisaba el jsonb
+   * entero con `{ es }` y borraba cualquier traducción en cada guardado.
+   */
+  const { data: existente, error: errorLectura } = await supabase
+    .from("landing_faq")
+    .select("question_i18n, answer_i18n, question_auto_i18n, answer_auto_i18n")
+    .eq("id", id)
+    .maybeSingle<FilaFaqIdiomas>();
+  if (errorLectura) volver("error", errorLectura.message);
+  if (!existente) volver("error", "Esa pregunta ya no existe.");
+
+  const traducciones = armarTraducciones(formData, pregunta, respuesta, existente);
+  if ("error" in traducciones) volver("error", traducciones.error);
+
   const { error } = await supabase
     .from("landing_faq")
-    .update({ question_i18n: { es: pregunta }, answer_i18n: { es: respuesta } })
+    .update(traducciones)
     .eq("id", id);
   if (error) volver("error", error.message);
 

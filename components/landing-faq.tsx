@@ -1,6 +1,6 @@
 "use client";
 
-import { T } from "@/components/language-provider";
+import { T, usePublicI18n } from "@/components/language-provider";
 import type { PreguntaFrecuente } from "@/src/lib/portada";
 
 /**
@@ -22,10 +22,9 @@ import type { PreguntaFrecuente } from "@/src/lib/portada";
  *    cosas y hay que devolverlas con `aria-expanded`, `aria-controls` y manejo
  *    de foco.
  *
- * ⚠️ EL TEXTO VIENE EN ESPAÑOL EN LOS CUATRO IDIOMAS, Y ES DELIBERADO.
- *    Brunela lo carga una vez. La alternativa era pedirle cuatro versiones de
- *    cada pregunta, y entonces no carga ninguna: un FAQ vacío en cuatro idiomas
- *    es peor que uno en español en tres de ellos.
+ * ⚠️ CADA PREGUNTA LLEGA YA RESUELTA PARA LOS CUATRO IDIOMAS (`porIdioma`).
+ *    Lo que no está traducido viene en español: Brunela lo carga una vez y
+ *    traduce si quiere. Acá sólo se elige según el idioma de la visitante.
  *
  *    El título y la bajada SÍ se traducen, porque esos los escribimos nosotros
  *    una sola vez. Y por eso este componente es de CLIENTE: el idioma se
@@ -34,6 +33,7 @@ import type { PreguntaFrecuente } from "@/src/lib/portada";
  *    elegido. Las preguntas sí llegan como props, desde la base.
  */
 export function LandingFaq({ preguntas }: { preguntas: PreguntaFrecuente[] }) {
+  const { locale } = usePublicI18n();
   if (preguntas.length === 0) return null;
 
   return (
@@ -49,8 +49,11 @@ export function LandingFaq({ preguntas }: { preguntas: PreguntaFrecuente[] }) {
         </header>
 
         <div className="faq-lista">
-          {preguntas.map((p) => (
-            <details className="faq-item" key={p.id}>
+          {preguntas.map((f) => {
+            // Si el dato vino de una caché vieja sin `porIdioma`, queda el español.
+            const p = f.porIdioma?.[locale] ?? f;
+            return (
+            <details className="faq-item" key={f.id}>
               <summary className="faq-pregunta">
                 <span>{p.pregunta}</span>
                 {/*
@@ -70,7 +73,8 @@ export function LandingFaq({ preguntas }: { preguntas: PreguntaFrecuente[] }) {
                 {p.respuesta}
               </div>
             </details>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

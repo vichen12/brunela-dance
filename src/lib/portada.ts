@@ -1,5 +1,6 @@
 import { unstable_cache, revalidateTag } from "next/cache";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { IDIOMAS_FAQ, textoParaIdioma, type IdiomaFaq } from "@/src/features/admin/portada/faq-idiomas";
 
 /**
  * Lo que la portada lee de la base: FAQ, tráiler y certificados.
@@ -36,24 +37,30 @@ const VIGENCIA = 300;
 
 export type PreguntaFrecuente = {
   id: string;
+  /** En español: la base, y lo que se ve si un idioma no está traducido. */
   pregunta: string;
   respuesta: string;
+  /**
+   * El texto ya resuelto para cada idioma (traducción completa o, si no hay,
+   * el español). La portada elige en el navegador, que es donde se sabe el
+   * idioma de la visitante.
+   */
+  porIdioma: Record<IdiomaFaq, { pregunta: string; respuesta: string }>;
 };
 
 /**
  * El FAQ de la portada.
  *
- * 🔴 SALE EN ESPAÑOL EN LOS CUATRO IDIOMAS, Y ES UNA DECISIÓN, NO UNA DEUDA.
+ * 🔴 EL ESPAÑOL ES OBLIGATORIO; LOS OTROS TRES IDIOMAS, NO.
  *
- *    Brunela carga las preguntas una sola vez, en español, y se ven igual en
- *    ES/EN/FR/IT hasta que alguien las traduzca a mano. La alternativa era
- *    obligarla a escribir cada pregunta cuatro veces, y entonces no las carga
- *    ninguna vez: un FAQ vacío en los cuatro idiomas es peor que uno en español
- *    en tres de ellos.
+ *    Brunela carga las preguntas en español y, si quiere, escribe su propia
+ *    traducción en EN / FR / IT desde el panel. Un idioma sin traducción se ve
+ *    en español: un FAQ vacío en un idioma es peor que uno en español.
  *
- *    Las columnas de la base SÍ son `jsonb` por idioma, así que el día que se
- *    traduzca no hay que migrar nada: se llenan las otras claves y esta función
- *    empieza a elegir. Hoy pide `es` y punto.
+ *    Orden de preferencia: la traducción de Brunela > la automática > el
+ *    español. Las dos primeras viven en el MISMO lugar (`question_i18n[idioma]`;
+ *    la automática sólo lleva además una marca en `question_auto_i18n`), así
+ *    que la vista alcanza y no hizo falta migración. Ver faq-idiomas.ts.
  */
 export async function preguntasFrecuentes(): Promise<PreguntaFrecuente[]> {
   const cargar = unstable_cache(
@@ -68,11 +75,12 @@ export async function preguntasFrecuentes(): Promise<PreguntaFrecuente[]> {
         if (error || !data) return [];
 
         return (data as RawFaq[])
-          .map((f) => ({
-            id: f.id,
-            pregunta: (f.question_i18n?.es ?? "").trim(),
-            respuesta: (f.answer_i18n?.es ?? "").trim(),
-          }))
+          .map((f) => {
+            const porIdioma = Object.fromEntries(
+              IDIOMAS_FAQ.map((idioma) => [idioma, textoParaIdioma(f.question_i18n, f.answer_i18n, idioma)])
+            ) as PreguntaFrecuente["porIdioma"];
+            return { id: f.id, pregunta: porIdioma.es.pregunta, respuesta: porIdioma.es.respuesta, porIdioma };
+          })
           /**
            * Una pregunta sin texto no se muestra aunque esté publicada.
            *
@@ -86,7 +94,9 @@ export async function preguntasFrecuentes(): Promise<PreguntaFrecuente[]> {
         return [];
       }
     },
-    ["landing-faq"],
+    // v2: la forma cambió (porIdioma). Con la clave vieja, una entrada cacheada
+    // de antes llegaría sin traducciones durante cinco minutos.
+    ["landing-faq-v2"],
     { tags: [TAG], revalidate: VIGENCIA }
   );
 
