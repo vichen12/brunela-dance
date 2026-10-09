@@ -1,5 +1,6 @@
 "use client";
 
+import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { useId } from "react";
 import { motion, MotionConfig, type Variants } from "motion/react";
@@ -126,21 +127,14 @@ export function SelectAuto({
   etiqueta: string;
 }) {
   return (
-    <label className={"bib-select" + (defaultValue ? " es-activo" : "")}>
-      <span className="bib-select-etq">{etiqueta}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        aria-label={etiqueta}
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      >
-        {opciones.map((o) => (
-          <option key={o.key} value={o.key}>{o.label}</option>
-        ))}
-      </select>
-      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-        <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </label>
+    <Desplegable
+      variante="pildora"
+      name={name}
+      defaultValue={defaultValue}
+      etiqueta={etiqueta}
+      prefijo={etiqueta}
+      autoEnviar
+      opciones={opciones.map((o) => ({ value: o.key, label: o.label }))}
+    />
   );
 }

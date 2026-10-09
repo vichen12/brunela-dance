@@ -909,20 +909,6 @@ const CSS_BIBLIOTECA = `
 .bib-buscar-btn:hover { background: var(--pink); color: #fff; }
 
 .bib-filtros { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.bib-select {
-  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px;
-  padding: 0 32px 0 14px; border-radius: 99px; border: 1px solid #e7e5e4; background: #fff;
-  font-size: 12.5px; color: #78716c; cursor: pointer; transition: border-color .2s, background .2s;
-}
-.bib-select:hover { border-color: #a8a29e; }
-.bib-select.es-activo { border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep); }
-.bib-select-etq { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.bib-select select {
-  appearance: none; -webkit-appearance: none; border: 0; background: transparent; outline: none;
-  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer; padding: 0;
-}
-.bib-select.es-activo select { color: var(--pink-deep); }
-.bib-select svg { position: absolute; right: 13px; pointer-events: none; }
 .bib-quitar {
   display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 10px;
   font-size: 12px; font-weight: 700; color: var(--pink-deep); text-decoration: none;
@@ -1063,7 +1049,7 @@ const CSS_BIBLIOTECA = `
   .bib-buscar { flex: none; max-width: none; }
   .bib-filtros { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .bib-filtros::-webkit-scrollbar { display: none; }
-  .bib-select { flex-shrink: 0; }
+  .bib-filtros .dsp { flex-shrink: 0; }
   .bib-nav { flex-direction: column; align-items: stretch; }
   .bib-seg { align-self: flex-start; }
   .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 16px; }

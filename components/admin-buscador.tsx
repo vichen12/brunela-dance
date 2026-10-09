@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 
 /**
@@ -61,24 +62,16 @@ export function AdminBuscador({
       />
 
       {filtros.map((f) => (
-        <select
+        <Desplegable
           key={f.name}
+          variante="pildora"
           name={f.name}
           defaultValue={f.valor}
-          aria-label={f.etiqueta}
-          style={{
-            minHeight: 42, padding: "10px 14px", borderRadius: 999,
-            border: `1.5px solid ${f.valor ? "var(--pink)" : "#f0eeec"}`,
-            background: f.valor ? "var(--pink-wash)" : "#fff",
-            color: f.valor ? "var(--pink-deep)" : "var(--muted)",
-            fontSize: 12.5, fontWeight: f.valor ? 700 : 500,
-            fontFamily: "inherit", cursor: "pointer", outline: "none",
-          }}
-        >
-          {f.opciones.map((o) => (
-            <option key={o.key} value={o.key}>{o.label}</option>
-          ))}
-        </select>
+          etiqueta={f.etiqueta}
+          prefijo={f.etiqueta}
+          autoEnviar
+          opciones={f.opciones.map((o) => ({ value: o.key, label: o.label }))}
+        />
       ))}
 
       <button type="submit" style={{

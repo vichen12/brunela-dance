@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -66,11 +67,6 @@ const inp: React.CSSProperties = {
   fontSize: 12, outline: "none", fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 4l3 3 3-3' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 28,
-};
 
 function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
   if (!message) return null;
@@ -282,23 +278,29 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
                     <label style={{ display: "flex", flexDirection: "column" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Plan</span>
-                      <select style={sel} defaultValue={profile.membership_tier} name="membershipTier">
-                        <option value="none">Sin plan</option>
-                        <option value="corps_de_ballet">Corps de Ballet</option>
-                        <option value="solista">Solista</option>
-                        <option value="principal">Principal</option>
-                      </select>
+                      <Desplegable
+                        style={inp} defaultValue={profile.membership_tier} name="membershipTier"
+                        opciones={[
+                          { value: "none", label: "Sin plan" },
+                          { value: "corps_de_ballet", label: "Corps de Ballet" },
+                          { value: "solista", label: "Solista" },
+                          { value: "principal", label: "Principal" },
+                        ]}
+                      />
                     </label>
 
                     <label style={{ display: "flex", flexDirection: "column" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Nivel técnico</span>
-                      <select style={sel} defaultValue={profile.technical_level} name="technicalLevel">
-                        <option value="principiante">Principiante</option>
-                        <option value="intermedio">Intermedio</option>
-                        <option value="avanzado">Avanzado</option>
-                        <option value="profesional">Profesional</option>
-                        <option value="maestro">Maestro</option>
-                      </select>
+                      <Desplegable
+                        style={inp} defaultValue={profile.technical_level} name="technicalLevel"
+                        opciones={[
+                          { value: "principiante", label: "Principiante" },
+                          { value: "intermedio", label: "Intermedio" },
+                          { value: "avanzado", label: "Avanzado" },
+                          { value: "profesional", label: "Profesional" },
+                          { value: "maestro", label: "Maestro" },
+                        ]}
+                      />
                     </label>
 
                     <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 2 }}>

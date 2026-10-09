@@ -535,3 +535,38 @@ describe("el cron que evita que Supabase pause el proyecto", () => {
     expect(ruta()).toMatch(/export const dynamic = "force-dynamic"/);
   });
 });
+
+// ── Ningun <select> nativo ──────────────────────────────────────────────────
+
+describe("los desplegables son todos del sistema", () => {
+  /**
+   * La lista que abre un <select> la dibuja el sistema operativo: en Windows
+   * es una caja gris con la opcion en azul, y no hay CSS que la toque. Se
+   * reemplazaron los 33 por components/desplegable.tsx el 2026-10-08.
+   */
+  const archivos = (dir: string): string[] =>
+    readdirSync(dir).flatMap((n) => {
+      const p = join(dir, n);
+      return statSync(p).isDirectory() ? archivos(p) : p.endsWith(".tsx") ? [p] : [];
+    });
+
+  it("no queda ningun <select> en app/ ni en components/", () => {
+    const conSelect = [...archivos("app"), ...archivos("components")].filter((f) => {
+      // Sin comentarios: varios explican por que NO se usa <select>.
+      const codigo = leer(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+      return /<select[\s>]/.test(codigo);
+    });
+    expect(conSelect, "usar <Desplegable> de components/desplegable.tsx").toEqual([]);
+  });
+
+  it("el desplegable sigue validando required y volviendo con form.reset()", () => {
+    const src = leer("components/desplegable.tsx");
+    // type="hidden" y readOnly quedan FUERA de la validacion del navegador:
+    // con cualquiera de los dos, un required dejaria de frenar el envio.
+    const input = src.slice(src.indexOf('className="dsp-valor"') - 200, src.indexOf('className="dsp-valor"') + 400);
+    expect(input).toMatch(/required=\{required\}/);
+    expect(input).not.toMatch(/type="hidden"|readOnly/);
+    // Sin esto, el formulario de subida quedaba con la categoria de la clase anterior.
+    expect(src).toMatch(/addEventListener\("reset"/);
+  });
+});

@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -102,12 +103,15 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
 
           <div>
             <label className={lbl}>Plan que lo puede ver</label>
-            <select className={inp} name="membershipTierRequired" defaultValue="none">
-              <option value="none">Todas las alumnas</option>
-              <option value="corps_de_ballet">Corps de Ballet</option>
-              <option value="solista">Solista</option>
-              <option value="principal">Principal</option>
-            </select>
+            <Desplegable
+              className={inp} name="membershipTierRequired" defaultValue="none"
+              opciones={[
+                { value: "none", label: "Todas las alumnas" },
+                { value: "corps_de_ballet", label: "Corps de Ballet" },
+                { value: "solista", label: "Solista" },
+                { value: "principal", label: "Principal" },
+              ]}
+            />
           </div>
 
           <div>
@@ -188,12 +192,15 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
                     </div>
                     <div>
                       <label className={lbl}>Plan que lo puede ver</label>
-                      <select className={inp} name="membershipTierRequired" defaultValue={doc.membership_tier_required}>
-                        <option value="none">Todas las alumnas</option>
-                        <option value="corps_de_ballet">Corps de Ballet</option>
-                        <option value="solista">Solista</option>
-                        <option value="principal">Principal</option>
-                      </select>
+                      <Desplegable
+                        className={inp} name="membershipTierRequired" defaultValue={doc.membership_tier_required}
+                        opciones={[
+                          { value: "none", label: "Todas las alumnas" },
+                          { value: "corps_de_ballet", label: "Corps de Ballet" },
+                          { value: "solista", label: "Solista" },
+                          { value: "principal", label: "Principal" },
+                        ]}
+                      />
                     </div>
                     <input name="description" type="hidden" defaultValue={doc.description ?? ""} />
                     <input name="categorySlug" type="hidden" defaultValue={doc.category_slug ?? ""} />

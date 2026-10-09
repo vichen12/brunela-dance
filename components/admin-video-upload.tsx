@@ -1,4 +1,5 @@
 "use client";
+import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useCallback, useRef, useState } from "react";
@@ -141,7 +142,6 @@ const inp: React.CSSProperties = {
   outline: "none",
   fontFamily: "inherit"
 };
-const sel: React.CSSProperties = { ...inp, appearance: "auto" };
 const lbl: React.CSSProperties = {
   display: "block",
   fontSize: 10,
@@ -457,25 +457,32 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       {/* 5 a 8 — como se clasifica la clase */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
         <Field label="Tipo de contenido">
-          <select style={sel} defaultValue="clase" name="contentType" disabled={busy}>
-            {TIPOS_DE_CONTENIDO.map((t) => (
-              <option key={t.slug} value={t.slug}>{t.label}</option>
-            ))}
-          </select>
+          <Desplegable
+            style={inp}
+            defaultValue="clase"
+            name="contentType"
+            disabled={busy}
+            opciones={TIPOS_DE_CONTENIDO.map((t) => ({ value: t.slug, label: t.label }))}
+          />
         </Field>
         <Field label="Categoría / Colección">
-          <select style={sel} defaultValue={CATEGORIAS[0].slug} name="categorySlug" required disabled={busy}>
-            {CATEGORIAS.map((c) => (
-              <option key={c.slug} value={c.slug}>{c.label}</option>
-            ))}
-          </select>
+          <Desplegable
+            style={inp}
+            defaultValue={CATEGORIAS[0].slug}
+            name="categorySlug"
+            required
+            disabled={busy}
+            opciones={CATEGORIAS.map((c) => ({ value: c.slug, label: c.label }))}
+          />
         </Field>
         <Field label="Nivel">
-          <select style={sel} defaultValue="todos" name="nivel" disabled={busy}>
-            {NIVELES.map((n) => (
-              <option key={n.slug} value={n.slug}>{n.label}</option>
-            ))}
-          </select>
+          <Desplegable
+            style={inp}
+            defaultValue="todos"
+            name="nivel"
+            disabled={busy}
+            opciones={NIVELES.map((n) => ({ value: n.slug, label: n.label }))}
+          />
         </Field>
         <Field label="Duración (minutos)">
           <input style={inp} defaultValue={15} min={1} name="durationMinutes" required type="number" disabled={busy} />
@@ -517,11 +524,13 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
           <Field label="Estado">
-            <select style={sel} defaultValue="draft" name="status" disabled={busy}>
-              {ESTADOS.map((e) => (
-                <option key={e.slug} value={e.slug}>{e.label}</option>
-              ))}
-            </select>
+            <Desplegable
+              style={inp}
+              defaultValue="draft"
+              name="status"
+              disabled={busy}
+              opciones={ESTADOS.map((e) => ({ value: e.slug, label: e.label }))}
+            />
           </Field>
         </div>
 
@@ -557,23 +566,21 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <Field label="Plan de trabajo">
-                  <select
-                    style={sel}
+                  <Desplegable
+                    style={inp}
                     name="programId"
                     value={programId}
                     disabled={busy}
-                    onChange={(e) => {
-                      const id = e.target.value;
+                    onChange={(id) => {
                       setProgramId(id);
                       const elegido = programas.find((p) => p.id === id);
                       setProgramDay(elegido ? String(elegido.proximoDia) : "");
                     }}
-                  >
-                    <option value="">No agregar a ningún plan</option>
-                    {programas.map((p) => (
-                      <option key={p.id} value={p.id}>{p.titulo}</option>
-                    ))}
-                  </select>
+                    opciones={[
+                      { value: "", label: "No agregar a ningún plan" },
+                      ...programas.map((p) => ({ value: p.id, label: p.titulo })),
+                    ]}
+                  />
                 </Field>
                 <Field label="Día del plan">
                   <input

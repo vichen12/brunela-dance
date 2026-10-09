@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
@@ -86,11 +87,6 @@ const inp: React.CSSProperties = {
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
@@ -180,12 +176,15 @@ export default async function AdminAnnouncementsPage({
             </label>
             <label style={{ display: "flex", flexDirection: "column" }}>
               <Lbl>Destinatarias</Lbl>
-              <select style={sel} name="tierTarget" defaultValue="all">
-                <option value="all">Todas las alumnas</option>
-                <option value="corps_de_ballet">Corps de Ballet y superiores</option>
-                <option value="solista">Solista y superiores</option>
-                <option value="principal">Solo Principal</option>
-              </select>
+              <Desplegable
+                style={inp} name="tierTarget" defaultValue="all"
+                opciones={[
+                  { value: "all", label: "Todas las alumnas" },
+                  { value: "corps_de_ballet", label: "Corps de Ballet y superiores" },
+                  { value: "solista", label: "Solista y superiores" },
+                  { value: "principal", label: "Solo Principal" },
+                ]}
+              />
             </label>
           </div>
           <label style={{ display: "flex", flexDirection: "column" }}>

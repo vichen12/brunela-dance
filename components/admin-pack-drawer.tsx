@@ -1,5 +1,6 @@
 "use client";
 
+import { Desplegable } from "@/components/desplegable";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -59,11 +60,6 @@ const inp: React.CSSProperties = {
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
@@ -132,12 +128,13 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
         <form action={addVideoToPackAction} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginBottom: 14 }}>
           <input type="hidden" name="packId" value={pack.id} />
           <F label="Agregar una clase">
-            <select style={sel} name="videoId" defaultValue="">
-              <option value="" disabled>Elegí una clase…</option>
-              {disponibles.map((c) => (
-                <option key={c.id} value={c.id}>{c.titulo}</option>
-              ))}
-            </select>
+            <Desplegable
+              style={inp}
+              name="videoId"
+              defaultValue=""
+              placeholder="Elegí una clase…"
+              opciones={disponibles.map((c) => ({ value: c.id, label: c.titulo }))}
+            />
           </F>
           <BotonEnviar pendingLabel="Agregando…" style={{
             background: "#1c1917", color: "#fff", border: "none", borderRadius: 99,

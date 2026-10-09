@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { leerCategorias } from "@/src/lib/categorias";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -427,19 +428,25 @@ export default async function AdminChatPage({ searchParams }: {
                 </div>
                 <div>
                   <label className={lbl}>Tipo</label>
-                  <select className={inp} name="type" defaultValue="community">
-                    <option value="community">Comunidad (todas)</option>
-                    <option value="tier">Exclusiva por plan</option>
-                  </select>
+                  <Desplegable
+                    className={inp} name="type" defaultValue="community"
+                    opciones={[
+                      { value: "community", label: "Comunidad (todas)" },
+                      { value: "tier", label: "Exclusiva por plan" },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className={lbl}>Plan mínimo</label>
-                  <select className={inp} name="tier_required" defaultValue="none">
-                    <option value="none">Sin restricción</option>
-                    <option value="corps_de_ballet">Corps de Ballet</option>
-                    <option value="solista">Solista</option>
-                    <option value="principal">Principal</option>
-                  </select>
+                  <Desplegable
+                    className={inp} name="tier_required" defaultValue="none"
+                    opciones={[
+                      { value: "none", label: "Sin restricción" },
+                      { value: "corps_de_ballet", label: "Corps de Ballet" },
+                      { value: "solista", label: "Solista" },
+                      { value: "principal", label: "Principal" },
+                    ]}
+                  />
                 </div>
                 <button className="button-primary w-full" type="submit">Crear sala</button>
               </form>
@@ -452,14 +459,14 @@ export default async function AdminChatPage({ searchParams }: {
                 <form action={createCategoryRoomAction} className="space-y-3">
                   <div>
                     <label className={lbl}>Categoría</label>
-                    <select className={inp} name="category_slug" required defaultValue="">
-                      <option value="" disabled>Elegí una categoría…</option>
-                      {categories.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.name_i18n?.es ?? c.slug}
-                        </option>
-                      ))}
-                    </select>
+                    <Desplegable
+                      className={inp}
+                      name="category_slug"
+                      required
+                      defaultValue=""
+                      placeholder="Elegí una categoría…"
+                      opciones={categories.map((c) => ({ value: c.slug, label: c.name_i18n?.es ?? c.slug }))}
+                    />
                   </div>
                   <div>
                     <label className={lbl}>Nombre del canal</label>
@@ -467,12 +474,15 @@ export default async function AdminChatPage({ searchParams }: {
                   </div>
                   <div>
                     <label className={lbl}>Plan mínimo</label>
-                    <select className={inp} name="tier_required" defaultValue="none">
-                      <option value="none">Sin restricción</option>
-                      <option value="corps_de_ballet">Corps de Ballet</option>
-                      <option value="solista">Solista</option>
-                      <option value="principal">Principal</option>
-                    </select>
+                    <Desplegable
+                      className={inp} name="tier_required" defaultValue="none"
+                      opciones={[
+                        { value: "none", label: "Sin restricción" },
+                        { value: "corps_de_ballet", label: "Corps de Ballet" },
+                        { value: "solista", label: "Solista" },
+                        { value: "principal", label: "Principal" },
+                      ]}
+                    />
                   </div>
                   <button className="button-secondary w-full" type="submit">Crear canal de categoría</button>
                 </form>

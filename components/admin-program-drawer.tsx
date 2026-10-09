@@ -1,4 +1,5 @@
 "use client";
+import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useEffect, useRef, useState } from "react";
@@ -45,11 +46,6 @@ const inp: React.CSSProperties = {
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
 
 const tarjeta: React.CSSProperties = {
   background: "#fff", border: "1px solid #f0eeec", borderRadius: 16,
@@ -106,18 +102,24 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
         </F>
 
         <F label="Plan que lo puede ver">
-          <select style={sel} defaultValue={program?.membership_tier_required ?? "solista"} name="membershipTierRequired">
-            <option value="solista">Solista</option>
-            <option value="principal">Principal</option>
-          </select>
+          <Desplegable
+            style={inp} defaultValue={program?.membership_tier_required ?? "solista"} name="membershipTierRequired"
+            opciones={[
+              { value: "solista", label: "Solista" },
+              { value: "principal", label: "Principal" },
+            ]}
+          />
         </F>
 
         <F label="Estado">
-          <select style={sel} defaultValue={program?.status ?? "draft"} name="status">
-            <option value="draft">Borrador</option>
-            <option value="published">Publicado</option>
-            <option value="archived">Archivado</option>
-          </select>
+          <Desplegable
+            style={inp} defaultValue={program?.status ?? "draft"} name="status"
+            opciones={[
+              { value: "draft", label: "Borrador" },
+              { value: "published", label: "Publicado" },
+              { value: "archived", label: "Archivado" },
+            ]}
+          />
         </F>
 
         <F label="Imagen de portada">
@@ -272,12 +274,14 @@ export function EditarPrograma({
                       {/* Antes era un input donde habia que escribir el slug de
                           memoria. El datalist autocompletaba, pero listaba slugs:
                           en la practica, memorizar codigos. */}
-                      <select style={sel} name="videoSlug" required defaultValue="">
-                        <option value="" disabled>Elegí una clase…</option>
-                        {videos.map((v) => (
-                          <option key={v.id} value={v.slug}>{tituloDe(v, v.slug)}</option>
-                        ))}
-                      </select>
+                      <Desplegable
+                        style={inp}
+                        name="videoSlug"
+                        required
+                        defaultValue=""
+                        placeholder="Elegí una clase…"
+                        opciones={videos.map((v) => ({ value: v.slug, label: tituloDe(v, v.slug) }))}
+                      />
                     </F>
                     <BotonEnviar style={{
                       background: "var(--pink)", color: "#fff", border: "none", borderRadius: 99,

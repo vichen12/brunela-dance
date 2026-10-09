@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { Users, Gem } from "lucide-react";
@@ -214,19 +215,25 @@ export default async function CommunityPage({ searchParams }: {
             </div>
             <div style={{ marginBottom: 8 }}>
               <label className={lbl}>Tipo</label>
-              <select className={inp} name="type" defaultValue="community">
-                <option value="community">Comunidad</option>
-                <option value="tier">Exclusiva</option>
-              </select>
+              <Desplegable
+                className={inp} name="type" defaultValue="community"
+                opciones={[
+                  { value: "community", label: "Comunidad" },
+                  { value: "tier", label: "Exclusiva" },
+                ]}
+              />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label className={lbl}>Plan mínimo</label>
-              <select className={inp} name="tier_required" defaultValue="none">
-                <option value="none">Sin restricción</option>
-                <option value="corps_de_ballet">Corps de Ballet</option>
-                <option value="solista">Solista</option>
-                <option value="principal">Principal</option>
-              </select>
+              <Desplegable
+                className={inp} name="tier_required" defaultValue="none"
+                opciones={[
+                  { value: "none", label: "Sin restricción" },
+                  { value: "corps_de_ballet", label: "Corps de Ballet" },
+                  { value: "solista", label: "Solista" },
+                  { value: "principal", label: "Principal" },
+                ]}
+              />
             </div>
             <button type="submit" style={{
               width: "100%", padding: "7px 0", borderRadius: 10, border: "none", cursor: "pointer",

@@ -1,5 +1,6 @@
 "use client";
 
+import { Desplegable } from "@/components/desplegable";
 import { useState } from "react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { agregarClaseAPlanAction, quitarClaseDePlanAction } from "@/src/features/admin/actions";
@@ -38,7 +39,6 @@ const inp: React.CSSProperties = {
   fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = { ...inp, appearance: "auto" };
 
 const lbl: React.CSSProperties = {
   display: "block",
@@ -141,23 +141,17 @@ export function ClaseEnPlanes({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 110px auto", gap: 10, alignItems: "end" }}>
             <label style={{ display: "flex", flexDirection: "column" }}>
               <span style={lbl}>Plan</span>
-              <select
-                style={sel}
+              <Desplegable
+                style={inp}
                 value={programId}
-                onChange={(e) => {
-                  const id = e.target.value;
+                placeholder="Elegí un plan…"
+                onChange={(id) => {
                   setProgramId(id);
                   const plan = planes.find((p) => p.id === id);
                   setDia(plan ? String(plan.proximoDia) : "");
                 }}
-              >
-                <option value="">Elegí un plan…</option>
-                {planes.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.titulo}
-                  </option>
-                ))}
-              </select>
+                opciones={planes.map((p) => ({ value: p.id, label: p.titulo }))}
+              />
             </label>
 
             <label style={{ display: "flex", flexDirection: "column" }}>

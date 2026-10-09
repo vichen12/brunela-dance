@@ -1,5 +1,6 @@
 "use client";
 
+import { Desplegable } from "@/components/desplegable";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actions";
@@ -74,11 +75,6 @@ const inp: React.CSSProperties = {
   fontSize: 13, outline: "none", fontFamily: "inherit",
 };
 
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
 
 
 function Lbl({ children }: { children: React.ReactNode }) {
@@ -169,32 +165,32 @@ function VideoForm({
       {/* 5 a 8 — como se clasifica la clase */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
         <F label="Tipo de contenido">
-          <select style={sel} defaultValue={video.content_type ?? "clase"} name="contentType">
-            {TIPOS_DE_CONTENIDO.map((t) => (
-              <option key={t.slug} value={t.slug}>{t.label}</option>
-            ))}
-          </select>
+          <Desplegable
+            style={inp}
+            defaultValue={video.content_type ?? "clase"}
+            name="contentType"
+            opciones={TIPOS_DE_CONTENIDO.map((t) => ({ value: t.slug, label: t.label }))}
+          />
         </F>
         <F label="Categoría / Colección">
           {/* La columna es un array y el formulario elige una: se muestra la
               primera. Una clase vieja con dos categorias conserva la segunda
               hasta que alguien guarde, y ahi queda con la elegida. */}
-          <select style={sel} defaultValue={video.category_slugs?.[0] ?? CATEGORIAS[0].slug} name="categorySlug" required>
-            {CATEGORIAS.map((c) => (
-              <option key={c.slug} value={c.slug}>{c.label}</option>
-            ))}
-          </select>
+          <Desplegable
+            style={inp}
+            defaultValue={video.category_slugs?.[0] ?? CATEGORIAS[0].slug}
+            name="categorySlug"
+            required
+            opciones={CATEGORIAS.map((c) => ({ value: c.slug, label: c.label }))}
+          />
         </F>
         <F label="Nivel">
-          <select
-            style={sel}
+          <Desplegable
+            style={inp}
             defaultValue={rangoANivel(video.recommended_min_level, video.recommended_max_level)}
             name="nivel"
-          >
-            {NIVELES.map((n) => (
-              <option key={n.slug} value={n.slug}>{n.label}</option>
-            ))}
-          </select>
+            opciones={NIVELES.map((n) => ({ value: n.slug, label: n.label }))}
+          />
         </F>
         <F label="Duración (minutos)">
           {/* En minutos, que es como piensa una clase quien la da. La conversion
@@ -233,15 +229,21 @@ function VideoForm({
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
           <F label="Estado">
-            <select style={sel} defaultValue={video.status === "archived" ? "draft" : video.status} name="status">
-              {ESTADOS.map((e) => (
-                <option key={e.slug} value={e.slug}>{e.label}</option>
-              ))}
-              {/* Una clase archivada de antes conserva su estado hasta que
-                  alguien lo cambie a mano. Sin esta opcion el desplegable
-                  mostraria "Borrador" en una clase archivada, que es mentira. */}
-              {video.status === "archived" && <option value="archived">Archivado</option>}
-            </select>
+            {/* Una clase archivada de antes conserva su estado hasta que
+                alguien lo cambie a mano: por eso la opcion "Archivado" aparece
+                solo para ella, y por eso arranca elegida.
+                ⚠️ Antes arrancaba en "draft" aunque la opcion existiera: abrir
+                una clase archivada y guardar cualquier otro cambio la pasaba a
+                borrador sin que nadie lo pidiera. */}
+            <Desplegable
+              style={inp}
+              defaultValue={video.status}
+              name="status"
+              opciones={[
+                ...ESTADOS.map((e) => ({ value: e.slug, label: e.label })),
+                ...(video.status === "archived" ? [{ value: "archived", label: "Archivado" }] : []),
+              ]}
+            />
           </F>
 
           {/* Los campos "Mux Playback ID" y "Mux Asset ID" salieron el 2026-08-03:

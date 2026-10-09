@@ -1,3 +1,4 @@
+import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -98,12 +99,15 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
 
           <div>
             <label className={labelCls}>Plan que la puede ver</label>
-            <select className={inputCls} name="membershipTierRequired" defaultValue="none">
-              <option value="none">Sin restricción (todas)</option>
-              <option value="corps_de_ballet">Corps de Ballet</option>
-              <option value="solista">Solista</option>
-              <option value="principal">Principal</option>
-            </select>
+            <Desplegable
+              className={inputCls} name="membershipTierRequired" defaultValue="none"
+              opciones={[
+                { value: "none", label: "Sin restricción (todas)" },
+                { value: "corps_de_ballet", label: "Corps de Ballet" },
+                { value: "solista", label: "Solista" },
+                { value: "principal", label: "Principal" },
+              ]}
+            />
           </div>
 
           <div className="md:col-span-2">
@@ -214,12 +218,15 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
 
                     <div>
                       <label className={labelCls}>Plan que la puede ver</label>
-                      <select className={inputCls} name="membershipTierRequired" defaultValue={cat.membership_tier_required}>
-                        <option value="none">Sin restricción</option>
-                        <option value="corps_de_ballet">Corps de Ballet</option>
-                        <option value="solista">Solista</option>
-                        <option value="principal">Principal</option>
-                      </select>
+                      <Desplegable
+                        className={inputCls} name="membershipTierRequired" defaultValue={cat.membership_tier_required}
+                        opciones={[
+                          { value: "none", label: "Sin restricción" },
+                          { value: "corps_de_ballet", label: "Corps de Ballet" },
+                          { value: "solista", label: "Solista" },
+                          { value: "principal", label: "Principal" },
+                        ]}
+                      />
                     </div>
 
                     <div className="md:col-span-2">
