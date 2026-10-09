@@ -142,6 +142,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const reservasActivas = Array.from(bookings.values()).filter((b) => b.status !== "canceled").length;
   // La marca "Proxima clase" es de la primera de la agenda, filtre lo que filtre.
   const idProxima = proximas[0]?.id ?? null;
+  const misReservas = proximas.filter((x) => { const b = bookings.get(x.id); return b?.status === "reserved" || b?.status === "waitlisted"; });
 
   const normal = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const reservada = (id: string) => { const b = bookings.get(id); return b?.status === "reserved" || b?.status === "waitlisted"; };
@@ -311,6 +312,49 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
           ]} />
         )}
 
+        {/* Mis inscripciones: lo que ya reservo, a mano y arriba de todo, con
+            el boton para entrar. Antes habia que buscarlo en la lista. */}
+        {misReservas.length > 0 && (
+          <section className="mis" aria-label="Mis inscripciones">
+            <div className="mis-cab">
+              <span className="mis-ico" aria-hidden="true"><CalendarCheck size={18} strokeWidth={2.2} /></span>
+              <h2 className="mis-titulo">Mis inscripciones</h2>
+              <span className="mis-cuenta">{misReservas.length}</span>
+            </div>
+            <ul className="mis-lista">
+              {misReservas.map((sesion) => {
+                const fm = partesFecha(sesion.starts_at, sesion.session_timezone);
+                const link = links.get(sesion.id);
+                const espera = bookings.get(sesion.id)?.status === "waitlisted";
+                const hora = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || "Europe/Madrid" }).format(new Date(sesion.starts_at));
+                return (
+                  <li key={sesion.id} className="mis-item">
+                    <div className="mis-fecha" aria-hidden="true">
+                      <span>{fm.semana}</span>
+                      <b>{fm.dia}</b>
+                      <span>{fm.mes}</span>
+                    </div>
+                    <div className="mis-txt">
+                      <p className="mis-nombre">{resolveI18nText(sesion.title_i18n)}</p>
+                      <p className="mis-meta">
+                        <Clock size={12} strokeWidth={2.4} aria-hidden="true" /> {hora} (Madrid)
+                        <span className={"mis-estado" + (espera ? " es-espera" : "")}>{espera ? "En lista de espera" : "Lugar reservado"}</span>
+                      </p>
+                    </div>
+                    {link && !espera ? (
+                      <a href={link.join_url} target="_blank" rel="noreferrer" className="mis-entrar">
+                        <Video size={15} strokeWidth={2.2} aria-hidden="true" /> Entrar
+                      </a>
+                    ) : (
+                      <a href={"#sesion-" + sesion.id} className="mis-ver">Ver</a>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {sessions.length > 0 && (
           <section className="cal" aria-label="Calendario de clases en vivo">
             <header className="cal-cab">
@@ -333,7 +377,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               {celdas.map((k, i) => {
                 if (!k) return <span key={"v" + i} className="cal-celda es-vacia" aria-hidden="true" />;
                 const delK = porDia.get(k) ?? [];
-                const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length ? " tiene" : "");
+                const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length ? " tiene" : "") + (delK.some((x) => reservada(x.id)) ? " tiene-mia" : "");
                 const num = <span className="cal-num">{Number(k.slice(8))}</span>;
                 if (!delK.length) return <span key={k} className={clases} role="gridcell">{num}</span>;
                 return (
@@ -342,7 +386,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                     <span className="cal-eventos">
                       {delK.slice(0, 3).map((sesion) => (
                         <span key={sesion.id} className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "") + (bloqueadas.has(sesion.id) ? " es-bloqueada" : "")}>
-                          <b>{new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at))}</b> {resolveI18nText(sesion.title_i18n)}
+                          {reservada(sesion.id) && <Check size={11} strokeWidth={3.4} aria-hidden="true" className="cal-ev-tilde" />}<b>{new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at))}</b> {resolveI18nText(sesion.title_i18n)}
                         </span>
                       ))}
                       {delK.length > 3 && <span className="cal-mas">+{delK.length - 3} más</span>}
@@ -456,6 +500,27 @@ function partesFecha(iso: string, zona: string) {
 }
 
 const CSS = `
+.mis { border-radius: 30px; padding: 20px 22px; background: linear-gradient(135deg, #FFE9E1 0%, #FFF4EE 60%, #FFEDE4 100%); border: 1px solid var(--pink-line); box-shadow: var(--sombra); }
+.mis-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.mis-ico { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; background: var(--pink); color: #fff; box-shadow: 0 8px 16px -8px rgba(230,79,85,.9); }
+.mis-titulo { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+.mis-cuenta { padding: 2px 10px; border-radius: 99px; background: #fff; color: var(--pink-deep); font-size: 13px; font-weight: 900; }
+.mis-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.mis-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px; border-radius: 22px; background: #fff; border: 1px solid var(--linea); box-shadow: 0 8px 20px -16px rgba(176,70,70,.6); transition: transform .3s var(--curva), box-shadow .3s; }
+.mis-item:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+.mis-fecha { width: 54px; flex-shrink: 0; padding: 6px 0; border-radius: 16px; background: var(--rubor); display: flex; flex-direction: column; align-items: center; line-height: 1.1; color: var(--pink-deep); }
+.mis-fecha span { font-size: 10.5px; font-weight: 800; text-transform: capitalize; }
+.mis-fecha b { font-size: 22px; font-weight: 900; color: var(--ink); }
+.mis-txt { flex: 1; min-width: 0; }
+.mis-nombre { font-size: 15px; font-weight: 900; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mis-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.mis-estado { padding: 2px 9px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 11.5px; font-weight: 800; }
+.mis-estado.es-espera { background: #FFF4E8; color: var(--melocoton-deep); }
+.mis-entrar, .mis-ver { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 99px; font-size: 13.5px; font-weight: 800; text-decoration: none; transition: transform .25s var(--curva); }
+.mis-entrar { background: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
+.mis-ver { background: #fff; color: var(--ink); border: 1.5px solid var(--linea-fuerte); }
+.mis-entrar:hover, .mis-ver:hover { transform: translateY(-1px); }
+@media (max-width: 560px) { .mis { padding: 16px; border-radius: 24px; } .mis-lista { grid-template-columns: 1fr; } }
 .sv-card.es-bloqueada { background: linear-gradient(160deg, #FFFAF6, #fff 60%); }
 .sv-card.es-bloqueada .sv-fecha { filter: saturate(.6); opacity: .85; }
 .sv-candado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -495,8 +560,13 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
 .cal-leyenda i.es-corps { background: #F2B9A5; }
 .cal-leyenda i.es-solista { background: #F3C795; }
 .cal-leyenda i.es-principal { background: var(--pink); }
-.cal-leyenda i.es-mia { background: #4C8F55; }
-.cal-ev.es-mia { box-shadow: inset 0 0 0 1.5px #7DB585; }
+/* Lo que reservaste se destaca: pastilla coral llena con tilde, y el dia
+   entero en rubor con su numero en coral. */
+.cal-leyenda i.es-mia { background: var(--pink); }
+.cal-ev.es-mia { background: var(--pink) !important; color: #fff !important; border-color: var(--pink-mid) !important; box-shadow: 0 6px 14px -8px rgba(230,79,85,.9); display: flex; align-items: center; gap: 4px; }
+.cal-ev-tilde { flex-shrink: 0; }
+.cal-celda.tiene-mia { background: linear-gradient(160deg, #FFEDE8, #FFF6F2); border-color: var(--pink-line); }
+.cal-celda.tiene-mia .cal-num { color: var(--pink-deep); }
 .cal-ev.es-cancelada { text-decoration: line-through; opacity: .55; }
 .cal-celda.es-pasado .cal-ev { opacity: .6; }
 .cal-mas { font-size: 11px; font-weight: 800; color: var(--pink-deep); padding-left: 4px; }
@@ -511,7 +581,8 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
   .cal-celda { min-height: 58px; padding: 5px 3px; border-radius: 12px; align-items: center; }
   .cal-ev { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; font-size: 0; }
   .cal-ev.es-corps { background: #F2B9A5; } .cal-ev.es-solista { background: #F3C795; } .cal-ev.es-principal { background: var(--pink); }
-  .cal-ev.es-mia { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #4C8F55; }
+  .cal-ev.es-mia { width: 10px; height: 10px; background: var(--pink) !important; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--pink); }
+  .cal-ev-tilde { display: none; }
   .cal-eventos { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
   .cal-mas { font-size: 9px; padding: 0; }
   .cal-sem { font-size: 10.5px; }
@@ -532,7 +603,7 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
 .sv-lista > .sv-card:nth-child(3) { animation-delay: .12s; }
 .sv-lista > .sv-card:nth-child(n+4) { animation-delay: .18s; }
 .sv-card:hover { transform: translateY(-3px); border-color: var(--linea-fuerte); box-shadow: var(--sombra-alta); }
-.sv-card.es-reservada { border-color: #D5E7CF; background: linear-gradient(100deg, #F4F9F2 0%, #fff 50%); }
+.sv-card.es-reservada { border-color: var(--pink-line); background: linear-gradient(100deg, #FFF1EC 0%, #fff 50%); }
 .sv-card.es-pasada { opacity: 0.72; box-shadow: none; }
 
 /* Bloque de fecha: una pastilla pastel, como una hoja de calendario blanda. */
@@ -544,8 +615,8 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
 }
 .sv-card:hover .sv-fecha { transform: rotate(-3deg) scale(1.03); }
 .sv-lista > .sv-card:nth-child(3n+2) .sv-fecha { background: linear-gradient(160deg, #FFE4E4 0%, #FFF3F2 100%); color: var(--pink-deep); }
-.sv-lista > .sv-card:nth-child(3n+3) .sv-fecha { background: linear-gradient(160deg, #F7EBFA 0%, #FBF5FC 100%); color: #B4533A; }
-.sv-card.es-reservada .sv-fecha { background: linear-gradient(160deg, #E2F0DE 0%, #F2F8F0 100%); color: var(--salvia-deep); }
+.sv-lista > .sv-card:nth-child(3n+3) .sv-fecha { background: linear-gradient(160deg, #FFF0E6 0%, #FFF8F3 100%); color: #B4533A; }
+.sv-card.es-reservada .sv-fecha { background: linear-gradient(160deg, #FFDCD3 0%, #FFF0EA 100%); color: var(--pink-deep); }
 .sv-fecha-semana { font-size: 13px; font-weight: 800; text-transform: capitalize; }
 .sv-fecha-dia { font-weight: 900; font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
 .sv-fecha-mes { padding: 2px 9px; border-radius: 99px; background: rgba(255,255,255,.75); font-size: 12px; font-weight: 800; text-transform: capitalize; }
@@ -556,7 +627,7 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
 .sv-vivo { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: sv-latido 1.6s ease-in-out infinite; }
 @keyframes sv-latido { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.8); } 50% { box-shadow: 0 0 0 5px rgba(255,255,255,0); } }
 .sv-estado { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 99px; font-size: 12.5px; font-weight: 800; }
-.sv-estado.es-ok { background: var(--salvia); color: var(--salvia-deep); }
+.sv-estado.es-ok { background: var(--pink); color: #fff; }
 .sv-estado.es-invitada { background: var(--melocoton); color: var(--melocoton-deep); }
 .sv-plan { padding: 4px 11px; border-radius: 99px; font-size: 12.5px; font-weight: 800; color: var(--pink-deep); background: var(--rubor); }
 .sv-titulo { margin-top: 2px; font-weight: 900; font-size: 23px; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); }
@@ -572,8 +643,8 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
   box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); transition: background .2s, transform .3s var(--curva), box-shadow .3s;
 }
 .sv-reservar:hover, .sv-entrar:hover { background: var(--pink-mid); transform: translateY(-2px); }
-.sv-entrar { background: var(--salvia-deep); box-shadow: 0 14px 26px -14px rgba(63,122,69,.8); }
-.sv-entrar:hover { background: #356A3B; }
+.sv-entrar { background: var(--pink); box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.sv-entrar:hover { background: var(--pink-mid); }
 .sv-cancelar {
   display: inline-flex; align-items: center; height: 48px; padding: 0 22px; border-radius: 99px; cursor: pointer;
   border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 800;
