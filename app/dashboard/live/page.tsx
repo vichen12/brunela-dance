@@ -1,6 +1,4 @@
 import {
-  bookingStatusLabel,
-  formatDateTimeLabel,
   liveSessionStatusLabel,
   membershipTierLabel,
   resolveI18nText,
@@ -14,6 +12,9 @@ import {
 } from "@/src/features/studio/actions";
 import { requireUser } from "@/src/features/auth/guards";
 import { HoraSesion } from "@/components/hora-sesion";
+import { BotonEnviar } from "@/components/boton-enviar";
+import { ArrowRight, CalendarCheck, Check, Clock, Users, Video, X } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -46,44 +47,6 @@ type AccessLinkRecord = {
   join_url: string;
   passcode: string | null;
 };
-
-/** Fila de detalle de una sesion: icono en cuadradito, etiqueta y valor. */
-function Detalle({ d, d2, titulo, valor }: { d: string; d2?: string; titulo: string; valor: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-        background: "var(--pink-wash)", color: "var(--pink)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />}
-        </svg>
-      </div>
-      <div>
-        <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>{titulo}</p>
-        <p style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>{valor}</p>
-      </div>
-    </div>
-  );
-}
-
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
-
-  return (
-    <div
-      className={`rounded-[1.5rem] border px-4 py-4 text-sm font-semibold ${
-        tone === "success"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-[rgba(217,105,119,0.18)] bg-[rgba(255,238,242,0.88)] text-[color:var(--rose-deep)]"
-      }`}
-    >
-      {message}
-    </div>
-  );
-}
 
 export default async function DashboardLivePage({ searchParams }: { searchParams?: SearchParams }) {
   const { user } = await requireUser();
@@ -127,192 +90,217 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     ((linksData ?? []) as AccessLinkRecord[]).map((link) => [link.live_session_id, link])
   );
 
-  return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+  // Proximas y pasadas, separadas. Antes iban mezcladas y la marca de "Próxima
+  // clase" caia en la primera de la lista aunque ya hubiera terminado.
+  const ahora = Date.now();
+  const proximas = sessions.filter((s) => new Date(s.ends_at).getTime() >= ahora && s.status !== "canceled" && s.status !== "completed");
+  const pasadas = sessions.filter((s) => !proximas.includes(s)).reverse();
+  const reservasActivas = Array.from(bookings.values()).filter((b) => b.status !== "canceled").length;
 
-        <header className="hero-stage">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <span className="studio-chip">Clases en vivo</span>
-              <h1 className="display mt-8 text-5xl leading-none md:text-7xl">
-                Clases en vivo y{" "}
-                <span style={{ color: "var(--pink)", fontStyle: "italic" }}>reservas.</span>
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
-                Reservá tu lugar en las próximas clases con Brunela. Cuando se acerque el horario vas a
-                ver acá el enlace para entrar, y podés cancelar si te surge algo.
-              </p>
-            </div>
+  const tarjeta = (session: LiveSessionRecord, esLaProxima: boolean, pasada: boolean) => {
+    const booking = bookings.get(session.id);
+    const accessLink = links.get(session.id);
+    const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
+    const f = partesFecha(session.starts_at, session.session_timezone);
+    return (
+      <li key={session.id} className={"sv-card" + (isReserved ? " es-reservada" : "") + (pasada ? " es-pasada" : "")}>
+        <div className="sv-fecha" aria-hidden="true">
+          <span className="sv-fecha-semana">{f.semana}</span>
+          <span className="sv-fecha-dia">{f.dia}</span>
+          <span className="sv-fecha-mes">{f.mes}</span>
+        </div>
 
-            <div className="soft-stat min-w-[16rem] p-5">
-              <p className="eyebrow">Tus reservas</p>
-              <p className="display mt-4 text-4xl leading-none">
-                {Array.from(bookings.values()).filter((booking) => booking.status !== "canceled").length}
-              </p>
-              <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                Reservas activas o en lista de espera.
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <Flash message={success} tone="success" />
-        <Flash message={error} tone="error" />
-
-        <section className="panel rounded-[2.4rem] p-7 md:p-9">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="eyebrow">Agenda</p>
-              <h2 className="display mt-4 text-4xl">Reserva desde tu estudio</h2>
-            </div>
-            <span className="studio-chip">{sessions.length} sesiones</span>
+        <div className="sv-cuerpo">
+          <div className="sv-linea">
+            {esLaProxima && <span className="sv-proxima"><span className="sv-vivo" aria-hidden="true" /> Próxima clase</span>}
+            {isReserved && (
+              <span className="sv-estado es-ok"><Check size={12} strokeWidth={3} aria-hidden="true" /> {booking?.status === "waitlisted" ? "En lista de espera" : "Reservaste tu lugar"}</span>
+            )}
+            {/* Sin esto, una alumna ve una clase marcada "Principal" con su plan
+                de Corps y parece un error del sistema. La marca explica por que
+                la esta viendo. */}
+            {invitadaA.has(session.id) && <span className="sv-estado es-invitada">Invitada por Brunela</span>}
+            <span className="sv-plan">{membershipTierLabel(session.membership_tier_required)}</span>
+            {pasada && <span className="sv-plan">{liveSessionStatusLabel(session.status)}</span>}
           </div>
 
-          <div className="mt-10 grid gap-4">
-            {sessions.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-[rgba(118,92,113,0.14)] bg-[rgba(255,255,255,0.52)] p-6 text-sm leading-7 text-[color:var(--ink-soft)]">
-                Todavia no hay clases en vivo programadas.
-              </div>
-            ) : null}
+          <h3 className="sv-titulo">{resolveI18nText(session.title_i18n)}</h3>
+          {resolveI18nText(session.description_i18n) && <p className="sv-desc">{resolveI18nText(session.description_i18n)}</p>}
 
-            {sessions.map((session, indice) => {
-              const booking = bookings.get(session.id);
-              const accessLink = links.get(session.id);
-              const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
+          <ul className="sv-datos">
+            <li><Clock size={14} strokeWidth={2} aria-hidden="true" /> <HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} /></li>
+            <li><Users size={14} strokeWidth={2} aria-hidden="true" /> {session.capacity} lugares</li>
+            {/* La regla real: el enlace se revela al reservar, no a una hora
+                fija. No hay ventana de minutos en ningun lado. */}
+            <li><Video size={14} strokeWidth={2} aria-hidden="true" /> {accessLink ? "Enlace disponible" : "El enlace aparece al reservar"}</li>
+          </ul>
 
-              return (
-                <article key={session.id} className="feature-tile rounded-[2rem] border border-[rgba(var(--border-rgb),0.42)] bg-[rgba(255,255,255,0.88)] p-5">
-                  <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-                    <div
-                      className="relative min-h-[14rem] overflow-hidden rounded-[1.7rem] border border-[rgba(var(--border-rgb),0.3)] bg-cover bg-center"
-                      style={{
-                        backgroundColor: "rgba(238, 225, 228, 0.85)",
-                        backgroundImage: session.cover_image_url ? `url(${session.cover_image_url})` : undefined
-                      }}
-                    >
-                      {indice === 0 && (
-                        <span style={{
-                          position: "absolute", top: 14, left: 14,
-                          display: "inline-flex", alignItems: "center", gap: 7,
-                          background: "rgba(28,25,23,0.82)", color: "#fff",
-                          fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                          padding: "7px 13px", borderRadius: 99, textTransform: "uppercase",
-                        }}>
-                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--pink)" }} />
-                          Próxima clase
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="studio-chip">{membershipTierLabel(session.membership_tier_required)}</span>
-                        <span className="studio-chip">{liveSessionStatusLabel(session.status)}</span>
-                        {booking ? <span className="studio-chip">{bookingStatusLabel(booking.status)}</span> : null}
-                        {/* Sin esto, una alumna ve una clase marcada "Principal" con su
-                            plan de Corps y parece un error del sistema. La marca explica
-                            por que la esta viendo. Va con --pink-mid y no --pink: aca hay
-                            texto para leer, no una etiqueta que se mira de reojo. */}
-                        {invitadaA.has(session.id) && (
-                          <span
-                            className="studio-chip"
-                            style={{ background: "var(--pink-mid)", color: "#fff", borderColor: "transparent" }}
-                          >
-                            Invitada por Brunela
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="display mt-5 text-4xl">{resolveI18nText(session.title_i18n)}</h3>
-                      <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                        {resolveI18nText(session.description_i18n) || "Descripcion pendiente en admin."}
-                      </p>
-
-                      <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        <Detalle
-                          d="M3 4.5h10v9H3v-9z" d2="M3 7.2h10M5.6 2.6v3M10.4 2.6v3"
-                          titulo="Inicio" valor={<HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} />}
-                        />
-                        <Detalle
-                          d="M8 4v4l2.5 1.5" d2="M8 14A6 6 0 108 2a6 6 0 000 12z"
-                          titulo="Fin" valor={<HoraSesion iso={session.ends_at} zonaEstudio={session.session_timezone} />}
-                        />
-                        <Detalle
-                          d="M6.2 7.6a2.6 2.6 0 100-5.2 2.6 2.6 0 000 5.2zM1.6 13.4a4.6 4.6 0 019.2 0"
-                          d2="M10.6 3.1a2.2 2.2 0 010 4.3M11.6 9.2a3.8 3.8 0 012.8 3.6"
-                          titulo="Capacidad" valor={`${session.capacity} lugares`}
-                        />
-                        <Detalle
-                          d="M6.5 9.5a2.5 2.5 0 003.5 0l2-2a2.5 2.5 0 00-3.5-3.5l-.6.6"
-                          d2="M9.5 6.5a2.5 2.5 0 00-3.5 0l-2 2a2.5 2.5 0 003.5 3.5l.6-.6"
-                          titulo="Enlace"
-                          /* La regla real: el enlace se revela al reservar, no a una
-                             hora fija. No hay ventana de minutos en ningun lado. */
-                          valor={accessLink ? "Disponible ahora" : "Disponible al reservar"}
-                        />
-                      </div>
-
-                      <div className="mt-6 flex flex-wrap gap-3">
-                        {isReserved ? (
-                          <form action={cancelLiveSessionBookingAction}>
-                            <input name="sessionId" type="hidden" value={session.id} />
-                            <input name="redirectTo" type="hidden" value={redirectTo} />
-                            <button className="button-secondary" type="submit">
-                              Cancelar reserva
-                            </button>
-                          </form>
-                        ) : (
-                          <form action={reserveLiveSessionAction}>
-                            <input name="sessionId" type="hidden" value={session.id} />
-                            <input name="redirectTo" type="hidden" value={redirectTo} />
-                            <button className="button-primary" type="submit">
-                              Reservar lugar
-                            </button>
-                          </form>
-                        )}
-
-                        {accessLink ? (
-                          <a className="button-ghost" href={accessLink.join_url} rel="noreferrer" target="_blank">
-                            Entrar a la clase
-                          </a>
-                        ) : null}
-                      </div>
-
-                      {accessLink?.passcode ? (
-                        <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                          Passcode: <strong className="text-[color:var(--ink)]">{accessLink.passcode}</strong>
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
-          {/* Franja de cierre. Cada linea dice algo que el sistema HACE:
-              no promete avisos ni notificaciones, porque no existen. */}
-          {sessions.length > 0 && (
-            <div style={{
-              marginTop: 22, borderRadius: 20, padding: "18px 22px",
-              background: "var(--pink-wash)",
-              display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-            }}>
-              {[
-                ["Reservás en un clic", "Sin formularios ni confirmaciones por mail."],
-                ["El enlace aparece acá", "En esta misma pantalla, una vez que reservaste."],
-                ["Cancelás cuando quieras", "El lugar vuelve a quedar libre al instante."],
-              ].map(([titulo, texto]) => (
-                <div key={titulo}>
-                  <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>{titulo}</p>
-                  <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, lineHeight: 1.55 }}>{texto}</p>
-                </div>
-              ))}
+          {!pasada && (
+            <div className="sv-acciones">
+              {accessLink && (
+                <a className="sv-entrar" href={accessLink.join_url} rel="noreferrer" target="_blank">
+                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> Entrar a la clase
+                </a>
+              )}
+              {isReserved ? (
+                <form action={cancelLiveSessionBookingAction}>
+                  <input name="sessionId" type="hidden" value={session.id} />
+                  <input name="redirectTo" type="hidden" value={redirectTo} />
+                  <BotonEnviar className="sv-cancelar" pendingLabel="Cancelando…" confirmar="¿Cancelar tu reserva? Si la clase está llena, otra persona puede tomar tu lugar.">
+                    Cancelar reserva
+                  </BotonEnviar>
+                </form>
+              ) : (
+                <form action={reserveLiveSessionAction}>
+                  <input name="sessionId" type="hidden" value={session.id} />
+                  <input name="redirectTo" type="hidden" value={redirectTo} />
+                  <BotonEnviar className="sv-reservar" pendingLabel="Reservando…">
+                    <CalendarCheck size={16} strokeWidth={2.2} aria-hidden="true" /> Reservar mi lugar
+                  </BotonEnviar>
+                </form>
+              )}
             </div>
           )}
-        </section>
+          {!pasada && accessLink?.passcode && (
+            <p className="sv-pass">Código de acceso: <strong>{accessLink.passcode}</strong></p>
+          )}
+        </div>
+      </li>
+    );
+  };
+
+  return (
+    <main className="sv">
+      <style>{CSS}</style>
+      <section className="sv-shell">
+        <AdminCabecera
+          eyebrow="Clases en vivo"
+          titulo="En vivo con Brunela"
+          lede="Reservá tu lugar en las próximas clases. Cuando reservás aparece acá el enlace para entrar, y podés cancelar si te surge algo."
+        />
+
+        <AdminAviso mensaje={success} tono="ok" />
+        <AdminAviso mensaje={error} tono="error" />
+
+        {proximas.length > 0 && (
+          <AdminCifras items={[
+            { label: "Próximas", value: proximas.length, sub: "clases en agenda" },
+            { label: "Tus reservas", value: reservasActivas, sub: "activas o en espera" },
+          ]} />
+        )}
+
+        {proximas.length === 0 ? (
+          <AdminGuia
+            rotuloEjemplo="Así se ve una clase en vivo"
+            ejemplo={
+              <div className="ad-guia-flota sv-ejemplo">
+                <div className="sv-fecha"><span className="sv-fecha-semana">sáb</span><span className="sv-fecha-dia">25</span><span className="sv-fecha-mes">oct</span></div>
+                <div className="sv-cuerpo">
+                  <span className="sv-estado es-ok"><Check size={12} strokeWidth={3} /> Reservaste tu lugar</span>
+                  <p className="sv-titulo">Barra a tierra</p>
+                  <span className="sv-entrar"><Video size={16} strokeWidth={2.2} /> Entrar a la clase</span>
+                </div>
+              </div>
+            }
+            eyebrow="Todavía no hay clases programadas"
+            titulo="Así funcionan."
+            pasos={[
+              { icono: <CalendarCheck size={18} strokeWidth={2} />, titulo: "Reservás en un clic", texto: "Sin formularios ni confirmaciones por mail." },
+              { icono: <Video size={18} strokeWidth={2} />, titulo: "El enlace aparece acá", texto: "En esta misma pantalla, apenas reservás." },
+              { icono: <X size={18} strokeWidth={2} />, titulo: "Cancelás cuando quieras", texto: "El lugar vuelve a quedar libre al instante." },
+            ]}
+            cta={<AdminBoton href="/dashboard/library" lleno>Mientras tanto, ver clases <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" /></AdminBoton>}
+          />
+        ) : (
+          <ul className="sv-lista">{proximas.map((s, i) => tarjeta(s, i === 0, false))}</ul>
+        )}
+
+        {pasadas.length > 0 && (
+          <details className="sv-pasadas">
+            <summary>Clases pasadas <span>{pasadas.length}</span></summary>
+            <ul className="sv-lista">{pasadas.map((s) => tarjeta(s, false, true))}</ul>
+          </details>
+        )}
       </section>
     </main>
   );
 }
+
+/** Dia, mes y dia de semana en la zona DEL ESTUDIO: igual en servidor y cliente. */
+function partesFecha(iso: string, zona: string) {
+  try {
+    const d = new Date(iso);
+    const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("es-ES", { ...o, timeZone: zona }).format(d).replace(".", "");
+    return { dia: fmt({ day: "numeric" }), mes: fmt({ month: "short" }), semana: fmt({ weekday: "short" }) };
+  } catch {
+    return { dia: "—", mes: "", semana: "" };
+  }
+}
+
+const CSS = `
+.sv { padding-bottom: 80px; }
+.sv-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
+.sv .ad-mast { padding-bottom: 4px; }
+.sv-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.sv-card {
+  display: flex; gap: 22px; padding: 20px 22px; border-radius: 22px; border: 1px solid #e7e5e4; background: #fff;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+}
+.sv-card:hover { transform: translateY(-2px); border-color: var(--pink-line); box-shadow: 0 22px 40px -26px rgba(176,58,62,0.5); }
+.sv-card.es-reservada { border-color: #bbf7d0; background: linear-gradient(90deg, #f0fdf4 0%, #fff 45%); }
+.sv-card.es-pasada { opacity: 0.7; }
+.sv-fecha {
+  width: 86px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 12px 6px; border-radius: 18px; background: var(--pink-wash); align-self: flex-start;
+}
+.sv-fecha-semana { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pink-deep); }
+.sv-fecha-dia { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 38px; line-height: 1; letter-spacing: -0.04em; color: var(--ink); }
+.sv-fecha-mes { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #78716c; }
+.sv-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sv-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sv-proxima { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.sv-vivo { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); animation: sv-latido 1.6s ease-in-out infinite; }
+@keyframes sv-latido { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,79,85,0.6); } 50% { box-shadow: 0 0 0 5px rgba(230,79,85,0); } }
+.sv-estado { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+.sv-estado.es-ok { background: #dcfce7; color: #166534; }
+.sv-estado.es-invitada { background: var(--pink-mid); color: #fff; }
+.sv-plan { padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: #57534e; border: 1px solid #e7e5e4; }
+.sv-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 23px; line-height: 1.15; letter-spacing: -0.03em; color: var(--ink); }
+.sv-desc { font-size: 14px; line-height: 1.6; color: #57534e; max-width: 72ch; }
+.sv-datos { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.sv-datos li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57534e; }
+.sv-datos svg { color: var(--pink-mid); }
+.sv-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.sv-acciones form { display: contents; }
+.sv-reservar, .sv-entrar {
+  display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: 99px; border: 0; cursor: pointer;
+  background: var(--pink); color: #fff; font: inherit; font-size: 14px; font-weight: 700; text-decoration: none;
+  box-shadow: 0 10px 22px -10px rgba(230,79,85,0.8); transition: background .2s, transform .2s;
+}
+.sv-reservar:hover, .sv-entrar:hover { background: var(--pink-mid); transform: translateY(-1px); }
+.sv-entrar { background: #15803d; box-shadow: 0 10px 22px -10px rgba(21,128,61,0.7); }
+.sv-entrar:hover { background: #166534; }
+.sv-cancelar {
+  display: inline-flex; align-items: center; height: 46px; padding: 0 20px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid #d6d3d1; background: #fff; color: #57534e; font: inherit; font-size: 13.5px; font-weight: 700; transition: border-color .2s, color .2s;
+}
+.sv-cancelar:hover { border-color: var(--pink); color: var(--pink-deep); }
+.sv-pass { font-size: 13px; color: #57534e; }
+.sv-pass strong { color: var(--ink); letter-spacing: 0.04em; }
+.sv-pasadas { margin-top: 6px; }
+.sv-pasadas > summary {
+  list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 700; color: #78716c;
+}
+.sv-pasadas > summary::-webkit-details-marker { display: none; }
+.sv-pasadas > summary span { padding: 1px 8px; border-radius: 99px; background: #f5f5f4; font-size: 12px; }
+.sv-ejemplo { display: flex; gap: 16px; padding: 18px; align-items: center; }
+.sv-ejemplo .sv-cuerpo { gap: 8px; align-items: flex-start; }
+.sv-ejemplo .sv-entrar { height: 40px; font-size: 13px; padding: 0 16px; }
+@media (max-width: 640px) {
+  .sv-card { flex-direction: column; gap: 14px; padding: 16px; }
+  .sv-fecha { flex-direction: row; width: auto; gap: 8px; padding: 8px 14px; }
+  .sv-fecha-dia { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .sv-vivo { animation: none; } }
+`;
