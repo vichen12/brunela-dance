@@ -3,6 +3,10 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { completarOnboardingAction } from "@/src/features/auth/registro";
 import { redirect } from "next/navigation";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
+import { leerAccesoAlEstudio } from "@/src/features/acceso/servidor";
+import { onboardingPideElPago } from "@/src/features/acceso/reglas";
+import { cargarEleccionDePlan } from "@/src/features/planes/eleccion";
+import { ElegirPlan } from "@/components/elegir-plan";
 import {
   Activity,
   Bell,
@@ -72,6 +76,15 @@ export default async function OnboardingPage({ searchParams }: Props) {
 
   const nombre = profile?.full_name?.split(" ")[0] ?? null;
 
+  // EL PASO DEL PLAN: solo para quien no tiene acceso. Una alumna que Brunela
+  // dio de alta con meses gratis, una que ya compro un pack o una admin no
+  // pagan aca: terminan con "Entrar al estudio", como antes. La regla es la
+  // MISMA que la compuerta del estudio (src/features/acceso/reglas.ts).
+  const acceso = await leerAccesoAlEstudio(user.id);
+  const pidePago = !!acceso && onboardingPideElPago(acceso);
+  const eleccion = pidePago ? await cargarEleccionDePlan({ plan, interval, pack }) : null;
+  const total = pidePago ? 3 : 2;
+
   return (
     // `sistema` + la variable de Nunito: la misma piel suave que el panel. Esta
     // pantalla no vive bajo los layouts del sistema, asi que se la pone a mano.
@@ -80,8 +93,9 @@ export default async function OnboardingPage({ searchParams }: Props) {
         <div className="onb-pasos" aria-hidden="true">
           <span className="hecho" />
           <span className="activo" />
+          {pidePago && <span />}
         </div>
-        <p className="onb-kicker">Paso 2 de 2</p>
+        <p className="onb-kicker">Paso 2 de {total}</p>
         <h1 className="onb-title">
           {nombre ? `${nombre}, contanos` : "Contanos"}<br />
           <span>cómo entrenás.</span>
@@ -93,9 +107,8 @@ export default async function OnboardingPage({ searchParams }: Props) {
         {error && <p className="onb-error" role="alert">{error}</p>}
 
         <form action={completarOnboardingAction} className="onb-form">
-          {plan && <input type="hidden" name="plan" value={plan} />}
-          {interval && <input type="hidden" name="interval" value={interval} />}
-          {pack && <input type="hidden" name="pack" value={pack} />}
+          {/* El plan, el intervalo y el pack ya no van escondidos: los lleva
+              el paso 4, que es lo que la alumna ve y puede cambiar. */}
 
           {/*
             Los controles son inputs NATIVOS de verdad (radio y checkbox), solo
@@ -187,9 +200,32 @@ export default async function OnboardingPage({ searchParams }: Props) {
             </label>
           </fieldset>
 
+          {/* 4 · Tu plan. Obligatorio para quien no tiene acceso: el estudio
+              se abre cuando el pago entra (lo escribe el webhook). */}
+          {eleccion && (
+            <fieldset className="onb-group">
+              <legend className="onb-legend">
+                <span className="onb-num">4</span> {eleccion.pack ? "Tu pack" : "Tu plan"}
+                <small>{eleccion.pack ? "pago único" : "cambiás cuando quieras"}</small>
+              </legend>
+              <ElegirPlan eleccion={eleccion} />
+            </fieldset>
+          )}
+
           <button type="submit" className="onb-submit">
-            {plan || pack ? "Continuar al pago" : "Entrar al estudio"}
+            {!eleccion
+              ? "Entrar al estudio"
+              : eleccion.pack
+                ? "Pagar el pack"
+                : eleccion.diasPrueba > 0
+                  ? `Empezar mis ${eleccion.diasPrueba} días gratis`
+                  : "Ir al pago"}
           </button>
+          {eleccion && (
+            <p className="onb-seguro">
+              Pagás en Stripe, con conexión segura. Al volver, tu cuenta se abre sola.
+            </p>
+          )}
         </form>
       </section>
 
@@ -361,6 +397,7 @@ export default async function OnboardingPage({ searchParams }: Props) {
           box-shadow: 0 14px 26px -14px rgba(230,79,85,.85);
           transition: background .2s, transform .3s var(--curva), box-shadow .3s;
         }
+        .onb-seguro { margin: -16px 0 0; text-align: center; font-size: 12.5px; color: var(--muted); }
         .onb-submit:hover { background: var(--pink-mid); transform: translateY(-2px); box-shadow: 0 18px 30px -14px rgba(230,79,85,.9); }
 
         @media (max-width: 520px) {

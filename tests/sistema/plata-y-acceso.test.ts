@@ -27,6 +27,26 @@ import {
 
 const leer = (p: string) => readFileSync(p, "utf8");
 
+/**
+ * Desde 2026-10-09 la sesion de pago la arman funciones compartidas: las dos
+ * rutas de /api/stripe y el onboarding llaman a las MISMAS. Los invariantes de
+ * abajo siguen siendo los de antes; se miran donde ahora vive la logica.
+ */
+const CREAR = "src/lib/stripe/crear-checkout.ts";
+const PARAMETROS = "src/lib/stripe/parametros-checkout.ts";
+/** El cuerpo de una funcion exportada de crear-checkout.ts, hasta la siguiente. */
+function cuerpo(nombre: string) {
+  const src = leer(CREAR);
+  const ini = src.indexOf(`export async function ${nombre}(`);
+  expect(ini, `${CREAR} no exporta ${nombre}`).toBeGreaterThan(-1);
+  const fin = src.indexOf("\nexport ", ini + 1);
+  return src.slice(ini, fin === -1 ? undefined : fin);
+}
+const FUNCION_DE_RUTA: Record<string, string> = {
+  "app/api/stripe/checkout/route.ts": "crearCheckoutDeSuscripcion",
+  "app/api/stripe/checkout-pack/route.ts": "crearCheckoutDePack",
+};
+
 // ════════════════════════════════════════════════════════════════════════════
 // EL PRECIO LO PONE EL SERVIDOR, SIEMPRE
 // ════════════════════════════════════════════════════════════════════════════
@@ -51,11 +71,18 @@ describe("nadie puede pagar menos manipulando la request", () => {
   });
 
   it.each(rutasDePago)("%s resuelve el price id contra la base o el catalogo", (p) => {
+    // La ruta delega en la funcion compartida, con quien paga sacado de la
+    // SESION y lo demas del esquema validado -- nunca el body crudo.
+    const fn = FUNCION_DE_RUTA[p];
     const src = leer(p);
+    expect(src).toMatch(new RegExp(`await ${fn}\\(\\{\\s*user: \\{ id: user\\.id`));
+    expect(src).not.toMatch(/checkout\.sessions\.create/);
     // El price id tiene que venir de una lectura del servidor. Si apareciera
     // dentro de line_items directo desde el body, ese seria el bug.
-    expect(src).toMatch(/resolvePriceId\(|stripe_price_id_(test|live)/);
-    expect(src).toMatch(/line_items:\s*\[\{\s*price:\s*priceId/);
+    const body = cuerpo(fn);
+    expect(body).toMatch(/resolvePriceId\(|stripe_price_id_(test|live)/);
+    expect(body).toMatch(/\bpriceId,/);
+    expect(leer(PARAMETROS)).toMatch(/line_items:\s*\[\{\s*price:\s*a\.priceId/);
   });
 
   it("el modo lo decide la clave secreta y nada mas", () => {
@@ -65,8 +92,8 @@ describe("nadie puede pagar menos manipulando la request", () => {
     expect(catalogo).toMatch(/export function stripeMode\(secretKey/);
     expect(catalogo).toMatch(/sk\|rk\)_live_/);
 
-    for (const p of ["app/api/stripe/checkout/route.ts", "app/api/stripe/checkout-pack/route.ts"]) {
-      expect(leer(p), `${p} no deriva el modo de la clave`).toMatch(/stripeMode\(env\.STRIPE_SECRET_KEY\)/);
+    for (const fn of ["crearCheckoutDeSuscripcion", "crearCheckoutDePack"]) {
+      expect(cuerpo(fn), `${fn} no deriva el modo de la clave`).toMatch(/stripeMode\(env\.STRIPE_SECRET_KEY\)/);
     }
   });
 
@@ -80,6 +107,8 @@ describe("nadie puede pagar menos manipulando la request", () => {
       "app/api/stripe/checkout-pack/route.ts",
       "app/api/stripe/portal/route.ts",
       "app/api/stripe/webhooks/route.ts",
+      CREAR,
+      PARAMETROS,
     ]) {
       expect(leer(p), `${p} usa una clave que solo deberia usar ${soloEsteArchivo}`)
         .not.toMatch(/STRIPE_SECRET_KEY_(TEST|LIVE)/);
@@ -95,7 +124,8 @@ describe("nadie puede pagar menos manipulando la request", () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 describe("un pack despublicado no se compra ni con el enlace directo", () => {
-  const ruta = () => leer("app/api/stripe/checkout-pack/route.ts");
+  // La comprobacion vive en la funcion que usan la ruta Y el onboarding.
+  const ruta = () => cuerpo("crearCheckoutDePack");
 
   it("se comprueba is_published antes de cobrar", () => {
     const src = ruta();
@@ -114,6 +144,8 @@ describe("un pack despublicado no se compra ni con el enlace directo", () => {
     const src = ruta();
     expect(src).toContain('.from("pack_purchases")');
     expect(src).toMatch(/status:\s*409/);
+    // Y la ruta sigue devolviendo ese status tal cual.
+    expect(leer("app/api/stripe/checkout-pack/route.ts")).toMatch(/status: resultado\.status/);
     expect(src.indexOf("yaLoTiene")).toBeLessThan(src.indexOf("checkout.sessions.create"));
   });
 

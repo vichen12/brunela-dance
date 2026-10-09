@@ -1,16 +1,8 @@
-import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAppUrl, getStripeServerEnv, hasStripeServerEnv } from "@/src/lib/env";
+import { hasStripeServerEnv } from "@/src/lib/env";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import {
-  catalogHasPerModePrices,
-  getSubscriptionCatalog,
-  resolvePriceId,
-  stripeMode,
-  type BillingInterval
-} from "@/src/lib/stripe/catalog";
+import { crearCheckoutDeSuscripcion } from "@/src/lib/stripe/crear-checkout";
 
 const schema = z.object({
   tier: z.enum(["corps_de_ballet", "solista", "principal"]),
@@ -21,6 +13,11 @@ const schema = z.object({
  * Creates a Stripe Checkout Session for the chosen plan + interval, with a
  * 7-day trial, and returns the redirect URL. The webhook (already implemented)
  * reads metadata.user_id to sync the subscription back to Supabase.
+ *
+ * La sesion la arma src/lib/stripe/crear-checkout.ts, la MISMA funcion que usa
+ * el onboarding: un solo lugar decide precio, prueba, metadata y texto legal.
+ * Esta ruta solo pone la sesion, valida la entrada y traduce el resultado a
+ * JSON con los mismos status de siempre.
  */
 export async function POST(request: Request) {
   if (!hasStripeServerEnv()) {
@@ -42,91 +39,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid" }, { status: 400 });
   }
 
-  const catalog = await getSubscriptionCatalog();
-  if (!catalog) {
-    return NextResponse.json({ error: "Catalogo de precios no configurado." }, { status: 500 });
-  }
-
-  if (!catalogHasPerModePrices(catalog)) {
-    return NextResponse.json(
-      {
-        error:
-          "El catalogo todavia guarda un solo juego de price ids. Corre la migracion " +
-          "20260730_stripe_price_ids_per_mode.sql."
-      },
-      { status: 500 }
-    );
-  }
-
-  const env = getStripeServerEnv();
-
-  // The mode comes from the secret key, so the key alone decides which set of
-  // price ids is used. There is no second switch to keep in sync.
-  const mode = stripeMode(env.STRIPE_SECRET_KEY);
-  const priceId = resolvePriceId(catalog, parsed.data.tier, parsed.data.interval as BillingInterval, mode);
-
-  if (!priceId) {
-    return NextResponse.json(
-      {
-        error:
-          `Falta el precio de Stripe del modo ${mode} para este plan. Cargalo en ` +
-          `site_settings -> subscriptions.catalog, en prices.${mode}.` +
-          (mode === "test"
-            ? " (La clave configurada es de prueba; si esperabas produccion, revisa STRIPE_SECRET_KEY.)"
-            : " (La clave configurada es de PRODUCCION.)")
-      },
-      { status: 500 }
-    );
-  }
-
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-  const appUrl = getAppUrl();
-
-  // Reuse an existing Stripe customer if we already have one for this user.
-  const admin = createSupabaseAdminClient();
-  const { data: existingSub } = await admin
-    .from("subscriptions")
-    .select("provider_customer_id")
-    .eq("user_id", user.id)
-    .not("provider_customer_id", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ provider_customer_id: string | null }>();
-
-  let customerId = existingSub?.provider_customer_id ?? undefined;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email ?? undefined,
-      metadata: { user_id: user.id }
-    });
-    customerId = customer.id;
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: catalog.trial_days ?? 7,
-      metadata: { user_id: user.id, tier: parsed.data.tier }
-    },
-    metadata: { user_id: user.id, tier: parsed.data.tier },
-    success_url: `${appUrl}/dashboard/plan?success=Suscripcion%20activada`,
-    cancel_url: `${appUrl}/dashboard/plan?error=Pago%20cancelado`,
-    allow_promotion_codes: true,
-    // Consentimiento expreso para empezar ya y perder el desistimiento
-    // (art. 103.m TRLGDCU). Va justo encima del boton de pagar: pulsarlo es
-    // el acto expreso. Tiene que coincidir con el punto 7 de
-    // app/legal/condiciones/page.tsx.
-    custom_text: {
-      submit: {
-        message:
-          "Al confirmar aceptás las Condiciones de contratación (bruneladance.com/legal/condiciones). " +
-          "Tenés 7 días de prueba gratis: si cancelás antes, no se cobra nada. " +
-          "Pedís acceso inmediato al contenido digital y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.",
-      },
-    },
+  const resultado = await crearCheckoutDeSuscripcion({
+    user: { id: user.id, email: user.email },
+    tier: parsed.data.tier,
+    interval: parsed.data.interval
   });
 
-  return NextResponse.json({ url: session.url });
+  if (!resultado.ok) {
+    return NextResponse.json({ error: resultado.error }, { status: resultado.status });
+  }
+
+  return NextResponse.json({ url: resultado.url });
 }

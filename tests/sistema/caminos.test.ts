@@ -49,7 +49,15 @@ describe("una alumna CON sesion puede comprar un pack", () => {
     // Este es EL bug: `redirect("/dashboard")` a secas perdia el pack y dejaba
     // la funcionalidad inexistente para quien ya tenia cuenta.
     expect(registro).toMatch(/q\.set\("pack"/);
-    expect(registro).toMatch(/redirect\(`\/dashboard\/plan\?\$\{q\.toString\(\)\}`/);
+    // Desde que el estudio exige acceso, va a /registro/plan (fuera del layout
+    // del estudio, que no ve la URL y perderia el pack)...
+    expect(registro).toMatch(/redirect\(`\/registro\/plan\?\$\{q\.toString\(\)\}`/);
+    // ...que lo muestra para pagar ahi, o -- si ya tiene acceso -- sigue al
+    // arranque automatico de siempre, CON el pack.
+    const elegir = leer("app/registro/plan/page.tsx");
+    expect(elegir).toMatch(/if \(pack\) q\.set\("pack", pack\)/);
+    expect(elegir).toMatch(/q\.set\("iniciar", "1"\)/);
+    expect(elegir).toMatch(/redirect\(`\/dashboard\/plan\?\$\{q\.toString\(\)\}`/);
   });
 
   it("el arranque automatico atiende el pack ANTES que el plan", () => {
@@ -98,8 +106,9 @@ describe("la alumna ve que compro", () => {
   });
 
   it("el destino de vuelta apunta a una pantalla que SI muestra el aviso", () => {
-    const ruta = leer("app/api/stripe/checkout-pack/route.ts");
-    const destino = ruta.match(/success_url:[^`]*`\$\{appUrl\}(\/[^?]+)\?success=/);
+    // La vuelta por defecto del pack vive con los parametros de la sesion.
+    const ruta = leer("src/lib/stripe/parametros-checkout.ts");
+    const destino = ruta.match(/destinosPackPorDefecto[\s\S]{0,120}?successUrl:[^`]*`\$\{appUrl\}(\/[^?]+)\?success=/);
     expect(destino, "no se pudo leer el success_url").not.toBeNull();
 
     const pantalla = `app${destino![1]}/page.tsx`;
@@ -110,8 +119,8 @@ describe("la alumna ve que compro", () => {
   it("el mensaje no promete que las clases ya esten desbloqueadas", () => {
     // Stripe redirige al instante y el webhook puede tardar. Prometer de mas y
     // que no aparezcan es peor que avisar de la demora.
-    const ruta = leer("app/api/stripe/checkout-pack/route.ts");
-    const msg = ruta.match(/success_url[\s\S]{0,300}?"([^"]+)"/)?.[1] ?? "";
+    const ruta = leer("src/lib/stripe/parametros-checkout.ts");
+    const msg = ruta.match(/destinosPackPorDefecto[\s\S]{0,120}?successUrl[\s\S]{0,300}?"([^"]+)"/)?.[1] ?? "";
     expect(msg.length).toBeGreaterThan(0);
     expect(msg.toLowerCase()).toMatch(/segundos|recarg/);
   });
@@ -487,8 +496,11 @@ describe("el camino de alta no tiene callejones sin salida", () => {
     // No hay que exigir plan para crear la cuenta: se elige después.
     const registro = leer("app/registro/page.tsx");
     expect(registro).toMatch(/Podés elegir tu plan al terminar/);
-    // Y el onboarding sin plan cae en la pantalla de planes, no en el aire.
-    expect(leer("src/features/auth/registro.ts")).toMatch(/redirect\("\/dashboard\/plan" as never\)/);
+    // Y el onboarding sin plan termina en el paso del plan y el pago (desde
+    // 2026-10-09 el plan se elige ahi mismo), no en el aire.
+    const acciones = leer("src/features/auth/registro.ts");
+    expect(acciones).toMatch(/await irAlPago\(user, \{ plan: parsed\.data\.plan/);
+    expect(leer("app/registro/onboarding/page.tsx")).toMatch(/<ElegirPlan eleccion=\{eleccion\} \/>/);
   });
 });
 

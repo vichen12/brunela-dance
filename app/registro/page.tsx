@@ -53,9 +53,13 @@ export default async function RegistroPage({ searchParams }: Props) {
         q.set("plan", plan);
         if (interval) q.set("interval", interval);
       }
+      // ⚠️ A /registro/plan y no directo a /dashboard/plan: desde que el
+      //    estudio exige acceso, quien no tiene plan rebotaria en el layout y
+      //    perderia el pack en el camino (el layout no ve la URL). Esa pantalla
+      //    lo resuelve: sin acceso, muestra el pack para pagar ahi; con acceso,
+      //    sigue a /dashboard/plan?...&iniciar=1, que arranca el pago solo.
       if (q.size > 0) {
-        q.set("iniciar", "1");
-        redirect(`/dashboard/plan?${q.toString()}` as never);
+        redirect(`/registro/plan?${q.toString()}` as never);
       }
       redirect("/dashboard" as never);
     }

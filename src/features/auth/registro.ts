@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
 import { requireUser } from "@/src/features/auth/guards";
+import { crearCheckoutDePack, crearCheckoutDeSuscripcion, type ResultadoCheckout } from "@/src/lib/stripe/crear-checkout";
+import { leerAccesoAlEstudio } from "@/src/features/acceso/servidor";
+import { onboardingPideElPago, RUTA_ELEGIR_PLAN } from "@/src/features/acceso/reglas";
 
 /**
  * Alta de cuenta y onboarding.
@@ -63,14 +66,19 @@ export async function signUpAction(formData: FormData) {
 
   const plan = String(formData.get("plan") ?? "") || undefined;
   const interval = String(formData.get("interval") ?? "") || undefined;
+  const pack = String(formData.get("pack") ?? "") || undefined;
   const emailCrudo = String(formData.get("email") ?? "").trim();
 
+  // ⚠️ `pack` no entraba a este parse: el formulario lo mandaba y se perdia,
+  //    asi que pending_pack quedaba siempre en null y quien llegaba por un pack
+  //    terminaba eligiendo plan.
   const parsed = esquemaAlta.safeParse({
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
     plan,
     interval,
+    pack,
   });
 
   if (!parsed.success) {
@@ -121,6 +129,7 @@ export async function signUpAction(formData: FormData) {
   const q = new URLSearchParams();
   if (parsed.data.plan) q.set("plan", parsed.data.plan);
   if (parsed.data.interval) q.set("interval", parsed.data.interval);
+  if (parsed.data.pack) q.set("pack", parsed.data.pack);
   redirect(`/registro/onboarding${q.size ? `?${q.toString()}` : ""}` as never);
 }
 
@@ -176,12 +185,14 @@ export async function completarOnboardingAction(formData: FormData) {
 
   const plan = String(formData.get("plan") ?? "") || undefined;
   const interval = String(formData.get("interval") ?? "") || undefined;
+  const pack = String(formData.get("pack") ?? "") || undefined;
 
   const parsed = esquemaOnboarding.safeParse({
     technicalLevel: formData.get("technicalLevel"),
     goals: formData.getAll("goals").map(String),
     plan,
     interval,
+    pack,
     marketingOptIn: formData.get("marketingOptIn") === "si",
   });
 
@@ -233,32 +244,111 @@ export async function completarOnboardingAction(formData: FormData) {
     );
   }
 
-  // El plan puede venir por URL (camino Google) o de la metadata (camino
-  // correo). Se prefiere el de la URL porque es el que la alumna acaba de ver.
-  const meta = user.user_metadata as {
-    pending_tier?: string | null;
-    pending_interval?: string | null;
-    pending_pack?: string | null;
-  } | undefined;
-  const tierFinal = parsed.data.plan ?? (meta?.pending_tier ?? undefined);
-  const intervaloFinal = parsed.data.interval ?? (meta?.pending_interval ?? undefined);
-  const packFinal = parsed.data.pack ?? (meta?.pending_pack ?? undefined);
-
-  // El pack va PRIMERO: quien entro por un pack no eligio plan, y si eligio las
-  // dos cosas lo ultimo que toco fue el pack. Cobrarle una suscripcion que no
-  // pidio es el peor error posible en este cruce.
-  if (packFinal) {
-    const q = new URLSearchParams({ pack: packFinal, iniciar: "1" });
-    redirect(`/dashboard/plan?${q.toString()}` as never);
+  // EL PAGO ES EL ULTIMO PASO DEL ALTA (pedido de la duena, 2026-10-09):
+  // "quiero que se pague ahi mismo, y cuando este pagado que se abra la cuenta".
+  //
+  // Solo para quien NO tiene acceso. Una alumna que Brunela dio de alta con
+  // meses gratis, una que ya compro un pack o una admin entran directo, como
+  // antes: la misma regla que la compuerta del estudio (src/features/acceso).
+  const acceso = await leerAccesoAlEstudio(user.id);
+  if (!acceso || !onboardingPideElPago(acceso)) {
+    redirect("/dashboard" as never);
   }
 
-  if (tierFinal && (TIERS as readonly string[]).includes(tierFinal)) {
-    const q = new URLSearchParams({ plan: tierFinal, iniciar: "1" });
-    if (intervaloFinal && (INTERVALOS as readonly string[]).includes(intervaloFinal)) {
-      q.set("interval", intervaloFinal);
+  // Lo que eligio en el paso 4 llega en el formulario: el radio del plan y del
+  // intervalo, o el pack escondido si venia por uno. No se mira la metadata
+  // aca: si el pack ya no estaba a la venta, la pantalla mostro los planes, y
+  // lo elegido es lo que la alumna vio.
+  await irAlPago(user, { plan: parsed.data.plan, interval: parsed.data.interval, pack: parsed.data.pack });
+}
+
+/**
+ * "Empezar mis 7 dias gratis" / "Pagar el pack" de /registro/plan: la pantalla
+ * a la que manda el estudio a quien no tiene acceso.
+ */
+export async function pagarPlanAction(formData: FormData) {
+  const { user } = await requireUser();
+
+  // Quien ya tiene acceso no paga aca: cambiar de plan o sumar un pack se hace
+  // desde /dashboard/plan, que sabe de suscripciones activas. Sin esto, una
+  // Solista con la pestaña vieja abierta abriria una SEGUNDA suscripcion.
+  const acceso = await leerAccesoAlEstudio(user.id);
+  if (!acceso || !onboardingPideElPago(acceso)) {
+    redirect("/dashboard" as never);
+  }
+
+  await irAlPago(user, {
+    plan: String(formData.get("plan") ?? "") || undefined,
+    interval: String(formData.get("interval") ?? "") || undefined,
+    pack: String(formData.get("pack") ?? "") || undefined,
+  });
+}
+
+/**
+ * Crea la sesion de Stripe con la MISMA funcion que /api/stripe/checkout y
+ * /api/stripe/checkout-pack (src/lib/stripe/crear-checkout.ts) y la manda ahi.
+ * Lo unico propio son los destinos de vuelta:
+ *
+ *   · pago hecho  -> /registro/activando, que espera al webhook. El acceso lo
+ *                    escribe SOLO el webhook; esa pantalla nunca lo da.
+ *   · cancelado   -> /registro/plan, con lo que habia elegido ya marcado.
+ *
+ * Quien paga sale de requireUser() (la sesion), nunca del formulario.
+ */
+async function irAlPago(
+  user: { id: string; email?: string | null },
+  eleccion: { plan?: string; interval?: string; pack?: string }
+): Promise<never> {
+  const volverConError = (mensaje: string): never =>
+    redirect(`${RUTA_ELEGIR_PLAN}?${new URLSearchParams({ error: mensaje }).toString()}` as never);
+
+  const exito = (appUrl: string) => `${appUrl}/registro/activando?session_id={CHECKOUT_SESSION_ID}`;
+
+  // Se valida ANTES del try: redirect() lanza, y un catch lo tragaria.
+  const slug = eleccion.pack ? eleccion.pack.slice(0, 120) : null;
+  const tier = (TIERS as readonly string[]).includes(eleccion.plan ?? "")
+    ? (eleccion.plan as (typeof TIERS)[number])
+    : null;
+  if (!slug && !tier) volverConError("Elegí un plan para seguir.");
+  const interval = eleccion.interval === "yearly" ? "yearly" : "monthly";
+
+  let resultado: ResultadoCheckout;
+  try {
+    resultado = slug
+      ? await crearCheckoutDePack({
+          user: { id: user.id, email: user.email },
+          packSlug: slug,
+          destinos: (appUrl) => ({
+            successUrl: exito(appUrl),
+            cancelUrl: `${appUrl}${RUTA_ELEGIR_PLAN}?${new URLSearchParams({ cancelado: "1", pack: slug }).toString()}`,
+          }),
+        })
+      : await crearCheckoutDeSuscripcion({
+          user: { id: user.id, email: user.email },
+          tier: tier!,
+          interval,
+          destinos: (appUrl) => ({
+            successUrl: exito(appUrl),
+            cancelUrl: `${appUrl}${RUTA_ELEGIR_PLAN}?${new URLSearchParams({ cancelado: "1", plan: tier!, interval }).toString()}`,
+          }),
+        });
+  } catch (e) {
+    console.error("[registro] no se pudo crear la sesion de pago:", e instanceof Error ? e.message : e);
+    return volverConError("No pudimos abrir el pago. Probá de nuevo en un momento.");
+  }
+
+  if (!resultado.ok) {
+    // Ya lo tiene: entonces ya tiene acceso. Al estudio, no a pagar de nuevo.
+    if (resultado.status === 409) redirect("/dashboard" as never);
+    if (resultado.status === 404) {
+      return volverConError("Ese pack ya no está disponible. Podés elegir un plan.");
     }
-    redirect(`/dashboard/plan?${q.toString()}` as never);
+    // El detalle (price id que falta, catalogo viejo) es para nosotros, no
+    // para la alumna.
+    console.error("[registro] checkout rechazado:", resultado.status, resultado.error);
+    return volverConError("No pudimos abrir el pago. Probá de nuevo en un momento.");
   }
 
-  redirect("/dashboard/plan" as never);
+  if (!resultado.url) return volverConError("No pudimos abrir el pago. Probá de nuevo en un momento.");
+  redirect(resultado.url as never);
 }

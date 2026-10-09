@@ -14,6 +14,8 @@ import { aplicarBajaSiVencio, getAccesoGratis } from "@/src/features/studio/acce
 import { PLAN_LABEL, diasRestantes, estaVencido, fechaLarga } from "@/src/features/studio/acceso-gratis-reglas";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
 import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { destinoDelEstudio, tieneAccesoAlEstudio } from "@/src/features/acceso/reglas";
+import { tienePackComprado } from "@/src/features/acceso/servidor";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
@@ -79,8 +81,39 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Las admin quedan afuera: sus cuentas se crearon a mano o se importaron, y
   // ninguna paso por este flujo. Sin esta excepcion, Brunela entraria a su
   // propio panel y le pediriamos que declare su nivel de ballet.
-  if (profile && !profile.is_admin && !profile.onboarding_completed) {
-    redirect("/registro/onboarding" as never);
+  //
+  // COMPUERTA DE ACCESO (2026-10-09): "cuando este pagado que se abra la
+  // cuenta". Sin plan, sin pack y sin acceso gratis vigente, el estudio no
+  // abre: va a /registro/plan a elegir y pagar.
+  //
+  // ⚠️ POR QUE NO HAY BUCLE
+  //    · /registro/* NO esta bajo este layout, asi que el destino nunca vuelve
+  //      a pasar por aca para decidir.
+  //    · /registro/plan solo devuelve al estudio a quien esta misma regla deja
+  //      pasar (destinoDeElegirPlan es su espejo), y lee los datos igual: baja
+  //      del gratis aplicada antes de mirar el plan, y la misma consulta de
+  //      packs (src/features/acceso/servidor.ts).
+  //    · Justo despues de pagar, el webhook puede no haber llegado: para eso
+  //      esta /registro/activando, que espera sin pasar por aca.
+  //    · A diferencia de la baja de arriba, esto no redirige a la misma ruta:
+  //      manda FUERA del layout, a una pantalla que no redirige de vuelta.
+  //
+  // La consulta de packs solo corre para quien no tiene plan: a las demas no
+  // les cuesta nada.
+  if (profile) {
+    const tier = profile.membership_tier;
+    const tienePack = !profile.is_admin && tier === "none" ? await tienePackComprado(user.id) : false;
+    const destino = destinoDelEstudio({
+      esAdmin: profile.is_admin,
+      onboardingCompleto: !!profile.onboarding_completed,
+      tieneAcceso: tieneAccesoAlEstudio({
+        esAdmin: profile.is_admin,
+        tier,
+        tienePack,
+        gratisHasta: acceso.disponible ? acceso.hasta : null,
+      }),
+    });
+    if (destino) redirect(destino as never);
   }
 
   // El nombre de quien entro. Antes cualquier admin leia "BRUNELA", y hay tres.

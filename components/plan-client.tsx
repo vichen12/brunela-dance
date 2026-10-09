@@ -3,6 +3,7 @@ import { Check, Settings } from 'lucide-react';
 import { AdminCabecera } from '@/components/admin-ui';
 
 import Link from "next/link";
+import { PLAN_TEXTOS, formatEur } from '@/src/features/planes/planes';
 
 import { useState, useEffect } from 'react';
 
@@ -39,27 +40,30 @@ const PLAN_META: Record<CatalogTier['tier'], {
   icono: string;
 }> = {
   corps_de_ballet: {
-    name: 'Corps de Ballet',
-    desc: 'Acceso a todo lo básico que necesitás.',
-    features: ['Biblioteca completa', 'Filtros por nivel y foco', 'Progreso guardado', '7 días de prueba gratuita'],
+    // Texto de venta compartido con el onboarding (src/features/planes).
+    name: PLAN_TEXTOS.corps_de_ballet.nombre,
+    desc: PLAN_TEXTOS.corps_de_ballet.desc,
+    features: PLAN_TEXTOS.corps_de_ballet.incluye,
     cabecera: 'plana',
     encima: null,
     // bailarina
     icono: 'M8 3.1a1.05 1.05 0 100-2.1 1.05 1.05 0 000 2.1zM8 4.3v3.4M8 7.7l-2.3 3.9M8 7.7l2.3 3.9M5.1 5.4L8 6.3l2.9-.9',
   },
   solista: {
-    name: 'Solista',
-    desc: 'Planes de trabajo guiados, con progreso estructurado.',
-    features: ['Todo Corps de Ballet', 'Planes de trabajo día por día', 'Mayor profundidad técnica', 'Objetivos por semana'],
+    // Texto de venta compartido con el onboarding (src/features/planes).
+    name: PLAN_TEXTOS.solista.nombre,
+    desc: PLAN_TEXTOS.solista.desc,
+    features: PLAN_TEXTOS.solista.incluye,
     cabecera: 'suave',
     encima: 'Más elegida',
     // corona
     icono: 'M2.6 12h10.8l.9-6.2-3.2 2.2L8 3.3 4.9 8 1.7 5.8 2.6 12z',
   },
   principal: {
-    name: 'Principal',
-    desc: 'La experiencia completa con clases en vivo.',
-    features: ['Todo Solista', '2 clases en vivo al mes', 'Acompañamiento personalizado', 'Chat directo con Brunela'],
+    // Texto de venta compartido con el onboarding (src/features/planes).
+    name: PLAN_TEXTOS.principal.nombre,
+    desc: PLAN_TEXTOS.principal.desc,
+    features: PLAN_TEXTOS.principal.incluye,
     cabecera: 'coral',
     encima: 'Experiencia total',
     // rayo
@@ -69,15 +73,6 @@ const PLAN_META: Record<CatalogTier['tier'], {
 
 const TIER_ORDER: Record<Tier, number> = { none: 0, corps_de_ballet: 1, solista: 2, principal: 3 };
 
-function formatEur(amount: number) {
-  // Show cents only when the amount actually has them. Every current price is a
-  // whole number, but the catalog is editable and a 9,90 could appear any day.
-  const hasCents = Math.round(amount * 100) % 100 !== 0;
-  return `${amount.toLocaleString('es-ES', {
-    minimumFractionDigits: hasCents ? 2 : 0,
-    maximumFractionDigits: 2,
-  })}€`;
-}
 
 /**
  * Un pack, como lo ve la alumna.
