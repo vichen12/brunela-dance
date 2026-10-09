@@ -16,11 +16,15 @@ const ROUTES: Record<string, string> = {
   "/admin/packs":         "Packs",
   "/admin/precios":       "Precios",
   "/admin/settings":      "Configuración",
+  "/admin/portada":       "Portada",
+  "/admin/analiticas":    "Analíticas",
 };
 
 export function AdminHeader({ inicial }: { inicial: string }) {
   const pathname = usePathname();
-  const title = ROUTES[pathname] ?? "Backstage";
+  // Una ficha (/admin/users/abc) toma el nombre de su seccion: antes caia
+  // en "Backstage", que no es el nombre de nada.
+  const title = ROUTES[pathname] ?? ROUTES[pathname.split("/").slice(0, 3).join("/")] ?? "Panel";
 
   return (
     <header style={{

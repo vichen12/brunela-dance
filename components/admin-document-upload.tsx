@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { FileCheck2, Loader2, UploadCloud } from "lucide-react";
 
 const MAX_BYTES = 52_428_800; // 50 MiB
 
@@ -49,9 +50,17 @@ export function AdminDocumentUpload({ valorInicial, nombreCampo = "fileUrl" }: P
   const [progreso, setProgreso] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function alElegir(e: React.ChangeEvent<HTMLInputElement>) {
+  const [arrastrando, setArrastrando] = useState(false);
+
+  function alElegir(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) void subir(file);
+    // Vaciar el input: sin esto, elegir el MISMO archivo despues de un error no
+    // dispara onChange y parece que el boton no anda.
+    e.target.value = "";
+  }
+
+  async function subir(file: File) {
 
     setError(null);
     setNombre(file.name);
@@ -114,44 +123,57 @@ export function AdminDocumentUpload({ valorInicial, nombreCampo = "fileUrl" }: P
         style={{ display: "none" }}
       />
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={estado === "subiendo"}
-        style={{
-          width: "100%", minHeight: 52, borderRadius: 14, cursor: estado === "subiendo" ? "default" : "pointer",
-          border: `1.5px dashed ${estado === "error" ? "#fecaca" : "var(--pink-line)"}`,
-          background: estado === "listo" ? "var(--pink-wash)" : "#fff",
-          color: "var(--pink-deep)", fontSize: 13, fontWeight: 700,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+      {/* Zona de carga: se hace clic o se SUELTA el archivo encima. */}
+      <div
+        role="button"
+        tabIndex={estado === "subiendo" ? -1 : 0}
+        aria-label={estado === "listo" ? "Cambiar el archivo" : "Elegir un archivo"}
+        className={"dup" + (arrastrando ? " es-arrastre" : "") + (estado === "listo" ? " es-listo" : "") + (estado === "error" ? " es-error" : "") + (estado === "subiendo" ? " es-subiendo" : "")}
+        onClick={() => estado !== "subiendo" && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && estado !== "subiendo") { e.preventDefault(); inputRef.current?.click(); }
+        }}
+        onDragOver={(e) => { e.preventDefault(); if (estado !== "subiendo") setArrastrando(true); }}
+        onDragLeave={() => setArrastrando(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setArrastrando(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file && estado !== "subiendo") void subir(file);
         }}
       >
-        {estado === "subiendo" && `Subiendo… ${progreso}%`}
-        {estado === "listo" && `✓ ${nombre ?? "Archivo cargado"} — ${ETIQUETA[tipo]}${pesoKb ? ` · ${pesoKb} KB` : ""}`}
-        {estado === "idle" && "Elegir archivo"}
-        {estado === "error" && "Elegir otro archivo"}
-      </button>
+        {estado === "listo" ? (
+          <>
+            <span className="dup-ico dup-ico--listo"><FileCheck2 size={22} strokeWidth={1.8} aria-hidden="true" /></span>
+            <span className="dup-txt">
+              <span className="dup-titulo">{nombre ?? "Archivo cargado"}</span>
+              <span className="dup-sub">
+                {nombre ? `${ETIQUETA[tipo]}${pesoKb ? ` · ${pesoKb >= 1000 ? `${(pesoKb / 1000).toFixed(1)} MB` : `${pesoKb} KB`}` : ""} · subido` : "Ya tiene un archivo. Elegí otro sólo si querés reemplazarlo."}
+              </span>
+            </span>
+            <span className="dup-cambiar">Cambiar</span>
+          </>
+        ) : estado === "subiendo" ? (
+          <>
+            <span className="dup-ico"><Loader2 size={22} strokeWidth={1.8} className="dup-gira" aria-hidden="true" /></span>
+            <span className="dup-txt">
+              <span className="dup-titulo">Subiendo {nombre}…</span>
+              <span className="dup-barra"><span style={{ width: `${progreso}%` }} /></span>
+            </span>
+            <span className="dup-pct">{progreso}%</span>
+          </>
+        ) : (
+          <>
+            <span className="dup-ico"><UploadCloud size={24} strokeWidth={1.7} aria-hidden="true" /></span>
+            <span className="dup-txt">
+              <span className="dup-titulo">{estado === "error" ? "Probá con otro archivo" : <>Arrastrá el archivo acá o <u>elegilo</u></>}</span>
+              <span className="dup-sub">PDF, imagen, video, audio o Word · hasta 50 MB</span>
+            </span>
+          </>
+        )}
+      </div>
 
-      {estado === "subiendo" && (
-        <div style={{ height: 5, background: "var(--pink-wash)", borderRadius: 99, marginTop: 8, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${progreso}%`, background: "var(--pink)", borderRadius: 99, transition: "width 0.2s" }} />
-        </div>
-      )}
-
-      {error && (
-        <p style={{ marginTop: 8, fontSize: 12, color: "#991b1b", lineHeight: 1.5 }}>{error}</p>
-      )}
-
-      {estado === "listo" && !nombre && (
-        <p style={{ marginTop: 8, fontSize: 11.5, color: "var(--muted)" }}>
-          Ya hay un archivo cargado. Elegí otro sólo si querés reemplazarlo.
-        </p>
-      )}
-
-      <p style={{ marginTop: 8, fontSize: 11.5, color: "var(--muted)", lineHeight: 1.55 }}>
-        PDF, imagen, video, audio o Word. Hasta 50 MB. Sólo lo ven las alumnas
-        del plan que elijas más abajo.
-      </p>
+      {error && <p className="dup-error">{error}</p>}
     </div>
   );
 }

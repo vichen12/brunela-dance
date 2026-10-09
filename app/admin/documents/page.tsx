@@ -2,7 +2,7 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
 import { requireAdmin } from "@/src/features/auth/guards";
 import {
-  ChevronDown, Download, Eye, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Upload, Users, Video,
+  Check, ChevronDown, Download, Eye, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Upload, Users, Video,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -85,39 +85,68 @@ function Campos({ doc, clases }: { doc?: Doc; clases: ClaseCorta[] }) {
   }
 
   return (
-    <div className="doc-form">
-      <label className="doc-campo doc-campo--ancho">
-        <span className="doc-etq">Título</span>
-        <input name="title" defaultValue={doc?.title ?? ""} required placeholder="Guía de alineación postural" />
-      </label>
-      <label className="doc-campo doc-campo--ancho">
-        <span className="doc-etq">Descripción <small>opcional</small></span>
-        <textarea name="description" rows={2} defaultValue={doc?.description ?? ""} placeholder="Para qué sirve, en una línea…" />
-      </label>
-      <div className="doc-campo doc-campo--ancho">
-        <span className="doc-etq">Archivo</span>
-        {/* El tipo y el peso los deduce el componente del archivo real. */}
-        <AdminDocumentUpload valorInicial={doc?.file_url} />
-      </div>
-      <label className="doc-campo">
-        <span className="doc-etq">Quién lo ve</span>
-        <Desplegable name="membershipTierRequired" defaultValue={doc?.membership_tier_required ?? "none"} opciones={PLANES} />
-      </label>
-      <label className="doc-campo">
-        <span className="doc-etq">Orden <small>el más bajo va primero</small></span>
-        <input name="sortOrder" type="number" min={0} defaultValue={doc?.sort_order ?? 0} />
-      </label>
-      <label className="doc-campo">
-        <span className="doc-etq">Categoría <small>opcional</small></span>
-        <Desplegable name="categorySlug" defaultValue={doc?.category_slug ?? ""} opciones={opcionesCategoria} />
-      </label>
-      <label className="doc-campo">
-        <span className="doc-etq">Clase relacionada <small>opcional</small></span>
-        <Desplegable name="videoSlug" defaultValue={doc?.video_slug ?? ""} opciones={opcionesClase} />
-      </label>
-      <label className="doc-publicado doc-campo--ancho">
-        <input name="isPublished" type="checkbox" defaultChecked={doc?.is_published ?? false} />
-        <span>Publicado <small>si no lo tildás, queda guardado pero las alumnas no lo ven</small></span>
+    <div className="pf doc-campos">
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">01</span> El archivo</legend>
+        <div className="pf-campo" style={{ marginBottom: 14 }}>
+          {/* El tipo y el peso los deduce el componente del archivo real. */}
+          <AdminDocumentUpload valorInicial={doc?.file_url} />
+        </div>
+        <div className="pf-grilla">
+          <label className="pf-campo">
+            <span className="pf-etq">Título <small>como lo va a ver la alumna</small></span>
+            <input name="title" defaultValue={doc?.title ?? ""} required placeholder="Guía de alineación postural" />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Descripción <small>opcional</small></span>
+            <input name="description" defaultValue={doc?.description ?? ""} placeholder="Para qué sirve, en una línea" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">02</span> Quién lo ve</legend>
+        <div className="pf-planes doc-planes" role="radiogroup" aria-label="Quién lo ve">
+          {[
+            { value: "none", titulo: "Todas", sub: "Cualquier alumna con cuenta" },
+            { value: "corps_de_ballet", titulo: "Corps de Ballet", sub: "Corps, Solista y Principal" },
+            { value: "solista", titulo: "Solista", sub: "Solista y Principal" },
+            { value: "principal", titulo: "Principal", sub: "Solo Principal" },
+          ].map((p) => (
+            <label key={p.value} className="pf-plan">
+              <input type="radio" name="membershipTierRequired" value={p.value} defaultChecked={(doc?.membership_tier_required ?? "none") === p.value} />
+              <span className="pf-plan-caja">
+                <span className="pf-plan-titulo">{p.titulo}</span>
+                <span className="pf-plan-sub">{p.sub}</span>
+                <span className="pf-plan-tilde" aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">03</span> Dónde aparece <small>opcional</small></legend>
+        <div className="pf-grilla doc-donde">
+          <label className="pf-campo">
+            <span className="pf-etq">Categoría</span>
+            <Desplegable name="categorySlug" defaultValue={doc?.category_slug ?? ""} opciones={opcionesCategoria} />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Clase relacionada</span>
+            <Desplegable name="videoSlug" defaultValue={doc?.video_slug ?? ""} opciones={opcionesClase} />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Orden <small>el más bajo va primero</small></span>
+            <input name="sortOrder" type="number" min={0} defaultValue={doc?.sort_order ?? 0} />
+          </label>
+        </div>
+      </fieldset>
+
+      <label className="pf-switch doc-publicar">
+        <input name="isPublished" type="checkbox" role="switch" defaultChecked={doc?.is_published ?? false} />
+        <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+        <span className="pf-switch-txt">Publicado <small>si lo dejás apagado, queda guardado pero las alumnas no lo ven</small></span>
       </label>
     </div>
   );
@@ -283,17 +312,11 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
 
 const CSS = `
 .doc { display: flex; flex-direction: column; }
-.doc-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; padding-top: 18px; }
-.doc-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.doc-campo--ancho { grid-column: 1 / -1; }
-.doc-etq { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #78716c; }
-.doc-etq small { margin-left: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #a8a29e; }
-.doc-campo input, .doc-campo textarea { border-radius: 12px; border: 1.5px solid #e7e5e4; padding: 0.75rem 0.95rem; font-size: 14px; }
-.doc-campo input:focus, .doc-campo textarea:focus { border-color: var(--pink); }
-.doc-campo .dsp-boton { border-color: #e7e5e4; }
-.doc-publicado { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
-.doc-publicado input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--pink); padding: 0; }
-.doc-publicado small { display: block; font-size: 12px; font-weight: 400; color: #a8a29e; }
+.doc-campos { padding-top: 0; }
+.doc-planes { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.doc-donde { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.doc-campos .dsp-boton { border-color: #e7e5e4; }
+.doc-publicar { padding: 18px 0 4px; }
 .doc-pie { display: flex; gap: 10px; align-items: center; padding-top: 18px; }
 .doc-borrar { margin-left: auto; color: var(--pink-deep); border-color: var(--pink-line); }
 .doc-borrar:hover { background: var(--pink-wash); border-color: var(--pink); }
@@ -329,7 +352,6 @@ const CSS = `
 .doc-editar > summary::-webkit-details-marker { display: none; }
 .doc-editar > summary .ad-flecha { margin-left: auto; }
 .doc-editar[open] { padding-bottom: 18px; }
-.doc-editar[open] .doc-form { padding-top: 4px; }
 
 .doc-ejemplo { padding: 8px; transform: rotate(-1.5deg); }
 .doc-ejemplo-fila {
@@ -350,7 +372,4 @@ const CSS = `
 }
 @media (prefers-reduced-motion: reduce) { .doc-ejemplo-fila { animation: none; } }
 
-@media (max-width: 640px) {
-  .doc-form { grid-template-columns: minmax(0, 1fr); }
-}
 `;

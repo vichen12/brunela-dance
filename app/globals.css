@@ -3671,8 +3671,12 @@ body {
    Chrome dejaba un recuadro negro alrededor del ultimo enlace clicado (se veia
    en el menu lateral). :focus-visible sigue mostrandolo con Tab. */
 a:focus:not(:focus-visible),
-button:focus:not(:focus-visible) { outline: none; }
+button:focus:not(:focus-visible),
+summary:focus:not(:focus-visible) { outline: none; }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+/* Los <summary> de los bloques plegables: con el mouse quedaba un marco negro
+   alrededor del encabezado. Con teclado, el contorno coral y redondeado. */
+summary:focus-visible { outline: 2px solid var(--pink); outline-offset: -2px; border-radius: 18px; }
 
 /* ── Buscador de los listados de admin (components/admin-buscador.tsx) ──
    Misma barra que la biblioteca: busqueda abierta, filtros en pildora que
@@ -3804,10 +3808,14 @@ details[open] > summary .ad-flecha { transform: rotate(180deg); }
    ════════════════════════════════════════════════════════════════════════ */
 .pf { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; }
 .pf-seccion { border: 0; margin: 0; padding: 18px 0 20px; min-width: 0; border-bottom: 1px solid #f0eeec; }
+/* float + width: el <legend> pasa al flujo normal. Si no, se apoya en el
+   borde del fieldset y el padding se suma DEBAJO, con un hueco de mas. */
 .pf-seccion legend {
+  float: left; width: 100%;
   display: flex; align-items: center; gap: 10px; padding: 0; margin-bottom: 14px;
   font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 15px; letter-spacing: -0.02em; color: var(--ink);
 }
+.pf-seccion > legend + * { clear: both; }
 .pf-seccion legend small { font-family: var(--font-body), sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #a8a29e; }
 .pf-num {
   display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 24px; padding: 0 7px; border-radius: 99px;
@@ -3953,3 +3961,42 @@ details[open] > summary .ad-flecha { transform: rotate(180deg); }
 @keyframes ad-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (max-width: 900px) { .ad-guia { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .ad-guia-flota { animation: none; } }
+
+/* ── Zona de carga de archivos (components/admin-document-upload.tsx) ── */
+.dup {
+  display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 16px 18px; border-radius: 16px; cursor: pointer;
+  border: 1.5px dashed var(--pink-line); background: #fff; transition: border-color .2s, background .2s, transform .2s;
+}
+.dup:hover { border-color: var(--pink); background: #fffafa; }
+.dup:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+.dup.es-arrastre { border-style: solid; border-color: var(--pink); background: var(--pink-wash); transform: scale(1.01); }
+.dup.es-listo { border-style: solid; border-color: #e7e5e4; background: #fafaf9; }
+.dup.es-listo:hover { border-color: var(--pink-line); }
+.dup.es-error { border-color: #fca5a5; }
+.dup.es-subiendo { cursor: progress; border-style: solid; }
+.dup-ico {
+  width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink-wash); color: var(--pink-deep); transition: transform .3s cubic-bezier(.16,1,.3,1);
+}
+.dup:hover .dup-ico, .dup.es-arrastre .dup-ico { transform: translateY(-2px); }
+.dup-ico--listo { background: #dcfce7; color: #15803d; }
+.dup-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dup-titulo { font-size: 14.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dup-titulo u { color: var(--pink-deep); text-underline-offset: 3px; }
+.dup-sub { font-size: 12.5px; color: #78716c; }
+.dup-cambiar {
+  flex-shrink: 0; padding: 7px 13px; border-radius: 99px; border: 1px solid #e7e5e4; background: #fff;
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+}
+.dup-barra { display: block; height: 6px; border-radius: 99px; background: var(--pink-wash); overflow: hidden; }
+.dup-barra span { display: block; height: 100%; border-radius: 99px; background: var(--pink); transition: width .2s; }
+.dup-pct { flex-shrink: 0; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; color: var(--ink); }
+.dup-gira { animation: dup-gira 0.9s linear infinite; }
+@keyframes dup-gira { to { transform: rotate(360deg); } }
+.dup-error { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--pink-deep); }
+
+/* En los menus laterales el foco no es un marco: despues de navegar con un
+   clic, Chrome deja el foco en el enlace y lo dibujaba como un rectangulo
+   coral. Se marca con el fondo suave del item, que sigue siendo visible
+   para quien navega con teclado. */
+aside nav a:focus-visible, aside a:focus-visible { outline: none; background: var(--pink-wash); }
