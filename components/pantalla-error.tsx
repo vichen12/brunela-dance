@@ -165,10 +165,10 @@ const CSS_ERROR = `
 }
 .perr-raya { display: inline-block; width: 28px; height: 1.5px; background: var(--pink); }
 .perr-titulo {
-  font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: clamp(38px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.02em; color: var(--ink);
+  font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: clamp(32px, 4.4vw, 54px); line-height: 1.05; letter-spacing: -0.04em; color: var(--ink);
 }
-.perr-titulo em { font-style: italic; color: var(--pink-mid); }
+.perr-titulo em { font-style: normal; color: var(--pink-mid); }
 .perr-linea { display: block; overflow: hidden; padding-bottom: 0.1em; }
 .perr-linea-in { display: block; }
 .perr-texto { margin: 18px auto 0; max-width: 46ch; font-size: 15px; line-height: 1.7; color: #57534e; }

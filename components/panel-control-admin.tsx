@@ -456,11 +456,11 @@ const CSS = `
 }
 .pc-eyebrow-raya { display: inline-block; width: 36px; height: 1.5px; background: var(--pink); transform-origin: left; }
 .pc-titulo {
-  font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: clamp(44px, 6.2vw, 92px); line-height: 0.98; letter-spacing: -0.025em;
+  font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: clamp(38px, 5vw, 72px); line-height: 1; letter-spacing: -0.04em;
   color: var(--ink);
 }
-.pc-titulo em { font-style: italic; color: var(--pink-mid); }
+.pc-titulo em { font-style: normal; color: var(--pink-mid); }
 .pc-linea { display: block; overflow: hidden; padding-bottom: 0.08em; }
 .pc-linea-in { display: block; }
 
@@ -498,8 +498,8 @@ const CSS = `
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #78716c;
 }
 .pc-cifra-num {
-  font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: clamp(48px, 5vw, 76px); line-height: 0.9; letter-spacing: -0.03em;
+  font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: clamp(40px, 4.2vw, 60px); line-height: 0.95; letter-spacing: -0.045em;
   color: var(--ink); font-variant-numeric: lining-nums tabular-nums;
 }
 .pc-cifra:hover .pc-cifra-num { color: var(--pink-mid); }
@@ -516,8 +516,8 @@ const CSS = `
   padding-bottom: 12px; margin-bottom: 18px; border-bottom: 1px solid #e7e5e4;
 }
 .pc-h2 {
-  font-family: var(--font-serif), serif; font-weight: 400; font-size: 30px;
-  letter-spacing: -0.015em; color: var(--ink); line-height: 1;
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 24px;
+  letter-spacing: -0.03em; color: var(--ink); line-height: 1;
 }
 .pc-mas {
   display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
@@ -569,13 +569,13 @@ const CSS = `
 .pc-vivo li + li { border-top: 1px solid #f0eeec; }
 .pc-vivo-fila { display: flex; align-items: center; gap: 22px; padding: 14px 0; text-decoration: none; color: inherit; }
 .pc-vivo-fecha { display: flex; flex-direction: column; align-items: center; width: 56px; flex-shrink: 0; }
-.pc-vivo-dia { font-family: var(--font-serif), serif; font-size: 40px; line-height: 0.9; color: var(--ink); }
+.pc-vivo-dia { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 32px; line-height: 0.95; letter-spacing: -0.04em; color: var(--ink); }
 .pc-vivo-mes { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pink-deep); margin-top: 4px; }
 .pc-vivo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pc-vivo-titulo { font-size: 15px; font-weight: 700; color: var(--ink); }
 .pc-vivo-hora { font-size: 12.5px; color: #78716c; }
 .pc-vivo-res { font-size: 12px; color: #78716c; white-space: nowrap; }
-.pc-vivo-res strong { font-family: var(--font-serif), serif; font-size: 22px; font-weight: 400; color: var(--ink); margin-right: 3px; }
+.pc-vivo-res strong { font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 800; color: var(--ink); margin-right: 3px; }
 .pc-vivo-vacio {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   padding: 22px 24px; border-radius: 16px; border: 1.5px dashed #d6d3d1;
@@ -609,8 +609,8 @@ const CSS = `
 .pc-estudio-link:hover { text-decoration: underline; }
 .pc-estudio-total { display: flex; align-items: flex-end; gap: 14px; }
 .pc-estudio-num {
-  font-family: var(--font-serif), serif; font-size: 76px; line-height: 0.82;
-  color: var(--ink); letter-spacing: -0.04em;
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 60px; line-height: 0.85;
+  color: var(--ink); letter-spacing: -0.05em;
 }
 .pc-estudio-total-txt { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; font-size: 15px; color: var(--ink); }
 .pc-estudio-altas { font-size: 12px; color: var(--pink-muted); }
@@ -640,7 +640,7 @@ const CSS = `
 .pc-reparto-puntos { flex: 1; min-width: 12px; border-bottom: 1.5px dotted #d6d3d1; transform: translateY(-4px); }
 .pc-reparto-pct { font-size: 11px; color: #a8a29e; font-variant-numeric: tabular-nums; }
 .pc-reparto-num {
-  font-family: var(--font-serif), serif; font-size: 24px; line-height: 1; color: var(--ink);
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 19px; line-height: 1; color: var(--ink);
   min-width: 22px; text-align: right; font-variant-numeric: lining-nums tabular-nums;
 }
 
@@ -657,7 +657,7 @@ const CSS = `
   width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1.5px solid; background: #fff;
-  font-family: var(--font-serif), serif; font-style: italic; font-size: 17px;
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 14px;
 }
 .pc-altas-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .pc-altas-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -678,7 +678,7 @@ const CSS = `
 }
 .pc-atajos li:first-child .pc-atajo { padding-left: 0; }
 .pc-atajo:hover { background: var(--pink-wash); }
-.pc-atajo-num { font-family: var(--font-serif), serif; font-style: italic; font-size: 30px; color: var(--pink-mid); width: 36px; flex-shrink: 0; }
+.pc-atajo-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--pink-mid); width: 36px; flex-shrink: 0; }
 .pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pc-atajo-label { font-size: 14px; font-weight: 700; color: var(--ink); }
 .pc-atajo:hover .pc-atajo-label { color: var(--pink-deep); }

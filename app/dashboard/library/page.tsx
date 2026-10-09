@@ -868,10 +868,10 @@ const CSS_BIBLIOTECA = `
 }
 .bib-eyebrow-raya { display: inline-block; width: 36px; height: 1.5px; background: var(--pink); }
 .bib-titulo {
-  font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: clamp(44px, 6.4vw, 96px); line-height: 0.96; letter-spacing: -0.025em; color: var(--ink);
+  font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: clamp(38px, 5vw, 72px); line-height: 1; letter-spacing: -0.04em; color: var(--ink);
 }
-.bib-titulo em { font-style: italic; color: var(--pink-mid); }
+.bib-titulo em { font-style: normal; color: var(--pink-mid); }
 .bib-lede { margin-top: 18px; max-width: 54ch; font-size: 15px; line-height: 1.7; color: #57534e; }
 .bib-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-bottom: 8px; }
 
@@ -949,7 +949,7 @@ const CSS_BIBLIOTECA = `
   display: flex; align-items: baseline; gap: 10px; padding: 18px 0 22px;
   font-size: 13px; color: #78716c;
 }
-.bib-contador-num { font-family: var(--font-serif), serif; font-size: 34px; line-height: 1; color: var(--ink); }
+.bib-contador-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 28px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
 
 /* grilla */
 .bib-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 34px 22px; }
@@ -1004,8 +1004,8 @@ const CSS_BIBLIOTECA = `
 .bib-cat { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pink-deep); }
 .bib-fecha { color: #a8a29e; }
 .bib-card-titulo {
-  margin-top: 6px; font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: 22px; line-height: 1.15; letter-spacing: -0.01em; color: var(--ink);
+  margin-top: 6px; font-family: var(--font-display), sans-serif; font-weight: 700;
+  font-size: 17px; line-height: 1.25; letter-spacing: -0.015em; color: var(--ink);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .bib-card-link:hover .bib-card-titulo { color: var(--pink-deep); }
@@ -1034,14 +1034,14 @@ const CSS_BIBLIOTECA = `
   display: inline-flex; align-items: center; justify-content: center; transition: transform .5s cubic-bezier(.16,1,.3,1);
 }
 .bib-nueva:hover .bib-nueva-ico { transform: rotate(90deg); }
-.bib-nueva-titulo { font-family: var(--font-serif), serif; font-size: 22px; color: var(--ink); }
+.bib-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.015em; color: var(--ink); }
 .bib-nueva-sub { font-size: 12px; }
 
 .bib-vacio {
   display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;
   padding: 56px 24px; border-radius: 22px; border: 1.5px dashed #e7e5e4;
 }
-.bib-vacio-titulo { font-family: var(--font-serif), serif; font-size: 28px; color: var(--ink); }
+.bib-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -0.025em; color: var(--ink); }
 .bib-mas { display: flex; justify-content: center; padding-top: 40px; }
 
 @media (max-width: 760px) {
