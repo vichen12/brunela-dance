@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
-import { AlertCircle, Lock, Mail } from "lucide-react";
+import { AlertCircle, Lock, Mail, Search } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
@@ -31,6 +31,9 @@ export default async function ChatPage({ searchParams }: {
   // Barra lateral de alumnas: acumulativa, como la biblioteca. Se recorre
   // buscando a alguien, asi que perder las anteriores al pedir mas seria peor.
   const paginaMiembros = Math.max(0, Math.min(200, Number(params.pmiembros) || 0));
+  // Buscador y filtro de plan de la barra de alumnas (vista admin).
+  const buscar = (typeof params.buscar === "string" ? params.buscar : "").trim().slice(0, 80);
+  const fPlan = ["none", "corps_de_ballet", "solista", "principal"].includes(String(params.plan)) ? String(params.plan) : "";
 
   const profile = await getCurrentProfile(user.id);
 
@@ -38,10 +41,16 @@ export default async function ChatPage({ searchParams }: {
 
   // ─── ADMIN VIEW ───────────────────────────────────────────────
   if (isAdmin) {
-    const { data: allProfiles } = await supabase
+    let consultaMiembros = supabase
       .from("profiles")
       .select("id, full_name, email, membership_tier, is_admin")
-      .eq("is_admin", false)
+      .eq("is_admin", false);
+    if (buscar) {
+      const t = buscar.replace(/[,()%]/g, " ");
+      consultaMiembros = consultaMiembros.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
+    }
+    if (fPlan) consultaMiembros = consultaMiembros.eq("membership_tier", fPlan as "none");
+    const { data: allProfiles } = await consultaMiembros
       .order("created_at", { ascending: false })
       // Fase D: la barra lateral traia TODAS las alumnas del estudio en cada
       // carga. Se pide una de mas para saber si hay siguiente sin contar.
@@ -50,8 +59,26 @@ export default async function ChatPage({ searchParams }: {
     const crudas = (allProfiles ?? []) as Profile[];
     const hayMasMiembros = crudas.length > POR_PAGINA_MIEMBROS * (paginaMiembros + 1);
     const members = crudas.slice(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
+    // La conversacion abierta sigue abierta aunque la busqueda no la incluya:
+    // si no, escribir en el buscador cerraba el chat que estaba leyendo.
+    if (selectedUserId && !members.some((m) => m.id === selectedUserId)) {
+      const { data: abierta } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, membership_tier, is_admin")
+        .eq("id", selectedUserId).eq("is_admin", false).maybeSingle();
+      if (abierta) members.push(abierta as Profile);
+    }
+    const filtrando = Boolean(buscar || fPlan);
+    const conFiltros = (extra: Record<string, string>) => {
+      const u = new URLSearchParams();
+      if (buscar) u.set("buscar", buscar);
+      if (fPlan) u.set("plan", fPlan);
+      for (const [k, v] of Object.entries(extra)) if (v) u.set(k, v);
+      const t = u.toString();
+      return "/dashboard/chat" + (t ? "?" + t : "");
+    };
 
-    const activeUserId = selectedUserId ?? members[0]?.id ?? null;
+    const activeUserId = selectedUserId ?? (filtrando ? null : members[0]?.id ?? null);
     let activeRoom: DmRoom | null = null;
 
     if (activeUserId) {
@@ -118,14 +145,38 @@ export default async function ChatPage({ searchParams }: {
             <p className="dm-lateral-titulo">Alumnas</p>
             {/* "cargadas" y no "alumnas" a secas: la lista esta paginada, asi
                 que este numero es lo que se ve, no el total del estudio. */}
-            <p className="dm-cuenta">{members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}</p>
+            <p className="dm-cuenta">{members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}{filtrando ? " encontradas" : ""}</p>
+            <form method="get" action="/dashboard/chat" className="dm-buscar" role="search">
+              {activeUserId && <input type="hidden" name="user" value={activeUserId} />}
+              {fPlan && <input type="hidden" name="plan" value={fPlan} />}
+              <Search size={16} strokeWidth={2} aria-hidden="true" />
+              <input type="search" name="buscar" defaultValue={buscar} placeholder="Buscar alumna o correo" aria-label="Buscar alumna" />
+            </form>
+            <nav className="dm-planes" aria-label="Filtrar por plan">
+              {[["", "Todas"], ["principal", "Principal"], ["solista", "Solista"], ["corps_de_ballet", "Corps"], ["none", "Sin plan"]].map(([k, l]) => {
+                const u = new URLSearchParams();
+                if (buscar) u.set("buscar", buscar);
+                if (k) u.set("plan", k);
+                if (activeUserId) u.set("user", activeUserId);
+                const t = u.toString();
+                return (
+                  <Link key={k || "todas"} href={("/dashboard/chat" + (t ? "?" + t : "")) as never} className={"dm-plan" + (fPlan === k ? " es-activo" : "")}>{l}</Link>
+                );
+              })}
+            </nav>
           </div>
           <nav className="dm-lista">
+            {members.length === 0 && (
+              <div className="dm-sin">
+                <p>Ninguna alumna coincide.</p>
+                <Link href="/dashboard/chat" className="dm-mas">Ver todas</Link>
+              </div>
+            )}
             {members.map((m) => {
               const active = m.id === activeUserId;
               const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
               return (
-                <Link key={m.id} href={`/dashboard/chat?user=${m.id}` as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+                <Link key={m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
                   <span className="dm-ini">{name[0]?.toUpperCase()}</span>
                   <span className="dm-persona-txt">
                     <span className="dm-persona-nombre">{name}</span>
@@ -135,7 +186,7 @@ export default async function ChatPage({ searchParams }: {
               );
             })}
             {hayMasMiembros && (
-              <Link href={`/dashboard/chat?pmiembros=${paginaMiembros + 1}${activeUserId ? `&user=${activeUserId}` : ""}` as never} className="dm-mas">
+              <Link href={conFiltros({ pmiembros: String(paginaMiembros + 1), user: activeUserId ?? "" }) as never} className="dm-mas">
                 Ver más alumnas
               </Link>
             )}
@@ -310,6 +361,14 @@ export default async function ChatPage({ searchParams }: {
 }
 
 const CSS_DM = `
+.dm-buscar { display: flex; align-items: center; gap: 8px; height: 42px; margin-top: 12px; padding: 0 14px; border-radius: 99px; background: #fff; border: 1.5px solid var(--linea-fuerte); color: var(--muted); transition: border-color .2s, box-shadow .2s; }
+.dm-buscar:focus-within { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); color: var(--pink-deep); }
+.dm-buscar input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 13.5px; color: var(--ink); }
+.dm-planes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.dm-plan { padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; text-decoration: none; color: var(--muted); background: #fff; border: 1px solid var(--linea); transition: background .2s, color .2s; }
+.dm-plan:hover { background: var(--rubor); color: var(--pink-deep); }
+.dm-plan.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; }
+.dm-sin { padding: 18px 8px; text-align: center; font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
 .dm { display: flex; height: 100vh; overflow: hidden; background: #fff; }
 .dm-lateral { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--linea); background: linear-gradient(180deg, #FFF8F4 0%, #FFFCFA 100%); }
 .dm-lateral-cab { padding: 22px 18px 14px; }
