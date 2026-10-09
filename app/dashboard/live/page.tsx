@@ -13,9 +13,10 @@ import {
 import { requireUser } from "@/src/features/auth/guards";
 import { HoraSesion } from "@/components/hora-sesion";
 import { BotonEnviar } from "@/components/boton-enviar";
-import { ArrowRight, CalendarCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Users, Video, X } from "lucide-react";
+import { ArrowRight, Lock, CalendarCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Users, Video, X } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { AdminBuscador } from "@/components/admin-buscador";
 import Link from "next/link";
 
@@ -98,7 +99,31 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     supabase.from("live_session_invitations").select("live_session_id").eq("user_id", user.id)
   ]);
 
-  const sessions = (sessionsData ?? []) as LiveSessionRecord[];
+  // ── Vitrina: TODAS las sesiones, tambien las de planes que no tiene ──
+  // Pedido de la duena: que a todas les aparezcan todas las clases en vivo, y
+  // que solo no se puedan inscribir si no son del plan.
+  //
+  // La lista "accesible" sigue saliendo del cliente de la alumna (RLS) y es la
+  // UNICA que decide que se puede reservar y que enlaces se ven. Las que RLS no
+  // devolvio se traen con service_role y columnas acotadas -- ni enlace, ni
+  // codigo, ni nada que de acceso -- y se marcan bloqueadas. Reservarlas igual
+  // falla en la base (policy de live_session_bookings): esto es solo vitrina.
+  const accesibles = (sessionsData ?? []) as LiveSessionRecord[];
+  const idsAccesibles = new Set(accesibles.map((x) => x.id));
+  const { data: todasData } = await createSupabaseAdminClient()
+    .from("live_sessions")
+    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, booking_opens_at, booking_closes_at, capacity, cover_image_url")
+    .in("status", ["scheduled", "completed"])
+    .order("starts_at", { ascending: true });
+  const bloqueadas = new Set<string>();
+  const sessions = [
+    ...accesibles,
+    ...((todasData ?? []) as LiveSessionRecord[]).filter((x) => {
+      if (idsAccesibles.has(x.id)) return false;
+      bloqueadas.add(x.id);
+      return true;
+    }),
+  ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   const invitadaA = new Set(
     ((invitationsData ?? []) as { live_session_id: string }[]).map((i) => i.live_session_id)
   );
@@ -188,9 +213,10 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     const booking = bookings.get(session.id);
     const accessLink = links.get(session.id);
     const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
+    const bloqueada = bloqueadas.has(session.id);
     const f = partesFecha(session.starts_at, session.session_timezone);
     return (
-      <li key={session.id} id={"sesion-" + session.id} className={"sv-card" + (isReserved ? " es-reservada" : "") + (pasada ? " es-pasada" : "")}>
+      <li key={session.id} id={"sesion-" + session.id} className={"sv-card" + (isReserved ? " es-reservada" : "") + (pasada ? " es-pasada" : "") + (bloqueada ? " es-bloqueada" : "")}>
         <div className="sv-fecha" aria-hidden="true">
           <span className="sv-fecha-semana">{f.semana}</span>
           <span className="sv-fecha-dia">{f.dia}</span>
@@ -233,7 +259,12 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                   <Video size={16} strokeWidth={2.2} aria-hidden="true" /> Entrar a la clase
                 </a>
               )}
-              {isReserved ? (
+              {bloqueada ? (
+                <div className="sv-candado">
+                  <span className="sv-candado-txt"><Lock size={14} strokeWidth={2.4} aria-hidden="true" /> Disponible desde {membershipTierLabel(session.membership_tier_required)}</span>
+                  <Link href="/dashboard/plan" className="sv-candado-btn">Ver planes <ArrowRight size={14} strokeWidth={2.4} aria-hidden="true" /></Link>
+                </div>
+              ) : isReserved ? (
                 <form action={cancelLiveSessionBookingAction}>
                   <input name="sessionId" type="hidden" value={session.id} />
                   <input name="redirectTo" type="hidden" value={redirectTo} />
@@ -310,7 +341,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                     {num}
                     <span className="cal-eventos">
                       {delK.slice(0, 3).map((sesion) => (
-                        <span key={sesion.id} className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "")}>
+                        <span key={sesion.id} className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "") + (bloqueadas.has(sesion.id) ? " es-bloqueada" : "")}>
                           <b>{new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at))}</b> {resolveI18nText(sesion.title_i18n)}
                         </span>
                       ))}
@@ -425,6 +456,13 @@ function partesFecha(iso: string, zona: string) {
 }
 
 const CSS = `
+.sv-card.es-bloqueada { background: linear-gradient(160deg, #FFFAF6, #fff 60%); }
+.sv-card.es-bloqueada .sv-fecha { filter: saturate(.6); opacity: .85; }
+.sv-candado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sv-candado-txt { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 16px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13.5px; font-weight: 800; }
+.sv-candado-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 18px; border-radius: 99px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font-size: 13.5px; font-weight: 800; text-decoration: none; transition: background .2s, border-color .2s, gap .25s var(--curva); }
+.sv-candado-btn:hover { background: var(--rubor); border-color: var(--pink-line); gap: 9px; }
+.cal-ev.es-bloqueada::before { content: "🔒 "; font-size: 9px; }
 /* ── Calendario ── */
 .cal { border: 1px solid var(--linea); border-radius: 30px; background: linear-gradient(160deg, #FFF7F3, #fff 45%); box-shadow: var(--sombra); padding: 22px 22px 16px; }
 .cal-cab { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
