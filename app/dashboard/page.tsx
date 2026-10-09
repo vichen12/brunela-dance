@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight, BookOpen, CalendarDays, CalendarHeart, Clock, FileText, Flame, ListOrdered,
-  Mail, Megaphone, Play, Sparkles, Timer,
-} from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, CalendarHeart, Check, Clock, FileText, Flame, ListOrdered, Mail, Megaphone, Play, Sparkles, Timer } from "lucide-react";
 import { HoraSesion } from "@/components/hora-sesion";
 import { PanelControlAdmin } from "@/components/panel-control-admin";
 import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
@@ -196,6 +193,14 @@ export default async function DashboardPage() {
   const resumeMin = Math.floor(resumeElapsed / 60);
   const resumeSec = resumeElapsed % 60;
   const canAccessLive = liveData ? TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required] : false;
+  // Si ya reservo, la tarjeta no puede seguir diciendo "Reservar lugar": se
+  // vio con datos de prueba, una alumna con su lugar tomado invitada a
+  // reservarlo de nuevo. La policy devuelve solo las reservas propias.
+  const { data: miReserva } = liveData
+    ? await supabase.from("live_session_bookings").select("id")
+        .eq("live_session_id", liveData.id).eq("user_id", user.id)
+        .in("status", ["reserved", "waitlisted"]).limit(1).maybeSingle()
+    : { data: null };
   const announcements = (announcementsData ?? []) as Announcement[];
 
   // Solo las que todavia no pasaron y siguen publicadas. Se filtra y ordena en
@@ -347,7 +352,11 @@ export default async function DashboardPage() {
                   <span><CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" /> {formatLiveDate(liveData.starts_at)}</span>
                   <span><Clock size={14} strokeWidth={2.2} aria-hidden="true" /> {formatTime(liveData.starts_at)}</span>
                 </div>
-                {canAccessLive ? (
+                {miReserva ? (
+                  <Link href="/dashboard/live" className="ini-btn ini-btn--lleno">
+                    <Check size={15} strokeWidth={2.6} /> Tenés tu lugar · ver enlace
+                  </Link>
+                ) : canAccessLive ? (
                   <Link href="/dashboard/live" className="ini-btn ini-btn--lleno">
                     Reservar lugar <ArrowRight size={15} strokeWidth={2.4} />
                   </Link>
