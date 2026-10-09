@@ -1957,3 +1957,13 @@ body:has(.auth-page) {
 .auth-cuenta .auth-cuenta-titulo { color: #fff !important; }
 .auth-cuenta .auth-cuenta-titulo span { color: #FFE9DE !important; }
 .auth-left .auth-cuenta { margin: 22px 0 22px; }
+
+/* Contador de la puerta de acceso anticipado: grande y en coral, que se vea. */
+.pa-cuenta { margin: 8px 0 22px; padding: 20px 20px 22px; max-width: 560px; border-radius: 28px; background: linear-gradient(135deg, #E64F55 0%, #EB7478 55%, #F29A84 100%); box-shadow: 0 30px 60px -28px rgba(217,52,56,.85); position: relative; overflow: hidden; isolation: isolate; }
+.pa-cuenta::after { content: ""; position: absolute; z-index: -1; width: 300px; height: 300px; right: -100px; top: -140px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.35), transparent 65%); animation: auth-late 6s ease-in-out infinite alternate; }
+.pa-cuenta .cr-fila { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pa-page .pa-cuenta .cr-b, .pa-cuenta .cr-b { width: auto !important; background: rgba(255,255,255,.97) !important; border: 0 !important; border-radius: 22px; padding: 18px 4px 14px !important; box-shadow: 0 12px 24px -14px rgba(120,20,30,.5); }
+.pa-cuenta .cr-n { font-size: clamp(42px, 5vw, 66px) !important; font-weight: 900; line-height: 1; color: #B03A3E !important; font-variant-numeric: tabular-nums; }
+.pa-cuenta .cr-l { font-size: 13px !important; font-weight: 800; color: #8A6F68 !important; margin-top: 6px; }
+@media (max-width: 420px) { .pa-cuenta { padding: 14px; } .pa-cuenta .cr-fila { gap: 7px; } }
+@media (prefers-reduced-motion: reduce) { .pa-cuenta::after { animation: none; } }

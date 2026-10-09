@@ -111,7 +111,8 @@ export default async function ProximamentePage({
             <T id="puerta.lead" />
           </p>
 
-          <CuentaRegresiva objetivoISO={apertura.toISOString()} />
+          {/* Contador protagonista: tarjeta coral con numeros grandes. */}
+          <div className="pa-cuenta"><CuentaRegresiva objetivoISO={apertura.toISOString()} /></div>
 
           <form className="pa-form" method="POST" action="/api/acceso">
             {/* La ruta original, para volver adonde iba despues de entrar. El
