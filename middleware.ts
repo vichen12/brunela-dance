@@ -87,7 +87,11 @@ export async function middleware(request: NextRequest) {
        *    renderiza del lado del servidor, antes de que exista esa respuesta.
        */
       const cabeceras = new Headers(request.headers);
-      cabeceras.set("x-destino-original", ruta);
+      // CON el query string: los enlaces de los correos traen ahi el codigo
+      // (/auth/confirm?token_hash=...). Sin el, quien abria una invitacion en
+      // un navegador que todavia no habia pasado la puerta ponia la contraseña
+      // y volvia al enlace SIN el codigo: "El enlace esta incompleto".
+      cabeceras.set("x-destino-original", ruta + request.nextUrl.search);
 
       return NextResponse.rewrite(url, { request: { headers: cabeceras } });
     }
