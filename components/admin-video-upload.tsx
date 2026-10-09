@@ -487,17 +487,6 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         />
       </div>
 
-      {/* La direccion no la escribe nadie: sale sola del titulo en espanol.
-          Sigue siendo un campo y no un calculo del servidor porque una clase ya
-          publicada no puede cambiar de direccion sin romper los enlaces que
-          alguien haya guardado, y eso se ve mejor pudiendo leerla. */}
-      <div style={{ marginTop: 14 }}>
-        <Field label="Dirección de la clase (se completa sola)">
-          <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
-          <AutoDireccion desde="titleEs" />
-        </Field>
-      </div>
-
       {/* 10, 11 y 12 — lo que no ve la alumna */}
       <BloqueSoloParaVos>
         <span style={lbl}>Plan que la puede ver</span>
@@ -591,6 +580,19 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         </div>
       </BloqueSoloParaVos>
 
+      {/* Despues del 11 y no entre materiales y planes: la lista de Brunela va
+          del 1 al 11 seguida, y la direccion no esta en ella.
+          La direccion no la escribe nadie: sale sola del titulo en espanol.
+          Sigue siendo un campo y no un calculo del servidor porque una clase ya
+          publicada no puede cambiar de direccion sin romper los enlaces que
+          alguien haya guardado, y eso se ve mejor pudiendo leerla. */}
+      <div style={{ marginTop: 14 }}>
+        <Field label="Dirección de la clase (se completa sola)">
+          <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
+          <AutoDireccion desde="titleEs" />
+        </Field>
+      </div>
+
       {/* Video file */}
       <div className="avu-archivo avu-archivo--video">
         <div className="avu-archivo-cab">
@@ -646,9 +648,10 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         </div>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18, cursor: "pointer" }}>
-        <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 18, height: 18, accentColor: "var(--pink)" }} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>Destacar este video</span>
+      <label className="pf-switch" style={{ marginTop: 18 }}>
+        <input name="isFeatured" type="checkbox" role="switch" disabled={busy} />
+        <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+        <span className="pf-switch-txt">Destacar esta clase <small>sale primero en la biblioteca</small></span>
       </label>
 
       {(busy || phase === "done" || phase === "error") && (
