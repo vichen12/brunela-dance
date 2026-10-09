@@ -1,5 +1,8 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
+import { ArrowRight, Check, ChevronDown, Pencil, Shield } from "lucide-react";
+import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
+import { AdminBuscador } from "@/components/admin-buscador";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -54,31 +57,12 @@ const OBJETIVO_LABEL: Record<string, string> = {
   bienestar_general: "Bienestar general",
 };
 
-const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  none:            { bg: "#f1f5f9", color: "#64748b", label: "Sin plan" },
-  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps de Ballet" },
-  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
+const TIER_STYLE: Record<string, { clase: string; label: string }> = {
+  none:            { clase: "au-plan--none", label: "Sin plan" },
+  corps_de_ballet: { clase: "au-plan--corps", label: "Corps de Ballet" },
+  solista:         { clase: "au-plan--solista", label: "Solista" },
+  principal:       { clase: "au-plan--principal", label: "Principal" },
 };
-
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 8, border: "1px solid #e7e5e4",
-  background: "#fff", color: "#1c1917", padding: "7px 10px",
-  fontSize: 12, outline: "none", fontFamily: "inherit",
-};
-
-
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
-  return (
-    <div style={{
-      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600, marginBottom: 20,
-      background: tone === "success" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "success" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "success" ? "#bbf7d0" : "#fecaca"}`,
-    }}>{message}</div>
-  );
-}
 
 export default async function AdminUsersPage({ searchParams }: { searchParams?: SearchParams }) {
   await requireAdmin();
@@ -92,13 +76,21 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   // con 500, justo cuando el estudio empieza a funcionar.
   const pagina = Math.max(0, Math.min(200, Number(params.pagina) || 0));
   const plan = typeof params.plan === "string" && params.plan in FILTROS_PLAN ? params.plan : "";
-  const conPlan = (p: number) => `/admin/users?${plan ? `plan=${plan}&` : ""}pagina=${p}`;
+  // Buscar por nombre o correo. Antes no habia forma de encontrar a UNA alumna
+  // entre 300 que no fuera pasar paginas.
+  const q = (typeof params.q === "string" ? params.q : "").trim();
+  const conPlan = (p: number) =>
+    `/admin/users?${plan ? `plan=${plan}&` : ""}${q ? `q=${encodeURIComponent(q)}&` : ""}pagina=${p}`;
 
   let consulta = supabase
     .from("profiles")
     .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at");
   if (plan === "con-plan") consulta = consulta.neq("membership_tier", "none");
   else if (plan) consulta = consulta.eq("membership_tier", plan as "none");
+  if (q) {
+    const t = q.replace(/[,()%]/g, " ");
+    consulta = consulta.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
+  }
 
   // ⚠️ Los totales van en su PROPIA consulta, y no es un viaje de mas al pedo.
   //    Contarlos sobre las filas de la pagina daria "3 solistas" habiendo 30:
@@ -121,241 +113,207 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
     acc[p.membership_tier] = (acc[p.membership_tier] ?? 0) + 1;
     return acc;
   }, {});
-  const totalAlumnas = (todosLosTiers ?? []).filter((p) => !p.is_admin).length;
+  // Todas las cuentas, admin incluidas: es lo que lista la pagina y lo que
+  // suman las cifras por plan. Antes "Alumnas" contaba sin admin y los planes
+  // con admin, y las cifras no cerraban.
+  const totalCuentas = (todosLosTiers ?? []).length;
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Comunidad</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Alumnas.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos.
-        </p>
-      </header>
+    <main className="au">
+      <style>{CSS}</style>
 
-      <Flash message={success} tone="success" />
-      <Flash message={error} tone="error" />
+      <AdminCabecera
+        eyebrow="Comunidad"
+        titulo="Alumnas"
+        lede="Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos, y cada una tiene su ficha completa."
+      />
 
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
+
+      {/* Las cifras filtran, y suman: cada cuenta cae en exactamente un plan. */}
+      <div className="au-cifras">
         {[
-          // profiles.length incluye a las admin. El panel de inicio cuenta solo
-          // alumnas, asi que los dos numeros no coinciden -- y no coincidian por
-          // una etiqueta, no por un error. Ahora cada uno dice lo que cuenta.
-          { value: totalAlumnas, label: "Alumnas", color: "#1c1917", filtro: "" },
-          { value: tierCounts["principal"] ?? 0,       label: "Principal",       color: "var(--pink-deep)", filtro: "principal" },
-          { value: tierCounts["solista"] ?? 0,         label: "Solista",         color: "var(--pink-deep)", filtro: "solista" },
-          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", color: "var(--pink-deep)", filtro: "corps_de_ballet" },
-        ].map((s) => (
-          <Link key={s.label} href={(s.filtro ? `/admin/users?plan=${s.filtro}` : "/admin/users") as never} style={{
-            background: "#fff", borderRadius: 16, padding: "18px 20px", textDecoration: "none",
-            border: plan === s.filtro ? "1.5px solid var(--pink)" : "1px solid #f0eeec",
-          }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: s.color, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#a8a29e", marginTop: 6, letterSpacing: "0.04em" }}>{s.label}</p>
+          { value: totalCuentas, label: "Todas", filtro: "" },
+          { value: tierCounts["principal"] ?? 0, label: "Principal", filtro: "principal" },
+          { value: tierCounts["solista"] ?? 0, label: "Solista", filtro: "solista" },
+          { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", filtro: "corps_de_ballet" },
+          { value: tierCounts["none"] ?? 0, label: "Sin plan", filtro: "none" },
+        ].map((c) => (
+          <Link
+            key={c.label}
+            href={(c.filtro ? `/admin/users?plan=${c.filtro}` : "/admin/users") as never}
+            className={"au-cifra" + (plan === c.filtro ? " es-activa" : "")}
+            aria-current={plan === c.filtro ? "page" : undefined}
+          >
+            <span className="au-cifra-label">{c.label}</span>
+            <span className="au-cifra-num">{c.value}</span>
           </Link>
         ))}
       </div>
 
-      {plan && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, fontSize: 13, color: "var(--ink-soft)" }}>
-          Mostrando: <strong style={{ color: "var(--ink)" }}>{FILTROS_PLAN[plan]}</strong>
-          <Link href="/admin/users" style={{ color: "var(--pink-deep)", fontWeight: 700, fontSize: 12 }}>Quitar filtro</Link>
-        </div>
-      )}
+      <AdminBuscador
+        action="/admin/users"
+        q={q}
+        placeholder="Buscar por nombre o correo"
+        total={totalCuentas}
+        mostrando={profiles.length}
+        filtros={[{
+          name: "plan", valor: plan, etiqueta: "Plan",
+          opciones: [{ key: "", label: "Cualquier plan" }, ...Object.entries(FILTROS_PLAN).map(([key, label]) => ({ key, label }))],
+        }]}
+      />
 
-      {/* User list */}
-      <div style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, overflow: "hidden" }}>
-        {/* Table header */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 120px 120px 80px 80px 100px",
-          padding: "10px 20px", borderBottom: "1px solid #f0eeec",
-          fontSize: 10, fontWeight: 700, color: "#a8a29e", letterSpacing: "0.1em", textTransform: "uppercase",
-        }}>
-          <span>Persona</span>
-          <span>Plan</span>
-          <span>Nivel</span>
-          <span>Onboarding</span>
-          <span>Admin</span>
-          <span></span>
+      {profiles.length === 0 ? (
+        <div className="ad-vacio">
+          <p className="ad-vacio-titulo">{q || plan ? "Nadie coincide." : "Todavía no hay alumnas."}</p>
+          {(q || plan) && <Link href="/admin/users" className="ad-btn">Ver todas</Link>}
         </div>
-
-        {profiles.length === 0 ? (
-          <div style={{ padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13 }}>
-            {plan ? "No hay nadie con ese plan." : "No hay perfiles registrados todavía."}
-          </div>
-        ) : (
-          profiles.map((profile, i) => {
+      ) : (
+        <ul className="au-lista">
+          {profiles.map((profile) => {
             const tier = TIER_STYLE[profile.membership_tier] ?? TIER_STYLE.none;
             const name = profile.full_name ?? profile.email.split("@")[0];
-            const joinDate = new Date(profile.created_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+            const joinDate = new Date(profile.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
             return (
-              <details key={profile.id} style={{ borderBottom: i < profiles.length - 1 ? "1px solid #f9f7f6" : "none" }}>
-                <summary style={{
-                  listStyle: "none", cursor: "pointer", userSelect: "none",
-                  display: "grid", gridTemplateColumns: "1fr 120px 120px 80px 80px 100px",
-                  alignItems: "center", padding: "12px 20px",
-                }}>
-                  {/* Name + email */}
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#1c1917" }}>
+              <li key={profile.id} className="au-fila">
+                <div className="au-fila-cuerpo">
+                  <span className="au-ini" aria-hidden="true">{name[0]?.toUpperCase()}</span>
+                  <div className="au-info">
+                    <p className="au-nombre">
                       {name}
-                      {profile.is_admin && (
-                        <span style={{
-                          marginLeft: 8, fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 99,
-                          background: "var(--pink-wash)", color: "var(--pink-deep)",
-                        }}>ADMIN</span>
-                      )}
+                      {profile.is_admin && <span className="au-admin"><Shield size={11} strokeWidth={2.4} aria-hidden="true" /> Admin</span>}
                     </p>
-                    <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 1 }}>{profile.email}</p>
-                    <p style={{ fontSize: 10, color: "#c4b5af", marginTop: 1 }}>Ingreso: {joinDate}</p>
-
-                    {/* La ficha completa: progreso, plan, reservas y mensajes.
-                        Es la pantalla desde la que se puede ACTUAR, asi que se
-                        entra desde aca y no solo desde las analiticas. */}
-                    <Link href={`/admin/users/${profile.id}`} style={{
-                      display: "inline-block", marginTop: 5, fontSize: 10.5,
-                      fontWeight: 700, color: "var(--pink-deep)", textDecoration: "none",
-                    }}>Ver ficha completa →</Link>
-
+                    <p className="au-correo">{profile.email} · desde el {joinDate}</p>
                     {/* Que busca mejorar. Lo eligio ella en el onboarding. */}
                     {profile.training_goals && profile.training_goals.length > 0 && (
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
-                        {profile.training_goals.map((g) => (
-                          <span key={g} style={{
-                            fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 99,
-                            background: "var(--pink-wash)", color: "var(--pink-deep)",
-                          }}>{OBJETIVO_LABEL[g] ?? g}</span>
-                        ))}
+                      <div className="au-objetivos">
+                        {profile.training_goals.map((g) => <span key={g}>{OBJETIVO_LABEL[g] ?? g}</span>)}
                       </div>
                     )}
                   </div>
-
-                  {/* Tier */}
-                  <div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                      background: tier.bg, color: tier.color,
-                    }}>{tier.label}</span>
-                  </div>
-
-                  {/* Level */}
-                  <div>
-                    <span style={{ fontSize: 11, color: "#78716c", fontWeight: 500, textTransform: "capitalize" }}>
-                      {profile.technical_level ?? "—"}
+                  <div className="au-datos">
+                    <span className={"au-plan " + tier.clase}>{tier.label}</span>
+                    <span className="au-nivel">{profile.technical_level ?? "—"}</span>
+                    <span className={"au-onb" + (profile.onboarding_completed ? " es-ok" : "")}>
+                      {profile.onboarding_completed ? <><Check size={12} strokeWidth={3} aria-hidden="true" /> Onboarding</> : "Onboarding pendiente"}
                     </span>
                   </div>
-
-                  {/* Onboarding */}
-                  <div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                      background: profile.onboarding_completed ? "#dcfce7" : "#f1f5f9",
-                      color: profile.onboarding_completed ? "#166534" : "#64748b",
-                    }}>{profile.onboarding_completed ? "Listo" : "Pendiente"}</span>
-                  </div>
-
-                  {/* Is admin */}
-                  <div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                      background: profile.is_admin ? "var(--pink-wash)" : "transparent",
-                      color: profile.is_admin ? "var(--pink-mid)" : "#c4b5af",
-                    }}>{profile.is_admin ? "Si" : "No"}</span>
-                  </div>
-
-                  {/* Expand indicator */}
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: 11, color: "#c4b5af", fontWeight: 500 }}>Editar ▾</span>
-                  </div>
-                </summary>
-
-                {/* Edit form */}
-                <div style={{ padding: "16px 20px 20px", borderTop: "1px solid #f9f7f6", background: "#fafaf9" }}>
-                  <form action={updateProfileAdminAction} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
-                    <input name="profileId" type="hidden" value={profile.id} />
-
-                    <label style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Plan</span>
-                      <Desplegable
-                        style={inp} defaultValue={profile.membership_tier} name="membershipTier"
-                        opciones={[
-                          { value: "none", label: "Sin plan" },
-                          { value: "corps_de_ballet", label: "Corps de Ballet" },
-                          { value: "solista", label: "Solista" },
-                          { value: "principal", label: "Principal" },
-                        ]}
-                      />
-                    </label>
-
-                    <label style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#78716c", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Nivel técnico</span>
-                      <Desplegable
-                        style={inp} defaultValue={profile.technical_level} name="technicalLevel"
-                        opciones={[
-                          { value: "principiante", label: "Principiante" },
-                          { value: "intermedio", label: "Intermedio" },
-                          { value: "avanzado", label: "Avanzado" },
-                          { value: "profesional", label: "Profesional" },
-                          { value: "maestro", label: "Maestro" },
-                        ]}
-                      />
-                    </label>
-
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 2 }}>
-                      <input defaultChecked={profile.onboarding_completed} name="onboardingCompleted" type="checkbox" style={{ width: 15, height: 15, accentColor: "var(--pink-mid)" }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Onboarding completo</span>
-                    </label>
-
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 2 }}>
-                      <input defaultChecked={profile.is_admin} name="isAdmin" type="checkbox" style={{ width: 15, height: 15, accentColor: "var(--pink-mid)" }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Es admin</span>
-                    </label>
-
-                    <BotonEnviar style={{
-                      background: "#1c1917", color: "#fff", border: "none",
-                      borderRadius: 99, padding: "9px 20px",
-                      fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}>GUARDAR</BotonEnviar>
-                  </form>
+                  {/* La ficha completa: progreso, plan, reservas y mensajes. */}
+                  <Link href={`/admin/users/${profile.id}` as never} className="au-ficha">
+                    Ficha <ArrowRight size={14} strokeWidth={2.2} aria-hidden="true" />
+                  </Link>
                 </div>
-              </details>
+
+                <details className="au-editar">
+                  <summary><Pencil size={13} strokeWidth={2} aria-hidden="true" /> Editar accesos <ChevronDown size={14} strokeWidth={2} className="ad-flecha" aria-hidden="true" /></summary>
+                  <form action={updateProfileAdminAction} className="au-form">
+                    <input name="profileId" type="hidden" value={profile.id} />
+                    <label className="au-campo">
+                      <span>Plan</span>
+                      <Desplegable defaultValue={profile.membership_tier} name="membershipTier" opciones={[
+                        { value: "none", label: "Sin plan" },
+                        { value: "corps_de_ballet", label: "Corps de Ballet" },
+                        { value: "solista", label: "Solista" },
+                        { value: "principal", label: "Principal" },
+                      ]} />
+                    </label>
+                    <label className="au-campo">
+                      <span>Nivel técnico</span>
+                      <Desplegable defaultValue={profile.technical_level} name="technicalLevel" opciones={[
+                        { value: "principiante", label: "Principiante" },
+                        { value: "intermedio", label: "Intermedio" },
+                        { value: "avanzado", label: "Avanzado" },
+                        { value: "profesional", label: "Profesional" },
+                        { value: "maestro", label: "Maestro" },
+                      ]} />
+                    </label>
+                    <label className="pf-switch au-switch">
+                      <input defaultChecked={profile.onboarding_completed} name="onboardingCompleted" type="checkbox" role="switch" />
+                      <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+                      <span className="pf-switch-txt">Onboarding completo</span>
+                    </label>
+                    <label className="pf-switch au-switch">
+                      <input defaultChecked={profile.is_admin} name="isAdmin" type="checkbox" role="switch" />
+                      <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+                      <span className="pf-switch-txt">Es admin <small>entra al panel</small></span>
+                    </label>
+                    <BotonEnviar className="pf-guardar au-guardar" pendingLabel="Guardando…">
+                      <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar
+                    </BotonEnviar>
+                  </form>
+                </details>
+              </li>
             );
-          })
-        )}
-      </div>
+          })}
+        </ul>
+      )}
 
-      {/* Paginacion. A diferencia de la biblioteca, aca es de a paginas y no
-          acumulativa: en un listado de gestion se busca a UNA alumna, no se
-          recorre el conjunto. */}
+      {/* Paginacion: en un listado de gestion se busca a UNA alumna, no se
+          recorre el conjunto, asi que va de a paginas. */}
       {(pagina > 0 || hayMasPaginas) && (
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: 14, marginTop: 18,
-        }}>
-          {pagina > 0 ? (
-            <Link href={conPlan(pagina - 1) as never} style={{
-              padding: "10px 18px", borderRadius: 999, textDecoration: "none",
-              background: "#fff", color: "var(--pink-deep)",
-              border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
-            }}>← Anteriores</Link>
-          ) : <span />}
-
-          <span style={{ fontSize: 11.5, color: "#a8a29e" }}>
-            {pagina * POR_PAGINA + 1}–{pagina * POR_PAGINA + profiles.length} de {totalAlumnas} alumnas
-          </span>
-
-          {hayMasPaginas ? (
-            <Link href={conPlan(pagina + 1) as never} style={{
-              padding: "10px 18px", borderRadius: 999, textDecoration: "none",
-              background: "#fff", color: "var(--pink-deep)",
-              border: "1.5px solid var(--pink-line)", fontSize: 12.5, fontWeight: 700,
-            }}>Siguientes →</Link>
-          ) : <span />}
-        </div>
+        <nav className="au-paginas" aria-label="Páginas">
+          {pagina > 0 ? <Link href={conPlan(pagina - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
+          <span className="au-paginas-txt">{pagina * POR_PAGINA + 1}–{pagina * POR_PAGINA + profiles.length}</span>
+          {hayMasPaginas ? <Link href={conPlan(pagina + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
+        </nav>
       )}
     </main>
   );
 }
+
+const CSS = `
+.au { display: flex; flex-direction: column; }
+.au-cifras { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--ink); border-bottom: 1px solid #e7e5e4; margin-bottom: 4px; }
+.au-cifra { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 20px 18px; text-decoration: none; transition: background .2s; }
+.au-cifra:first-child { padding-left: 0; }
+.au-cifra + .au-cifra { border-left: 1px solid #e7e5e4; }
+.au-cifra::after { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--pink); transform: scaleX(0); transform-origin: left; transition: transform .45s cubic-bezier(.16,1,.3,1); }
+.au-cifra:hover::after, .au-cifra.es-activa::after { transform: scaleX(1); }
+.au-cifra-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #78716c; }
+.au-cifra.es-activa .au-cifra-label { color: var(--pink-deep); }
+.au-cifra-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 34px; line-height: 0.95; letter-spacing: -0.045em; color: var(--ink); }
+
+.au-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.au-fila { border: 1px solid #e7e5e4; border-radius: 18px; background: #fff; transition: border-color .2s, box-shadow .3s; }
+.au-fila:hover { border-color: var(--pink-line); box-shadow: 0 16px 30px -24px rgba(176,58,62,0.5); }
+.au-fila-cuerpo { display: flex; align-items: center; gap: 14px; padding: 14px 16px; flex-wrap: wrap; }
+.au-ini { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; }
+.au-info { flex: 1 1 260px; min-width: 0; }
+.au-nombre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; font-weight: 700; color: var(--ink); }
+.au-admin { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: #fff; color: var(--ink); border: 1px solid #d6d3d1; }
+.au-correo { font-size: 12.5px; color: #a8a29e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.au-objetivos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.au-objetivos span { padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; color: var(--pink-deep); background: var(--pink-wash); }
+.au-datos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.au-plan { padding: 4px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 800; }
+.au-plan--none { background: #f5f5f4; color: #78716c; }
+.au-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.au-plan--solista { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.au-plan--principal { background: var(--pink); color: #fff; box-shadow: 0 6px 14px -8px rgba(230,79,85,0.8); }
+.au-nivel { font-size: 12.5px; color: #57534e; text-transform: capitalize; }
+.au-onb { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #a8a29e; }
+.au-onb.es-ok { color: #15803d; font-weight: 600; }
+.au-ficha { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 14px; border-radius: 99px; text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); border: 1.5px solid #e7e5e4; transition: border-color .2s, gap .2s; }
+.au-ficha:hover { border-color: var(--ink); gap: 8px; }
+.au-editar { border-top: 1px solid #f5f5f4; margin: 0 16px; }
+.au-editar > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 10px 0 12px; font-size: 13px; font-weight: 700; color: #57534e; user-select: none; }
+.au-editar > summary::-webkit-details-marker { display: none; }
+.au-editar > summary .ad-flecha { margin-left: auto; }
+.au-editar[open] { padding-bottom: 16px; }
+.au-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 18px; align-items: end; }
+.au-campo { display: flex; flex-direction: column; gap: 6px; }
+.au-campo > span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #78716c; }
+.au-campo .dsp-boton { border-color: #e7e5e4; }
+.au-switch { padding-bottom: 8px; }
+.au-guardar { justify-self: start; }
+.au-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; }
+.au-paginas-txt { font-size: 12.5px; color: #a8a29e; }
+@media (max-width: 760px) {
+  .au-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .au-cifra + .au-cifra { border-left: 0; }
+  .au-cifra { padding-left: 0; border-top: 1px solid #f0eeec; }
+}
+`;
+
