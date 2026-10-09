@@ -1,5 +1,5 @@
 "use client";
-import { Pencil } from "lucide-react";
+import { Check, Image as ImageIcon, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
@@ -66,97 +66,166 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
  * El formulario del plan de trabajo. Se exporta porque lo usan los DOS caminos: el
  * alta (en la pagina, sin panel) y la edicion (dentro del drawer). Una copia
  * por camino garantiza que en unos meses uno tenga un campo que el otro no.
+ *
+ * Va por secciones numeradas y con controles que se ven sin abrir nada (plan y
+ * estado como opciones a la vista, dias con atajos, portada con vista previa).
+ * Los `name` son los mismos de siempre: upsertProgramAction no cambia.
  */
 export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel: string; program?: ProgramRecord; onGuardado?: () => void }) {
   const esNuevo = !program;
+  const [dias, setDias] = useState<number>(program?.duration_days ?? 14);
+  const [portada, setPortada] = useState(program?.cover_image_url ?? "");
+  const [portadaRota, setPortadaRota] = useState(false);
+  const portadaValida = /^https?:\/\/\S+$/.test(portada.trim());
 
   return (
-    <form action={upsertProgramAction}>
+    <form action={upsertProgramAction} className="pf">
       {onGuardado && <CerrarAlGuardar onExito={onGuardado} />}
       <input name="id" type="hidden" value={program?.id ?? ""} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <F label="Título en español">
-          <input style={inp} defaultValue={program?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Fundamentos en 7 días" />
-        </F>
-
-        <F label="Título en inglés">
-          <input style={inp} defaultValue={program?.title_i18n?.en ?? ""} name="titleEn" placeholder="Fundamentals in 7 days" />
-        </F>
-
-        <F label={esNuevo ? "Dirección del plan (se completa sola)" : "Dirección"}>
-          {/* Al editar es solo lectura: cambiarla rompe cualquier enlace ya
-              compartido. Al crear hace falta, porque todavia no existe. */}
-          <input
-            style={esNuevo ? inp : { ...inp, background: "#fafaf9", color: "#78716c" }}
-            defaultValue={program?.slug ?? ""}
-            name="slug"
-            required
-            readOnly={!esNuevo}
-            placeholder="fundamentos-7-dias"
-          />
-            <AutoDireccion desde="titleEs" activo={esNuevo} />
-        </F>
-
-        <F label="Cuántos días dura">
-          <input style={inp} defaultValue={program?.duration_days ?? 14} min={1} name="durationDays" required type="number" />
-        </F>
-
-        <F label="Plan que lo puede ver">
-          <Desplegable
-            style={inp} defaultValue={program?.membership_tier_required ?? "solista"} name="membershipTierRequired"
-            opciones={[
-              { value: "solista", label: "Solista" },
-              { value: "principal", label: "Principal" },
-            ]}
-          />
-        </F>
-
-        <F label="Estado">
-          <Desplegable
-            style={inp} defaultValue={program?.status ?? "draft"} name="status"
-            opciones={[
-              { value: "draft", label: "Borrador" },
-              { value: "published", label: "Publicado" },
-              { value: "archived", label: "Archivado" },
-            ]}
-          />
-        </F>
-
-        <F label="Imagen de portada">
-          <input style={inp} defaultValue={program?.cover_image_url ?? ""} name="coverImageUrl" placeholder="https://..." />
-        </F>
-
-        <div style={{ display: "flex", alignItems: "center", paddingTop: 20 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input defaultChecked={program?.is_featured ?? false} name="isFeatured" type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--pink)" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#44403c" }}>Destacar este plan</span>
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">01</span> Qué es</legend>
+        <div className="pf-grilla">
+          <label className="pf-campo">
+            <span className="pf-etq">Título</span>
+            <input defaultValue={program?.title_i18n?.es ?? ""} name="titleEs" required placeholder="Trabajo de pies en 14 días" />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Título en inglés <small>opcional</small></span>
+            <input defaultValue={program?.title_i18n?.en ?? ""} name="titleEn" placeholder="Footwork in 14 days" />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Descripción <small>la lee la alumna antes de empezar</small></span>
+            <textarea defaultValue={program?.description_i18n?.es ?? ""} name="descriptionEs" required rows={3} placeholder="Qué trabaja este plan y para quién es…" />
+          </label>
+          <label className="pf-campo">
+            <span className="pf-etq">Descripción en inglés <small>opcional</small></span>
+            <textarea defaultValue={program?.description_i18n?.en ?? ""} name="descriptionEn" rows={3} />
           </label>
         </div>
-      </div>
+      </fieldset>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-        <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.es ?? ""} name="descriptionEs" required placeholder="Qué trabaja este plan…" />
-        </F>
-        <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 78, resize: "vertical" }} defaultValue={program?.description_i18n?.en ?? ""} name="descriptionEn" />
-        </F>
-      </div>
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">02</span> Duración</legend>
+        <div className="pf-grilla">
+          <div className="pf-campo">
+            <span className="pf-etq" id="pf-dias-etq">Cuántos días dura</span>
+            <div className="pf-dias">
+              <button type="button" className="pf-paso" aria-label="Un día menos" onClick={() => setDias((d) => Math.max(1, d - 1))}>
+                <Minus size={16} strokeWidth={2.2} />
+              </button>
+              <input
+                aria-labelledby="pf-dias-etq" name="durationDays" type="number" min={1} max={365} required
+                value={dias} onChange={(e) => setDias(Math.max(1, Number(e.target.value) || 1))}
+              />
+              <button type="button" className="pf-paso" aria-label="Un día más" onClick={() => setDias((d) => Math.min(365, d + 1))}>
+                <Plus size={16} strokeWidth={2.2} />
+              </button>
+            </div>
+            <div className="pf-atajos" role="group" aria-label="Duraciones comunes">
+              {[7, 14, 21, 28].map((n) => (
+                <button key={n} type="button" className={"pf-atajo" + (dias === n ? " es-activo" : "")} onClick={() => setDias(n)}>
+                  {n} días
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="pf-campo">
+            <span className="pf-etq">Dirección <small>{esNuevo ? "se completa sola con el título" : "no se cambia: rompería los enlaces ya compartidos"}</small></span>
+            {/* Al editar es solo lectura: cambiarla rompe cualquier enlace ya
+                compartido. Al crear hace falta, porque todavia no existe. */}
+            <div className="pf-direccion">
+              <span className="pf-direccion-pre">…/programs/</span>
+              <input defaultValue={program?.slug ?? ""} name="slug" required readOnly={!esNuevo} placeholder="trabajo-de-pies-14-dias" />
+            </div>
+            <AutoDireccion desde="titleEs" activo={esNuevo} />
+          </label>
+        </div>
+      </fieldset>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-        <button type="submit" style={{
-          background: esNuevo ? "var(--pink)" : "#1c1917", color: "#fff", border: "none",
-          borderRadius: 99, padding: "10px 24px", fontSize: 11, fontWeight: 700,
-          letterSpacing: "0.1em", cursor: "pointer",
-        }}>{actionLabel}</button>
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">03</span> Quién lo ve</legend>
+        <div className="pf-planes" role="radiogroup" aria-label="Plan que lo puede ver">
+          {[
+            { value: "solista", titulo: "Solista", sub: "Lo ven Solista y Principal" },
+            { value: "principal", titulo: "Principal", sub: "Solo Principal" },
+          ].map((p) => (
+            <label key={p.value} className="pf-plan">
+              <input type="radio" name="membershipTierRequired" value={p.value} defaultChecked={(program?.membership_tier_required ?? "solista") === p.value} />
+              <span className="pf-plan-caja">
+                <span className="pf-plan-titulo">{p.titulo}</span>
+                <span className="pf-plan-sub">{p.sub}</span>
+                <span className="pf-plan-tilde" aria-hidden="true"><Check size={13} strokeWidth={3} /></span>
+              </span>
+            </label>
+          ))}
+        </div>
 
+        <div className="pf-fila-estado">
+          <div className="pf-campo">
+            <span className="pf-etq">Estado</span>
+            <div className="pf-segmento" role="radiogroup" aria-label="Estado">
+              {[
+                { value: "draft", label: "Borrador" },
+                { value: "published", label: "Publicado" },
+                { value: "archived", label: "Archivado" },
+              ].map((e) => (
+                <label key={e.value}>
+                  <input type="radio" name="status" value={e.value} defaultChecked={(program?.status ?? "draft") === e.value} />
+                  <span>{e.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <label className="pf-switch">
+            <input defaultChecked={program?.is_featured ?? false} name="isFeatured" type="checkbox" role="switch" />
+            <span className="pf-switch-pista" aria-hidden="true"><span /></span>
+            <span className="pf-switch-txt">Destacar <small>aparece primero para las alumnas</small></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="pf-seccion">
+        <legend><span className="pf-num">04</span> Portada <small>opcional</small></legend>
+        <div className="pf-portada">
+          <div className="pf-portada-vista" aria-hidden="true">
+            {portadaValida && !portadaRota ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={portada.trim()} alt="" onError={() => setPortadaRota(true)} onLoad={() => setPortadaRota(false)} />
+            ) : (
+              <span className="pf-portada-vacia">
+                <ImageIcon size={22} strokeWidth={1.6} />
+                {portadaRota ? "No se pudo cargar" : "Vista previa"}
+              </span>
+            )}
+          </div>
+          <label className="pf-campo">
+            <span className="pf-etq">Dirección de la imagen</span>
+            <input
+              name="coverImageUrl" type="url" placeholder="https://…" value={portada}
+              onChange={(e) => { setPortada(e.target.value); setPortadaRota(false); }}
+            />
+            <span className="pf-ayuda">
+              {portadaRota ? "Esa dirección no devuelve una imagen: revisá que esté bien copiada." : "Pegá el enlace a una imagen horizontal. Si la dejás vacía, se usa un degradé."}
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div className="pf-pie">
+        <BotonEnviar className="pf-guardar" pendingLabel={esNuevo ? "Creando…" : "Guardando…"}>
+          {esNuevo ? <Plus size={16} strokeWidth={2.2} aria-hidden="true" /> : <Check size={16} strokeWidth={2.4} aria-hidden="true" />}
+          {actionLabel}
+        </BotonEnviar>
         {!esNuevo && (
-          <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este plan de trabajo y todos sus días? No se puede deshacer." formAction={deleteProgramAction} style={{
-            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</BotonEnviar>
+          <BotonEnviar
+            className="pf-borrar"
+            pendingLabel="Borrando…"
+            confirmar="¿Borrar este plan de trabajo y todos sus días? No se puede deshacer."
+            formAction={deleteProgramAction}
+          >
+            <Trash2 size={15} strokeWidth={2} aria-hidden="true" /> Borrar plan
+          </BotonEnviar>
         )}
       </div>
     </form>
