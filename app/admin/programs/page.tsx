@@ -1,4 +1,4 @@
-import { Check, Eye, Plus, Star } from "lucide-react";
+import { CalendarDays, Check, Eye, Plus, Rocket, Star } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
@@ -134,6 +134,9 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
 
   const abrirNueva = params.nueva === "1";
   const hayFiltro = Boolean(q || fEstadoProg);
+  // El estudio todavia no tiene NINGUN plan (no es lo mismo que un filtro sin
+  // resultados): ahi se muestra la guia en vez de cifras en cero.
+  const estudioVacio = (totalProgramas ?? 0) === 0;
   const totalEmpezaron = [...usoPorPrograma.values()].reduce((a, u) => a + u.empezaron, 0);
 
   return (
@@ -153,6 +156,66 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
+      {estudioVacio ? (
+        <>
+          {/* Sin ningun plan, las cifras en cero y el buscador no dicen nada.
+              En su lugar: como se ve un plan y los tres pasos para armarlo. */}
+          <section className="apl-guia" aria-labelledby="apl-guia-titulo">
+            <div className="apl-ejemplo" aria-hidden="true">
+              <span className="apl-ejemplo-rotulo">Así lo ve la alumna</span>
+              <div className="apl-ejemplo-card">
+                <div className="apl-ejemplo-portada">
+                  <span className="apl-dias-num"><strong>14</strong> días</span>
+                </div>
+                <div className="apl-ejemplo-cuerpo">
+                  <span className="apl-estado apl-estado--pub"><span className="apl-punto" />Publicado</span>
+                  <p className="apl-ejemplo-titulo">Trabajo de pies</p>
+                  <div className="apl-ejemplo-dias">
+                    {Array.from({ length: 14 }, (_, i) => (
+                      <span key={i} className="apl-ejemplo-dia" style={{ animationDelay: `${0.4 + i * 0.09}s` }} />
+                    ))}
+                  </div>
+                  <p className="apl-ejemplo-hoy"><span>Hoy</span> Día 3 · Relevé en barra</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="apl-pasos">
+              <p className="apl-guia-eyebrow">Tu primer plan</p>
+              <h2 id="apl-guia-titulo" className="apl-guia-titulo">Armalo en tres pasos.</h2>
+              <ol>
+                <li>
+                  <span className="apl-paso-ico"><Plus size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+                  <div>
+                    <p className="apl-paso-titulo">Creá el plan</p>
+                    <p>Nombre, cuántos días dura y qué plan lo ve. Por ejemplo: «Trabajo de pies, 14 días», para Solista.</p>
+                  </div>
+                </li>
+                <li>
+                  <span className="apl-paso-ico"><CalendarDays size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  <div>
+                    <p className="apl-paso-titulo">Asigná una clase a cada día</p>
+                    <p>Desde «Editar y días», o al subir una clase. Los días que falten se ven marcados.</p>
+                  </div>
+                </li>
+                <li>
+                  <span className="apl-paso-ico"><Rocket size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  <div>
+                    <p className="apl-paso-titulo">Publicalo</p>
+                    <p>La alumna lo encuentra en «Planes de trabajo», ve qué le toca hoy y su plan recuerda por dónde va.</p>
+                  </div>
+                </li>
+              </ol>
+              <AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primer plan</AdminBoton>
+            </div>
+          </section>
+
+          <AdminNueva abierto={abrirNueva} titulo="Crear un plan de trabajo" sub="Título, cuántos días, plan que lo ve y portada. Los días se cargan después.">
+            <ProgramForm actionLabel="Crear plan" />
+          </AdminNueva>
+        </>
+      ) : (
+        <>
       <AdminCifras items={[
         { label: "Planes", value: totalProgramas ?? programs.length, sub: "creados" },
         { label: "Publicados", value: publicados, sub: "visibles para las alumnas" },
@@ -250,6 +313,8 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
           })}
         </ul>
       )}
+        </>
+      )}
     </main>
   );
 }
@@ -300,6 +365,59 @@ const CSS_PLANES = `
 .apl-uso { margin-top: 6px; font-size: 12.5px; color: #78716c; }
 .apl-uso strong { color: var(--ink); }
 .apl-pie { margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 8px; }
+
+/* guia de primer plan (solo con el estudio sin ningun plan) */
+.apl-guia {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 56px); align-items: center;
+  padding: clamp(24px, 3vw, 40px); margin-bottom: 18px; border-radius: 28px;
+  background: radial-gradient(120% 140% at 0% 0%, var(--pink-wash) 0%, #fff 55%); border: 1px solid #f0eeec;
+}
+.apl-ejemplo { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.apl-ejemplo-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #a8a29e; }
+.apl-ejemplo-card {
+  width: 100%; max-width: 360px; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid #e7e5e4;
+  box-shadow: 0 30px 60px -34px rgba(176,58,62,0.55); transform: rotate(-2deg);
+  animation: apl-flota 6s ease-in-out infinite;
+}
+@keyframes apl-flota { 0%, 100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(-1deg) translateY(-8px); } }
+.apl-ejemplo-portada {
+  position: relative; aspect-ratio: 16 / 7;
+  background: linear-gradient(135deg, var(--pink-wash) 0%, var(--pink-soft) 55%, var(--rose) 130%);
+}
+.apl-ejemplo-cuerpo { padding: 16px 18px 18px; }
+.apl-ejemplo-titulo { margin-top: 6px; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
+.apl-ejemplo-dias { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.apl-ejemplo-dia { width: 16px; height: 16px; border-radius: 4px; background: #f0eeec; animation: apl-llena 0.4s ease both; }
+.apl-ejemplo-dia:nth-child(-n+3) { animation-name: apl-llena-hecho; }
+.apl-ejemplo-dia:nth-child(3) { animation-name: apl-llena-hoy; }
+@keyframes apl-llena { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink-soft); } }
+@keyframes apl-llena-hecho { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink); } }
+@keyframes apl-llena-hoy { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; background: var(--pink); box-shadow: 0 0 0 3px var(--pink-wash), 0 0 0 4.5px var(--pink); } }
+.apl-ejemplo-hoy { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 600; color: #57534e; }
+.apl-ejemplo-hoy span {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
+  background: var(--pink); padding: 3px 8px; border-radius: 99px;
+}
+
+.apl-guia-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep); }
+.apl-guia-titulo { margin-top: 8px; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: clamp(26px, 2.8vw, 36px); letter-spacing: -0.04em; line-height: 1.05; color: var(--ink); }
+.apl-pasos ol { list-style: none; margin: 22px 0 24px; padding: 0; display: flex; flex-direction: column; gap: 16px; counter-reset: paso; }
+.apl-pasos li { display: flex; gap: 14px; align-items: flex-start; }
+.apl-paso-ico {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--pink-mid); border: 1px solid var(--pink-line); box-shadow: 0 6px 14px -10px rgba(176,58,62,0.6);
+}
+.apl-paso-titulo { font-weight: 800; font-size: 15px; color: var(--ink); margin-bottom: 2px; }
+.apl-pasos li p:not(.apl-paso-titulo) { font-size: 13.5px; line-height: 1.55; color: #57534e; }
+
+@media (max-width: 900px) {
+  .apl-guia { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .apl-ejemplo-card, .apl-ejemplo-dia { animation: none; }
+  .apl-ejemplo-dia { background: var(--pink-soft); }
+  .apl-ejemplo-dia:nth-child(-n+3) { background: var(--pink); }
+}
 `;
 
 // ── Formulario ────────────────────────────────────────────────────────────────
