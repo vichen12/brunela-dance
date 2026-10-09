@@ -70,21 +70,24 @@ function timeLabel(iso: string) {
 function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
   if (isAdmin) return (
     <div style={{
-      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-      background: 'linear-gradient(135deg, var(--rose), var(--pink-mid))',
+      width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+      background: 'linear-gradient(135deg, #F38A6C, var(--pink))',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 13, fontWeight: 800, color: '#fff',
+      fontSize: 14, fontWeight: 900, color: '#fff',
+      boxShadow: '0 8px 16px -10px rgba(230,79,85,.85)',
     }}>B</div>
   );
-  const colors = ['var(--pink-wash)', '#f0fdf4', '#fefce8', '#eff6ff', 'var(--pink-wash)'];
-  const texts = ['var(--pink-mid)', '#166534', '#854d0e', '#1d4ed8', '#7e22ce'];
+  // Pasteles calidos: rubor, salvia, melocoton, lila y crema.
+  const colors = ['#FFF2EE', '#E7F1E4', '#FFE9DE', '#F7EBFA', '#FFF4E8'];
+  const texts = ['#B03A3E', '#3F7A45', '#C25E3A', '#8A4E9C', '#A35A2E'];
   const idx = name.charCodeAt(0) % colors.length;
   return (
     <div style={{
-      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+      width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
       background: colors[idx], color: texts[idx],
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 12, fontWeight: 700, border: '1.5px solid rgba(0,0,0,0.06)',
+      fontSize: 13, fontWeight: 900, border: '2px solid #fff',
+      boxShadow: '0 4px 10px -6px rgba(176,90,80,.5)',
     }}>{initial(name)}</div>
   );
 }
@@ -115,8 +118,8 @@ function MessageBubble({
       (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
 
   if (isMe) return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-      <div style={{ maxWidth: '70%' }}>
+    <div className="crm-fila crm-fila--mia" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+      <div style={{ maxWidth: '72%' }}>
         <div style={{
           // --pink-mid y no --pink: esto es texto de LECTURA SOSTENIDA a 13.5px
           // en peso normal, no una etiqueta que se mira de reojo. Blanco sobre
@@ -125,8 +128,10 @@ function MessageBubble({
           background: fallido ? '#fff' : 'var(--pink-mid)',
           color: fallido ? '#991b1b' : '#fff',
           border: fallido ? '1.5px solid #fecaca' : 'none',
-          borderRadius: '18px 18px 6px 18px',
-          padding: '12px 17px', fontSize: 13.5, lineHeight: 1.55,
+          borderRadius: '22px 22px 8px 22px',
+          padding: '12px 18px', fontSize: 14, lineHeight: 1.55,
+          boxShadow: fallido ? 'none' : '0 12px 22px -16px rgba(217,52,56,.9)',
+          whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
           // Mientras viaja, apenas translucido. Sutil a proposito: el mensaje ya
           // esta ahi, solo todavia no confirmado.
           opacity: enviando ? 0.62 : 1,
@@ -134,7 +139,7 @@ function MessageBubble({
         }}>{msg.content}</div>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
-          fontSize: 10, color: fallido ? '#991b1b' : 'var(--muted)', marginTop: 5,
+          fontSize: 11.5, fontWeight: 600, color: fallido ? '#991b1b' : 'var(--muted)', marginTop: 5, paddingRight: 4,
         }}>
           {fallido ? (
             <>
@@ -142,7 +147,7 @@ function MessageBubble({
               <button
                 onClick={onReintentar}
                 style={{
-                  fontSize: 10, fontWeight: 700, color: '#991b1b', background: 'none',
+                  fontSize: 11.5, fontWeight: 800, color: '#991b1b', background: 'none', fontFamily: 'inherit',
                   border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline',
                 }}
               >Reintentar</button>
@@ -171,45 +176,47 @@ function MessageBubble({
 
   return (
     <div
-      style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'flex-end' }}
+      className="crm-fila"
+      style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-end' }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
       <Avatar name={name} isAdmin={senderIsAdmin} />
-      <div style={{ maxWidth: '70%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: senderIsAdmin ? 'var(--pink)' : 'var(--muted)', letterSpacing: '0.08em' }}>
-            {name.toUpperCase()}
+      <div style={{ maxWidth: '72%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5, paddingLeft: 4 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: senderIsAdmin ? 'var(--pink-deep)' : 'var(--ink)' }}>
+            {name}
           </span>
           {senderIsAdmin && (
-            <span style={{ fontSize: 7.5, background: 'var(--pink-wash)', color: 'var(--pink)', padding: '1px 6px', borderRadius: 99, fontWeight: 700, letterSpacing: '0.1em' }}>
-              INSTRUCTORA
+            <span style={{ fontSize: 11, background: 'var(--rubor)', color: 'var(--pink-deep)', padding: '2px 9px', borderRadius: 99, fontWeight: 800 }}>
+              Instructora
             </span>
           )}
         </div>
         <div style={{
-          background: '#fff',
-          border: '1px solid #F1E9E7',
-          borderRadius: '6px 18px 18px 18px',
-          padding: '12px 17px', fontSize: 13.5, color: 'var(--ink)', lineHeight: 1.55,
+          background: senderIsAdmin ? 'linear-gradient(160deg, #FFEDE8, #FFF6F2)' : '#FFF8F5',
+          border: '1px solid var(--linea)',
+          borderRadius: '8px 22px 22px 22px',
+          padding: '12px 18px', fontSize: 14, color: 'var(--ink)', lineHeight: 1.55,
+          whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
         }}>{msg.content}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          <span style={{ fontSize: 9, color: 'var(--muted)' }}>{timeLabel(msg.created_at)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, paddingLeft: 4, minHeight: 22 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>{timeLabel(msg.created_at)}</span>
           {canModerate && hover && msg.user_id && (
             <>
               <button
                 onClick={() => onDelete(msg.id)}
-                style={{ fontSize: 9, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                className="crm-mod crm-mod--borrar"
               >eliminar</button>
               {!senderIsAdmin && (
                 <>
                   <button
                     onClick={() => onMute(msg.user_id!, name)}
-                    style={{ fontSize: 9, color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                    className="crm-mod crm-mod--mutear"
                   >mutear</button>
                   <button
                     onClick={() => onBan(msg.user_id!, name)}
-                    style={{ fontSize: 9, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                    className="crm-mod crm-mod--banear"
                   >banear</button>
                 </>
               )}
@@ -563,12 +570,13 @@ export function ChatRoom({
   }, [muteTarget, muteReason, muteDuration, userId, modo, enviandoModeracion, cerrarModal]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="crm" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <style>{CSS_CHAT}</style>
       {/* Room label */}
       {roomName && (
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--pink-soft)', flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--pink)' }}>
-            {roomName.toUpperCase()}
+        <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--linea)', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', padding: '4px 12px', borderRadius: 99, background: 'var(--rubor)', fontSize: 12.5, fontWeight: 800, color: 'var(--pink-deep)' }}>
+            {roomName}
           </span>
         </div>
       )}
@@ -576,11 +584,13 @@ export function ChatRoom({
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px,3vw,20px) clamp(12px,3vw,20px) 8px' }}>
         {messages.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', padding: '56px 20px', color: '#8A6F68', fontSize: 14 }}>
-            <span style={{ width: 58, height: 58, borderRadius: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pink-wash)', color: 'var(--pink-deep)', marginBottom: 6 }}>
-              <MessageCircle size={26} strokeWidth={1.7} aria-hidden="true" />
+          <div className="crm-vacio">
+            <span className="crm-vacio-burbujas" aria-hidden="true">
+              <span className="crm-vacio-b crm-vacio-b--1" />
+              <span className="crm-vacio-ico"><MessageCircle size={28} strokeWidth={1.8} /></span>
+              <span className="crm-vacio-b crm-vacio-b--2" />
             </span>
-            <span style={{ fontFamily: 'var(--font-display), sans-serif', fontWeight: 800, fontSize: 19, letterSpacing: '-0.025em', color: 'var(--ink)' }}>
+            <span className="crm-vacio-titulo">
               Todavía no hay mensajes
             </span>
             Sé la primera en escribir.
@@ -597,7 +607,7 @@ export function ChatRoom({
               style={{
                 border: '1.5px solid var(--pink-line)', borderRadius: 999,
                 background: '#fff', color: 'var(--pink-deep)',
-                padding: '8px 18px', fontSize: 11.5, fontWeight: 700,
+                padding: '9px 18px', fontSize: 13, fontWeight: 800,
                 fontFamily: 'inherit', cursor: cargandoViejos ? 'default' : 'pointer',
                 opacity: cargandoViejos ? 0.6 : 1,
               }}
@@ -625,10 +635,10 @@ export function ChatRoom({
       {!enVivo && (
         <div style={{
           padding: '10px 20px', flexShrink: 0,
-          background: 'var(--pink-wash)', borderTop: '1px solid var(--pink-soft)',
+          background: '#FFF4E8', borderTop: '1px solid var(--linea)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
-          <span style={{ fontSize: 12, color: 'var(--pink-deep)', fontWeight: 600, lineHeight: 1.5 }}>
+          <span style={{ fontSize: 13, color: 'var(--melocoton-deep)', fontWeight: 700, lineHeight: 1.5 }}>
             {reintentos > 5
               ? 'Sin conexión con el chat. Podés seguir escribiendo, pero no vas a ver mensajes nuevos hasta recargar.'
               : 'Reconectando… puede que no estés viendo los mensajes más nuevos.'}
@@ -638,8 +648,8 @@ export function ChatRoom({
               onClick={() => { setReintentos(0); setIntento((i) => i + 1); }}
               style={{
                 flexShrink: 0, border: 0, borderRadius: 999, cursor: 'pointer',
-                padding: '7px 15px', background: 'var(--pink)', color: '#fff',
-                fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit',
+                padding: '8px 16px', background: 'var(--pink)', color: '#fff',
+                fontSize: 13, fontWeight: 800, fontFamily: 'inherit',
               }}
             >Reintentar</button>
           )}
@@ -648,11 +658,10 @@ export function ChatRoom({
 
       {/* Input */}
       <div className="cr-composer" style={{
-        padding: '14px 20px', borderTop: '1px solid #F6E7E1', flexShrink: 0,
+        padding: '12px clamp(12px,3vw,20px)', borderTop: '1px solid var(--linea)', flexShrink: 0,
         display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(8px)',
       }}>
-        <style>{'.cr-composer input:focus { border-color: var(--pink) !important; box-shadow: 0 0 0 4px rgba(230,79,85,0.1); }'}</style>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -660,9 +669,9 @@ export function ChatRoom({
           placeholder={placeholder}
           aria-label={placeholder}
           style={{
-            flex: 1, height: 48, border: '1.5px solid #F0DED6', borderRadius: 24,
-            padding: '0 18px', fontSize: 14.5, color: 'var(--ink)',
-            background: '#fff', outline: 'none', transition: 'border-color .2s, box-shadow .2s',
+            flex: 1, minWidth: 0, height: 50, border: '1.5px solid var(--linea)', borderRadius: 99,
+            padding: '0 20px', fontSize: 14.5, color: 'var(--ink)',
+            background: 'var(--crema)', outline: 'none', transition: 'border-color .2s, box-shadow .2s, background .2s',
             fontFamily: 'var(--font-body), sans-serif',
           }}
         />
@@ -672,13 +681,14 @@ export function ChatRoom({
           aria-label="Enviar mensaje"
           title="Enviar"
           style={{
-            width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-            background: input.trim() ? 'var(--pink)' : '#FBF0EB',
-            color: input.trim() ? '#fff' : '#D9BCB2',
+            width: 50, height: 50, borderRadius: '50%', flexShrink: 0,
+            background: input.trim() ? 'var(--pink)' : 'var(--rubor)',
+            color: input.trim() ? '#fff' : '#D9A99C',
             border: 'none', cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: input.trim() ? '0 8px 18px -10px rgba(230,79,85,0.8)' : 'none',
-            transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
+            boxShadow: input.trim() ? '0 12px 22px -12px rgba(230,79,85,0.85)' : 'none',
+            transition: 'background 0.15s, color 0.15s, box-shadow 0.15s, transform .3s var(--curva)',
+            transform: input.trim() ? 'scale(1.04)' : 'none',
           }}
         >
           <SendHorizontal size={19} strokeWidth={2.2} aria-hidden="true" />
@@ -688,25 +698,25 @@ export function ChatRoom({
       {/* Mute modal */}
       {muteTarget && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(28,25,23,0.5)',
+          position: 'fixed', inset: 0, background: 'rgba(90,50,45,0.32)', padding: 16,
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
           backdropFilter: 'blur(4px)',
         }}>
           <div style={{
-            background: '#fff', borderRadius: 24, padding: 32, width: 360,
-            boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
+            background: 'linear-gradient(180deg, #FFF6F2, #fff 40%)', borderRadius: 30, padding: 28, width: 380, maxWidth: '100%',
+            border: '1px solid var(--linea)', boxShadow: '0 30px 60px -24px rgba(176,70,70,0.45)',
           }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
+            <p style={{ fontSize: 19, fontWeight: 900, letterSpacing: '-0.015em', color: 'var(--ink)', marginBottom: 6 }}>
               {modo === 'ban' ? 'Banear' : 'Mutear'} a {muteTarget.name}
             </p>
-            <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--muted)', marginBottom: 18 }}>
               {modo === 'ban'
                 ? 'No va a poder entrar a ningún canal del estudio mientras dure el baneo.'
                 : 'La alumna no podrá escribir mientras dure el silencio.'}
             </p>
 
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' }}>
-              DURACIÓN
+            <label style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', display: 'block', marginBottom: 8 }}>
+              Duración
             </label>
             <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
               {([
@@ -722,11 +732,12 @@ export function ChatRoom({
                     type="button"
                     onClick={() => setMuteDuration(opt.key)}
                     style={{
-                      padding: '7px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                      cursor: 'pointer',
-                      background: active ? 'var(--pink)' : 'var(--pink-wash)',
-                      color: active ? '#fff' : 'var(--muted)',
-                      border: active ? 'none' : '1.5px solid var(--pink-soft)',
+                      padding: '8px 14px', borderRadius: 99, fontSize: 13, fontWeight: 800,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      background: active ? 'var(--pink)' : '#fff',
+                      color: active ? '#fff' : 'var(--ink)',
+                      border: active ? '1.5px solid var(--pink)' : '1.5px solid var(--linea-fuerte)',
+                      boxShadow: active ? '0 10px 20px -12px rgba(230,79,85,.85)' : 'none',
                     }}
                   >{opt.label}</button>
                 );
@@ -738,15 +749,15 @@ export function ChatRoom({
               onChange={(e) => setMuteReason(e.target.value)}
               placeholder="Motivo (opcional)"
               style={{
-                width: '100%', borderRadius: 12, border: '1.5px solid var(--pink-soft)',
-                padding: '10px 14px', fontSize: 13, minHeight: 80, resize: 'vertical',
+                width: '100%', borderRadius: 18, border: '1.5px solid var(--linea-fuerte)', background: '#fff',
+                padding: '12px 16px', fontSize: 14, minHeight: 84, resize: 'vertical', color: 'var(--ink)',
                 fontFamily: 'var(--font-body), sans-serif', outline: 'none',
               }}
             />
             {errorModeracion && (
               <p style={{
                 fontSize: 12, color: '#991b1b', background: '#fef2f2',
-                border: '1px solid #fecaca', borderRadius: 10,
+                border: '1px solid #fecaca', borderRadius: 14,
                 padding: '9px 12px', marginTop: 12, lineHeight: 1.5,
               }}>
                 No se pudo aplicar: {errorModeracion}
@@ -762,7 +773,7 @@ export function ChatRoom({
                   flex: 1,
                   opacity: enviandoModeracion ? 0.6 : 1,
                   cursor: enviandoModeracion ? 'default' : 'pointer',
-                  ...(modo === 'ban' ? { background: '#991b1b' } : null),
+                  ...(modo === 'ban' ? { background: 'var(--pink-deep)' } : null),
                 }}
               >
                 {enviandoModeracion
@@ -779,3 +790,28 @@ export function ChatRoom({
     </div>
   );
 }
+
+/**
+ * Lo que no se puede escribir inline: hover, foco y la animacion de entrada de
+ * cada mensaje. Todo bajo .crm para no pisar nada de afuera.
+ */
+const CSS_CHAT = `
+@keyframes crm-entra { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.crm-fila { animation: crm-entra .45s var(--curva, ease) both; }
+.crm-fila--mia { transform-origin: right bottom; }
+.crm .cr-composer input:focus { border-color: var(--pink-line) !important; background: #fff !important; box-shadow: 0 0 0 4px rgba(230,79,85,0.1); }
+.crm-mod { font: inherit; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; border: 0; cursor: pointer; transition: background .2s; }
+.crm-mod--borrar { color: #B03A3E; background: #FDECEC; }
+.crm-mod--mutear { color: #A35A2E; background: #FFF4E8; }
+.crm-mod--banear { color: #8F2E32; background: #FFE4E4; }
+.crm-mod:hover { filter: brightness(.96); }
+.crm-vacio { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 56px 20px; color: var(--muted); font-size: 14px; }
+.crm-vacio-burbujas { position: relative; width: 120px; height: 84px; margin-bottom: 8px; }
+.crm-vacio-ico { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); box-shadow: var(--sombra); }
+.crm-vacio-b { position: absolute; }
+.crm-vacio-b--1 { left: 0; top: 8px; width: 34px; height: 22px; background: #FFE9DE; border-radius: 14px 14px 14px 4px; animation: crm-flota 4s ease-in-out infinite alternate; }
+.crm-vacio-b--2 { right: 0; bottom: 6px; width: 40px; height: 24px; background: #F7EBFA; border-radius: 14px 14px 4px 14px; animation: crm-flota 5s ease-in-out infinite alternate-reverse; }
+@keyframes crm-flota { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+.crm-vacio-titulo { font-weight: 900; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .crm-fila, .crm-vacio-b { animation: none; } }
+`;

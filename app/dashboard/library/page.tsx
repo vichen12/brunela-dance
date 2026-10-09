@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil, Rocket, Archive, Play, Lock, Search, Plus, Tag, ArrowRight, ArrowUpRight, X } from "lucide-react";
+import { Pencil, Rocket, Archive, Play, Lock, Search, Plus, Tag, ArrowRight, ArrowUpRight, X, Clock, BarChart3, Sparkles, CheckCircle2, Library } from "lucide-react";
 import { Movimiento, Revelar, Aparecer, Grilla, Item, Pildoras, SelectAuto } from "@/components/biblioteca-motion";
 import { requireUser, requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -57,13 +57,12 @@ function mmss(segundos: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-/** "22 MAYO" */
+/** "22 mayo" */
 function fechaCorta(iso: string | null) {
   if (!iso) return null;
   return new Date(iso)
     .toLocaleDateString("es-ES", { day: "numeric", month: "long" })
-    .replace(" de ", " ")
-    .toUpperCase();
+    .replace(" de ", " ");
 }
 
 /**
@@ -113,7 +112,7 @@ const TIER_META: Record<string, { bg: string; color: string; label: string }> = 
   none:            { bg: "#FBF0EB", color: "#8A6F68", label: "Básico" },
   corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps" },
   solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal:       { bg: "#3B2A2C", color: "var(--pink-wash)", label: "Principal" },
+  principal:       { bg: "var(--pink)", color: "#fff", label: "Principal" },
 };
 
 /**
@@ -129,28 +128,28 @@ const TIER_META: Record<string, { bg: string; color: string; label: string }> = 
  * tiene por que perder su color y caer en el gris de reserva.
  */
 const CAT_GRADIENTS: Record<string, string> = {
-  ballet:                        "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
-  tecnica:                       "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-soft) 100%)",
-  dehors:                        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
-  movilidad:                     "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink-mid) 100%)",
-  stretching:                    "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
-  "pies-y-tobillos":             "linear-gradient(145deg, var(--rose) 0%, var(--pink) 100%)",
-  equilibrio:                    "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
-  "abdominales-para-bailarines": "linear-gradient(145deg, var(--pink-soft) 0%, var(--pink) 100%)",
-  "linea-y-control":             "linear-gradient(145deg, var(--rose) 0%, var(--pink-mid) 100%)",
-  giros:                         "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-soft) 100%)",
-  "preparacion-fisica":          "linear-gradient(145deg, var(--pink-soft) 0%, var(--rose) 100%)",
+  ballet:                        "linear-gradient(140deg, #FFF1EC 0%, #FFD9CF 100%)",
+  tecnica:                       "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
+  dehors:                        "linear-gradient(140deg, #FDECEC 0%, #F8CFCF 100%)",
+  movilidad:                     "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
+  stretching:                    "linear-gradient(140deg, #F7F0FA 0%, #E6D6F0 100%)",
+  "pies-y-tobillos":             "linear-gradient(140deg, #FFF4E8 0%, #FBD3BE 100%)",
+  equilibrio:                    "linear-gradient(140deg, #F2F7EF 0%, #DCEBD5 100%)",
+  "abdominales-para-bailarines": "linear-gradient(140deg, #FFF1EC 0%, #FAD0C8 100%)",
+  "linea-y-control":             "linear-gradient(140deg, #F7F0FA 0%, #EBD9EE 100%)",
+  giros:                         "linear-gradient(140deg, #FDECEC 0%, #FFDCCB 100%)",
+  "preparacion-fisica":          "linear-gradient(140deg, #FFF4E8 0%, #F6D5C2 100%)",
 
-  pilates:    "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
-  pbt:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink) 100%)",
-  pct:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-mid) 100%)",
-  reformer:   "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
-  mat:        "linear-gradient(145deg, var(--pink-wash) 0%, var(--rose) 100%)",
+  pilates:    "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
+  pbt:        "linear-gradient(140deg, #FFF1EC 0%, #FFD9CF 100%)",
+  pct:        "linear-gradient(140deg, #F7F0FA 0%, #E6D6F0 100%)",
+  reformer:   "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
+  mat:        "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
 };
 
 function catGradient(slugs: string[]): string {
   for (const s of slugs) if (CAT_GRADIENTS[s]) return CAT_GRADIENTS[s];
-  return "linear-gradient(145deg, var(--pink-wash) 0%, var(--pink-line) 100%)";
+  return "linear-gradient(140deg, #FFF2EE 0%, #FBDDD3 100%)";
 }
 
 /** Cuantas clases por tanda. Con menos, "Ver más" aparece demasiado seguido. */
@@ -567,29 +566,31 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             instante y el webhook puede tardar unos segundos: decirle "ya podés
             verlas" y que no aparezcan es peor que avisarle de la demora. */}
         {avisoCompra && (
-          <div role="status" className="bib-aviso">{avisoCompra}</div>
+          <div role="status" className="bib-aviso">
+            <span className="bib-aviso-ico" aria-hidden="true"><CheckCircle2 size={18} strokeWidth={2} /></span>
+            <span>{avisoCompra}</span>
+          </div>
         )}
 
         {/* ── Cabecera ── */}
         <header className="bib-mast">
-          <div style={{ minWidth: 0 }}>
+          <span className="bib-mast-mancha bib-mast-mancha--a" aria-hidden="true" />
+          <span className="bib-mast-mancha bib-mast-mancha--b" aria-hidden="true" />
+          <div className="bib-mast-txt">
             <Aparecer>
               <p className="bib-eyebrow">
-                <span className="bib-eyebrow-raya" />
+                <Library size={14} strokeWidth={2.2} aria-hidden="true" />
                 Biblioteca de clases
               </p>
             </Aparecer>
             <h1 className="bib-titulo">
               {isAdmin ? (
-                <>
-                  <Revelar retraso={0.05}>Gestión de</Revelar>
-                  <Revelar retraso={0.15}><em>clases.</em></Revelar>
-                </>
+                <Revelar retraso={0.05}>Gestión de <em>clases</em></Revelar>
               ) : (
-                <Revelar retraso={0.05}>Tus <em>clases.</em></Revelar>
+                <Revelar retraso={0.05}>Tus <em>clases</em></Revelar>
               )}
             </h1>
-            <Aparecer retraso={0.3}>
+            <Aparecer retraso={0.25}>
               <p className="bib-lede">
                 {isAdmin
                   ? "Publicá, editá y organizá todas las clases del estudio. Como admin ves también los borradores."
@@ -599,22 +600,22 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           </div>
 
           {isAdmin && (
-            <Aparecer retraso={0.4} className="bib-mast-acciones">
+            <Aparecer retraso={0.35} className="bib-mast-acciones">
               <Link href="/admin/videos" className="bib-btn bib-btn--lleno">
-                <Plus size={16} strokeWidth={2.2} /> Nueva clase
+                <Plus size={16} strokeWidth={2.4} /> Nueva clase
               </Link>
               <Link href="/admin/categories" className="bib-btn">
-                <Tag size={15} strokeWidth={2} /> Categorías
+                <Tag size={15} strokeWidth={2.2} /> Categorías
               </Link>
               <Link href="/admin/videos" className="bib-btn bib-btn--texto">
-                Panel de clases <ArrowUpRight size={15} strokeWidth={2.2} />
+                Panel de clases <ArrowUpRight size={15} strokeWidth={2.4} />
               </Link>
             </Aparecer>
           )}
         </header>
 
         {/* ── Buscar y filtrar ── */}
-        <Aparecer retraso={0.35} className="bib-barra">
+        <Aparecer retraso={0.3} className="bib-barra">
           {/* Buscador: formulario GET, sin JavaScript. Conserva categoria, filtros y vista. */}
           <form method="get" action="/dashboard/library" className="bib-buscar" role="search">
             {activeCategory !== "all" && <input type="hidden" name="category" value={activeCategory} />}
@@ -623,7 +624,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             {fPlan && <input type="hidden" name="plan" value={fPlan} />}
             {fEstado && <input type="hidden" name="estado" value={fEstado} />}
             {modoTodo && !sinNada && <input type="hidden" name="ver" value="todo" />}
-            <Search size={18} strokeWidth={1.8} className="bib-buscar-ico" aria-hidden="true" />
+            <Search size={18} strokeWidth={2} className="bib-buscar-ico" aria-hidden="true" />
             <input
               type="search"
               name="q"
@@ -632,7 +633,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               aria-label="Buscar clases"
             />
             <button type="submit" className="bib-buscar-btn" aria-label="Buscar">
-              <ArrowRight size={16} strokeWidth={2} />
+              <ArrowRight size={16} strokeWidth={2.4} />
             </button>
           </form>
 
@@ -656,7 +657,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             </noscript>
             {hayFiltros && (
               <Link href={enlace({ nivel: null, dur: null, plan: null, estado: null }) as never} className="bib-quitar">
-                <X size={13} strokeWidth={2.2} /> Quitar filtros
+                <X size={13} strokeWidth={2.4} /> Quitar filtros
               </Link>
             )}
           </form>
@@ -667,7 +668,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             esta viendo el catalogo completo, y "Explorar todo" no haria nada.
             Es un segmento y no una pildora mas porque no acota: cambia QUE
             conjunto se mira. */}
-        <Aparecer retraso={0.45} className="bib-nav">
+        <Aparecer retraso={0.4} className="bib-nav">
           {!sinNada && (
             <Pildoras
               variante="segmento"
@@ -704,6 +705,11 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
         {/* ── Grilla ── */}
         {visible.length === 0 ? (
           <div className="bib-vacio">
+            <div className="bib-vacio-ilus" aria-hidden="true">
+              <span className="bib-vacio-burbuja bib-vacio-burbuja--a"><Play size={18} strokeWidth={2.2} fill="currentColor" /></span>
+              <span className="bib-vacio-burbuja bib-vacio-burbuja--b"><Search size={22} strokeWidth={2.2} /></span>
+              <span className="bib-vacio-burbuja bib-vacio-burbuja--c"><Sparkles size={16} strokeWidth={2.2} /></span>
+            </div>
             <p className="bib-vacio-titulo">
               {isAdmin && !busqueda && !hayFiltros
                 ? "Todavía no hay clases."
@@ -711,8 +717,13 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                   ? `No encontramos clases para “${busqueda}”.`
                   : "No hay clases para este filtro."}
             </p>
+            <p className="bib-vacio-sub">
+              {isAdmin && !busqueda && !hayFiltros
+                ? "Subí la primera y va a aparecer acá, lista para tus alumnas."
+                : "Probá con otra palabra o sacá algún filtro: seguro hay algo lindo esperándote."}
+            </p>
             {isAdmin
-              ? <Link href="/admin/videos" className="bib-btn bib-btn--lleno"><Plus size={16} strokeWidth={2.2} /> Subir una clase</Link>
+              ? <Link href="/admin/videos" className="bib-btn bib-btn--lleno"><Plus size={16} strokeWidth={2.4} /> Subir una clase</Link>
               : hayFiltros || busqueda
                 ? <Link href="/dashboard/library" className="bib-btn">Ver todas las clases</Link>
                 : null}
@@ -742,39 +753,46 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                       href={(bloqueada(video.id) ? "/dashboard/plan" : `/dashboard/library/${video.slug}`) as never}
                       className="bib-card-link"
                     >
-                      <div className="bib-img" style={thumbSrc ? undefined : { background: catGradient(video.category_slugs) }}>
+                      <div
+                        className={"bib-img" + (thumbSrc ? "" : " es-sin-foto")}
+                        style={thumbSrc ? undefined : { background: catGradient(video.category_slugs) }}
+                      >
                         {thumbSrc && <img src={thumbSrc} alt="" loading="lazy" />}
                         {thumbSrc && <span className="bib-img-sombra" aria-hidden="true" />}
                         <span className="bib-chips">
                           {isDraft && isAdmin && <span className="bib-chip bib-chip--borrador">Borrador</span>}
-                          {video.is_featured && <span className="bib-chip bib-chip--dest">Destacada</span>}
+                          {video.is_featured && <span className="bib-chip bib-chip--dest"><Sparkles size={11} strokeWidth={2.4} aria-hidden="true" /> Destacada</span>}
                         </span>
                         {bloqueada(video.id) && (
                           <span className="bib-candado">
-                            <Lock size={11} strokeWidth={2.2} aria-hidden="true" />
+                            <Lock size={11} strokeWidth={2.4} aria-hidden="true" />
                             {TIER_META[planQueDesbloquea(video, planDeLaAlumna)]?.label ?? "Plan"}
                           </span>
                         )}
                         <span className="bib-play" aria-hidden="true">
-                          {bloqueada(video.id) ? <Lock size={18} strokeWidth={2} /> : <Play size={18} strokeWidth={2} fill="currentColor" />}
+                          {bloqueada(video.id) ? <Lock size={18} strokeWidth={2.2} /> : <Play size={18} strokeWidth={2} fill="currentColor" />}
                         </span>
-                        <span className="bib-dur">{mmss(video.duration_seconds)}</span>
+                        <span className="bib-dur">
+                          <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
+                          {mmss(video.duration_seconds)}
+                        </span>
+                      </div>
+                      <div className="bib-info">
+                        <p className="bib-cat">
+                          <span className="bib-cat-chip">{categoria}</span>
+                          {fecha ? <span className="bib-fecha">{fecha}</span> : null}
+                        </p>
+                        <h3 className="bib-card-titulo">{title}</h3>
+                        <p className="bib-meta">
+                          <BarChart3 size={13} strokeWidth={2.2} aria-hidden="true" />
+                          {nivelTexto(video.recommended_min_level, video.recommended_max_level)}
+                          {pct > 0 ? <span className="bib-meta-pct">{pct >= 90 ? "Completada" : `${pct}% visto`}</span> : null}
+                        </p>
                         {pct > 0 && (
                           <span className="bib-prog" aria-label={`${pct}% visto`}>
                             <span style={{ width: `${pct}%` }} />
                           </span>
                         )}
-                      </div>
-                      <div className="bib-info">
-                        <p className="bib-cat">
-                          {categoria}
-                          {fecha ? <span className="bib-fecha"> · {fecha}</span> : null}
-                        </p>
-                        <h3 className="bib-card-titulo">{title}</h3>
-                        <p className="bib-meta">
-                          {nivelTexto(video.recommended_min_level, video.recommended_max_level)}
-                          {pct > 0 ? <span className="bib-meta-pct"> · {pct >= 90 ? "Completada" : `${pct}% visto`}</span> : null}
-                        </p>
                       </div>
                     </Link>
 
@@ -788,7 +806,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                           aria-label={`Editar ${title}`}
                           className="bib-admin-btn"
                         >
-                          <Pencil size={14} strokeWidth={2} />
+                          <Pencil size={14} strokeWidth={2.2} />
                           <span>Editar</span>
                         </Link>
                         <form action={quickPublishToggleAction}>
@@ -800,7 +818,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
                             aria-label={isDraft ? `Publicar ${title}` : `Pasar ${title} a borrador`}
                             className={"bib-admin-btn" + (isDraft ? " es-publicar" : "")}
                           >
-                            {isDraft ? <Rocket size={14} strokeWidth={2} /> : <Archive size={14} strokeWidth={2} />}
+                            {isDraft ? <Rocket size={14} strokeWidth={2.2} /> : <Archive size={14} strokeWidth={2.2} />}
                             <span>{isDraft ? "Publicar" : "Despublicar"}</span>
                           </button>
                         </form>
@@ -814,7 +832,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
             {isAdmin && (
               <Item className="bib-item">
                 <Link href="/admin/videos" className="bib-nueva">
-                  <span className="bib-nueva-ico"><Plus size={22} strokeWidth={1.8} /></span>
+                  <span className="bib-nueva-ico"><Plus size={24} strokeWidth={2.2} /></span>
                   <span className="bib-nueva-titulo">Nueva clase</span>
                   <span className="bib-nueva-sub">Subir un video al catálogo</span>
                 </Link>
@@ -828,7 +846,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
         {hayMasPaginas && (
           <div className="bib-mas">
             <Link href={enlace({ pagina: String(pagina + 1) }) as never} className="bib-btn">
-              Ver más clases <ArrowRight size={15} strokeWidth={2} />
+              Ver más clases <ArrowRight size={15} strokeWidth={2.4} />
             </Link>
           </div>
         )}
@@ -839,8 +857,8 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
 }
 
 // ── Estilos ──────────────────────────────────────────────────────────────────
-// Misma direccion que el panel del estudio: titular en Bodoni, filetes finos en
-// vez de cajas, coral de la landing y nada negro de fondo.
+// Direccion "suave y calida": tarjetas blancas con radio grande y sombra tibia,
+// chips pastel, nada negro de fondo y ninguna etiqueta en mayusculas espaciadas.
 
 const CSS_BIBLIOTECA = `
 .bib {
@@ -853,210 +871,277 @@ const CSS_BIBLIOTECA = `
   outline: 2px solid var(--pink); outline-offset: 3px;
 }
 .bib-aviso {
-  border-radius: 16px; padding: 13px 18px; margin-bottom: 20px; font-size: 13.5px; line-height: 1.55;
-  background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;
+  display: flex; align-items: center; gap: 12px;
+  border-radius: var(--radio-chico); padding: 12px 16px; margin-bottom: 18px; font-size: 14px; font-weight: 600; line-height: 1.55;
+  background: var(--salvia); color: var(--salvia-deep); border: 1px solid #D3E6CD;
+}
+.bib-aviso-ico {
+  width: 34px; height: 34px; border-radius: 12px; flex-shrink: 0; background: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 
-/* cabecera */
+/* cabecera: tarjeta-hero suave con manchas difusas */
 .bib-mast {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
-  padding-bottom: clamp(22px, 3vw, 32px);
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 22px 28px; flex-wrap: wrap;
+  padding: clamp(24px, 3.2vw, 40px) clamp(22px, 3.2vw, 44px);
+  border-radius: 32px; border: 1px solid var(--linea);
+  background: linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%);
 }
+.bib-mast-mancha { position: absolute; z-index: -1; border-radius: 50%; filter: blur(40px); pointer-events: none; }
+.bib-mast-mancha--a { width: 340px; height: 340px; right: -80px; top: -160px; background: rgba(255, 210, 186, 0.75); animation: bib-flota 14s ease-in-out infinite; }
+.bib-mast-mancha--b { width: 260px; height: 260px; right: 26%; bottom: -170px; background: rgba(253, 205, 205, 0.6); animation: bib-flota 18s ease-in-out infinite reverse; }
+@keyframes bib-flota { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-24px, 14px); } }
+.bib-mast-txt { min-width: 0; flex: 1 1 380px; }
 .bib-eyebrow {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep);
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 14px;
+  padding: 6px 13px 6px 10px; border-radius: 99px; background: #fff; box-shadow: 0 6px 16px -10px rgba(176, 70, 70, 0.45);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep);
 }
-.bib-eyebrow-raya { display: inline-block; width: 36px; height: 1.5px; background: var(--pink); }
 .bib-titulo {
-  font-family: var(--font-display), sans-serif; font-weight: 800;
-  font-size: clamp(38px, 5vw, 72px); line-height: 1; letter-spacing: -0.04em; color: var(--ink);
+  font-family: var(--font-display), sans-serif; font-weight: 900;
+  font-size: clamp(32px, 3.8vw, 50px); line-height: 1.08; letter-spacing: -0.02em; color: var(--ink);
 }
 .bib-titulo em { font-style: normal; color: var(--pink-mid); }
-.bib-lede { margin-top: 18px; max-width: 54ch; font-size: 15px; line-height: 1.7; color: #6E5550; }
-.bib-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-bottom: 8px; }
+.bib-lede { margin-top: 10px; max-width: 56ch; font-size: 15.5px; line-height: 1.65; color: var(--muted); }
+.bib-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
 .bib-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
-  height: 44px; padding: 0 20px; border-radius: 99px; text-decoration: none; cursor: pointer;
-  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
-  color: var(--ink); border: 1.5px solid #E6CCC2; background: #fff;
-  transition: border-color .2s, background .2s, color .2s, transform .2s, box-shadow .2s;
+  height: 46px; padding: 0 22px; border-radius: 99px; text-decoration: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 800;
+  color: var(--ink); border: 1px solid var(--linea-fuerte); background: #fff;
+  transition: border-color .25s, background .25s, color .25s, transform .35s var(--curva), box-shadow .35s var(--curva);
 }
-.bib-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
-.bib-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
-.bib-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
-.bib-btn--texto { border-color: transparent; background: transparent; color: var(--pink-deep); padding: 0 8px; }
-.bib-btn--texto:hover { border-color: transparent; color: var(--ink); }
+.bib-btn:hover { background: var(--rubor); border-color: var(--pink-line); color: var(--pink-deep); transform: translateY(-2px); }
+.bib-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.bib-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; box-shadow: 0 18px 30px -14px rgba(230,79,85,.9); }
+.bib-btn--texto { border-color: transparent; background: transparent; color: var(--pink-deep); padding: 0 10px; }
+.bib-btn--texto:hover { border-color: transparent; background: rgba(255,255,255,.7); }
 
 /* buscar y filtrar */
 .bib-barra {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px 28px; flex-wrap: wrap;
-  border-top: 1px solid var(--ink); border-bottom: 1px solid #F0DED6; padding: 14px 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap;
+  margin-top: 22px;
 }
-.bib-buscar { position: relative; flex: 1 1 320px; max-width: 520px; display: flex; align-items: center; }
-.bib-buscar-ico { position: absolute; left: 2px; color: #B39189; pointer-events: none; }
+.bib-buscar { position: relative; flex: 1 1 320px; max-width: 540px; display: flex; align-items: center; }
+.bib-buscar-ico { position: absolute; left: 18px; color: var(--muted); pointer-events: none; transition: color .2s; }
 .bib-buscar input {
-  width: 100%; height: 46px; padding: 0 44px 0 32px; border: 0; background: transparent;
-  font: inherit; font-size: 15px; color: var(--ink); outline: none;
+  width: 100%; height: 52px; padding: 0 56px 0 48px; border-radius: 99px;
+  border: 1px solid var(--linea-fuerte); background: #fff; box-shadow: var(--sombra);
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline: none;
+  transition: border-color .2s, box-shadow .3s;
 }
-.bib-buscar input::placeholder { color: #B39189; }
+.bib-buscar input::placeholder { color: #B39189; font-weight: 500; }
+.bib-buscar input:focus { border-color: var(--pink-line); box-shadow: 0 0 0 4px var(--pink-wash), var(--sombra); }
+.bib-buscar input:focus-visible { outline: none; }
 .bib-buscar:focus-within .bib-buscar-ico { color: var(--pink); }
 .bib-buscar-btn {
-  position: absolute; right: 0; width: 36px; height: 36px; border-radius: 50%;
+  position: absolute; right: 7px; width: 38px; height: 38px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-  border: 0; background: var(--pink-wash); color: var(--pink-deep); transition: background .2s, color .2s;
+  border: 0; background: var(--pink); color: #fff; box-shadow: 0 10px 18px -10px rgba(230,79,85,.9);
+  transition: background .2s, transform .3s var(--curva);
 }
-.bib-buscar-btn:hover { background: var(--pink); color: #fff; }
+.bib-buscar-btn:hover { background: var(--pink-mid); transform: scale(1.06); }
 
 .bib-filtros { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bib-filtros .dsp-boton { height: 42px; min-height: 42px; border-width: 1px; border-color: var(--linea-fuerte); background: #fff; }
+.bib-filtros .dsp-boton:hover:not(:disabled) { border-color: var(--pink-line); background: var(--rubor); }
+.bib-filtros .dsp-prefijo { font-size: 12.5px; letter-spacing: 0; text-transform: none; font-weight: 700; color: var(--muted); }
 .bib-quitar {
-  display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 10px;
-  font-size: 12px; font-weight: 700; color: var(--pink-deep); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 99px;
+  background: var(--rubor); font-size: 13px; font-weight: 800; color: var(--pink-deep); text-decoration: none;
+  transition: background .2s;
 }
-.bib-quitar:hover { color: var(--ink); }
+.bib-quitar:hover { background: var(--pink-wash); }
 
 /* vista y categorias */
-.bib-nav { display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap; padding: 20px 0 6px; }
+.bib-nav { display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap; padding: 22px 0 4px; }
 .bib-seg {
-  display: inline-flex; padding: 4px; border-radius: 99px; background: #FBF0EB; flex-shrink: 0;
+  display: inline-flex; padding: 5px; border-radius: 99px; background: var(--rubor); border: 1px solid var(--linea); flex-shrink: 0;
 }
 .bib-seg-op {
   position: relative; padding: 9px 18px; border-radius: 99px; text-decoration: none;
-  font-size: 13px; font-weight: 700; color: #8A6F68; transition: color .2s;
+  font-size: 13.5px; font-weight: 800; color: var(--muted); transition: color .2s;
 }
-.bib-seg-op:hover { color: var(--ink); }
-.bib-seg-op.es-activa { color: var(--ink); }
+.bib-seg-op:hover { color: var(--pink-deep); }
+.bib-seg-op.es-activa { color: var(--pink-deep); }
 .bib-seg-fondo {
   position: absolute; inset: 0; border-radius: 99px; background: #fff;
-  box-shadow: 0 1px 2px rgba(28,25,23,0.08), 0 4px 12px -4px rgba(28,25,23,0.12);
+  box-shadow: 0 1px 2px rgba(150,80,70,.08), 0 6px 14px -6px rgba(176,70,70,.3);
 }
 .bib-pildoras {
-  display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
-  padding: 2px 0; -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
+  display: flex; gap: 8px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
+  padding: 4px 2px 8px; -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
   mask-image: linear-gradient(to right, #000 92%, transparent);
 }
 .bib-pildoras::-webkit-scrollbar { display: none; }
 .bib-pildora {
-  position: relative; flex-shrink: 0; padding: 8px 16px; border-radius: 99px; text-decoration: none;
-  font-size: 12.5px; font-weight: 600; color: #6E5550; border: 1px solid #F0DED6; transition: border-color .2s, color .2s;
+  position: relative; flex-shrink: 0; padding: 9px 17px; border-radius: 99px; text-decoration: none;
+  font-size: 13.5px; font-weight: 700; color: var(--muted); background: #fff; border: 1px solid var(--linea);
+  transition: border-color .2s, color .2s, background .2s, transform .3s var(--curva);
 }
-.bib-pildora:hover { border-color: var(--pink-line); color: var(--pink-deep); }
-.bib-pildora.es-activa { color: #fff; border-color: transparent; }
-.bib-pildora-fondo { position: absolute; inset: -1px; border-radius: 99px; background: var(--pink); }
+.bib-pildora:hover { border-color: var(--pink-line); color: var(--pink-deep); background: var(--rubor); transform: translateY(-1px); }
+.bib-pildora.es-activa { color: #fff; border-color: transparent; background: transparent; }
+.bib-pildora-fondo { position: absolute; inset: -1px; border-radius: 99px; background: var(--pink); box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .bib-pildora-txt { position: relative; }
 
 .bib-contador {
-  display: flex; align-items: baseline; gap: 10px; padding: 18px 0 22px;
-  font-size: 13px; color: #8A6F68;
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin: 14px 0 22px;
+  padding: 6px 14px 6px 6px; border-radius: 99px; background: var(--crema); border: 1px solid var(--linea);
+  font-size: 13.5px; font-weight: 700; color: var(--muted);
 }
-.bib-contador-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 28px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
+.bib-contador-num {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 99px; background: #fff;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px -6px rgba(176,70,70,.4);
+  font-weight: 900; font-size: 15px; color: var(--pink-deep);
+}
 
 /* grilla */
-.bib-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 34px 22px; }
+.bib-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 24px; }
 .bib-item { min-width: 0; }
-.bib-card { position: relative; height: 100%; }
-.bib-card.es-apagada { opacity: 0.5; }
-.bib-card-link { display: block; text-decoration: none; color: inherit; }
+.bib-card {
+  position: relative; height: 100%; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--linea); border-radius: 28px; padding: 10px;
+  box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s var(--curva), border-color .35s;
+}
+.bib-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-alta); border-color: var(--pink-line); }
+.bib-card.es-apagada { opacity: 0.55; }
+.bib-card-link { display: block; flex: 1; text-decoration: none; color: inherit; border-radius: 20px; }
 .bib-img {
-  position: relative; aspect-ratio: 16 / 11; border-radius: 18px; overflow: hidden; isolation: isolate;
-  background: var(--pink-wash);
-  transition: box-shadow .4s, transform .4s cubic-bezier(.16,1,.3,1);
+  position: relative; aspect-ratio: 16 / 11; border-radius: 20px; overflow: hidden; isolation: isolate;
+  background: var(--rubor);
 }
 .bib-img img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  transition: transform .9s cubic-bezier(.16,1,.3,1);
+  transition: transform .9s var(--curva);
 }
-.bib-card-link:hover .bib-img { transform: translateY(-4px); box-shadow: 0 22px 40px -22px rgba(176,58,62,0.55); }
-.bib-card-link:hover .bib-img img { transform: scale(1.06); }
+.bib-card:hover .bib-img img { transform: scale(1.05); }
+.bib-img.es-sin-foto::before, .bib-img.es-sin-foto::after {
+  content: ""; position: absolute; z-index: 0; border-radius: 50%; pointer-events: none;
+}
+.bib-img.es-sin-foto::before { width: 62%; aspect-ratio: 1; right: -14%; top: -22%; background: rgba(255,255,255,.55); }
+.bib-img.es-sin-foto::after { width: 38%; aspect-ratio: 1; left: -8%; bottom: -16%; background: rgba(255,255,255,.4); }
 .bib-img-sombra {
   position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(to top, rgba(28,25,23,0.45) 0%, rgba(28,25,23,0) 45%);
+  background: linear-gradient(to top, rgba(120,60,50,0.18) 0%, rgba(120,60,50,0) 40%);
 }
-.bib-chips { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; gap: 6px; }
+.bib-chips { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; gap: 6px; flex-wrap: wrap; }
 .bib-chip {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 5px 10px; border-radius: 99px; backdrop-filter: blur(8px);
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 800; padding: 5px 11px; border-radius: 99px;
 }
-.bib-chip--borrador { background: rgba(255,255,255,0.92); color: var(--pink-deep); }
-.bib-chip--dest { background: var(--pink); color: #fff; }
+.bib-chip--borrador { background: var(--melocoton); color: var(--melocoton-deep); box-shadow: 0 4px 12px -6px rgba(194,94,58,.5); }
+.bib-chip--dest { background: var(--pink); color: #fff; box-shadow: 0 6px 14px -8px rgba(230,79,85,.9); }
 .bib-candado {
   position: absolute; top: 12px; right: 12px; z-index: 2;
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px;
-  background: rgba(255,255,255,0.94); color: var(--pink-deep);
-  font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px;
+  background: rgba(255,255,255,0.95); color: var(--pink-deep);
+  font-size: 12px; font-weight: 800; box-shadow: 0 6px 14px -8px rgba(176,70,70,.5);
 }
 .bib-play {
-  position: absolute; z-index: 2; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  position: absolute; z-index: 2; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
   display: flex; align-items: center; justify-content: center; border-radius: 50%;
-  background: rgba(255,255,255,0.94); color: var(--pink-mid);
-  opacity: 0; transform: scale(0.7); transition: opacity .3s, transform .4s cubic-bezier(.16,1,.3,1);
+  background: rgba(255,255,255,0.96); color: var(--pink);
+  box-shadow: 0 14px 28px -12px rgba(176,70,70,.55);
+  opacity: 0; transform: scale(0.75); transition: opacity .3s, transform .45s var(--curva);
 }
-.bib-card-link:hover .bib-play { opacity: 1; transform: scale(1); }
+.bib-play svg { margin-left: 2px; }
+.bib-card:hover .bib-play { opacity: 1; transform: scale(1); }
 .bib-dur {
   position: absolute; z-index: 2; right: 12px; bottom: 12px;
-  font-size: 11.5px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums;
-  padding: 3px 9px; border-radius: 8px; background: rgba(28,25,23,0.45); backdrop-filter: blur(6px);
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+  padding: 5px 11px; border-radius: 99px; background: rgba(255,255,255,0.94);
+  box-shadow: 0 4px 12px -6px rgba(150,80,70,.45);
 }
-.bib-prog { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,0.35); }
-.bib-prog span { display: block; height: 100%; background: var(--pink); }
+.bib-dur svg { color: var(--pink); }
 
-.bib-info { padding: 14px 2px 0; }
-.bib-cat { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pink-deep); }
-.bib-fecha { color: #B39189; }
+.bib-info { padding: 14px 8px 8px; }
+.bib-cat { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bib-cat-chip {
+  display: inline-flex; padding: 4px 11px; border-radius: 99px; background: var(--rubor);
+  font-size: 12px; font-weight: 800; color: var(--pink-deep);
+}
+.bib-fecha { font-size: 12px; font-weight: 700; color: #B39189; }
 .bib-card-titulo {
-  margin-top: 6px; font-family: var(--font-display), sans-serif; font-weight: 700;
-  font-size: 17px; line-height: 1.25; letter-spacing: -0.015em; color: var(--ink);
+  margin-top: 10px; font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: 18px; line-height: 1.3; letter-spacing: -0.01em; color: var(--ink);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  transition: color .2s;
 }
-.bib-card-link:hover .bib-card-titulo { color: var(--pink-deep); }
-.bib-meta { margin-top: 6px; font-size: 12.5px; color: #8A6F68; }
-.bib-meta-pct { color: var(--pink-deep); font-weight: 600; }
+.bib-card:hover .bib-card-titulo { color: var(--pink-deep); }
+.bib-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.bib-meta svg { color: #C9A79E; }
+.bib-meta-pct {
+  margin-left: auto; padding: 3px 10px; border-radius: 99px; background: var(--salvia);
+  color: var(--salvia-deep); font-size: 12px; font-weight: 800;
+}
+.bib-prog { display: block; margin-top: 12px; height: 7px; border-radius: 99px; background: var(--rubor); overflow: hidden; }
+.bib-prog span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F48A7A, var(--pink)); }
 
-.bib-admin { display: flex; gap: 6px; margin-top: 12px; }
+.bib-admin { display: flex; gap: 8px; margin: 2px 6px 6px; padding-top: 12px; border-top: 1px solid var(--linea); }
 .bib-admin form { display: contents; }
 .bib-admin-btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px;
-  border: 1px solid #F0DED6; background: #fff; color: #6E5550; cursor: pointer; text-decoration: none;
-  font: inherit; font-size: 11.5px; font-weight: 700; transition: border-color .2s, background .2s, color .2s;
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 99px;
+  border: 1px solid var(--linea-fuerte); background: #fff; color: var(--ink); cursor: pointer; text-decoration: none;
+  font: inherit; font-size: 13px; font-weight: 800; transition: border-color .2s, background .2s, color .2s, transform .3s var(--curva);
 }
-.bib-admin-btn:hover { border-color: var(--pink-line); background: var(--pink-wash); color: var(--pink-deep); }
-.bib-admin-btn.es-publicar { border-color: var(--pink); background: var(--pink); color: #fff; }
+.bib-admin-btn:hover { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); transform: translateY(-1px); }
+.bib-admin-btn.es-publicar { border-color: var(--pink); background: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .bib-admin-btn.es-publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
 
 .bib-nueva {
-  height: 100%; min-height: 240px; aspect-ratio: auto; border-radius: 18px; border: 1.5px dashed #E6CCC2;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  text-decoration: none; color: #8A6F68; transition: border-color .25s, background .25s, color .25s;
+  height: 100%; min-height: 280px; border-radius: 28px; border: 2px dashed var(--linea-fuerte); background: var(--crema);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px;
+  text-decoration: none; color: var(--muted);
+  transition: border-color .3s, background .3s, color .3s, transform .35s var(--curva);
 }
-.bib-nueva:hover { border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep); }
+.bib-nueva:hover { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); transform: translateY(-4px); }
 .bib-nueva-ico {
-  width: 52px; height: 52px; border-radius: 50%; border: 1.5px solid currentColor; margin-bottom: 6px;
-  display: inline-flex; align-items: center; justify-content: center; transition: transform .5s cubic-bezier(.16,1,.3,1);
+  width: 60px; height: 60px; border-radius: 20px; margin-bottom: 10px; background: #fff; color: var(--pink);
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--sombra);
+  transition: transform .5s var(--curva);
 }
-.bib-nueva:hover .bib-nueva-ico { transform: rotate(90deg); }
-.bib-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.015em; color: var(--ink); }
-.bib-nueva-sub { font-size: 12px; }
+.bib-nueva:hover .bib-nueva-ico { transform: rotate(90deg) scale(1.05); }
+.bib-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 18px; color: var(--ink); }
+.bib-nueva-sub { font-size: 13.5px; font-weight: 600; }
 
 .bib-vacio {
-  display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;
-  padding: 56px 24px; border-radius: 22px; border: 1.5px dashed #F0DED6;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  padding: 48px 24px 52px; border-radius: 32px; border: 1px solid var(--linea);
+  background: linear-gradient(160deg, #FFF7F3 0%, #fff 70%);
 }
-.bib-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -0.025em; color: var(--ink); }
+.bib-vacio-ilus { position: relative; width: 150px; height: 104px; margin-bottom: 8px; }
+.bib-vacio-burbuja {
+  position: absolute; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--sombra);
+}
+.bib-vacio-burbuja--a { width: 54px; height: 54px; left: 4px; top: 28px; border-radius: 18px; background: var(--rubor); color: var(--pink); transform: rotate(-8deg); }
+.bib-vacio-burbuja--b { width: 68px; height: 68px; left: 46px; top: 4px; border-radius: 22px; background: #fff; color: var(--pink-deep); z-index: 1; }
+.bib-vacio-burbuja--c { width: 44px; height: 44px; right: 4px; top: 50px; border-radius: 15px; background: var(--melocoton); color: var(--melocoton-deep); transform: rotate(10deg); }
+.bib-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 22px; letter-spacing: -0.015em; color: var(--ink); }
+.bib-vacio-sub { max-width: 44ch; font-size: 14.5px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; }
 .bib-mas { display: flex; justify-content: center; padding-top: 40px; }
 
 @media (max-width: 760px) {
-  .bib-barra { flex-direction: column; align-items: stretch; }
+  .bib-mast { border-radius: 26px; }
+  .bib-barra { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
   .bib-buscar { flex: none; max-width: none; }
-  .bib-filtros { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .bib-filtros { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
   .bib-filtros::-webkit-scrollbar { display: none; }
   .bib-filtros .dsp { flex-shrink: 0; }
   .bib-nav { flex-direction: column; align-items: stretch; }
   .bib-seg { align-self: flex-start; }
-  .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 16px; }
+  .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
 }
 @media (max-width: 480px) {
   .bib-mast-acciones { width: 100%; }
   .bib-mast-acciones .bib-btn:not(.bib-btn--texto) { flex: 1; }
   .bib-grilla { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bib-mast-mancha { animation: none; }
+  .bib-card, .bib-card:hover, .bib-nueva:hover { transform: none; }
 }
 `;

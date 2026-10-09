@@ -11,8 +11,14 @@
  *   coincide, el contenido "salta" al llegar y se siente peor que no haber
  *   puesto nada.
  *
- * La clase `.sk` y su animacion viven en globals.css.
+ * La clase `.sk` y su animacion viven en globals.css. El TONO lo pone `Sk`
+ * con `backgroundImage` en linea: es calido (rubor/melocoton) en vez del gris
+ * de globals, y al pisar solo la imagen se conserva el `background-size` del
+ * que depende el brillo animado.
  */
+
+/** Brillo calido de los esqueletos, a juego con el sistema suave. */
+const BRILLO = "linear-gradient(90deg, #FFF3EF 25%, #FBE6DF 50%, #FFF3EF 75%)";
 
 /** Una barra. `w` acepta numero (px) o cadena ("60%"). */
 export function Sk({
@@ -20,7 +26,7 @@ export function Sk({
 }: {
   h?: number; w?: number | string; r?: number; style?: React.CSSProperties;
 }) {
-  return <div className="sk" style={{ height: h, width: w, borderRadius: r, ...style }} />;
+  return <div className="sk" style={{ height: h, width: w, borderRadius: r, backgroundImage: BRILLO, ...style }} />;
 }
 
 /** La tarjeta blanca con borde que usa todo el sistema. */
@@ -31,8 +37,9 @@ export function SkTarjeta({
 }) {
   return (
     <div style={{
-      background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 20,
-      padding: "22px 24px", ...style,
+      background: "#fff", border: "1px solid #F3E3DC", borderRadius: 24,
+      padding: "22px 24px", boxShadow: "0 1px 2px rgba(150, 80, 70, 0.05), 0 12px 32px -18px rgba(176, 90, 80, 0.32)",
+      ...style,
     }}>{children}</div>
   );
 }
@@ -71,12 +78,12 @@ export function SkMetricas({ n = 4 }: { n?: number }) {
 /** Listado de filas, como los de /admin. */
 export function SkFilas({ n = 6, alto = 62 }: { n?: number; alto?: number }) {
   return (
-    <div style={{ background: "#fff", border: "1.5px solid #F6E7E1", borderRadius: 18, overflow: "hidden" }}>
+    <div style={{ background: "#fff", border: "1px solid #F3E3DC", borderRadius: 24, overflow: "hidden" }}>
       {Array.from({ length: n }, (_, i) => (
         <div key={i} style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           gap: 16, padding: "0 20px", height: alto,
-          borderBottom: i === n - 1 ? "none" : "1px solid #f9f7f6",
+          borderBottom: i === n - 1 ? "none" : "1px solid #F3E3DC",
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
             <Sk h={13} w={`${45 + ((i * 13) % 30)}%`} />
@@ -95,7 +102,7 @@ export function SkGrid({ n = 6, ratio = "4/3" }: { n?: number; ratio?: string })
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
       {Array.from({ length: n }, (_, i) => (
         <div key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Sk style={{ aspectRatio: ratio }} r={18} />
+          <Sk style={{ aspectRatio: ratio }} r={22} />
           <Sk h={13} w="70%" />
           <Sk h={10} w="45%" />
         </div>

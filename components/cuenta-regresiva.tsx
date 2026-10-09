@@ -18,14 +18,12 @@ function calcular(objetivo: number): Resto {
 /**
  * La cuenta regresiva hasta la apertura.
  *
- * POR QUE NO SON CUATRO TARJETAS
- *   Lo eran, y ese es el patron por defecto: cuatro recuadros iguales con un
- *   numero y una etiqueta. Se ve en cualquier pagina de "proximamente" y no
- *   dice nada de la marca -- cuatro cajas con borde son cuatro cajas con borde.
- *
- *   Aca los numeros van sueltos y grandes, separados por filetes finos, como una
- *   ficha de programa. El peso lo lleva la tipografia, que es lo que la marca ya
- *   usa en la portada, y no un contenedor.
+ * POR QUE SON CUATRO PASTILLAS BLANDAS
+ *   Antes los numeros iban sueltos, separados por filetes finos, como una ficha
+ *   de programa: era la linea editorial del sistema. El rediseño "suave y
+ *   calido" (2026-10-08) la reemplazo: cada numero va en una pastilla
+ *   redondeada en tonos pastel, con la etiqueta en oracion y no en mayusculas
+ *   espaciadas. Los tonos alternan para que no sean cuatro cajas iguales.
  *
  * ⚠️ EL PRIMER RENDER NO MUESTRA NUMEROS, Y ES A PROPOSITO.
  *
@@ -85,41 +83,33 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
 
         .cr-fila {
           display: flex;
-          align-items: flex-start;
-          gap: clamp(0.85rem, 2.4vw, 1.6rem);
+          align-items: stretch;
+          gap: clamp(0.5rem, 1.6vw, 0.8rem);
         }
 
         .cr-b {
-          position: relative;
+          flex: 1 1 0;
+          min-width: 0;
+          max-width: 6.2rem;
           display: flex;
           flex-direction: column;
-          gap: 0.28rem;
-          padding-left: clamp(0.85rem, 2.4vw, 1.6rem);
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.85rem 0.4rem 0.7rem;
+          border-radius: 20px;
+          background: linear-gradient(160deg, #FFE9DE 0%, #FFF6F1 100%);
+          border: 1px solid rgba(233, 207, 197, 0.6);
         }
-
-        /* El filete separador va como borde del bloque, no como un elemento
-           aparte: asi no hay nodos vacios en el arbol de accesibilidad. El
-           primero no lleva, para que la fila arranque alineada con el texto de
-           arriba y no desplazada. */
-        .cr-b::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          top: 0.32rem;
-          bottom: 0.9rem;
-          width: 1px;
-          background: var(--pink-line, #F2C6C6);
-        }
-
-        .cr-b[data-primero="si"] { padding-left: 0; }
-        .cr-b[data-primero="si"]::before { display: none; }
+        .cr-b:nth-child(2) { background: linear-gradient(160deg, #FFE4E4 0%, #FFF4F3 100%); }
+        .cr-b:nth-child(3) { background: linear-gradient(160deg, #F7EBFA 0%, #FCF7FD 100%); }
+        .cr-b:nth-child(4) { background: linear-gradient(160deg, #E7F1E4 0%, #F5FAF3 100%); }
 
         .cr-n {
           font-family: var(--font-display), sans-serif;
-          font-size: clamp(2.1rem, 5.2vw, 3.1rem);
+          font-size: clamp(1.7rem, 4.4vw, 2.5rem);
           font-weight: 900;
-          line-height: 0.92;
-          letter-spacing: -0.045em;
+          line-height: 1;
+          letter-spacing: -0.03em;
           color: var(--ink, #3B2A2C);
           /* Tabular: sin esto los numeros cambian de ancho cada segundo y toda
              la fila tiembla. */
@@ -128,10 +118,8 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
 
         .cr-l {
           font-family: var(--font-body), sans-serif;
-          font-size: 0.6rem;
-          font-weight: 700;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
+          font-size: 0.78rem;
+          font-weight: 800;
           /* --pink-deep y no --pink: es texto chico, y --pink sobre blanco da
              3.78:1, por debajo del 4.5:1 que pide AA. Es la regla que ya esta
              escrita en CLAUDE.md. */
@@ -140,15 +128,18 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
 
         .cr-llego {
           margin: 1rem 0 0;
+          display: inline-block;
+          padding: 0.5rem 0.9rem;
+          border-radius: 99px;
+          background: #FFF2EE;
           font-size: 0.85rem;
           font-weight: 700;
           color: var(--pink-deep, #B03A3E);
         }
 
         @media (max-width: 380px) {
-          .cr-fila { gap: 0.6rem; }
-          .cr-b { padding-left: 0.6rem; }
-          .cr-l { font-size: 0.55rem; letter-spacing: 0.1em; }
+          .cr-b { border-radius: 16px; padding: 0.7rem 0.2rem 0.6rem; }
+          .cr-l { font-size: 0.7rem; }
         }
       `}</style>
     </div>

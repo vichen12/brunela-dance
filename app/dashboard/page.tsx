@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  ArrowRight, BookOpen, CalendarDays, CalendarHeart, Clock, FileText, Flame, ListOrdered,
+  Mail, Megaphone, Play, Sparkles, Timer,
+} from "lucide-react";
 import { HoraSesion } from "@/components/hora-sesion";
 import { PanelControlAdmin } from "@/components/panel-control-admin";
 import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
@@ -71,41 +75,16 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 const QUICK_LINKS = [
-  { href: "/dashboard/library"   as const, label: "Biblioteca",  sub: "Explorá todas las clases",
-    d: "M2.5 3h4a2 2 0 012 2v8a1.6 1.6 0 00-1.6-1.4H2.5V3z", d2: "M13.5 3h-4a2 2 0 00-2 2v8a1.6 1.6 0 011.6-1.4h4.4V3z" },
-  { href: "/dashboard/programs"  as const, label: "Planes de trabajo", sub: "Tu semana, día por día",
-    d: "M3 4.5h10M3 8h10M3 11.5h6" },
-  { href: "/dashboard/live"      as const, label: "Calendario",  sub: "Ver próximos en vivo",
-    d: "M3 4.5h10v9H3v-9z", d2: "M3 7.2h10M5.6 2.6v3M10.4 2.6v3" },
-  { href: "/dashboard/documents" as const, label: "Documentos",  sub: "PDFs y guías útiles",
-    d: "M5 1.5h5.5L14 5V14H5V1.5z", d2: "M10 1.5V5h4" },
+  { href: "/dashboard/library"   as const, label: "Biblioteca",        sub: "Explorá todas las clases", Icono: BookOpen,      tono: "rubor" },
+  { href: "/dashboard/programs"  as const, label: "Planes de trabajo", sub: "Tu semana, día por día",   Icono: ListOrdered,   tono: "melocoton" },
+  { href: "/dashboard/live"      as const, label: "Calendario",        sub: "Ver próximos en vivo",     Icono: CalendarHeart, tono: "salvia" },
+  { href: "/dashboard/documents" as const, label: "Documentos",        sub: "PDFs y guías útiles",      Icono: FileText,      tono: "lila" },
 ];
 
-/** Icono de línea, del mismo trazo que el menú lateral. */
-function Ico({ d, d2, size = 16 }: { d: string; d2?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-      <path d={d} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      {d2 && <path d={d2} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />}
-    </svg>
-  );
-}
-
-/** Cuadradito de color detrás de un icono, como en las tarjetas de la referencia. */
-function IcoCaja({ d, d2 }: { d: string; d2?: string }) {
-  return (
-    <div style={{
-      width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-      background: "var(--pink-wash)", color: "var(--pink)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <Ico d={d} d2={d2} size={18} />
-    </div>
-  );
-}
-
+/** "Jueves, 8 de octubre": solo la primera letra en mayuscula. */
 function formatDate() {
-  return new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const t = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function formatTime(iso: string) {
@@ -237,49 +216,34 @@ export default async function DashboardPage() {
 
 
   return (
-    <main className="pb-20 md:pb-10" style={{ minHeight: "100vh" }}>
-      <section style={{ maxWidth: 980, margin: "0 auto", padding: "32px 28px", display: "flex", flexDirection: "column", gap: 18 }}>
+    <main className="pb-20 md:pb-10" style={{ minHeight: "100vh", background: "#fff" }}>
+      <style>{CSS_INICIO}</style>
+      <section className="ini">
 
         {/* ── PERSONAL SECTION ── */}
 
         {/* Invitaciones de Brunela. Van ARRIBA de los anuncios: un anuncio es
             para todas, esto es para ella sola y ademas tiene fecha. */}
         {invitaciones.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="ini-pila">
             {invitaciones.map((s) => (
-              <Link
-                key={s.id}
-                href="/dashboard/live"
-                style={{
-                  display: "flex", gap: 12, alignItems: "flex-start", textDecoration: "none",
-                  background: "#fff", border: "1px solid var(--pink-line)",
-                  borderLeft: "3px solid var(--pink-mid)", borderRadius: 16, padding: "14px 20px",
-                }}
-              >
-                <div style={{
-                  width: 28, height: 28, borderRadius: 8, background: "var(--pink-mid)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, marginTop: 1,
-                }}>
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M2 4.5h12v8H2v-8z" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
-                    <path d="M2 5l6 4 6-4" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
-                  </svg>
-                </div>
+              <Link key={s.id} href="/dashboard/live" className="ini-aviso ini-aviso--invita">
+                <span className="ini-burbuja ini-burbuja--blanca" aria-hidden="true">
+                  <Mail size={18} strokeWidth={2.2} />
+                </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink-deep)", marginBottom: 3 }}>
-                    Brunela te invitó a una clase en vivo
-                  </p>
-                  <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.5 }}>
+                  <p className="ini-aviso-titulo">Brunela te invitó a una clase en vivo</p>
+                  <p className="ini-aviso-txt">
                     <strong>{s.title_i18n?.es ?? s.slug}</strong>
                     {" — "}
                     <HoraSesion iso={s.starts_at} zonaEstudio={s.session_timezone} />
                   </p>
                   {/* Lo mas importante del cartel: sin reservar no entra. */}
-                  <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 4 }}>
+                  <p className="ini-aviso-nota">
                     Entrás aunque no tengas ese plan, pero tenés que reservar tu lugar.
                   </p>
                 </div>
+                <ArrowRight size={18} strokeWidth={2.4} className="ini-aviso-flecha" aria-hidden="true" />
               </Link>
             ))}
           </div>
@@ -287,27 +251,15 @@ export default async function DashboardPage() {
 
         {/* Announcements */}
         {announcements.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="ini-pila">
             {announcements.map((ann) => (
-              <div key={ann.id} style={{
-                background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
-                border: "1px solid var(--pink-line)", borderRadius: 16,
-                padding: "14px 20px", display: "flex", gap: 12, alignItems: "flex-start",
-              }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 8,
-                  background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, marginTop: 1,
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2v1M8 13v1M2 8H1M15 8h-1M4.2 4.2l-.7-.7M12.5 12.5l-.7-.7M4.2 11.8l-.7.7M12.5 3.5l-.7.7" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-                    <circle cx="8" cy="8" r="3" stroke="#fff" strokeWidth="1.5" />
-                  </svg>
-                </div>
+              <div key={ann.id} className="ini-aviso ini-aviso--anuncio">
+                <span className="ini-burbuja ini-burbuja--blanca" aria-hidden="true">
+                  <Megaphone size={18} strokeWidth={2.2} />
+                </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {ann.title && <p style={{ fontSize: 13, fontWeight: 700, color: "var(--pink-deep)", marginBottom: 3 }}>{ann.title}</p>}
-                  <p style={{ fontSize: 13, color: "#5A4440", lineHeight: 1.5 }}>{ann.content}</p>
+                  {ann.title && <p className="ini-aviso-titulo">{ann.title}</p>}
+                  <p className="ini-aviso-txt">{ann.content}</p>
                 </div>
               </div>
             ))}
@@ -315,170 +267,119 @@ export default async function DashboardPage() {
         )}
 
         {/* Saludo */}
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--pink)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
+        <header className="ini-hola">
+          <span className="ini-mancha ini-mancha--a" aria-hidden="true" />
+          <span className="ini-mancha ini-mancha--b" aria-hidden="true" />
+          <p className="ini-fecha">
+            <CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" />
             {formatDate()}
           </p>
-          <h2 style={{
-            fontFamily: "var(--font-display), serif",
-            fontSize: 36, fontWeight: 800, color: "var(--ink)",
-            lineHeight: 1.1, letterSpacing: "-0.01em",
-          }}>
-            <Saludo />,{" "}
-            <span style={{ color: "var(--pink)", fontStyle: "italic" }}>{firstName}.</span>
-          </h2>
-          <p style={{ marginTop: 6, fontSize: 13, color: "#8A6F68", lineHeight: 1.5 }}>
-            Tu cuerpo te espera. Seguí donde lo dejaste.
-          </p>
-        </div>
+          <h1 className="ini-titulo">
+            <Saludo />, <span className="ini-nombre">{firstName}</span>
+          </h1>
+          <p className="ini-lede">Tu cuerpo te espera. Seguí donde lo dejaste.</p>
+        </header>
 
         {/* Personal stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div className="ini-cifras">
           {[
-            { value: classesWatched, label: classesWatched === 1 ? "Clase vista" : "Clases vistas",
-              d: "M4.5 3.5L13 8l-8.5 4.5V3.5z" },
-            { value: minutesPracticed, label: minutesPracticed === 1 ? "Minuto practicado" : "Minutos practicados",
-              d: "M8 4v4l2.5 1.5", d2: "M8 14A6 6 0 108 2a6 6 0 000 12z" },
-            { value: rachaSemanal, label: "Racha semanal",
-              d: "M8 14c2.5 0 4.5-1.9 4.5-4.3 0-3-2.6-4.3-3.4-7.2-1.3 1-2.1 2.3-2 3.8-1-.3-1.5-1-1.7-1.9C4.2 5.6 3.5 7.2 3.5 9.7 3.5 12.1 5.5 14 8 14z" },
+            { value: classesWatched, label: classesWatched === 1 ? "Clase vista" : "Clases vistas", Icono: Play, tono: "rubor" },
+            { value: minutesPracticed, label: minutesPracticed === 1 ? "Minuto practicado" : "Minutos practicados", Icono: Timer, tono: "melocoton" },
+            { value: rachaSemanal, label: "Racha semanal", Icono: Flame, tono: "salvia" },
           ].map((s, i) => (
-            <div key={i} style={{
-              background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
-              padding: "18px 20px", display: "flex", alignItems: "center", gap: 14,
-            }}>
-              <IcoCaja d={s.d} d2={s.d2} />
-              <div>
-                <p style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-                <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 5, fontWeight: 500 }}>{s.label}</p>
+            <div key={i} className={`ini-cifra ini-cifra--${s.tono}`}>
+              <span className="ini-cifra-ico" aria-hidden="true"><s.Icono size={19} strokeWidth={2.2} /></span>
+              <div style={{ minWidth: 0 }}>
+                <p className="ini-cifra-num">{s.value}</p>
+                <p className="ini-cifra-label">{s.label}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Continua viendo */}
-        <div style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 20, padding: "18px 20px" }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 14 }}>
-            Continua viendo
+        <div className="ini-card">
+          <p className="ini-card-titulo">
+            <span className="ini-burbuja" aria-hidden="true"><Play size={16} strokeWidth={2.2} fill="currentColor" /></span>
+            Continuá viendo
           </p>
 
           {resume && resumeTitle ? (
-            <Link href={`/dashboard/library/${resume.videos!.slug}` as never} style={{
-              textDecoration: "none", display: "flex", alignItems: "center", gap: 18,
-            }}>
-              <div style={{
-                width: 180, height: 100, flexShrink: 0, borderRadius: 14, overflow: "hidden",
-                background: "linear-gradient(145deg, var(--pink-wash), var(--pink-soft))",
-              }}>
+            <Link href={`/dashboard/library/${resume.videos!.slug}` as never} className="ini-seguir">
+              <div className="ini-seguir-img">
                 {resume.videos!.thumbnail_url && (
-                  <img src={resume.videos!.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={resume.videos!.thumbnail_url} alt="" />
                 )}
+                <span className="ini-seguir-play" aria-hidden="true"><Play size={16} strokeWidth={2} fill="currentColor" /></span>
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 17, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>{resumeTitle}</p>
-                <p style={{ fontSize: 13, color: "var(--pink)", marginBottom: 14 }}>
+                <p className="ini-chip">
                   {(resume.videos!.category_slugs ?? []).map((c) => CAT_LABEL[c] ?? c).join(" · ") || "Clase"}
                 </p>
-                <div style={{ background: "var(--pink-wash)", borderRadius: 99, height: 5 }}>
-                  <div style={{ background: "var(--pink)", height: "100%", width: `${resumeProgress}%`, borderRadius: 99 }} />
-                </div>
-                <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>{resumeProgress}% completado</p>
+                <p className="ini-seguir-titulo">{resumeTitle}</p>
+                <div className="ini-barra"><span style={{ width: `${resumeProgress}%` }} /></div>
+                <p className="ini-seguir-pct">{resumeProgress}% completado</p>
               </div>
 
-              <div style={{
-                width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
-                background: "var(--pink-wash)", color: "var(--pink)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Ico d="M6 3.5L10.5 8 6 12.5" size={16} />
-              </div>
+              <span className="ini-seguir-flecha" aria-hidden="true"><ArrowRight size={18} strokeWidth={2.4} /></span>
             </Link>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <IcoCaja d="M4.5 3.5L13 8l-8.5 4.5V3.5z" />
-              <p style={{ fontSize: 13, color: "var(--muted)" }}>
-                Todavia no empezaste ninguna clase.{" "}
-                <Link href="/dashboard/library" style={{ color: "var(--pink)", textDecoration: "none", fontWeight: 600 }}>
-                  Elegi la primera →
-                </Link>
+            <div className="ini-vacio">
+              <span className="ini-burbuja ini-burbuja--grande" aria-hidden="true"><Sparkles size={20} strokeWidth={2.2} /></span>
+              <p>
+                Todavía no empezaste ninguna clase.{" "}
+                <Link href="/dashboard/library" className="ini-enlace">Elegí la primera →</Link>
               </p>
             </div>
           )}
         </div>
 
         {/* Proxima en vivo + accesos rapidos */}
-        <div className="dash-2col" style={{ display: "grid", gridTemplateColumns: liveData ? "1fr 1fr" : "1fr", gap: 12 }}>
+        <div className={"ini-2col" + (liveData ? "" : " es-una")}>
           {liveData && (
-            <div style={{
-              position: "relative", borderRadius: 20, overflow: "hidden",
-              minHeight: 190, background: "var(--ink)",
-              border: canAccessLive ? "none" : "1px solid #F6E7E1",
-            }}>
-              {liveData.cover_image_url && (
-                <img src={liveData.cover_image_url} alt="" style={{
-                  position: "absolute", inset: 0, width: "100%", height: "100%",
-                  objectFit: "cover", opacity: 0.55,
-                }} />
-              )}
-              <div style={{
-                position: "relative", height: "100%", padding: "22px 24px",
-                display: "flex", flexDirection: "column", alignItems: "flex-start",
-                background: "linear-gradient(100deg, rgba(28,25,23,0.94) 45%, rgba(28,25,23,0.35))",
-              }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 12 }}>
-                  Proxima clase en vivo
-                </p>
-                <p style={{ fontSize: 19, fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: 12, maxWidth: 340 }}>
-                  {resolveI18nText(liveData.title_i18n)}
-                </p>
-                <div style={{ display: "flex", gap: 16, marginBottom: 20, color: "rgba(255,255,255,0.78)", fontSize: 12 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Ico d="M3 4.5h10v9H3v-9z" d2="M3 7.2h10M5.6 2.6v3M10.4 2.6v3" size={14} />
-                    {formatLiveDate(liveData.starts_at)}
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Ico d="M8 4v4l2.5 1.5" d2="M8 14A6 6 0 108 2a6 6 0 000 12z" size={14} />
-                    {formatTime(liveData.starts_at)}
-                  </span>
+            <div className="ini-vivo">
+              <span className="ini-mancha ini-mancha--c" aria-hidden="true" />
+              <div className="ini-vivo-cuerpo">
+                <p className="ini-vivo-eyebrow"><span className="ini-vivo-punto" aria-hidden="true" /> Próxima clase en vivo</p>
+                <p className="ini-vivo-titulo">{resolveI18nText(liveData.title_i18n)}</p>
+                <div className="ini-vivo-datos">
+                  <span><CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" /> {formatLiveDate(liveData.starts_at)}</span>
+                  <span><Clock size={14} strokeWidth={2.2} aria-hidden="true" /> {formatTime(liveData.starts_at)}</span>
                 </div>
                 {canAccessLive ? (
-                  <Link href="/dashboard/live" style={{
-                    display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
-                    background: "var(--pink)", color: "#fff", borderRadius: 99,
-                    padding: "11px 22px", fontSize: 13, fontWeight: 700,
-                  }}>
-                    Reservar lugar <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+                  <Link href="/dashboard/live" className="ini-btn ini-btn--lleno">
+                    Reservar lugar <ArrowRight size={15} strokeWidth={2.4} />
                   </Link>
                 ) : (
-                  <Link href="/dashboard/plan" style={{
-                    display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
-                    background: "transparent", color: "#fff",
-                    border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 99,
-                    padding: "10px 20px", fontSize: 13, fontWeight: 700,
-                  }}>
-                    Actualizar plan <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+                  <Link href="/dashboard/plan" className="ini-btn">
+                    Actualizar plan <ArrowRight size={15} strokeWidth={2.4} />
                   </Link>
                 )}
               </div>
+              {liveData.cover_image_url && (
+                <div className="ini-vivo-img">
+                  <img src={liveData.cover_image_url} alt="" />
+                </div>
+              )}
             </div>
           )}
 
-          <div style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 20, padding: "20px 22px" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "var(--muted)", textTransform: "uppercase", marginBottom: 14 }}>
-              Accesos rapidos
+          <div className="ini-card">
+            <p className="ini-card-titulo">
+              <span className="ini-burbuja" aria-hidden="true"><Sparkles size={16} strokeWidth={2.2} /></span>
+              Accesos rápidos
             </p>
-            <div className="quick-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="ini-accesos">
               {QUICK_LINKS.map((link) => (
-                <Link key={link.href} href={link.href} style={{
-                  display: "flex", alignItems: "center", gap: 12, textDecoration: "none",
-                  padding: "12px 14px", borderRadius: 14, background: "#fff",
-                  border: "1px solid #F6E7E1",
-                }}>
-                  <IcoCaja d={link.d} d2={link.d2} />
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{link.label}</p>
-                    <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{link.sub}</p>
-                  </div>
+                <Link key={link.href} href={link.href} className="ini-acceso">
+                  <span className={`ini-acceso-ico ini-acceso-ico--${link.tono}`} aria-hidden="true">
+                    <link.Icono size={18} strokeWidth={2.2} />
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <span className="ini-acceso-label">{link.label}</span>
+                    <span className="ini-acceso-sub">{link.sub}</span>
+                  </span>
                 </Link>
               ))}
             </div>
@@ -487,55 +388,34 @@ export default async function DashboardPage() {
 
         {/* Para hoy: carrusel de clases reales */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "var(--muted)", textTransform: "uppercase" }}>
-              Para hoy, {firstName}
-            </p>
-            <Link href="/dashboard/library" style={{
-              display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none",
-              fontSize: 12, fontWeight: 600, color: "var(--pink)",
-            }}>
-              Ver todas las clases <Ico d="M6 3.5L10.5 8 6 12.5" size={13} />
+          <div className="ini-fila-cab">
+            <h2 className="ini-h2">Para hoy, {firstName}</h2>
+            <Link href="/dashboard/library" className="ini-ver">
+              Ver todas las clases <ArrowRight size={14} strokeWidth={2.4} />
             </Link>
           </div>
 
           {sugeridas.length === 0 ? (
-            <div style={{
-              background: "#fff", border: "1px dashed #F0DED6", borderRadius: 18,
-              padding: "26px 22px", fontSize: 13, color: "var(--muted)",
-            }}>
-              Todavia no hay clases publicadas para tu plan.
+            <div className="ini-vacio ini-vacio--caja">
+              <span className="ini-burbuja ini-burbuja--grande" aria-hidden="true"><BookOpen size={20} strokeWidth={2.2} /></span>
+              <p>Todavía no hay clases publicadas para tu plan. Muy pronto vas a encontrar acá tus clases del día.</p>
             </div>
           ) : (
-            <div className="hoy-fila" style={{
-              display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6,
-              scrollSnapType: "x mandatory",
-            }}>
+            <div className="ini-hoy">
               {sugeridas.map((clase) => (
-                <Link key={clase.id} href={`/dashboard/library/${clase.slug}` as never} style={{
-                  position: "relative", flex: "0 0 auto", width: 190, aspectRatio: "3/4",
-                  borderRadius: 18, overflow: "hidden", textDecoration: "none",
-                  scrollSnapAlign: "start", background: "linear-gradient(145deg, var(--pink-wash), var(--pink-soft))",
-                }}>
-                  {clase.thumbnail_url && (
-                    <img src={clase.thumbnail_url} alt="" style={{
-                      position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-                    }} />
-                  )}
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to top, rgba(28,25,23,0.82) 26%, rgba(28,25,23,0.05) 62%)",
-                    display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 14,
-                  }}>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.82)", marginBottom: 2 }}>
-                      {(clase.category_slugs ?? []).map((c) => CAT_LABEL[c] ?? c)[0] ?? "Clase"}
-                    </p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>
-                      {resolveI18nText(clase.title_i18n)}
-                    </p>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 6 }}>
+                <Link key={clase.id} href={`/dashboard/library/${clase.slug}` as never} className="ini-hoy-card">
+                  <div className="ini-hoy-img">
+                    {clase.thumbnail_url && <img src={clase.thumbnail_url} alt="" />}
+                    <span className="ini-hoy-dur">
+                      <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
                       {formatDuracion(clase.duration_seconds)}
-                    </p>
+                    </span>
+                  </div>
+                  <div className="ini-hoy-info">
+                    <span className="ini-chip">
+                      {(clase.category_slugs ?? []).map((c) => CAT_LABEL[c] ?? c)[0] ?? "Clase"}
+                    </span>
+                    <p className="ini-hoy-titulo">{resolveI18nText(clase.title_i18n)}</p>
                   </div>
                 </Link>
               ))}
@@ -547,3 +427,244 @@ export default async function DashboardPage() {
     </main>
   );
 }
+
+// ── Estilos de la vista de alumna ────────────────────────────────────────────
+// Suave y calido: tarjetas blancas de radio grande, cifras en tonos pastel,
+// iconos en burbujas y nada oscuro de fondo (la tarjeta del vivo era negra).
+
+const CSS_INICIO = `
+.ini {
+  max-width: 1040px; margin: 0 auto; padding: clamp(20px, 3vw, 36px) clamp(16px, 3vw, 32px);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.ini a:focus { outline: none; }
+.ini a:focus-visible { outline: 2px solid var(--pink); outline-offset: 3px; }
+.ini-pila { display: flex; flex-direction: column; gap: 10px; }
+
+.ini-burbuja {
+  width: 36px; height: 36px; border-radius: 13px; flex-shrink: 0; background: var(--rubor); color: var(--pink-deep);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ini-burbuja--blanca { width: 42px; height: 42px; border-radius: 15px; background: #fff; color: var(--pink); box-shadow: var(--sombra); }
+.ini-burbuja--grande { width: 46px; height: 46px; border-radius: 16px; }
+
+/* avisos */
+.ini-aviso {
+  display: flex; gap: 14px; align-items: center; padding: 14px 18px 14px 14px; border-radius: var(--radio);
+  border: 1px solid var(--linea); text-decoration: none; color: inherit;
+}
+.ini-aviso--invita {
+  background: linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%);
+  transition: transform .35s var(--curva), box-shadow .35s var(--curva);
+}
+.ini-aviso--invita:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+.ini-aviso--anuncio { background: #FFF8EF; border-color: #F6E2CC; }
+.ini-aviso--anuncio .ini-burbuja--blanca { color: var(--melocoton-deep); }
+.ini-aviso-titulo { font-size: 14px; font-weight: 800; color: var(--pink-deep); margin-bottom: 2px; }
+.ini-aviso--anuncio .ini-aviso-titulo { color: var(--melocoton-deep); }
+.ini-aviso-txt { font-size: 14px; line-height: 1.55; color: #5A4440; }
+.ini-aviso-txt strong { color: var(--ink); font-weight: 800; }
+.ini-aviso-nota { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.ini-aviso-flecha { flex-shrink: 0; color: var(--pink); }
+
+/* saludo */
+.ini-hola {
+  position: relative; overflow: hidden; isolation: isolate;
+  padding: clamp(24px, 3.4vw, 38px) clamp(22px, 3.4vw, 40px); border-radius: 32px; border: 1px solid var(--linea);
+  background: linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%);
+}
+.ini-mancha { position: absolute; z-index: -1; border-radius: 50%; filter: blur(40px); pointer-events: none; }
+.ini-mancha--a { width: 300px; height: 300px; right: -70px; top: -140px; background: rgba(255, 210, 186, 0.75); animation: ini-flota 14s ease-in-out infinite; }
+.ini-mancha--b { width: 220px; height: 220px; right: 30%; bottom: -150px; background: rgba(253, 205, 205, 0.6); animation: ini-flota 18s ease-in-out infinite reverse; }
+.ini-mancha--c { width: 240px; height: 240px; left: -80px; bottom: -140px; background: rgba(255, 214, 196, 0.7); }
+@keyframes ini-flota { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-22px, 12px); } }
+.ini-fecha {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 14px;
+  padding: 6px 13px 6px 10px; border-radius: 99px; background: #fff; box-shadow: 0 6px 16px -10px rgba(176,70,70,.45);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep);
+}
+.ini-titulo {
+  font-family: var(--font-display), sans-serif; font-weight: 900;
+  font-size: clamp(28px, 3.6vw, 44px); line-height: 1.1; letter-spacing: -0.02em; color: var(--ink);
+}
+.ini-nombre { color: var(--pink-mid); }
+.ini-lede { margin-top: 8px; font-size: 15.5px; line-height: 1.6; color: var(--muted); }
+
+/* cifras */
+.ini-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ini-cifra {
+  display: flex; align-items: center; gap: 14px; padding: 18px 20px; border-radius: var(--radio);
+  border: 1px solid transparent;
+}
+.ini-cifra--rubor { background: var(--rubor); border-color: #FBE3DC; }
+.ini-cifra--melocoton { background: #FFF4E8; border-color: #F8E3CD; }
+.ini-cifra--salvia { background: #F2F7EF; border-color: #DFEBD9; }
+.ini-cifra-ico {
+  width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; background: #fff;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px -8px rgba(150,80,70,.4);
+}
+.ini-cifra--rubor .ini-cifra-ico { color: var(--pink); }
+.ini-cifra--melocoton .ini-cifra-ico { color: var(--melocoton-deep); }
+.ini-cifra--salvia .ini-cifra-ico { color: var(--salvia-deep); }
+.ini-cifra-num { font-family: var(--font-display), sans-serif; font-size: 30px; font-weight: 900; color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
+.ini-cifra-label { font-size: 13px; color: var(--muted); margin-top: 5px; font-weight: 700; }
+
+/* tarjetas */
+.ini-card {
+  background: #fff; border: 1px solid var(--linea); border-radius: 28px; padding: 20px 22px;
+  box-shadow: var(--sombra);
+}
+.ini-card-titulo {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  font-family: var(--font-display), sans-serif; font-size: 16.5px; font-weight: 900; color: var(--ink);
+}
+
+/* continua viendo */
+.ini-seguir { display: flex; align-items: center; gap: 18px; text-decoration: none; color: inherit; border-radius: 20px; }
+.ini-seguir-img {
+  position: relative; width: 190px; aspect-ratio: 16 / 10; flex-shrink: 0; border-radius: 20px; overflow: hidden;
+  background: linear-gradient(140deg, #FFF1EC, #FFD9CF);
+}
+.ini-seguir-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--curva); }
+.ini-seguir:hover .ini-seguir-img img { transform: scale(1.05); }
+.ini-seguir-play {
+  position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%;
+  background: rgba(255,255,255,.95); color: var(--pink); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 22px -10px rgba(176,70,70,.6);
+}
+.ini-seguir-play svg { margin-left: 2px; }
+.ini-chip {
+  display: inline-flex; padding: 4px 11px; border-radius: 99px; background: var(--rubor);
+  font-size: 12px; font-weight: 800; color: var(--pink-deep);
+}
+.ini-seguir-titulo { margin-top: 8px; font-size: 18px; font-weight: 800; color: var(--ink); line-height: 1.3; }
+.ini-barra { margin-top: 12px; height: 8px; border-radius: 99px; background: var(--rubor); overflow: hidden; }
+.ini-barra span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F59A86, var(--pink)); }
+.ini-seguir-pct { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 7px; }
+.ini-seguir-flecha {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; background: var(--pink); color: #fff;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85);
+  transition: transform .35s var(--curva);
+}
+.ini-seguir:hover .ini-seguir-flecha { transform: translateX(3px); }
+.ini-vacio { display: flex; align-items: center; gap: 14px; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.ini-vacio--caja { padding: 22px; border-radius: var(--radio); background: var(--crema); border: 1px dashed var(--linea-fuerte); }
+.ini-enlace { color: var(--pink-deep); text-decoration: none; font-weight: 800; }
+.ini-enlace:hover { color: var(--pink); }
+
+/* vivo + accesos */
+.ini-2col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.ini-2col.es-una { grid-template-columns: minmax(0, 1fr); }
+.ini-vivo {
+  position: relative; overflow: hidden; isolation: isolate; display: flex; gap: 16px; align-items: stretch;
+  padding: 22px; border-radius: 28px; border: 1px solid #F6DCCF;
+  background: linear-gradient(140deg, #FFF4E8 0%, #FFEDE4 55%, #FFE2D3 100%);
+}
+.ini-vivo-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.ini-vivo-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 12px; padding: 5px 12px 5px 10px;
+  border-radius: 99px; background: #fff; font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep);
+}
+.ini-vivo-punto { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); animation: ini-latido 1.8s ease-in-out infinite; }
+@keyframes ini-latido { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,79,85,.45); } 50% { box-shadow: 0 0 0 6px rgba(230,79,85,0); } }
+.ini-vivo-titulo { font-family: var(--font-display), sans-serif; font-size: 20px; font-weight: 900; color: var(--ink); line-height: 1.25; letter-spacing: -0.01em; }
+.ini-vivo-datos { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+.ini-vivo-datos span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 99px;
+  background: rgba(255,255,255,.75); font-size: 12.5px; font-weight: 700; color: #6E5550;
+}
+.ini-vivo-datos svg { color: var(--melocoton-deep); }
+.ini-vivo-img { width: 38%; max-width: 170px; flex-shrink: 0; border-radius: 20px; overflow: hidden; box-shadow: var(--sombra); }
+.ini-vivo-img img { width: 100%; height: 100%; object-fit: cover; }
+.ini-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 99px; margin-top: auto;
+  text-decoration: none; font-size: 14px; font-weight: 800; color: var(--ink); background: #fff; border: 1px solid var(--linea-fuerte);
+  transition: background .2s, border-color .2s, color .2s, transform .35s var(--curva);
+}
+.ini-btn:hover { background: var(--rubor); border-color: var(--pink-line); color: var(--pink-deep); transform: translateY(-2px); }
+.ini-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.ini-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
+
+.ini-accesos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ini-acceso {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 20px; text-decoration: none;
+  background: var(--crema); border: 1px solid var(--linea);
+  transition: background .2s, border-color .2s, transform .35s var(--curva), box-shadow .35s var(--curva);
+}
+.ini-acceso:hover { background: #fff; border-color: var(--pink-line); transform: translateY(-2px); box-shadow: var(--sombra); }
+.ini-acceso-ico {
+  width: 40px; height: 40px; border-radius: 14px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ini-acceso-ico--rubor { background: var(--rubor); color: var(--pink-deep); }
+.ini-acceso-ico--melocoton { background: #FFF0E2; color: var(--melocoton-deep); }
+.ini-acceso-ico--salvia { background: #EEF5EA; color: var(--salvia-deep); }
+.ini-acceso-ico--lila { background: #F5EDF8; color: #7A4F8C; }
+.ini-acceso-label { display: block; font-size: 14px; font-weight: 800; color: var(--ink); }
+.ini-acceso-sub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* para hoy */
+.ini-fila-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 14px; }
+.ini-h2 { font-family: var(--font-display), sans-serif; font-size: 20px; font-weight: 900; color: var(--ink); letter-spacing: -0.015em; }
+.ini-ver {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; height: 36px; padding: 0 14px; border-radius: 99px;
+  background: var(--rubor); text-decoration: none; font-size: 13px; font-weight: 800; color: var(--pink-deep);
+  transition: background .2s;
+}
+.ini-ver:hover { background: var(--pink-wash); }
+.ini-hoy {
+  display: flex; gap: 14px; overflow-x: auto; padding: 4px 4px 18px; margin: 0 -4px;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
+  mask-image: linear-gradient(to right, #000 90%, transparent);
+}
+.ini-hoy::-webkit-scrollbar { display: none; }
+.ini-hoy-card {
+  flex: 0 0 auto; width: 220px; scroll-snap-align: start; text-decoration: none; color: inherit;
+  background: #fff; border: 1px solid var(--linea); border-radius: 24px; padding: 8px; box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s var(--curva), border-color .35s;
+}
+.ini-hoy-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-alta); border-color: var(--pink-line); }
+.ini-hoy-img {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden;
+  background: linear-gradient(140deg, #FFF1EC, #FFD9CF);
+}
+.ini-hoy-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--curva); }
+.ini-hoy-card:hover .ini-hoy-img img { transform: scale(1.05); }
+.ini-hoy-dur {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,.94);
+  font-size: 12px; font-weight: 800; color: var(--ink);
+}
+.ini-hoy-dur svg { color: var(--pink); }
+.ini-hoy-info { padding: 10px 6px 6px; }
+.ini-hoy-titulo {
+  margin-top: 8px; font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ini-hoy-card:hover .ini-hoy-titulo { color: var(--pink-deep); }
+
+@media (max-width: 760px) {
+  .ini-2col { grid-template-columns: minmax(0, 1fr); }
+  .ini-cifras { gap: 8px; }
+  .ini-cifra { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; border-radius: 20px; }
+  .ini-cifra-ico { width: 38px; height: 38px; border-radius: 13px; }
+  .ini-cifra-num { font-size: 26px; }
+  .ini-cifra-label { font-size: 12px; line-height: 1.3; }
+  .ini-hola { border-radius: 26px; }
+  .ini-hoy { margin: 0 -16px; padding: 4px 16px 18px; scroll-padding: 0 16px; }
+  .ini-hoy-card { width: 200px; }
+}
+@media (max-width: 520px) {
+  .ini-seguir { flex-wrap: wrap; }
+  .ini-seguir-img { width: 100%; }
+  .ini-seguir-flecha { display: none; }
+  .ini-accesos { grid-template-columns: minmax(0, 1fr); }
+  .ini-vivo { flex-direction: column-reverse; }
+  .ini-vivo-img { width: 100%; max-width: none; aspect-ratio: 16 / 9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ini-mancha, .ini-vivo-punto { animation: none; }
+  .ini-hoy-card:hover, .ini-acceso:hover, .ini-aviso--invita:hover { transform: none; }
+}
+`;

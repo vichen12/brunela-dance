@@ -1,23 +1,29 @@
-export default function LiveLoading() {
-  // La animacion vive en globals.css (.sk). Antes cada loading.tsx traia
-  // su propia copia del @keyframes: tres definiciones de lo mismo.
-  const pulse = { borderRadius: 12 } as React.CSSProperties;
+import { SkHero, SkTarjeta, Sk } from "@/components/skeleton";
 
+/**
+ * En vivo: la cabecera y tres tarjetas con su bloque de fecha a la izquierda,
+ * la misma forma que la pantalla real para que no salte al cargar.
+ * La animacion vive en globals.css (.sk).
+ */
+export default function LiveLoading() {
   return (
-    <>
-      <main className="pb-20 pt-6 md:pb-10 md:pt-10">
-        <section style={{ maxWidth: 960, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ marginBottom: 28 }}>
-            <div className="sk" style={{ ...pulse, height: 10, width: 100, marginBottom: 10 }} />
-            <div className="sk" style={{ ...pulse, height: 32, width: 200 }} />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="sk" style={{ ...pulse, borderRadius: 20, height: 100 }} />
-            ))}
-          </div>
-        </section>
-      </main>
-    </>
+    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
+      <section className="page-shell space-y-6">
+        <SkHero />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[0, 1, 2].map((i) => (
+            <SkTarjeta key={i} style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+              <Sk h={108} w={92} r={22} />
+              <div style={{ flex: 1, display: "grid", gap: 10, alignContent: "start", paddingTop: 4 }}>
+                <Sk h={22} w={130} r={99} />
+                <Sk h={24} w="55%" r={10} />
+                <Sk h={12} w="80%" />
+                <Sk h={44} w={180} r={99} />
+              </div>
+            </SkTarjeta>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }

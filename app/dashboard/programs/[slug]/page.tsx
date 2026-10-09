@@ -9,6 +9,7 @@ import {
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Play, Sparkles } from "lucide-react";
 
 /**
  * Un plan de trabajo, dia por dia.
@@ -128,106 +129,114 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
   const titulo = resolveI18nText(program.title_i18n);
 
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+    <main className="pd">
+      <style>{CSS}</style>
+      <section className="pd-shell">
 
-        <Link className="button-secondary" href="/dashboard/programs">
-          Volver a planes de trabajo
+        <Link className="pd-volver" href="/dashboard/programs">
+          <ArrowLeft size={16} strokeWidth={2.2} aria-hidden="true" /> Volver a planes de trabajo
         </Link>
 
-        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <article className="hero-stage">
+        <section className="pd-arriba">
+          <article className="pd-hero">
             <div
-              className="min-h-[18rem] rounded-[2rem] border border-[rgba(var(--border-rgb),0.32)] bg-cover bg-center"
-              style={{
-                backgroundColor: "rgba(238, 225, 228, 0.85)",
-                backgroundImage: program.cover_image_url ? `url(${program.cover_image_url})` : undefined
-              }}
+              className="pd-portada"
+              style={{ backgroundImage: program.cover_image_url ? `url(${program.cover_image_url})` : undefined }}
             />
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              <span className="studio-chip">{membershipTierLabel(program.membership_tier_required)}</span>
-              <span className="studio-chip">{total} días</span>
-            </div>
-
-            <h1 className="display mt-6 text-5xl leading-none md:text-7xl">{titulo}</h1>
-            <p className="mt-6 max-w-3xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
-              {resolveI18nText(program.description_i18n) || "Un recorrido de varios días, en orden."}
-            </p>
-
-            {/* Por donde va — arriba de todo, no al final */}
-            {total > 0 && (
-              <div className="mt-8">
-                <div className="mb-3 flex items-baseline justify-between gap-4">
-                  <span className="text-sm font-bold" style={{ color: "var(--ink)" }}>
-                    {terminado
-                      ? "Completaste el plan"
-                      : `Día ${Math.min(completos + 1, total)} de ${total}`}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-[0.08em] text-[color:var(--ink-soft)]">
-                    {terminado ? "100%" : `Faltan ${faltan} ${faltan === 1 ? "día" : "días"}`}
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full" style={{ background: "var(--pink-wash)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${porcentaje}%`, background: "var(--pink)" }}
-                  />
-                </div>
+            <div className="pd-hero-txt">
+              <div className="pd-chips">
+                <span className="pd-chip pd-chip--plan">{membershipTierLabel(program.membership_tier_required)}</span>
+                <span className="pd-chip"><CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" /> {total} días</span>
               </div>
-            )}
+
+              <h1 className="pd-titulo">{titulo}</h1>
+              <p className="pd-desc">
+                {resolveI18nText(program.description_i18n) || "Un recorrido de varios días, en orden."}
+              </p>
+
+              {/* Por donde va — arriba de todo, no al final */}
+              {total > 0 && (
+                <div className="pd-avance">
+                  <div className="pd-avance-fila">
+                    <span className="pd-avance-dia">
+                      {terminado
+                        ? "Completaste el plan"
+                        : `Día ${Math.min(completos + 1, total)} de ${total}`}
+                    </span>
+                    <span className="pd-avance-falta">
+                      {terminado ? "100%" : `Faltan ${faltan} ${faltan === 1 ? "día" : "días"}`}
+                    </span>
+                  </div>
+                  <div className="pd-barra">
+                    <div style={{ width: `${porcentaje}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
           </article>
 
-          <aside className="space-y-6">
-            <article className="panel rounded-[2.4rem] p-7 md:p-9">
-              {claseDeHoy && hoy ? (
-                <>
-                  <p className="eyebrow">{completos === 0 ? "Empezá por acá" : "Seguí por acá"}</p>
-                  <h2 className="display mt-4 text-4xl">Día {hoy.day_number}</h2>
-                  <p className="mt-4 text-lg font-semibold leading-8" style={{ color: "var(--ink)" }}>
-                    {resolveI18nText(claseDeHoy.title_i18n)}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-[color:var(--ink-soft)]">
-                    {formatDurationLabel(claseDeHoy.duration_seconds)}
-                  </p>
-                  <Link
-                    className="button-primary mt-6"
-                    href={`/dashboard/library/${claseDeHoy.slug}?programId=${program.id}&day=${hoy.day_number}`}
-                  >
-                    {completos === 0 ? "Empezar" : "Continuar"}
-                  </Link>
-                </>
-              ) : terminado ? (
-                <>
-                  <p className="eyebrow">Terminado</p>
-                  <h2 className="display mt-4 text-4xl">Hiciste los {total} días</h2>
-                  <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                    Podés repetir cualquier día desde la lista de abajo.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="eyebrow">En preparación</p>
-                  <h2 className="display mt-4 text-4xl">Todavía sin días</h2>
-                  <p className="mt-4 text-sm leading-7 text-[color:var(--ink-soft)]">
-                    Brunela está armando este plan. Mientras tanto podés entrenar con las clases sueltas.
-                  </p>
-                  <Link className="button-secondary mt-6 inline-flex" href="/dashboard/library">
-                    Ir a las clases
-                  </Link>
-                </>
-              )}
-            </article>
+          <aside className="pd-hoy">
+            {claseDeHoy && hoy ? (
+              <>
+                <span className="pd-hoy-eyebrow">
+                  <Sparkles size={14} strokeWidth={2.2} aria-hidden="true" />
+                  {completos === 0 ? "Empezá por acá" : "Seguí por acá"}
+                </span>
+                <div className="pd-hoy-dia">
+                  <span className="pd-hoy-rot">Día</span>
+                  <span className="pd-hoy-num">{hoy.day_number}</span>
+                </div>
+                <p className="pd-hoy-clase">{resolveI18nText(claseDeHoy.title_i18n)}</p>
+                <p className="pd-hoy-dur">
+                  <Clock size={14} strokeWidth={2.2} aria-hidden="true" /> {formatDurationLabel(claseDeHoy.duration_seconds)}
+                </p>
+                <Link
+                  className="pd-boton"
+                  href={`/dashboard/library/${claseDeHoy.slug}?programId=${program.id}&day=${hoy.day_number}`}
+                >
+                  <Play size={16} strokeWidth={2.4} fill="currentColor" aria-hidden="true" />
+                  {completos === 0 ? "Empezar" : "Continuar"}
+                </Link>
+              </>
+            ) : terminado ? (
+              <>
+                <span className="pd-hoy-eyebrow pd-hoy-eyebrow--ok">
+                  <Check size={14} strokeWidth={2.8} aria-hidden="true" /> Terminado
+                </span>
+                <h2 className="pd-hoy-titulo">Hiciste los {total} días</h2>
+                <p className="pd-hoy-txt">
+                  Podés repetir cualquier día desde la lista de abajo.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="pd-hoy-eyebrow">En preparación</span>
+                <h2 className="pd-hoy-titulo">Todavía sin días</h2>
+                <p className="pd-hoy-txt">
+                  Brunela está armando este plan. Mientras tanto podés entrenar con las clases sueltas.
+                </p>
+                <Link className="pd-boton pd-boton--suave" href="/dashboard/library">
+                  Ir a las clases <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+                </Link>
+              </>
+            )}
           </aside>
         </section>
 
-        <section className="panel rounded-[2.4rem] p-7 md:p-9">
-          <p className="eyebrow">El recorrido</p>
-          <h2 className="display mt-4 text-4xl">Día por día</h2>
+        <section className="pd-recorrido">
+          <div className="pd-recorrido-cabeza">
+            <span className="pd-recorrido-ico"><ListChecks size={20} strokeWidth={2} aria-hidden="true" /></span>
+            <div>
+              <p className="pd-recorrido-eyebrow">El recorrido</p>
+              <h2 className="pd-recorrido-titulo">Día por día</h2>
+            </div>
+          </div>
 
-          <div className="mt-8 grid gap-3">
+          <div className="pd-dias">
             {days.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-[rgba(118,92,113,0.14)] bg-[rgba(255,255,255,0.52)] p-6 text-sm leading-7 text-[color:var(--ink-soft)]">
+              <div className="pd-vacio">
+                <span className="pd-vacio-ico"><CalendarDays size={20} strokeWidth={2} aria-hidden="true" /></span>
                 Este plan todavía no tiene días armados.
               </div>
             ) : null}
@@ -244,61 +253,46 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
               // tocar, "0%" es ruido.
               const empezado = !completado && porciento > 0;
 
+              // Tres estados, tres pesos visuales. El de hoy tiene el borde de
+              // la marca; el futuro se apaga pero se abre igual.
+              const estado = esHoy ? " es-hoy" : completado ? " es-hecho" : empezado ? " es-empezado" : " es-futuro";
+
               return (
                 <Link
                   key={`${day.day_number}-${day.video_id}`}
-                  className="feature-tile block"
+                  className={"pd-dia" + estado}
                   href={`/dashboard/library/${clase.slug}?programId=${program.id}&day=${day.day_number}`}
-                  style={{
-                    // Tres estados, tres pesos visuales. El de hoy tiene el
-                    // borde de la marca; el futuro se apaga pero se abre igual.
-                    border: esHoy ? "1.5px solid var(--pink)" : undefined,
-                    background: esHoy ? "var(--pink-wash)" : undefined,
-                    opacity: !esHoy && !completado && !empezado ? 0.62 : 1
-                  }}
                 >
-                  <div className="flex items-center gap-4">
-                    {/* La marca de estado, en una columna fija: asi los titulos
-                        arrancan todos a la misma altura y la lista se recorre
-                        con la vista. */}
-                    <span
-                      aria-hidden
-                      style={{
-                        width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 11, fontWeight: 800,
-                        background: completado ? "var(--pink)" : esHoy ? "#fff" : "var(--pink-wash)",
-                        color: completado ? "#fff" : esHoy ? "var(--pink)" : "var(--ink-soft)",
-                        border: esHoy ? "1.5px solid var(--pink)" : "1px solid transparent"
-                      }}
-                    >
-                      {completado ? (
-                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                          <path d="M2.5 7.2l3 3L11.5 4" stroke="currentColor" strokeWidth="2"
-                            strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      ) : (
-                        day.day_number
-                      )}
-                    </span>
+                  {/* La marca de estado, en una columna fija: asi los titulos
+                      arrancan todos a la misma altura y la lista se recorre
+                      con la vista. */}
+                  <span aria-hidden className="pd-dia-marca">
+                    {completado ? (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2.5 7.2l3 3L11.5 4" stroke="currentColor" strokeWidth="2.2"
+                          strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      day.day_number
+                    )}
+                  </span>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold uppercase tracking-[0.08em]"
-                        style={{ color: esHoy ? "var(--pink-deep)" : "var(--ink-soft)" }}>
-                        Día {day.day_number}
-                        {esHoy && " · Te toca ahora"}
-                        {completado && " · Completado"}
-                        {empezado && ` · Empezado (${porciento}%)`}
-                      </p>
-                      <h3 className="mt-1.5 truncate text-lg font-semibold" style={{ color: "var(--ink)" }}>
-                        {resolveI18nText(clase.title_i18n)}
-                      </h3>
-                    </div>
-
-                    <span className="studio-chip flex-shrink-0">
-                      {formatDurationLabel(clase.duration_seconds)}
-                    </span>
+                  <div className="pd-dia-txt">
+                    <p className="pd-dia-rot">
+                      Día {day.day_number}
+                      {esHoy && " · Te toca ahora"}
+                      {completado && " · Completado"}
+                      {empezado && ` · Empezado (${porciento}%)`}
+                    </p>
+                    <h3 className="pd-dia-titulo">
+                      {resolveI18nText(clase.title_i18n)}
+                    </h3>
                   </div>
+
+                  <span className="pd-dia-dur">
+                    {formatDurationLabel(clase.duration_seconds)}
+                  </span>
+                  <span className="pd-dia-flecha" aria-hidden="true"><ArrowRight size={16} strokeWidth={2.2} /></span>
                 </Link>
               );
             })}
@@ -340,50 +334,183 @@ async function PlanBloqueado({ slug }: { slug: string }) {
   const tier = membershipTierLabel(plan.membership_tier_required);
 
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
-        <Link className="button-secondary" href="/dashboard/programs">
-          Volver a planes de trabajo
+    <main className="pd">
+      <style>{CSS}</style>
+      <section className="pd-shell">
+        <Link className="pd-volver" href="/dashboard/programs">
+          <ArrowLeft size={16} strokeWidth={2.2} aria-hidden="true" /> Volver a planes de trabajo
         </Link>
 
-        <section className="hero-stage">
+        <section className="pd-hero pd-hero--cerrado">
           <div
-            className="min-h-[14rem] rounded-[2rem] border border-[rgba(var(--border-rgb),0.32)] bg-cover bg-center"
-            style={{
-              backgroundColor: "rgba(238, 225, 228, 0.85)",
-              backgroundImage: plan.cover_image_url ? `url(${plan.cover_image_url})` : undefined,
-              filter: "grayscale(0.55)",
-              opacity: 0.72
-            }}
-          />
-
-          <div className="mt-8 flex flex-wrap gap-2">
-            <span className="studio-chip" style={{ color: "var(--pink-deep)" }}>
-              Desde {tier}
-            </span>
-            <span className="studio-chip">{plan.duration_days} días</span>
+            className="pd-portada pd-portada--cerrada"
+            style={{ backgroundImage: plan.cover_image_url ? `url(${plan.cover_image_url})` : undefined }}
+          >
+            <span className="pd-candado"><Lock size={22} strokeWidth={2} aria-hidden="true" /></span>
           </div>
 
-          <h1 className="display mt-6 text-5xl leading-none md:text-7xl">
-            {resolveI18nText(plan.title_i18n)}
-          </h1>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-[color:var(--ink-soft)] md:text-lg">
-            {resolveI18nText(plan.description_i18n) || "Un recorrido de varios días, en orden."}
-          </p>
+          <div className="pd-hero-txt">
+            <div className="pd-chips">
+              <span className="pd-chip pd-chip--plan">
+                <Lock size={13} strokeWidth={2.4} aria-hidden="true" /> Desde {tier}
+              </span>
+              <span className="pd-chip"><CalendarDays size={14} strokeWidth={2.2} aria-hidden="true" /> {plan.duration_days} días</span>
+            </div>
 
-          <div className="mt-8 rounded-[2rem] border p-6 md:p-7"
-            style={{ borderColor: "var(--pink-line)", background: "rgba(255,255,255,0.72)" }}>
-            <p className="eyebrow">Te falta {tier}</p>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--ink-soft)]">
-              Este plan de trabajo está armado día por día: qué clase hacer, en qué orden y con qué
-              objetivo. Se abre con {tier}, junto con todos los demás planes.
+            <h1 className="pd-titulo">
+              {resolveI18nText(plan.title_i18n)}
+            </h1>
+            <p className="pd-desc">
+              {resolveI18nText(plan.description_i18n) || "Un recorrido de varios días, en orden."}
             </p>
-            <Link className="button-primary mt-6 inline-flex" href="/dashboard/plan">
-              Ver planes
-            </Link>
+
+            <div className="pd-venta">
+              <span className="pd-venta-ico"><Sparkles size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+              <div className="pd-venta-txt">
+                <span className="pd-hoy-eyebrow">Te falta {tier}</span>
+                <p>
+                  Este plan de trabajo está armado día por día: qué clase hacer, en qué orden y con qué
+                  objetivo. Se abre con {tier}, junto con todos los demás planes.
+                </p>
+              </div>
+              <Link className="pd-boton" href="/dashboard/plan">
+                Ver planes <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </section>
       </section>
     </main>
   );
 }
+
+const CSS = `
+.pd { padding-bottom: 80px; }
+.pd-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 20px; }
+
+.pd-volver {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px 0 14px; border-radius: 99px;
+  background: #fff; border: 1.5px solid var(--linea-fuerte); color: var(--ink); font-size: 14px; font-weight: 800; text-decoration: none;
+  transition: background .2s, border-color .2s, transform .3s var(--curva);
+}
+.pd-volver:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateX(-2px); }
+
+.pd-arriba { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); align-items: stretch; }
+
+.pd-hero {
+  position: relative; overflow: hidden; isolation: isolate; padding: 12px; border-radius: 32px;
+  background: linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%); border: 1px solid var(--linea);
+}
+.pd-hero::after { content: ""; position: absolute; z-index: -1; width: 340px; height: 340px; right: -110px; bottom: -170px; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,185,.7), transparent 68%); }
+.pd-portada {
+  position: relative; min-height: 15rem; border-radius: 24px; background-size: cover; background-position: center;
+  background-color: #FFE9DE; background-image: linear-gradient(135deg, #FFE9DE 0%, #FFDADA 60%, #F7EBFA 130%);
+}
+.pd-portada--cerrada { min-height: 13rem; filter: saturate(.55) brightness(1.04); }
+.pd-candado {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 22px;
+  display: grid; place-items: center; background: rgba(255,255,255,.94); color: var(--pink-deep); box-shadow: var(--sombra-alta);
+}
+.pd-hero-txt { padding: 22px clamp(12px, 2.4vw, 26px) clamp(14px, 2.4vw, 22px); }
+.pd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pd-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 99px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 800; box-shadow: 0 6px 14px -10px rgba(176,70,70,.5); }
+.pd-chip svg { color: var(--pink-deep); }
+.pd-chip--plan { background: var(--pink); color: #fff; }
+.pd-chip--plan svg { color: #fff; }
+.pd-titulo { margin-top: 16px; font-weight: 900; font-size: clamp(34px, 4.6vw, 58px); line-height: 1.04; letter-spacing: -0.03em; color: var(--ink); }
+.pd-desc { margin-top: 12px; max-width: 62ch; font-size: 15.5px; line-height: 1.7; color: var(--muted); }
+
+.pd-avance { margin-top: 22px; padding: 16px 18px; border-radius: 22px; background: rgba(255,255,255,.8); border: 1px solid var(--linea); }
+.pd-avance-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.pd-avance-dia { font-size: 15px; font-weight: 900; color: var(--ink); }
+.pd-avance-falta { padding: 3px 10px; border-radius: 99px; background: var(--rubor); font-size: 12.5px; font-weight: 800; color: var(--pink-deep); }
+.pd-barra { height: 12px; border-radius: 99px; background: var(--rubor); overflow: hidden; }
+.pd-barra > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F38A6C, var(--pink)); transform-origin: left; animation: pd-llena 1.2s var(--curva) both .2s; }
+@keyframes pd-llena { from { transform: scaleX(0); } to { transform: none; } }
+
+/* Lo de hoy: tarjeta blanca con el numero del dia en una burbuja grande. */
+.pd-hoy {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: clamp(22px, 2.6vw, 32px);
+  border-radius: 32px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra);
+}
+.pd-hoy-eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 10px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 12.5px; font-weight: 800; }
+.pd-hoy-eyebrow--ok { background: var(--salvia); color: var(--salvia-deep); }
+.pd-hoy-dia { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.pd-hoy-num {
+  width: 84px; height: 84px; border-radius: 28px; display: grid; place-items: center;
+  background: linear-gradient(160deg, #FFE9DE 0%, #FFDADA 100%); color: var(--ink); font-size: 44px; font-weight: 900; letter-spacing: -0.03em;
+}
+.pd-hoy-rot { font-size: 15px; font-weight: 800; color: var(--muted); }
+.pd-hoy-clase { margin-top: 6px; font-size: 21px; font-weight: 900; line-height: 1.25; letter-spacing: -0.015em; color: var(--ink); }
+.pd-hoy-dur { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.pd-hoy-dur svg { color: var(--pink-deep); }
+.pd-hoy-titulo { margin-top: 6px; font-size: 28px; font-weight: 900; line-height: 1.12; letter-spacing: -0.02em; color: var(--ink); }
+.pd-hoy-txt { font-size: 14.5px; line-height: 1.65; color: var(--muted); }
+.pd-boton {
+  margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; padding: 0 26px; border-radius: 99px;
+  background: var(--pink); color: #fff; font-size: 15px; font-weight: 800; text-decoration: none; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85);
+  transition: background .2s, transform .3s var(--curva), box-shadow .3s;
+}
+.pd-hoy .pd-boton { align-self: stretch; margin-top: auto; }
+.pd-boton:hover { background: var(--pink-mid); transform: translateY(-2px); box-shadow: 0 18px 30px -14px rgba(230,79,85,.9); }
+.pd-boton--suave { background: #fff; color: var(--ink); border: 1.5px solid var(--linea-fuerte); box-shadow: none; }
+.pd-boton--suave:hover { background: var(--rubor); border-color: var(--pink-line); box-shadow: none; }
+
+/* El recorrido */
+.pd-recorrido { padding: clamp(20px, 2.6vw, 32px); border-radius: 32px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.pd-recorrido-cabeza { display: flex; align-items: center; gap: 14px; }
+.pd-recorrido-ico { width: 46px; height: 46px; border-radius: 16px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
+.pd-recorrido-eyebrow { font-size: 13px; font-weight: 800; color: var(--muted); }
+.pd-recorrido-titulo { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); }
+.pd-dias { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.pd-vacio { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 22px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); font-size: 14px; color: var(--muted); }
+.pd-vacio-ico { width: 40px; height: 40px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--pink-deep); }
+
+.pd-dia {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px 12px 12px; border-radius: 22px; text-decoration: none;
+  background: #fff; border: 1px solid var(--linea); transition: transform .3s var(--curva), box-shadow .3s, border-color .2s, background .2s, opacity .2s;
+}
+.pd-dia:hover { transform: translateY(-2px); border-color: var(--linea-fuerte); box-shadow: var(--sombra); opacity: 1; }
+.pd-dia-marca {
+  width: 42px; height: 42px; border-radius: 15px; flex-shrink: 0; display: grid; place-items: center;
+  background: var(--crema); color: var(--muted); font-size: 15px; font-weight: 900; border: 1px solid var(--linea);
+}
+.pd-dia-txt { flex: 1; min-width: 0; }
+.pd-dia-rot { font-size: 12.5px; font-weight: 800; color: var(--muted); }
+.pd-dia-titulo { margin-top: 2px; font-size: 16.5px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-dia-dur { flex-shrink: 0; padding: 5px 11px; border-radius: 99px; background: var(--crema); font-size: 12.5px; font-weight: 800; color: var(--muted); }
+.pd-dia-flecha { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--pink-deep); background: transparent; transition: background .2s, transform .3s var(--curva); }
+.pd-dia:hover .pd-dia-flecha { background: var(--rubor); transform: translateX(2px); }
+
+.pd-dia.es-hoy { background: linear-gradient(100deg, #FFEDE8 0%, #FFF7F4 70%); border: 1.5px solid var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.08); }
+.pd-dia.es-hoy .pd-dia-marca { background: var(--pink); color: #fff; border-color: var(--pink); box-shadow: 0 8px 16px -8px rgba(230,79,85,.8); }
+.pd-dia.es-hoy .pd-dia-rot { color: var(--pink-deep); }
+.pd-dia.es-hoy .pd-dia-dur { background: #fff; color: var(--pink-deep); }
+.pd-dia.es-hecho .pd-dia-marca { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
+.pd-dia.es-hecho .pd-dia-rot { color: var(--salvia-deep); }
+.pd-dia.es-empezado .pd-dia-marca { background: #FFF4E8; color: var(--melocoton-deep); border-color: var(--melocoton); }
+.pd-dia.es-empezado .pd-dia-rot { color: var(--melocoton-deep); }
+.pd-dia.es-futuro { opacity: .62; }
+
+/* Venta del plan cerrado */
+.pd-hero--cerrado { max-width: 980px; }
+.pd-venta {
+  margin-top: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 20px; border-radius: 24px;
+  background: rgba(255,255,255,.85); border: 1px solid var(--pink-line);
+}
+.pd-venta-ico { width: 50px; height: 50px; border-radius: 17px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
+.pd-venta-txt { flex: 1; min-width: 220px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.pd-venta-txt p { font-size: 14px; line-height: 1.65; color: var(--muted); }
+.pd-venta .pd-boton { margin-top: 0; }
+
+@media (max-width: 960px) { .pd-arriba { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .pd-hero, .pd-hoy, .pd-recorrido { border-radius: 26px; }
+  .pd-portada { min-height: 11rem; }
+  .pd-dia { gap: 10px; padding: 10px 12px 10px 10px; }
+  .pd-dia-flecha { display: none; }
+  .pd-dia-titulo { font-size: 15px; }
+  .pd-venta .pd-boton { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .pd-barra > div { animation: none; } }
+`;

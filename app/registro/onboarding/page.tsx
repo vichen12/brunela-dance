@@ -2,6 +2,7 @@ import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { completarOnboardingAction } from "@/src/features/auth/registro";
 import { redirect } from "next/navigation";
+import { fuenteSistema } from "@/src/lib/fuente-sistema";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,9 @@ export default async function OnboardingPage({ searchParams }: Props) {
   const nombre = profile?.full_name?.split(" ")[0] ?? null;
 
   return (
-    <main className="onb-page">
+    // `sistema` + la variable de Nunito: la misma piel suave que el panel. Esta
+    // pantalla no vive bajo los layouts del sistema, asi que se la pone a mano.
+    <main className={`onb-page sistema ${fuenteSistema.variable}`}>
       <section className="onb-card">
         <p className="onb-kicker">Paso 2 de 2</p>
         <h1 className="onb-title">
@@ -129,102 +132,110 @@ export default async function OnboardingPage({ searchParams }: Props) {
 
       <style>{`
         .onb-page {
+          position: relative; isolation: isolate; overflow: hidden;
           min-height: 100vh; display: flex; align-items: center; justify-content: center;
-          padding: 28px 20px 40px;
-          background:
-            radial-gradient(1100px 520px at 12% -8%, var(--pink-wash) 0%, transparent 60%),
-            radial-gradient(900px 480px at 105% 108%, var(--pink-soft) 0%, transparent 62%),
-            #fffdfd;
+          padding: 28px 16px 40px;
         }
+        /* Manchas tibias detras de la tarjeta: el fondo sigue siendo blanco. */
+        .onb-page::before, .onb-page::after {
+          content: ""; position: absolute; z-index: -1; border-radius: 50%; pointer-events: none;
+        }
+        .onb-page::before { width: 620px; height: 620px; left: -200px; top: -260px; background: radial-gradient(circle, rgba(255,226,211,.75), transparent 66%); }
+        .onb-page::after { width: 560px; height: 560px; right: -200px; bottom: -240px; background: radial-gradient(circle, rgba(253,236,236,.9), transparent 66%); }
         .onb-card {
           width: min(640px, 100%);
-          background: rgba(255,255,255,0.94);
-          border: 1.5px solid var(--pink-soft);
-          border-radius: 28px; padding: 34px 32px 30px;
-          box-shadow: 0 26px 70px rgba(28,25,23,0.09);
+          background: #fff;
+          border: 1px solid var(--linea);
+          border-radius: 32px; padding: 34px 32px 30px;
+          box-shadow: var(--sombra-alta);
+          animation: onb-entra .7s var(--curva) both;
         }
+        @keyframes onb-entra { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
         .onb-kicker {
-          font-size: 10px; font-weight: 900; letter-spacing: 0.2em;
-          text-transform: uppercase; color: var(--pink);
+          display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px;
+          background: var(--rubor); font-size: 12.5px; font-weight: 800; color: var(--pink-deep);
         }
+        .onb-kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
         .onb-title {
-          font-family: var(--font-display), sans-serif;
-          font-size: 34px; line-height: 1.1; font-weight: 800;
-          color: var(--ink); margin: 12px 0 0;
+          font-size: 36px; line-height: 1.08; font-weight: 900; letter-spacing: -0.025em;
+          color: var(--ink); margin: 14px 0 0;
         }
-        .onb-title span { color: var(--pink); font-style: italic; }
-        .onb-sub { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+        .onb-title span { color: var(--pink); }
+        .onb-sub { margin: 10px 0 0; font-size: 14.5px; color: var(--muted); line-height: 1.6; }
         .onb-error {
-          margin-top: 16px; border-radius: 14px; padding: 0.85rem 1rem;
-          font-size: 0.82rem; font-weight: 700; line-height: 1.4;
-          border: 1px solid rgba(217, 105, 119, 0.3);
-          background: rgba(255, 238, 242, 0.95); color: var(--pink-deep);
+          margin-top: 16px; border-radius: 18px; padding: 0.85rem 1rem;
+          font-size: 0.86rem; font-weight: 700; line-height: 1.4;
+          border: 1px solid var(--pink-line);
+          background: var(--pink-wash); color: var(--pink-deep);
         }
-        .onb-form { margin-top: 24px; display: grid; gap: 26px; }
+        .onb-form { margin-top: 26px; display: grid; gap: 26px; }
         .onb-group { border: 0; padding: 0; margin: 0; }
         .onb-legend {
-          font-size: 11px; font-weight: 900; letter-spacing: 0.14em;
-          text-transform: uppercase; color: var(--pink); margin-bottom: 12px;
+          font-size: 16px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 12px;
         }
         .onb-legend small {
-          font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-          text-transform: none; color: var(--pink-muted); margin-left: 8px;
+          font-size: 12.5px; font-weight: 700; color: var(--muted); margin-left: 8px;
         }
 
         .onb-niveles { display: grid; gap: 8px; }
         .onb-nivel {
-          display: flex; align-items: flex-start; gap: 12px;
-          padding: 13px 15px; border-radius: 15px;
-          border: 1.5px solid var(--pink-line); background: #fff;
-          cursor: pointer; min-height: 48px;
+          display: flex; align-items: center; gap: 13px;
+          padding: 13px 16px; border-radius: 20px;
+          border: 1.5px solid var(--linea); background: #fff;
+          cursor: pointer; min-height: 52px;
+          transition: border-color .2s, background .2s, transform .3s var(--curva), box-shadow .3s;
         }
+        .onb-nivel:hover { border-color: var(--linea-fuerte); background: var(--crema); }
         .onb-nivel:has(input:checked) {
-          border-color: var(--pink); background: var(--pink-wash);
+          border-color: var(--pink-line); background: linear-gradient(100deg, #FFEDE8, #FFF7F4 70%); box-shadow: 0 0 0 4px rgba(230,79,85,.07);
         }
-        .onb-nivel input { margin-top: 3px; accent-color: var(--pink); width: 16px; height: 16px; }
+        .onb-nivel input { flex-shrink: 0; accent-color: var(--pink); width: 18px; height: 18px; }
         .onb-nivel-body { display: flex; flex-direction: column; gap: 2px; }
-        .onb-nivel-label { font-size: 14px; font-weight: 800; color: var(--ink); }
-        .onb-nivel-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .onb-nivel-label { font-size: 15px; font-weight: 800; color: var(--ink); }
+        .onb-nivel-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
         .onb-objetivos { display: flex; flex-wrap: wrap; gap: 8px; }
         .onb-obj {
           display: inline-flex; align-items: center; gap: 8px;
-          padding: 11px 15px; border-radius: 999px;
-          border: 1.5px solid var(--pink-line); background: #fff;
-          cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink);
-          min-height: 44px;
+          padding: 10px 16px 10px 13px; border-radius: 999px;
+          border: 1.5px solid var(--linea); background: #fff;
+          cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink);
+          min-height: 44px; transition: border-color .2s, background .2s, color .2s;
         }
+        .onb-obj:hover { border-color: var(--linea-fuerte); background: var(--crema); }
         .onb-obj:has(input:checked) {
-          border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep);
+          border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep);
         }
-        .onb-obj input { accent-color: var(--pink); width: 15px; height: 15px; }
+        .onb-obj input { accent-color: var(--pink); width: 16px; height: 16px; }
 
         .onb-consent {
-          display: flex; align-items: flex-start; gap: 12px;
-          padding: 14px 15px; border-radius: 15px;
-          border: 1.5px solid var(--pink-line); background: #fff;
-          cursor: pointer; min-height: 48px;
+          display: flex; align-items: flex-start; gap: 13px;
+          padding: 15px 16px; border-radius: 20px;
+          border: 1.5px solid var(--linea); background: var(--crema);
+          cursor: pointer; min-height: 52px; transition: border-color .2s, background .2s;
         }
         .onb-consent:has(input:checked) {
-          border-color: var(--pink); background: var(--pink-wash);
+          border-color: #CFE3C9; background: #F2F7EF;
         }
-        .onb-consent input { margin-top: 3px; accent-color: var(--pink); width: 16px; height: 16px; }
+        .onb-consent input { flex-shrink: 0; margin-top: 2px; accent-color: var(--salvia-deep); width: 18px; height: 18px; }
         .onb-consent span { display: flex; flex-direction: column; gap: 3px; }
-        .onb-consent strong { font-size: 13.5px; font-weight: 700; color: var(--ink); }
-        .onb-consent small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .onb-consent strong { font-size: 14.5px; font-weight: 800; color: var(--ink); }
+        .onb-consent small { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
         .onb-submit {
-          width: 100%; min-height: 52px; border: 0; border-radius: 999px;
+          width: 100%; min-height: 54px; border: 0; border-radius: 999px;
           background: var(--pink); color: #fff; cursor: pointer;
-          font-family: var(--font-body), sans-serif; font-size: 0.72rem;
-          font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase;
-          box-shadow: 0 18px 34px rgba(230, 79, 85, 0.26);
+          font-family: inherit; font-size: 15.5px; font-weight: 800;
+          box-shadow: 0 14px 26px -14px rgba(230,79,85,.85);
+          transition: background .2s, transform .3s var(--curva), box-shadow .3s;
         }
+        .onb-submit:hover { background: var(--pink-mid); transform: translateY(-2px); box-shadow: 0 18px 30px -14px rgba(230,79,85,.9); }
 
         @media (max-width: 520px) {
-          .onb-card { padding: 26px 20px 24px; border-radius: 22px; }
-          .onb-title { font-size: 28px; }
+          .onb-card { padding: 26px 20px 24px; border-radius: 26px; }
+          .onb-title { font-size: 29px; }
         }
+        @media (prefers-reduced-motion: reduce) { .onb-card { animation: none; } }
       `}</style>
     </main>
   );

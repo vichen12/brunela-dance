@@ -59,18 +59,20 @@ export function PantallaError({
       <style>{CSS_ERROR}</style>
       <main className="perr">
         <div className="perr-cuerpo">
+          <span className="perr-mancha perr-mancha--a" aria-hidden="true" />
+          <span className="perr-mancha perr-mancha--b" aria-hidden="true" />
           {/* Un arco que se dibuja solo: el trazo de un port de bras, no un
               icono de alerta. La pantalla tiene que bajar la tension, no subirla. */}
           <svg className="perr-arco" viewBox="0 0 220 120" aria-hidden="true">
             <motion.path
               d="M10 110 C 40 20, 180 20, 210 110"
-              fill="none" stroke="var(--pink)" strokeWidth="1.5" strokeLinecap="round"
+              fill="none" stroke="var(--pink)" strokeWidth="3" strokeLinecap="round"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
               transition={{ duration: 1.6, ease: SUAVE }}
             />
             <motion.circle
-              cx="110" cy="43" r="4" fill="var(--pink)"
+              cx="110" cy="43" r="7" fill="var(--pink)"
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 1.1, type: "spring", stiffness: 300, damping: 14 }}
             />
@@ -157,41 +159,53 @@ const CSS_ERROR = `
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
   padding: 48px clamp(16px, 4vw, 48px); background: #fff;
 }
-.perr-cuerpo { width: 100%; max-width: 640px; text-align: center; }
-.perr-arco { width: 180px; height: auto; margin: 0 auto 22px; display: block; overflow: visible; }
-.perr-eyebrow {
-  display: inline-flex; align-items: center; gap: 12px; margin-bottom: 16px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep);
+.perr-cuerpo {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 100%; max-width: 660px; text-align: center;
+  padding: clamp(32px, 5vw, 52px) clamp(20px, 5vw, 52px);
+  border-radius: 32px; border: 1px solid var(--linea, #F3E3DC);
+  background: linear-gradient(160deg, #FFF1EC 0%, #FFF7F3 50%, #fff 100%);
+  box-shadow: var(--sombra, 0 12px 32px -18px rgba(176, 90, 80, 0.32));
 }
-.perr-raya { display: inline-block; width: 28px; height: 1.5px; background: var(--pink); }
+.perr-mancha { position: absolute; z-index: -1; border-radius: 50%; filter: blur(42px); pointer-events: none; }
+.perr-mancha--a { width: 280px; height: 280px; right: -90px; top: -120px; background: rgba(255, 210, 186, 0.7); }
+.perr-mancha--b { width: 220px; height: 220px; left: -80px; bottom: -110px; background: rgba(253, 205, 205, 0.6); }
+.perr-arco { width: 150px; height: auto; margin: 0 auto 20px; display: block; overflow: visible; }
+.perr-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  padding: 6px 13px 6px 11px; border-radius: 99px; background: #fff; box-shadow: 0 6px 16px -10px rgba(176,70,70,.45);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep);
+}
+.perr-raya { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
 .perr-titulo {
-  font-family: var(--font-display), sans-serif; font-weight: 800;
-  font-size: clamp(32px, 4.4vw, 54px); line-height: 1.05; letter-spacing: -0.04em; color: var(--ink);
+  font-family: var(--font-display), sans-serif; font-weight: 900;
+  font-size: clamp(28px, 4vw, 44px); line-height: 1.12; letter-spacing: -0.02em; color: var(--ink);
 }
 .perr-titulo em { font-style: normal; color: var(--pink-mid); }
 .perr-linea { display: block; overflow: hidden; padding-bottom: 0.1em; }
 .perr-linea-in { display: block; }
-.perr-texto { margin: 18px auto 0; max-width: 46ch; font-size: 15px; line-height: 1.7; color: #6E5550; }
-.perr-acciones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+.perr-texto { margin: 14px auto 0; max-width: 46ch; font-size: 15.5px; line-height: 1.7; color: var(--muted, #8A6F68); }
+.perr-texto strong { color: var(--ink); }
+.perr-acciones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
 .perr-btn {
-  display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px;
-  border-radius: 99px; border: 1.5px solid #E6CCC2; background: #fff; color: var(--ink);
-  font: inherit; font-size: 13.5px; font-weight: 700; text-decoration: none; cursor: pointer;
-  transition: border-color .2s, background .2s, transform .2s;
+  display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px;
+  border-radius: 99px; border: 1px solid var(--linea-fuerte, #E9CFC5); background: #fff; color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 800; text-decoration: none; cursor: pointer;
+  transition: border-color .2s, background .2s, color .2s, transform .35s cubic-bezier(.22,1,.36,1);
 }
-.perr-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
-.perr-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
-.perr-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
+.perr-btn:hover { background: var(--rubor, #FFF2EE); border-color: var(--pink-line); color: var(--pink-deep); transform: translateY(-2px); }
+.perr-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.perr-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
 .perr-btn:focus-visible { outline: 2px solid var(--pink); outline-offset: 3px; }
-.perr-detalle { margin-top: 30px; text-align: left; border-top: 1px solid #F6E7E1; padding-top: 14px; }
+.perr-detalle { margin-top: 26px; text-align: left; border-top: 1px solid var(--linea, #F3E3DC); padding-top: 14px; }
 .perr-detalle summary {
   cursor: pointer; text-align: center; list-style: none;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #B39189;
+  font-size: 13px; font-weight: 800; color: var(--muted, #8A6F68);
 }
 .perr-detalle summary::-webkit-details-marker { display: none; }
 .perr-detalle summary:hover { color: var(--pink-deep); }
 .perr-detalle pre {
-  margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #FFFAF6; border: 1px solid #F6E7E1;
-  font-size: 11.5px; line-height: 1.5; color: #6E5550; white-space: pre-wrap; word-break: break-word;
+  margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--linea, #F3E3DC);
+  font-size: 12px; line-height: 1.5; color: #6E5550; white-space: pre-wrap; word-break: break-word;
 }
 `;
