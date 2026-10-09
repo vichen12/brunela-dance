@@ -14,6 +14,34 @@ export async function middleware(request: NextRequest) {
   const { pathname: ruta } = request.nextUrl;
 
   /**
+   * Los enlaces de los correos de Supabase (confirmar cuenta, cambiar
+   * contraseña) llegan con `?code=` a la pagina de destino. Ese codigo hay que
+   * CANJEARLO por una sesion, y eso lo hace una sola ruta: /auth/callback.
+   *
+   * Sin este desvio, /sign-in/reset-password mostraba el formulario pero sin
+   * sesion, y al guardar daba "Auth session missing!". Y la confirmacion de
+   * cuenta caia en la portada (la Site URL) sin dejar a la alumna logueada.
+   *
+   * La portada manda a /dashboard y no al onboarding: el layout del estudio ya
+   * desvia al onboarding a quien no lo completo, y asi tambien sirve si el
+   * codigo era de otro tipo.
+   */
+  const codigo = request.nextUrl.searchParams.get("code");
+  const destinoDelCodigo: Record<string, string> = {
+    "/": "/dashboard",
+    "/sign-in/reset-password": "/sign-in/reset-password",
+    "/registro/onboarding": "/registro/onboarding",
+  };
+  if (codigo && destinoDelCodigo[ruta]) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.search = "";
+    url.searchParams.set("code", codigo);
+    url.searchParams.set("next", destinoDelCodigo[ruta]);
+    return NextResponse.redirect(url);
+  }
+
+  /**
    * La puerta de acceso anticipado va PRIMERO, antes de tocar Supabase.
    *
    * POR QUE PRIMERO

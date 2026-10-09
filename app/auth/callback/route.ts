@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     // Surface the real reason instead of a generic message so failures are
     // diagnosable from the sign-in screen.
     return NextResponse.redirect(
-      `${origin}/sign-in?error=${encodeURIComponent(`Google: ${error.message}`)}`
+      `${origin}/sign-in?error=${encodeURIComponent(`No se pudo entrar con ese enlace (${error.message}). Si venía de un correo, pedí uno nuevo.`)}`
     );
   }
 

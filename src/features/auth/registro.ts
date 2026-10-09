@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { hasSupabaseAuthEnv } from "@/src/lib/env";
+import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
 import { requireUser } from "@/src/features/auth/guards";
 
 /**
@@ -83,6 +83,11 @@ export async function signUpAction(formData: FormData) {
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
+      // A donde lleva el boton del correo de confirmacion. El middleware canjea
+      // el ?code= por sesion en /auth/callback y sigue al onboarding. Si la URL
+      // no estuviera en la lista de Supabase, cae en la Site URL (la portada)
+      // y el middleware la manda igual al estudio.
+      emailRedirectTo: `${getAppUrl()}/registro/onboarding`,
       // full_name lo lee handle_new_user() para el perfil. pending_tier queda
       // guardado para el paso del checkout.
       data: {
