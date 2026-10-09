@@ -1,5 +1,6 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
+import { ArrowRight, Search, X } from "lucide-react";
 
 /**
  * Buscador y filtros de los listados del panel.
@@ -39,27 +40,14 @@ export function AdminBuscador({
   const hayAlgo = Boolean(q) || filtros.some((f) => f.valor);
 
   return (
-    <form
-      method="get"
-      action={action}
-      style={{
-        display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center",
-        marginBottom: 16,
-      }}
-    >
-      <input
-        type="search"
-        name="q"
-        defaultValue={q}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        style={{
-          flex: "1 1 240px", minWidth: 200, minHeight: 42,
-          padding: "11px 16px", borderRadius: 999,
-          border: "1.5px solid #f0eeec", background: "#fff",
-          fontSize: 13, color: "#1c1917", outline: "none", fontFamily: "inherit",
-        }}
-      />
+    <form method="get" action={action} className="abus" role="search">
+      <label className="abus-buscar">
+        <Search size={17} strokeWidth={1.8} className="abus-buscar-ico" aria-hidden="true" />
+        <input type="search" name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} />
+        <button type="submit" className="abus-buscar-btn" aria-label="Buscar">
+          <ArrowRight size={16} strokeWidth={2} />
+        </button>
+      </label>
 
       {filtros.map((f) => (
         <Desplegable
@@ -74,22 +62,14 @@ export function AdminBuscador({
         />
       ))}
 
-      <button type="submit" style={{
-        minHeight: 42, padding: "10px 22px", borderRadius: 999, cursor: "pointer",
-        background: "var(--pink)", color: "#fff", border: "none",
-        fontSize: 12.5, fontWeight: 700, fontFamily: "inherit",
-      }}>Buscar</button>
-
       {hayAlgo && (
-        <Link href={action as never} style={{
-          minHeight: 42, display: "inline-flex", alignItems: "center",
-          padding: "10px 16px", borderRadius: 999, textDecoration: "none",
-          color: "var(--pink-deep)", fontSize: 12.5, fontWeight: 700,
-        }}>Quitar</Link>
+        <Link href={action as never} className="abus-quitar">
+          <X size={13} strokeWidth={2.2} aria-hidden="true" /> Quitar filtros
+        </Link>
       )}
 
-      <span style={{ fontSize: 11.5, color: "#a8a29e", marginLeft: "auto" }}>
-        {hayAlgo ? `${mostrando} de ${total}` : `${total} en total`}
+      <span className="abus-cuenta">
+        {hayAlgo ? <><strong>{mostrando}</strong> de {total}</> : <><strong>{total}</strong> en total</>}
       </span>
     </form>
   );

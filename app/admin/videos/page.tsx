@@ -1,4 +1,6 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
+import Link from "next/link";
+import { AlertCircle, Archive, CheckCircle2, ChevronDown, Eye, Languages, Play, Plus, Rocket, Star } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { EditarClase } from "@/components/admin-video-drawer";
@@ -86,16 +88,10 @@ async function quickFeaturedAction(fd: FormData) {
 
 // ── Style maps ─────────────────────────────────────────────────────────────────
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  published: { bg: "#dcfce7", color: "#166534", label: "Publicado" },
-  draft:     { bg: "#fef9c3", color: "#854d0e", label: "Borrador" },
-  archived:  { bg: "#f1f5f9", color: "#475569", label: "Archivado" },
-};
-
-const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps" },
-  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal:       { bg: "#1c1917", color: "var(--pink-wash)", label: "Principal" },
+const STATUS_STYLE: Record<string, { clase: string; label: string }> = {
+  published: { clase: "acl-chip--pub",  label: "Publicada" },
+  draft:     { clase: "acl-chip--borr", label: "Borrador" },
+  archived:  { clase: "acl-chip--arch", label: "Archivada" },
 };
 
 const LOCALE_FLAGS: Record<string, string> = { es: "ES", en: "EN", fr: "FR", it: "IT" };
@@ -387,214 +383,307 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
       : [])
   ];
 
+  // "Nueva clase" de la cabecera abre el formulario: un <details> no se abre
+  // con un ancla, asi que se pide por la URL y el servidor lo pinta abierto.
+  const abrirNueva = params.nueva === "1";
+  const hayFiltro = Boolean(q || fEstado || fPlan);
+
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Gestión de contenido</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Clases.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Subí, editá y publicá las clases del estudio, con su video, sus pistas de audio y el plan que las habilita.
-        </p>
+    <main className="acl">
+      <style>{CSS_CLASES}</style>
+
+      <header className="acl-mast">
+        <div style={{ minWidth: 0 }}>
+          <p className="acl-eyebrow"><span className="acl-raya" />Gestión de contenido</p>
+          <h1 className="acl-titulo">Clases<em>.</em></h1>
+          <p className="acl-lede">
+            Subí, editá y publicá las clases del estudio, con su video, sus pistas de audio y los planes que las ven.
+          </p>
+        </div>
+        <div className="acl-mast-acciones">
+          <Link href="/admin/videos?nueva=1#nueva" className="acl-btn acl-btn--lleno">
+            <Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva clase
+          </Link>
+          <Link href="/dashboard/library" className="acl-btn">
+            <Eye size={15} strokeWidth={2} aria-hidden="true" /> Ver como alumna
+          </Link>
+        </div>
       </header>
 
       <Flash message={success} tone="success" />
       <Flash message={error} tone="error" />
 
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: 12, marginBottom: 24 }}>
+      {/* Cifras. Con filtro, la cuenta de la lista ya dice "x de y" en el buscador:
+          estas son siempre las del catalogo entero. */}
+      <div className="acl-cifras" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
         {stats.map((s) => (
-          <div key={s.label} style={{
-            background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, padding: "20px 22px",
-          }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#1c1917", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#44403c", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#a8a29e", marginTop: 2 }}>{s.sub}</p>
+          <div key={s.label} className="acl-cifra">
+            <span className="acl-cifra-label">{s.label}</span>
+            <span className="acl-cifra-num">{s.value}</span>
+            <span className="acl-cifra-sub">{s.sub}</span>
           </div>
         ))}
       </div>
 
-      {/* New video form — collapsed by default */}
-      <details style={{ marginBottom: 16 }}>
-        <summary style={{
-          listStyle: "none", cursor: "pointer",
-          background: "#fff", border: "1px solid #f0eeec", borderRadius: 14,
-          padding: "14px 20px", display: "flex", alignItems: "center", gap: 10,
-          fontSize: 13, fontWeight: 700, color: "#1c1917", userSelect: "none",
-        }}>
-          <span style={{
-            width: 24, height: 24, borderRadius: 8,
-            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontSize: 16, fontWeight: 800, flexShrink: 0,
-          }}>+</span>
-          Nuevo video
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#a8a29e", fontWeight: 500 }}>Clic para desplegar formulario</span>
+      {/* Subir una clase, plegado. */}
+      <details className="acl-nueva" id="nueva" open={abrirNueva}>
+        <summary>
+          <span className="acl-nueva-ico" aria-hidden="true"><Plus size={18} strokeWidth={2.2} /></span>
+          <span className="acl-nueva-txt">
+            <span className="acl-nueva-titulo">Subir una clase nueva</span>
+            <span className="acl-nueva-sub">Video, idiomas, categoría, nivel, materiales y planes</span>
+          </span>
+          <ChevronDown size={18} strokeWidth={2} className="acl-nueva-flecha" aria-hidden="true" />
         </summary>
-        <div style={{
-          background: "#fff", border: "1px solid #f0eeec", borderTop: "none",
-          borderRadius: "0 0 14px 14px", padding: "24px 22px",
-        }}>
+        <div className="acl-nueva-cuerpo">
           <UploadForm bunnyReady={bunnyReady} programas={programas} />
         </div>
       </details>
 
-      {/* Video list */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#a8a29e", textTransform: "uppercase", marginBottom: 12 }}>
-          Videos — {videos.length}
-        </p>
-        {videos.length === 0 ? (
-          <div style={{
-            background: "#fff", border: "1.5px dashed #f0eeec", borderRadius: 16,
-            padding: "40px 24px", textAlign: "center", color: "#a8a29e", fontSize: 13,
-          }}>
-            No hay videos todavia. Crea el primero arriba.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {videos.map((video) => {
-              const st = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
-              const tier = TIER_STYLE[video.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
-              // El texto sale de la LISTA y el color del minimo: la insignia
-              // tiene que decir quien ve la clase de verdad. Con {corps,
-              // principal} el minimo es corps y Solista NO la ve; mostrar solo
-              // "Corps" ahi seria decir lo contrario de lo que hace la policy.
-              const planesTexto = planesEnTexto(
-                video.planes_permitidos?.length ? video.planes_permitidos : planesDesde(video.membership_tier_required)
-              );
-              // El nombre viejo era hasMux y el badge decia "Mux OK": nombraba al
-              // proveedor en vez de responder lo unico que importa mirando la lista,
-              // que es si esa clase ya se puede ver.
-              const tieneVideo = !!(video.bunny_video_id || video.stream_playback_id);
-              // Spanish always rides inside the video file, so it is never in
-              // audio_tracks -- but it IS a language the class plays in.
-              const audioLocales = (video.audio_tracks ?? []).map((t) => t.locale);
-              const allLocales = audioLocales.length > 0 ? ["es", ...audioLocales] : [];
-              const durMin = Math.floor(video.duration_seconds / 60);
-              const job = latestJob.get(video.id);
+      <AdminBuscador
+        action="/admin/videos"
+        q={q}
+        placeholder="Buscar por título o dirección"
+        total={totalVideos ?? videos.length}
+        mostrando={videos.length}
+        filtros={[
+          { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS },
+          { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES },
+        ]}
+      />
 
-              return (
-                <div key={video.id} style={{ background: "#fff", border: "1px solid #f0eeec", borderRadius: 16, overflow: "hidden" }}>
+      {videos.length === 0 ? (
+        <div className="acl-vacio">
+          <p className="acl-vacio-titulo">{hayFiltro ? "Ninguna clase coincide." : "Todavía no hay clases."}</p>
+          {hayFiltro
+            ? <Link href="/admin/videos" className="acl-btn">Ver todas</Link>
+            : <Link href="/admin/videos?nueva=1#nueva" className="acl-btn acl-btn--lleno"><Plus size={16} strokeWidth={2.2} /> Subir la primera</Link>}
+        </div>
+      ) : (
+        <ul className="acl-lista">
+          {videos.map((video) => {
+            const st = STATUS_STYLE[video.status] ?? STATUS_STYLE.draft;
+            // El texto sale de la LISTA: la ficha tiene que decir quien ve la
+            // clase de verdad. Con {corps, principal} el minimo es corps y
+            // Solista NO la ve; mostrar solo "Corps" diria lo contrario.
+            const planesTexto = planesEnTexto(
+              video.planes_permitidos?.length ? video.planes_permitidos : planesDesde(video.membership_tier_required)
+            );
+            const tieneVideo = !!(video.bunny_video_id || video.stream_playback_id);
+            // El espanol viaja dentro del archivo de video, asi que nunca esta en
+            // audio_tracks -- pero es un idioma en el que la clase se escucha.
+            const audioLocales = (video.audio_tracks ?? []).map((t) => t.locale);
+            const allLocales = audioLocales.length > 0 ? ["es", ...audioLocales] : [];
+            const durMin = Math.floor(video.duration_seconds / 60);
+            const job = latestJob.get(video.id);
+            const miniatura = adminThumb(video);
+            const titulo = video.title_i18n.es ?? video.slug;
 
-                  {/* Card header — always visible */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    padding: "14px 18px",
-                  }}>
-                    {/* Thumbnail */}
-                    <div style={{
-                      width: 64, height: 42, borderRadius: 10, flexShrink: 0, overflow: "hidden",
-                      background: "linear-gradient(145deg, var(--pink-soft), var(--rose))",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {adminThumb(video) ? (
-                        <img src={adminThumb(video)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                          <polygon points="7,4 16,10 7,16" fill="rgba(230, 79, 85,0.5)" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>
-                          {video.title_i18n.es ?? video.slug}
-                        </span>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>{st.label}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: tier.bg, color: tier.color }}>{planesTexto}</span>
-                        {video.is_featured && (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#fef9c3", color: "#854d0e" }}>Destacado</span>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#a8a29e", flexWrap: "wrap" }}>
-                        <span>/{video.slug}</span>
-                        <span>{durMin} min</span>
-                        {video.content_type === "mini_training" && <span>Mini Training</span>}
-                        {video.category_slugs?.length > 0 && (
-                          <span>{video.category_slugs.map((c) => CATEGORIA_LABEL[c] ?? c).join(", ")}</span>
-                        )}
-                        <span>{nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}</span>
-                        {tieneVideo && <span style={{ color: "#059669", fontWeight: 600 }}>Video listo</span>}
-                        {allLocales.length > 0 && (
-                          <span style={{ color: "#7c3aed", fontWeight: 600 }}>Audio: {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
-                        )}
-                        {/* Solo en clases PUBLICADAS: una en borrador no tiene
-                            por que tener uso, y marcarla seria ruido. */}
-                        {mostrarUso && video.status === "published" && (() => {
-                          const n = alumnasPorClase.get(video.id)?.size ?? 0;
-                          return n === 0 ? (
-                            <span style={{ color: "var(--pink-deep)", fontWeight: 700 }}>
-                              No la empezó nadie
-                            </span>
-                          ) : (
-                            <span>La empezaron {n}</span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* Quick actions */}
-                    <div style={{ display: "flex", gap: 5, flexShrink: 0, alignItems: "center" }}>
-                      {video.status !== "published" && (
-                        <form action={quickStatusAction}>
-                          <input type="hidden" name="id" value={video.id} />
-                          <input type="hidden" name="status" value="published" />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
-                            background: "#dcfce7", color: "#166534", border: "none", cursor: "pointer",
-                          }}>Publicar</BotonEnviar>
-                        </form>
-                      )}
-                      {video.status !== "archived" && (
-                        <form action={quickStatusAction}>
-                          <input type="hidden" name="id" value={video.id} />
-                          <input type="hidden" name="status" value="archived" />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
-                            background: "#f1f5f9", color: "#64748b", border: "none", cursor: "pointer",
-                          }}>Archivar</BotonEnviar>
-                        </form>
-                      )}
-                      <form action={quickFeaturedAction}>
-                        <input type="hidden" name="id" value={video.id} />
-                        <input type="hidden" name="current" value={String(video.is_featured)} />
-                        <button type="submit" style={{
-                          fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 99,
-                          background: video.is_featured ? "#fef9c3" : "#f9fafb",
-                          color: video.is_featured ? "#854d0e" : "#6b7280",
-                          border: "none", cursor: "pointer",
-                        }}>{video.is_featured ? "Quitar destaque" : "Destacar"}</button>
-                      </form>
-                    </div>
+            return (
+              <li key={video.id} className="acl-fila">
+                <div className="acl-fila-cuerpo">
+                  <div className="acl-mini">
+                    {miniatura ? <img src={miniatura} alt="" /> : <Play size={18} strokeWidth={2} aria-hidden="true" />}
+                    <span className="acl-mini-dur">{durMin} min</span>
                   </div>
 
-                  {/* Mux state — only while there is something to act on */}
-                  {job && job.status !== "done" && <MuxStatus job={job} />}
+                  <div className="acl-info">
+                    <div className="acl-chips">
+                      <span className={"acl-chip " + st.clase}>{st.label}</span>
+                      <span className="acl-chip acl-chip--plan">{planesTexto}</span>
+                      {video.is_featured && <span className="acl-chip acl-chip--dest"><Star size={11} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacada</span>}
+                      {video.content_type === "mini_training" && <span className="acl-chip acl-chip--plan">Mini Training</span>}
+                    </div>
+                    <h2 className="acl-titulo-clase">{titulo}</h2>
+                    <p className="acl-meta">
+                      {video.category_slugs?.length > 0 && <span>{video.category_slugs.map((c) => CATEGORIA_LABEL[c] ?? c).join(", ")}</span>}
+                      <span>{nivelEnTexto(video.recommended_min_level, video.recommended_max_level)}</span>
+                      <span className="acl-meta-slug">/{video.slug}</span>
+                    </p>
+                    <p className="acl-estado-video">
+                      {tieneVideo
+                        ? <span className="acl-ok"><CheckCircle2 size={13} strokeWidth={2.2} aria-hidden="true" /> Video listo</span>
+                        : <span className="acl-falta"><AlertCircle size={13} strokeWidth={2.2} aria-hidden="true" /> Sin video</span>}
+                      {allLocales.length > 0 && (
+                        <span className="acl-idiomas"><Languages size={13} strokeWidth={2} aria-hidden="true" /> {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</span>
+                      )}
+                      {/* Solo en clases PUBLICADAS: una en borrador no tiene
+                          por que tener uso, y marcarla seria ruido. */}
+                      {mostrarUso && video.status === "published" && (() => {
+                        const n = alumnasPorClase.get(video.id)?.size ?? 0;
+                        return n === 0
+                          ? <span className="acl-falta">No la empezó nadie</span>
+                          : <span>La empezaron {n}</span>;
+                      })()}
+                    </p>
+                  </div>
 
-                  {/* Edicion en panel lateral.
-                      Antes el formulario COMPLETO de cada clase vivia aca
-                      dentro de un <details>. Colapsado o no, React lo renderiza
-                      igual: con 19 clases eran ~250 controles de formulario en
-                      el DOM, y eso es lo que hacia scrollear metros. Ahora el
-                      formulario no existe hasta que se abre el panel. */}
-                  <div style={{
-                    padding: "9px 18px", borderTop: "1px solid #f9f7f6",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
+                  <div className="acl-acciones">
+                    {/* Edicion en panel lateral: el formulario no existe en el
+                        DOM hasta que se abre (con 19 clases eran ~250 controles). */}
                     <EditarClase
                       video={video}
                       planes={programas}
                       ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
                     />
+                    {video.status !== "published" && (
+                      <form action={quickStatusAction}>
+                        <input type="hidden" name="id" value={video.id} />
+                        <input type="hidden" name="status" value="published" />
+                        <BotonEnviar className="acl-accion acl-accion--publicar" pendingLabel="Publicando…">
+                          <Rocket size={14} strokeWidth={2} aria-hidden="true" /> Publicar
+                        </BotonEnviar>
+                      </form>
+                    )}
+                    <form action={quickFeaturedAction}>
+                      <input type="hidden" name="id" value={video.id} />
+                      <input type="hidden" name="current" value={String(video.is_featured)} />
+                      <BotonEnviar className="acl-accion" title={video.is_featured ? "Quitar de destacadas" : "Destacar en la biblioteca"}>
+                        <Star size={14} strokeWidth={2} fill={video.is_featured ? "currentColor" : "none"} aria-hidden="true" />
+                        {video.is_featured ? "Quitar destaque" : "Destacar"}
+                      </BotonEnviar>
+                    </form>
+                    {video.status !== "archived" && (
+                      <form action={quickStatusAction}>
+                        <input type="hidden" name="id" value={video.id} />
+                        <input type="hidden" name="status" value="archived" />
+                        <BotonEnviar className="acl-accion acl-accion--suave" title="Archivar: deja de verse, no se borra">
+                          <Archive size={14} strokeWidth={2} aria-hidden="true" /> Archivar
+                        </BotonEnviar>
+                      </form>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                {/* Estado del muxeo: solo mientras haya algo que hacer */}
+                {job && job.status !== "done" && <MuxStatus job={job} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </main>
   );
 }
+
+const CSS_CLASES = `
+.acl { display: flex; flex-direction: column; }
+.acl-mast {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px 28px; flex-wrap: wrap;
+  padding-bottom: clamp(22px, 3vw, 30px);
+}
+.acl-eyebrow {
+  display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep);
+}
+.acl-raya { display: inline-block; width: 28px; height: 1.5px; background: var(--pink); }
+.acl-titulo {
+  font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: clamp(40px, 5vw, 68px); line-height: 1; letter-spacing: -0.045em; color: var(--ink);
+}
+.acl-titulo em { font-style: normal; color: var(--pink); }
+.acl-lede { margin-top: 14px; max-width: 56ch; font-size: 15px; line-height: 1.7; color: #57534e; }
+.acl-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 6px; }
+.acl-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 99px;
+  border: 1.5px solid #d6d3d1; background: #fff; color: var(--ink); text-decoration: none;
+  font-size: 13px; font-weight: 700; white-space: nowrap; transition: border-color .2s, transform .2s, background .2s;
+}
+.acl-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
+.acl-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
+.acl-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
+
+.acl-cifras { display: grid; border-top: 1px solid var(--ink); border-bottom: 1px solid #e7e5e4; margin-bottom: 18px; }
+.acl-cifra { display: flex; flex-direction: column; gap: 8px; padding: 18px 22px 20px; }
+.acl-cifra:first-child { padding-left: 0; }
+.acl-cifra + .acl-cifra { border-left: 1px solid #e7e5e4; }
+.acl-cifra-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #78716c; }
+.acl-cifra-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 40px; line-height: 0.95; letter-spacing: -0.045em; color: var(--ink); }
+.acl-cifra-sub { font-size: 12px; color: var(--pink-muted); }
+
+.acl-nueva { margin-bottom: 8px; border: 1.5px dashed #e7e5e4; border-radius: 20px; transition: border-color .2s, background .2s; }
+.acl-nueva:hover { border-color: var(--pink-line); }
+.acl-nueva[open] { border-style: solid; border-color: var(--pink-line); background: #fff; }
+.acl-nueva summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; user-select: none; }
+.acl-nueva summary::-webkit-details-marker { display: none; }
+.acl-nueva-ico {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink); color: #fff; transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.acl-nueva[open] .acl-nueva-ico { transform: rotate(45deg); }
+.acl-nueva-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.acl-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
+.acl-nueva-sub { font-size: 12.5px; color: #78716c; }
+.acl-nueva-flecha { color: #a8a29e; transition: transform .3s; }
+.acl-nueva[open] .acl-nueva-flecha { transform: rotate(180deg); }
+.acl-nueva-cuerpo { padding: 4px 22px 24px; border-top: 1px solid #f0eeec; }
+
+.acl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.acl-fila { border-bottom: 1px solid #f0eeec; }
+.acl-fila-cuerpo { display: flex; align-items: center; gap: 18px; padding: 16px 8px; margin: 0 -8px; border-radius: 16px; transition: background .2s; }
+.acl-fila-cuerpo:hover { background: #fafaf9; }
+.acl-mini {
+  position: relative; width: 132px; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, var(--pink-wash), var(--pink-soft)); color: var(--pink-mid);
+}
+.acl-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.acl-mini-dur {
+  position: absolute; right: 6px; bottom: 6px; font-size: 10.5px; font-weight: 700; color: #fff;
+  padding: 2px 7px; border-radius: 6px; background: rgba(28,25,23,0.55);
+}
+.acl-info { flex: 1; min-width: 0; }
+.acl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
+.acl-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.acl-chip--pub { background: var(--ink); color: #fff; }
+.acl-chip--borr { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.acl-chip--arch { background: #f5f5f4; color: #78716c; }
+.acl-chip--plan { background: #fff; color: #57534e; border: 1px solid #e7e5e4; }
+.acl-chip--dest { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+.acl-titulo-clase {
+  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.025em;
+  color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.acl-meta, .acl-estado-video { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 12.5px; color: #78716c; }
+.acl-meta-slug { color: #a8a29e; }
+.acl-estado-video span { display: inline-flex; align-items: center; gap: 5px; }
+.acl-ok { color: #15803d; font-weight: 600; }
+.acl-falta { color: var(--pink-deep); font-weight: 600; }
+.acl-idiomas { color: #57534e; font-weight: 600; }
+
+.acl-acciones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.acl-acciones form { display: contents; }
+.acl-accion, .acl-editar {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 13px; border-radius: 10px; cursor: pointer;
+  border: 1px solid #e7e5e4; background: #fff; color: #44403c; font: inherit; font-size: 12.5px; font-weight: 700;
+  white-space: nowrap; transition: border-color .2s, background .2s, color .2s;
+}
+.acl-accion:hover, .acl-editar:hover { border-color: var(--pink-line); background: var(--pink-wash); color: var(--pink-deep); }
+.acl-editar { border-color: var(--ink); color: var(--ink); }
+.acl-accion--publicar { background: var(--pink); border-color: var(--pink); color: #fff; }
+.acl-accion--publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
+.acl-accion--suave { color: #78716c; }
+
+.acl-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 52px 24px; text-align: center;
+  border: 1.5px dashed #e7e5e4; border-radius: 22px;
+}
+.acl-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.025em; color: var(--ink); }
+
+@media (max-width: 980px) {
+  .acl-fila-cuerpo { flex-wrap: wrap; }
+  .acl-info { flex-basis: calc(100% - 150px); }
+  .acl-acciones { width: 100%; justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  .acl-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .acl-cifra:nth-child(3) { border-left: 0; padding-left: 0; }
+  .acl-cifra:nth-child(n+3) { border-top: 1px solid #e7e5e4; }
+  .acl-mini { width: 100%; }
+  .acl-info { flex-basis: 100%; }
+}
+`;
+

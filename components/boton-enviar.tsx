@@ -33,6 +33,7 @@ export function BotonEnviar({
   name,
   value,
   disabled,
+  title,
 }: {
   children: React.ReactNode;
   /** Que decir mientras trabaja. Por defecto, "Guardando...". */
@@ -53,6 +54,8 @@ export function BotonEnviar({
    * envio ajeno del mismo formulario.
    */
   disabled?: boolean;
+  /** Ayuda al pasar el mouse. */
+  title?: string;
 }) {
   const { pending } = useFormStatus();
 
@@ -64,6 +67,7 @@ export function BotonEnviar({
       formAction={formAction}
       name={name}
       value={value}
+      title={title}
       style={{
         cursor: pending ? "progress" : disabled ? "default" : "pointer",
         opacity: pending ? 0.65 : 1,

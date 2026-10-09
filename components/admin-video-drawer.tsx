@@ -1,6 +1,7 @@
 "use client";
 
 import { Desplegable } from "@/components/desplegable";
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteVideoAction, upsertVideoAction } from "@/src/features/admin/actions";
@@ -358,14 +359,9 @@ export function EditarClase({
 
   return (
     <>
-      <button
-        onClick={() => setAbierto(true)}
-        style={{
-          padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-          border: "1px solid #f0eeec", background: "#fff",
-          color: "#57534e", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
-        }}
-      >Editar</button>
+      <button type="button" onClick={() => setAbierto(true)} className="acl-editar">
+        <Pencil size={14} strokeWidth={2} aria-hidden="true" /> Editar
+      </button>
 
       {guardado && (
         <span style={{

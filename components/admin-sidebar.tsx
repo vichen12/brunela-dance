@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { signOutAction } from "@/src/features/auth/actions";
 import type { Route } from "next";
 import {
@@ -75,6 +76,12 @@ const NAV: { label: string; items: NavItem[] }[] = [
  */
 export function AdminSidebar({ nombre }: { nombre: string }) {
   const pathname = usePathname();
+
+  // En pantallas chicas el menu es un cajon: se cierra al navegar.
+  useEffect(() => {
+    const t = document.getElementById("menu-admin") as HTMLInputElement | null;
+    if (t) t.checked = false;
+  }, [pathname]);
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;

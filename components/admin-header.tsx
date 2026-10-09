@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 
 const ROUTES: Record<string, string> = {
   "/admin":               "Resumen",
@@ -26,11 +27,28 @@ export function AdminHeader({ inicial }: { inicial: string }) {
       position: "sticky", top: 0, zIndex: 20,
       background: "rgba(250,249,248,0.97)", backdropFilter: "blur(12px)",
       borderBottom: "1px solid #ece9e6",
-      height: 52, padding: "0 36px",
+      height: 52, padding: "0 clamp(14px, 3vw, 36px)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
       flexShrink: 0,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+        {/* Abre el menu en pantallas chicas (checkbox #menu-admin del layout).
+            Un <label> no recibe foco, por eso el role y el manejo de teclado. */}
+        <label
+          htmlFor="menu-admin"
+          className="adm-hamb"
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir el menú"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            const t = document.getElementById("menu-admin") as HTMLInputElement | null;
+            if (t) t.checked = !t.checked;
+          }}
+        >
+          <Menu size={20} strokeWidth={2} />
+        </label>
         <span style={{ fontSize: 11, color: "#c4b5af", fontWeight: 600, letterSpacing: "0.04em" }}>Admin</span>
         <span style={{ fontSize: 11, color: "#d6d3d1" }}>›</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>{title}</span>
