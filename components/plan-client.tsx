@@ -104,8 +104,14 @@ export function PlanClient({
   renewsAt,
   catalog,
   packs = [],
+  planGratis = null,
+  aviso = null,
 }: {
   currentTier: Tier;
+  /** El plan que esta usando GRATIS (acceso regalado por la admin), o null. */
+  planGratis?: Tier | null;
+  /** Tarjeta o franja del acceso gratis, ya renderizada en el servidor. */
+  aviso?: React.ReactNode;
   subscriptionStatus: string | null;
   renewsAt: string | null;
   catalog: Catalog;
@@ -272,6 +278,8 @@ export function PlanClient({
           <div role="alert" className="ad-aviso ad-aviso--error">{error}</div>
         )}
 
+        {aviso}
+
         {/* Active subscription banner + manage */}
         {hasActiveSub && (
           <div className="mp-activa">
@@ -369,7 +377,9 @@ export function PlanClient({
                 {/* Cabecera */}
                 <div className="mp-card-cabeza">
                   <div className="mp-card-nombres">
-                    {meta.encima && <span className="mp-card-encima">{meta.encima}</span>}
+                    {planGratis === entry.tier
+                      ? <span className="mp-card-encima">Lo estás usando gratis</span>
+                      : meta.encima && <span className="mp-card-encima">{meta.encima}</span>}
                     {/* h2 y no div: es el titulo de la tarjeta. En un <div> el
                         lector de pantalla no puede saltar de plan en plan. */}
                     <h2 className="mp-card-nombre">{meta.name}</h2>
@@ -426,6 +436,7 @@ export function PlanClient({
                       >
                         {loadingTier === entry.tier
                           ? 'Redirigiendo…'
+                          : planGratis === entry.tier ? `Seguir con ${meta.name}`
                           : isUpgrade ? 'Empezar 7 días gratis' : 'Cambiar a este plan'}
                       </button>
                     )}

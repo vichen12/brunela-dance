@@ -3,6 +3,9 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getSubscriptionCatalog } from "@/src/lib/stripe/catalog";
 import { PlanClient } from "@/components/plan-client";
+import { getAccesoGratis } from "@/src/features/studio/acceso-gratis";
+import { estaVencido } from "@/src/features/studio/acceso-gratis-reglas";
+import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,7 @@ export default async function PlanPage() {
     { data: packsData },
     { data: comprasData },
     { data: relaciones },
+    acceso,
   ] =
     await Promise.all([
       getCurrentProfile(user.id),
@@ -38,6 +42,8 @@ export default async function PlanPage() {
       //    cinco, en una pantalla que ya hacia cinco. No depende de ninguno, asi
       //    que no habia motivo para esperarlos.
       supabase.from("pack_videos").select("pack_id"),
+      // Tolerante: sin la migracion 20261009 llega disponible = false.
+      getAccesoGratis(user.id),
     ]);
 
   const compradosEl = new Map(
@@ -90,9 +96,25 @@ export default async function PlanPage() {
     compradoEl: compradosEl.get(p.id) ?? null,
   }));
 
+  // ACCESO GRATIS. Mientras dura, su membership_tier es el plan regalado, pero
+  // NO lo esta pagando: si se pasara tal cual, la tarjeta de ese plan diria
+  // "Tu plan actual" sin boton, y justo el plan que ya conoce seria el unico
+  // que no podria contratar. Para elegir plan, cuenta como "sin plan".
+  const tier = profile?.membership_tier ?? "none";
+  const subActiva = subscription?.status === "active" || subscription?.status === "trialing";
+  const esAdmin = profile?.is_admin ?? false;
+  const gratisVigente = acceso.disponible && !esAdmin && !subActiva && tier !== "none" && !!acceso.hasta && !!acceso.plan && !estaVencido(acceso.hasta);
+  const gratisTerminado = acceso.disponible && !esAdmin && tier === "none" && !!acceso.hasta && estaVencido(acceso.hasta);
+
   return (
     <PlanClient
-      currentTier={profile?.membership_tier ?? "none"}
+      currentTier={gratisVigente ? "none" : tier}
+      planGratis={gratisVigente ? acceso.plan : null}
+      aviso={
+        gratisVigente ? <TarjetaGratis plan={acceso.plan!} hasta={acceso.hasta!} desde={acceso.desde} compacta />
+        : gratisTerminado ? <FranjaGratis plan={acceso.plan} hasta={acceso.hasta!} />
+        : null
+      }
       subscriptionStatus={subscription?.status ?? null}
       renewsAt={subscription?.current_period_ends_at ?? null}
       catalog={catalog}

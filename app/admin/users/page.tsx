@@ -1,8 +1,11 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { Paginacion } from "@/components/paginacion";
-import { ArrowRight, Check, ChevronDown, Pencil, Shield } from "lucide-react";
-import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
+import { ArrowRight, Check, ChevronDown, Gift, Pencil, Shield, UserPlus } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva } from "@/components/admin-ui";
+import { NuevaAlumnaGratis } from "@/components/nueva-alumna-gratis";
+import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
+import { AVISO_FALTA_MIGRACION, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -110,6 +113,23 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   ]);
 
   const crudas = (data ?? []) as ProfileRow[];
+
+  // Acceso gratis: en una consulta APARTE, nunca dentro de la de arriba. Sin la
+  // migracion 20261009_acceso_gratis.sql la columna no existe y el 42703
+  // tiraria la lista entera; asi, solo se apaga esta funcion.
+  // `limit(1)` sin filtro de ids cuando no hay filas: igual sirve para saber
+  // si la migracion esta aplicada (y mostrar o no el bloque de "Nueva alumna").
+  const idsPagina = crudas.map((p) => p.id);
+  let consultaGratis = supabase.from("profiles").select("id, acceso_gratis_hasta, acceso_gratis_plan");
+  consultaGratis = idsPagina.length ? consultaGratis.in("id", idsPagina) : consultaGratis.limit(1);
+  const { data: gratisData, error: gratisError } = await consultaGratis;
+  const gratisDisponible = !gratisError;
+  if (gratisError && !esFaltaDeMigracion(gratisError)) console.error("[admin/users] acceso gratis:", gratisError.message);
+  const gratisDe = new Map<string, EstadoGratis>(
+    ((gratisData ?? []) as { id: string; acceso_gratis_hasta: string | null; acceso_gratis_plan: EstadoGratis["plan"] }[])
+      .map((g) => [g.id, { hasta: g.acceso_gratis_hasta, plan: g.acceso_gratis_plan }])
+  );
+  const nueva = params.nueva === "1";
   const profiles = crudas;
   const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
 
@@ -130,10 +150,17 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         eyebrow="Comunidad"
         titulo="Alumnas"
         lede="Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos, y cada una tiene su ficha completa."
+        acciones={<AdminBoton href="/admin/users?nueva=1#nueva" lleno><UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva alumna</AdminBoton>}
       />
 
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
+
+      {/* Alta a mano, con meses gratis. Sin la migracion, el bloque explica
+          que falta en vez de ofrecer un formulario que no puede guardar. */}
+      <AdminNueva id="nueva" abierto={nueva} titulo="Nueva alumna" sub="Creale la cuenta y regalale meses gratis de un plan">
+        {gratisDisponible ? <NuevaAlumnaGratis /> : <div role="status" className="ad-aviso ad-aviso--error">{AVISO_FALTA_MIGRACION}</div>}
+      </AdminNueva>
 
       {/* Las cifras filtran, y suman: cada cuenta cae en exactamente un plan. */}
       <div className="au-cifras">
@@ -199,6 +226,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   </div>
                   <div className="au-datos">
                     <span className={"au-plan " + tier.clase}>{tier.label}</span>
+                    <ChipGratis estado={gratisDe.get(profile.id)} />
                     <span className="au-nivel">{profile.technical_level ?? "—"}</span>
                     <span className={"au-onb" + (profile.onboarding_completed ? " es-ok" : "")}>
                       {profile.onboarding_completed ? <><Check size={12} strokeWidth={3} aria-hidden="true" /> Onboarding</> : "Onboarding pendiente"}
@@ -248,6 +276,17 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                     </BotonEnviar>
                   </form>
                 </details>
+
+                {gratisDisponible && (
+                  <details className="au-editar" open={profile.id === editar && params.gratis === "1"}>
+                    <summary><Gift size={13} strokeWidth={2} aria-hidden="true" /> Acceso gratis <ChevronDown size={14} strokeWidth={2} className="ad-flecha" aria-hidden="true" /></summary>
+                    <AccesoGratisControles
+                      alumnaId={profile.id}
+                      estado={gratisDe.get(profile.id) ?? null}
+                      volverA={`/admin/users?q=${encodeURIComponent(profile.email)}&editar=${profile.id}&gratis=1`}
+                    />
+                  </details>
+                )}
               </li>
             );
           })}

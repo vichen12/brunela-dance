@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { aplicarBajasVencidas } from "@/src/features/studio/acceso-gratis";
 
 /**
  * Mantiene despierto el proyecto de Supabase.
@@ -75,11 +76,25 @@ export async function GET(request: Request) {
 
     if (error) throw new Error(error.message);
 
+    /**
+     * SEGUNDO PASO: el acceso gratis que vencio (20261009_acceso_gratis.sql).
+     *
+     * Pasa a 'none' a quien tenia un regalo vencido, no es admin y no tiene una
+     * suscripcion que de acceso. Va DESPUES del keepalive a proposito: si esto
+     * falla, la base ya se desperto igual. Y el fallo devuelve 500 (abajo), asi
+     * que se ve en el panel de Vercel en vez de perderse.
+     *
+     * Sin la migracion devuelve `omitido` y no falla: el codigo se despliega
+     * antes de que la duena la corra.
+     */
+    const accesoGratis = await aplicarBajasVencidas(supabase);
+
     return NextResponse.json({
       ok: true,
       // Se devuelve el conteo para que se vea en los registros de Vercel que la
       // consulta llego de verdad a la base, y no solo que la ruta respondio.
       categorias: count,
+      accesoGratis,
       ms: Date.now() - empezo,
     });
   } catch (e) {

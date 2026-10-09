@@ -9,6 +9,10 @@ import { MobileDashboardNav } from "@/components/mobile-dashboard-nav";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
 import { getNotificaciones } from "@/src/features/studio/notificaciones";
 import { Notificaciones } from "@/components/notificaciones";
+import { AvisoFinGratis } from "@/components/aviso-fin-gratis";
+import { aplicarBajaSiVencio, getAccesoGratis } from "@/src/features/studio/acceso-gratis";
+import { PLAN_LABEL, diasRestantes, estaVencido, fechaLarga } from "@/src/features/studio/acceso-gratis-reglas";
+import type { Notificacion } from "@/src/features/studio/notificaciones";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
@@ -33,11 +37,26 @@ const getSeguirViendo = cache(async (userId: string) => {
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const [profile, seguirViendo, { data: fotoData }] = await Promise.all([
+  const [profile, seguirViendo, { data: fotoData }, acceso] = await Promise.all([
     getProfile(user.id),
     getSeguirViendo(user.id),
     (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
+    // Consulta aparte y tolerante: sin la migracion 20261009 devuelve
+    // `disponible: false` y todo lo del acceso gratis se oculta.
+    getAccesoGratis(user.id),
   ]);
+
+  // ACCESO GRATIS VENCIDO: baja en el momento, sin esperar al cron.
+  //
+  // Solo para quien entro (user.id de la sesion), y solo si vencio, tiene un
+  // plan, no es admin y no paga una suscripcion -- las condiciones se repiten
+  // dentro de la propia escritura. Si la baja se aplico, se recarga el inicio:
+  // el perfil memoizado de esta request ya traia el plan viejo, y la pagina
+  // pintaria clases abiertas que la base ya no le deja ver. En la recarga el
+  // plan ya es 'none' y esta rama no vuelve a entrar.
+  if (profile && await aplicarBajaSiVencio(user.id, profile.membership_tier, profile.is_admin, acceso)) {
+    redirect("/dashboard" as never);
+  }
 
   // COMPUERTA DE ONBOARDING
   //
@@ -64,6 +83,31 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isAdmin = profile?.is_admin ?? false;
   const notificaciones = await getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin);
 
+  // Recordatorios del acceso gratis en la campanita: a 7 dias, a 1 y el dia
+  // que termina. El id cambia con la etapa (y con la fecha, por si se lo
+  // extienden): marcar como leido el de 7 dias no apaga el de "hoy".
+  const tier = profile?.membership_tier ?? "none";
+  const gratisVigente = acceso.disponible && !isAdmin && !!acceso.hasta && !estaVencido(acceso.hasta) && tier !== "none";
+  const recordatoriosGratis: Notificacion[] = [];
+  if (gratisVigente) {
+    const d = diasRestantes(acceso.hasta!);
+    const plan = acceso.plan ? PLAN_LABEL[acceso.plan] : "tu plan";
+    if (d <= 7) {
+      const etapa = d <= 0 ? "hoy" : d === 1 ? "1" : "7";
+      recordatoriosGratis.push({
+        id: `gratis-${etapa}-${acceso.hasta}`,
+        tipo: "recordatorio",
+        titulo: d <= 0 ? `Tu acceso gratis a ${plan} termina hoy` : d === 1 ? `Tu acceso gratis a ${plan} termina mañana` : `Te quedan ${d} días de ${plan} gratis`,
+        texto: `Hasta el ${fechaLarga(acceso.hasta!)}. Elegí tu plan para seguir con tus clases sin cortes.`,
+        cuando: null,
+        href: "/dashboard/plan",
+      });
+    }
+  }
+
+  // El aviso grande de fin: una sola vez. Despues queda la franja del inicio.
+  const mostrarAvisoFin = acceso.disponible && !isAdmin && tier === "none" && estaVencido(acceso.hasta) && !acceso.avisoVistoAt;
+
   return (
     <>
       <style>{`
@@ -88,10 +132,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden", position: "relative" }}>
           {/* Campanita: invitaciones y anuncios, arriba a la derecha. */}
-          <div className="nt-barra"><Notificaciones items={notificaciones} /></div>
+          <div className="nt-barra"><Notificaciones items={[...recordatoriosGratis, ...notificaciones]} /></div>
           {children}
         </div>
         <MobileDashboardNav isAdmin={isAdmin} />
+        {mostrarAvisoFin && (
+          <AvisoFinGratis plan={acceso.plan ? PLAN_LABEL[acceso.plan] : null} nombre={profile?.full_name?.trim().split(/\s+/)[0] ?? ""} />
+        )}
       </div>
     </>
   );

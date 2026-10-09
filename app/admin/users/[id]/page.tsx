@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, CalendarCheck, CalendarDays, Check, CreditCard, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
+import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
+import { esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { enviarMensajeDesdeFichaAction, invitarDesdeFichaAction, quitarInvitacionDesdeFichaAction } from "@/src/features/admin/ficha-actions";
 import { AdminAviso } from "@/components/admin-ui";
@@ -50,13 +52,21 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
   // en vivo y lo que compro. service_role: esta pantalla ya paso requireAdmin.
   const db = createSupabaseAdminClient();
   const ahoraIso = new Date().toISOString();
-  const [{ data: salas }, { data: reservasData }, { data: invitData }, { data: proxData }, { data: comprasData }] = await Promise.all([
+  const [{ data: salas }, { data: reservasData }, { data: invitData }, { data: proxData }, { data: comprasData }, gratisRes] = await Promise.all([
     db.from("chat_rooms").select("id").eq("type", "dm").contains("participant_ids", [user.id, id]).order("created_at", { ascending: true }).limit(1),
     db.from("live_session_bookings").select("status, live_sessions(id, title_i18n, starts_at, session_timezone)").eq("user_id", id).in("status", ["reserved", "waitlisted"]),
     db.from("live_session_invitations").select("live_session_id, live_sessions(id, title_i18n, starts_at, session_timezone)").eq("user_id", id),
     db.from("live_sessions").select("id, title_i18n, starts_at, session_timezone, membership_tier_required").eq("status", "scheduled").gte("starts_at", ahoraIso).order("starts_at").limit(40),
     db.from("pack_purchases").select("id, purchased_at, packs(name_i18n)").eq("user_id", id).order("purchased_at", { ascending: false }),
+    // Acceso gratis, en su propia consulta: sin la migracion 20261009 la
+    // columna no existe y el 42703 solo apaga esta seccion, no la ficha.
+    db.from("profiles").select("acceso_gratis_hasta, acceso_gratis_plan").eq("id", id).maybeSingle(),
   ]);
+  const gratisDisponible = !gratisRes.error;
+  if (gratisRes.error && !esFaltaDeMigracion(gratisRes.error)) console.error("[ficha] acceso gratis:", gratisRes.error.message);
+  const gratis: EstadoGratis | null = gratisRes.data
+    ? { hasta: gratisRes.data.acceso_gratis_hasta as string | null, plan: gratisRes.data.acceso_gratis_plan as EstadoGratis["plan"] }
+    : null;
   const salaId = salas?.[0]?.id ?? null;
   const { data: mensajesData } = salaId
     ? await db.from("chat_messages").select("id, content, created_at, user_id, author_name, is_deleted").eq("room_id", salaId).eq("is_deleted", false).order("created_at", { ascending: false }).limit(6)
@@ -108,6 +118,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
             <div className="fa-chips">
               <span className="fa-chip fa-chip--plan">{f.perfil.plan}</span>
               <span className="fa-chip fa-chip--nivel">{f.perfil.nivel}</span>
+              <ChipGratis estado={gratis} />
               {inactiva && (
                 <span className="fa-chip fa-chip--alerta">Sin entrar hace {f.actividad.diasSinEntrar} días</span>
               )}
@@ -197,6 +208,19 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
           )}
         </section>
       </div>
+
+      {gratisDisponible && (
+        <section className="fa-tarjeta fa-ancla fa-gratis">
+          <div className="fa-tarjeta-cab">
+            <span className="fa-burbuja fa-burbuja--melo"><Gift size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+            <div>
+              <h2 className="fa-h2">Acceso gratis</h2>
+              <p className="fa-sub">Un plan regalado por un tiempo. Al terminar, le avisamos con cariño y le ofrecemos elegir uno.</p>
+            </div>
+          </div>
+          <AccesoGratisControles alumnaId={id} estado={gratis} volverA={`/admin/users/${id}`} />
+        </section>
+      )}
 
       <div className="fa-grilla">
         {/* Mensajes: la conversacion privada, y escribirle sin salir de aca */}

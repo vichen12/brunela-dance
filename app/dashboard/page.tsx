@@ -10,6 +10,9 @@ import { resolveI18nText } from "@/src/features/studio/helpers";
 import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 import { ClaseInminente } from "@/components/clase-inminente";
 import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notificaciones";
+import { getAccesoGratis } from "@/src/features/studio/acceso-gratis";
+import { estaVencido } from "@/src/features/studio/acceso-gratis-reglas";
+import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +144,7 @@ export default async function DashboardPage() {
     { data: paraHoy },
     { data: invitacionesData },
     cercanas,
+    acceso,
   ] = await Promise.all([
     // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
     // veces y el layout una tercera. Ahora es una sola consulta por request.
@@ -170,7 +174,14 @@ export default async function DashboardPage() {
     // Sus clases reservadas cercanas, para el cartel "Tu clase empieza en X
     // min". Memoizado: la campanita del layout ya lo pidio en este render.
     getMisClasesCercanas(user.id),
+    // Memoizado: el layout ya lo pidio en este render. Sin la migracion
+    // 20261009 llega con disponible = false y no se muestra nada.
+    getAccesoGratis(user.id),
   ]);
+  // Mientras dura: la tarjeta. Cuando termino: la franja (el aviso grande lo
+  // pone el layout, una sola vez). Las admin no tienen prueba.
+  const gratisVigente = acceso.disponible && !isAdmin && tier !== "none" && !!acceso.hasta && !!acceso.plan && !estaVencido(acceso.hasta);
+  const gratisTerminado = acceso.disponible && !isAdmin && tier === "none" && !!acceso.hasta && estaVencido(acceso.hasta);
   const inminente = cercanas.find((c) => esInminente(c)) ?? null;
 
 
@@ -250,6 +261,8 @@ export default async function DashboardPage() {
           />
         )}
 
+        {gratisTerminado && <FranjaGratis plan={acceso.plan} hasta={acceso.hasta!} />}
+
         {/* Saludo */}
         <header className="ini-hola">
           <span className="ini-mancha ini-mancha--a" aria-hidden="true" />
@@ -263,6 +276,8 @@ export default async function DashboardPage() {
           </h1>
           <p className="ini-lede">Tu cuerpo te espera. Seguí donde lo dejaste.</p>
         </header>
+
+        {gratisVigente && <TarjetaGratis plan={acceso.plan!} hasta={acceso.hasta!} desde={acceso.desde} />}
 
         {/* Personal stats */}
         <div className="ini-cifras">

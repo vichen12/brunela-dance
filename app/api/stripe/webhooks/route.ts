@@ -257,6 +257,45 @@ async function registrarCompraDePack(event: Stripe.Event): Promise<SyncOutcome> 
 }
 
 /**
+ * Si paga, deja de ser "alumna de prueba": acceso_gratis_hasta = null.
+ *
+ * ⚠️ ES ADITIVO Y NO PUEDE ROMPER NADA. Corre solo despues de que
+ *    syncSubscription aplico el evento, nunca lanza, y no toca membership_tier:
+ *    el plan lo sigue poniendo el trigger de la base a partir de la
+ *    suscripcion, como siempre (trampa 1).
+ *
+ *    Sin la migracion 20261009_acceso_gratis.sql la columna no existe y la
+ *    escritura da 42703: se ignora. Cualquier otro error se registra y se
+ *    sigue: el pago ya quedo guardado, que es lo que importa, y lanzar aca
+ *    haria que Stripe reintente un evento que ya se proceso bien.
+ *
+ *    Por que importa: sin esto, una alumna que paga con el regalo vencido
+ *    seguiria con la fecha vieja, y el aviso "tu prueba gratis termino" podria
+ *    volver a aparecerle si algun dia cancela.
+ */
+async function cerrarAccesoGratisSiPaga(event: Stripe.Event): Promise<void> {
+  try {
+    if (event.type !== "customer.subscription.created" && event.type !== "customer.subscription.updated") return;
+    const subscription = event.data.object as Stripe.Subscription;
+    if (subscription.status !== "active" && subscription.status !== "trialing") return;
+    const userId = subscription.metadata?.user_id;
+    if (!userId) return;
+
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ acceso_gratis_hasta: null, acceso_gratis_desde: null })
+      .eq("id", userId)
+      .not("acceso_gratis_hasta", "is", null);
+    if (error && error.code !== "42703") {
+      console.error(`[webhook] no se pudo cerrar el acceso gratis de ${userId}: ${error.message}`);
+    }
+  } catch (e) {
+    console.error("[webhook] cerrarAccesoGratisSiPaga:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
  * Receives Stripe webhooks, stores an audit trail and keeps subscriptions synchronized.
  */
 export async function POST(request: Request) {
@@ -284,6 +323,7 @@ export async function POST(request: Request) {
     // del otro devolviendo un motivo, asi que a lo sumo uno hace algo. Si el de
     // packs lanza, no se llega a auditar como exito -- que es lo correcto.
     const suscripcion = await syncSubscription(event);
+    if (suscripcion.applied) await cerrarAccesoGratisSiPaga(event);
     const pack = await registrarCompraDePack(event);
     const outcome: SyncOutcome = suscripcion.applied
       ? suscripcion
