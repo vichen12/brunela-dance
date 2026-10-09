@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { getAppUrl } from "@/src/lib/env";
 import { conSuscripcionQueDaAcceso } from "@/src/features/studio/acceso-gratis";
 import {
   AVISO_FALTA_MIGRACION, PLAN_LABEL, esFaltaDeMigracion, fechaLarga, nuevoVencimiento, type PlanPago,
@@ -57,25 +58,32 @@ export type EstadoNuevaAlumna =
   | { tipo: "inicial" }
   | { tipo: "error"; mensaje: string }
   | { tipo: "creada"; nombre: string; correo: string; contrasena: string; plan: string; hasta: string }
+  | { tipo: "invitada"; nombre: string; correo: string; plan: string; hasta: string }
   | { tipo: "existe"; id: string; nombre: string; correo: string; plan: PlanPago; unidad: "meses" | "dias"; cantidad: number };
 
 const nuevaSchema = z.object({
   nombre: z.string().trim().min(2, "Escribí su nombre.").max(120),
   correo: z.string().trim().toLowerCase().email("Ese correo no parece válido."),
   plan: z.enum(PLANES, { errorMap: () => ({ message: "Elegí un plan." }) }),
-  contrasena: z.string().min(8, "La contraseña provisoria tiene que tener al menos 8 caracteres.").max(72),
+  modo: z.enum(["mail", "clave"]).catch("mail"),
+  contrasena: z.string().max(72).optional(),
 });
 
 export async function crearAlumnaGratisAction(_prev: EstadoNuevaAlumna, fd: FormData): Promise<EstadoNuevaAlumna> {
   const { user } = await requireAdmin();
 
   const datos = nuevaSchema.safeParse({
-    nombre: fd.get("nombre"), correo: fd.get("correo"), plan: fd.get("plan"), contrasena: fd.get("contrasena"),
+    nombre: fd.get("nombre"), correo: fd.get("correo"), plan: fd.get("plan"),
+    modo: fd.get("modo"), contrasena: fd.get("contrasena") ?? undefined,
   });
   if (!datos.success) return { tipo: "error", mensaje: datos.error.issues[0]?.message ?? "Revisá los datos." };
   const tiempo = periodo.safeParse({ unidad: fd.get("unidad"), cantidad: fd.get("cantidad") });
   if (!tiempo.success) return { tipo: "error", mensaje: tiempo.error.issues[0]?.message ?? "Revisá el tiempo gratis." };
-  const { nombre, correo, plan, contrasena } = datos.data;
+  const { nombre, correo, plan, modo } = datos.data;
+  const contrasena = datos.data.contrasena ?? "";
+  if (modo === "clave" && contrasena.length < 8) {
+    return { tipo: "error", mensaje: "La contraseña provisoria tiene que tener al menos 8 caracteres." };
+  }
   const { unidad, cantidad } = tiempo.data;
 
   const db = createSupabaseAdminClient();
@@ -94,14 +102,27 @@ export async function crearAlumnaGratisAction(_prev: EstadoNuevaAlumna, fd: Form
     };
   }
 
-  const { data: creado, error: errAlta } = await db.auth.admin.createUser({
-    email: correo,
-    password: contrasena,
-    // Sin SMTP no hay correo de confirmacion: la cuenta nace confirmada y
-    // Brunela le pasa los datos a mano.
-    email_confirm: true,
-    user_metadata: { full_name: nombre },
-  });
+  /*
+   * Dos formas de darle la cuenta:
+   *   mail  -> inviteUserByEmail: Supabase le manda la plantilla "Invite user"
+   *            (emails/supabase/invitacion.html) y ella elige SU contraseña al
+   *            tocar el boton (/auth/confirm?type=invite -> contraseña nueva).
+   *            Es la recomendada: Brunela no maneja contraseñas ajenas.
+   *   clave -> la de antes: cuenta confirmada con contraseña provisoria que
+   *            Brunela le pasa a mano (por si el mail no le llega).
+   */
+  const { data: creado, error: errAlta } =
+    modo === "mail"
+      ? await db.auth.admin.inviteUserByEmail(correo, {
+          data: { full_name: nombre },
+          redirectTo: `${getAppUrl()}/sign-in/reset-password`,
+        })
+      : await db.auth.admin.createUser({
+          email: correo,
+          password: contrasena,
+          email_confirm: true,
+          user_metadata: { full_name: nombre },
+        });
   if (errAlta || !creado?.user) {
     const msg = errAlta?.message ?? "No se pudo crear la cuenta.";
     if (errAlta?.code === "email_exists" || /already/i.test(msg)) {
@@ -141,6 +162,9 @@ export async function crearAlumnaGratisAction(_prev: EstadoNuevaAlumna, fd: Form
   }
 
   refrescar(creado.user.id);
+  if (modo === "mail") {
+    return { tipo: "invitada", nombre, correo, plan: PLAN_LABEL[plan], hasta: fechaLarga(hasta.toISOString()) };
+  }
   return { tipo: "creada", nombre, correo, contrasena, plan: PLAN_LABEL[plan], hasta: fechaLarga(hasta.toISOString()) };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Check, Copy, Gift, KeyRound, RefreshCw, UserPlus } from "lucide-react";
+import { Check, Copy, Gift, KeyRound, Mail, RefreshCw, Send, UserPlus } from "lucide-react";
 import { Desplegable } from "@/components/desplegable";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { CantidadGratis } from "@/components/cantidad-gratis";
@@ -15,7 +15,9 @@ import { PLAN_LABEL, generarContrasena } from "@/src/features/studio/acceso-grat
  * la respuesta de la action, y nunca viaja en la URL (quedaria en el historial
  * del navegador y en los registros de Vercel).
  *
- * No hay SMTP: Brunela le pasa los datos a mano. Por eso la tarjeta final
+ * Dos formas (2026-10-09, ya con SMTP): por defecto le llega la INVITACION por
+ * mail y ella elige su contraseña. La otra, contraseña provisoria que Brunela
+ * le pasa a mano, queda por si el mail no le llega: por eso esa tarjeta final
  * trae "Copiar todo" con un texto listo para pegar en WhatsApp.
  */
 
@@ -44,10 +46,35 @@ export function NuevaAlumnaGratis() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [plan, setPlan] = useState("solista");
+  const [modo, setModo] = useState<"mail" | "clave">("mail");
 
   // La contraseña se genera en el navegador, despues de montar: generarla en el
   // render daria una distinta en servidor y cliente.
   useEffect(() => { setClave(generarContrasena(aleatorio)); }, [vuelta]);
+
+  if (estado.tipo === "invitada") {
+    return (
+      <div className="nag-lista" role="status">
+        <style>{CSS}</style>
+        <div className="nag-lista-cab">
+          <span className="nag-burbuja nag-burbuja--ok" aria-hidden="true"><Send size={19} strokeWidth={2.4} /></span>
+          <div>
+            <p className="nag-lista-titulo">¡Invitación enviada a {estado.nombre}!</p>
+            <p className="nag-lista-sub">
+              Le llegó un mail a <strong>{estado.correo}</strong> con el botón «Aceptar invitación». Al tocarlo
+              elige su contraseña y entra. Tiene {estado.plan} gratis hasta el {estado.hasta}.
+            </p>
+          </div>
+        </div>
+        <p className="nag-nota">Si no lo ve, que revise Spam o Promociones. Llega desde no-responder@bruneladance.com.</p>
+        <div className="nag-pie">
+          <button type="button" className="nag-sec" onClick={() => { window.location.href = "/admin/users?nueva=1#nueva"; }}>
+            <UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar a otra
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (estado.tipo === "creada") {
     const texto =
@@ -136,22 +163,50 @@ export function NuevaAlumnaGratis() {
           </div>
         </div>
 
-        <div className="pf-campo nag-clave-campo">
-          <span className="pf-etq">Contraseña provisoria <small>se la pasás vos; después la puede cambiar</small></span>
-          <div className="nag-clave-fila">
-            <span className="nag-clave-ico" aria-hidden="true"><KeyRound size={16} strokeWidth={2.2} /></span>
-            <input name="contrasena" value={clave} onChange={(e) => setClave(e.target.value)} required minLength={8} maxLength={72} autoComplete="off" spellCheck={false} />
-            <button type="button" className="nag-sec" onClick={() => setVuelta((v) => v + 1)}>
-              <RefreshCw size={14} strokeWidth={2.4} aria-hidden="true" /> Otra
-            </button>
+        <fieldset className="nag-modos">
+          <legend className="pf-etq">Cómo le llega</legend>
+          <label className="nag-modo">
+            <input type="radio" name="modo" value="mail" checked={modo === "mail"} onChange={() => setModo("mail")} />
+            <span className="nag-modo-ico" aria-hidden="true"><Mail size={18} strokeWidth={2.2} /></span>
+            <span className="nag-modo-txt">
+              <strong>Por mail <em>recomendado</em></strong>
+              <small>Le llega una invitación y elige ella su contraseña.</small>
+            </span>
+          </label>
+          <label className="nag-modo">
+            <input type="radio" name="modo" value="clave" checked={modo === "clave"} onChange={() => setModo("clave")} />
+            <span className="nag-modo-ico" aria-hidden="true"><KeyRound size={18} strokeWidth={2.2} /></span>
+            <span className="nag-modo-txt">
+              <strong>Le paso yo la contraseña</strong>
+              <small>Por WhatsApp, por ejemplo. Sirve si el mail no le llega.</small>
+            </span>
+          </label>
+        </fieldset>
+
+        {modo === "clave" && (
+          <div className="pf-campo nag-clave-campo">
+            <span className="pf-etq">Contraseña provisoria <small>se la pasás vos; después la puede cambiar</small></span>
+            <div className="nag-clave-fila">
+              <span className="nag-clave-ico" aria-hidden="true"><KeyRound size={16} strokeWidth={2.2} /></span>
+              <input name="contrasena" value={clave} onChange={(e) => setClave(e.target.value)} required minLength={8} maxLength={72} autoComplete="off" spellCheck={false} />
+              <button type="button" className="nag-sec" onClick={() => setVuelta((v) => v + 1)}>
+                <RefreshCw size={14} strokeWidth={2.4} aria-hidden="true" /> Otra
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="pf-pie">
-          <BotonEnviar className="pf-guardar" pendingLabel="Creando la cuenta…">
-            <UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear alumna
-          </BotonEnviar>
-          <span className="nag-nota">Entra sin confirmar el correo y la primera vez completa su perfil.</span>
+          {modo === "mail" ? (
+            <BotonEnviar className="pf-guardar" pendingLabel="Mandando la invitación…">
+              <Send size={16} strokeWidth={2.2} aria-hidden="true" /> Mandar invitación
+            </BotonEnviar>
+          ) : (
+            <BotonEnviar className="pf-guardar" pendingLabel="Creando la cuenta…">
+              <UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear alumna
+            </BotonEnviar>
+          )}
+          <span className="nag-nota">La primera vez que entra completa su perfil.</span>
         </div>
       </form>
     </div>
@@ -162,6 +217,19 @@ const CSS = `
 .nag { display: flex; flex-direction: column; gap: 16px; }
 .nag-form { display: flex; flex-direction: column; gap: 14px; }
 .nag-clave-campo { max-width: 520px; }
+.nag-modos { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.nag-modos legend { margin-bottom: 8px; }
+.nag-modo { position: relative; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 18px; border: 1.5px solid var(--linea); background: #fff; cursor: pointer; transition: border-color .2s, background .2s; }
+.nag-modo:hover { border-color: var(--linea-fuerte); background: var(--crema); }
+.nag-modo input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.nag-modo:has(input:checked) { border-color: var(--pink); background: var(--rubor); }
+.nag-modo:has(input:focus-visible) { outline: 3px solid rgba(230,79,85,.4); outline-offset: 2px; }
+.nag-modo-ico { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: var(--crema); color: #C25E3A; transition: background .2s, color .2s; }
+.nag-modo:has(input:checked) .nag-modo-ico { background: var(--pink); color: #fff; }
+.nag-modo-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nag-modo-txt strong { font-size: 14.5px; font-weight: 900; color: var(--ink); }
+.nag-modo-txt em { font-style: normal; font-size: 11px; font-weight: 800; color: var(--pink-deep); background: #fff; border: 1px solid var(--pink-line); padding: 1px 7px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
+.nag-modo-txt small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 .nag-clave-fila { position: relative; display: flex; align-items: center; gap: 10px; }
 .nag-clave-fila input { flex: 1; min-width: 0; padding-left: 2.6rem !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .02em; }
 .nag-clave-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--pink-deep); display: inline-flex; pointer-events: none; }
@@ -186,6 +254,7 @@ const CSS = `
 @media (max-width: 560px) {
   .nag-lista { padding: 16px; }
   .nag-clave-fila { flex-wrap: wrap; }
+  .nag-modos { grid-template-columns: minmax(0, 1fr); }
   .nag-pie .pf-guardar, .nag-pie .nag-sec { flex: 1 1 auto; justify-content: center; }
   .nag-form .pf-pie { flex-wrap: wrap; }
   .nag-form .pf-pie .pf-guardar { width: 100%; justify-content: center; white-space: nowrap; }

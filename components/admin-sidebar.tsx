@@ -60,7 +60,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: "/admin/users",         label: "Alumnas",          Icon: Users },
       // Crear una alumna vivia solo en un bloque plegado de /admin/users, y la
       // duena no lo encontraba. Abre ese bloque ya desplegado.
-      { href: "/admin/users?nueva=1#nueva", label: "Nueva alumna", Icon: UserPlus },
+      { href: "/admin/users?nueva=1#nueva", label: "Invitar alumna", Icon: UserPlus },
       { href: "/admin/sesiones-privadas", label: "Sesiones privadas", Icon: Lock },
       { href: "/admin/live",          label: "Sesiones en vivo", Icon: CalendarDays },
       // Mensajes y Comunidad vivian mezclados en /dashboard/chat y

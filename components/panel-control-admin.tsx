@@ -159,7 +159,7 @@ export function PanelControlAdmin({
     { href: "/admin/announcements",        label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora`, Icono: Megaphone },
     { href: "/admin/programs",             label: "Armar un plan",      sub: "Planes de trabajo por día", Icono: ListChecks },
     // Crear una alumna solo estaba en un bloque plegado de /admin/users.
-    { href: "/admin/users?nueva=1#nueva",  label: "Nueva alumna",       sub: "Cuenta y meses gratis", Icono: UserPlus },
+    { href: "/admin/users?nueva=1#nueva",  label: "Invitar alumna",     sub: "Le llega por mail", Icono: UserPlus },
     { href: "/admin/sesiones-privadas",    label: "Sesión privada",     sub: "Agendar uno a uno", Icono: Lock },
   ];
 

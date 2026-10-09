@@ -150,7 +150,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         eyebrow="Comunidad"
         titulo="Alumnas"
         lede="Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos, y cada una tiene su ficha completa."
-        acciones={<AdminBoton href="/admin/users?nueva=1#nueva" lleno><UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva alumna</AdminBoton>}
+        acciones={<AdminBoton href="/admin/users?nueva=1#nueva" lleno><UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar alumna</AdminBoton>}
       />
 
       <AdminAviso mensaje={success} tono="ok" />
@@ -158,7 +158,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
       {/* Alta a mano, con meses gratis. Sin la migracion, el bloque explica
           que falta en vez de ofrecer un formulario que no puede guardar. */}
-      <AdminNueva id="nueva" abierto={nueva} titulo="Nueva alumna" sub="Creale la cuenta y regalale meses gratis de un plan">
+      <AdminNueva id="nueva" abierto={nueva} titulo="Invitar alumna" sub="Le llega un mail para entrar, con los meses gratis que le regales">
         {gratisDisponible ? <NuevaAlumnaGratis /> : <div role="status" className="ad-aviso ad-aviso--error">{AVISO_FALTA_MIGRACION}</div>}
       </AdminNueva>
 
