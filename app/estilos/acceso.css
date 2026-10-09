@@ -1934,3 +1934,10 @@ body:has(.auth-page) {
 .auth-cuenta--movil { display: none; }
 @media (max-width: 900px) { .auth-cuenta--movil { display: block; margin: 0 0 22px; } }
 @media (max-width: 420px) { .auth-cuenta .cr-fila { gap: 6px; } .auth-cuenta { padding: 14px; } }
+
+/* Logo de la marca en la barra publica: isologo + wordmark (imagenes). */
+.nv-marca { display: inline-flex; align-items: center; gap: 8px; }
+.nv-marca-iso { width: 30px; height: 30px; object-fit: contain; transition: transform .5s cubic-bezier(.22,1,.36,1); }
+.nv-marca:hover .nv-marca-iso { transform: rotate(-8deg) scale(1.06); }
+.nv-marca-wm { height: 34px; width: auto; object-fit: contain; }
+@media (max-width: 420px) { .nv-marca-wm { height: 28px; } .nv-marca-iso { width: 26px; height: 26px; } }

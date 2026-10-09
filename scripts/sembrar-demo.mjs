@@ -208,7 +208,10 @@ const ANUNCIOS = [
 ];
 const PACKS = [
   ["pack-pies-perfectos", "Pack Pies perfectos", "Cinco clases para trabajar pies y tobillos a fondo.", 2900, true, ["pies-que-hablan", "tobillos-fuertes", "empeine-con-pelota", "equilibrio-en-releve", "passe-estable"]],
-  ["pack-giros", "Pack Giros", "Todo lo necesario para girar con confianza.", 3900, false, ["preparacion-de-giros", "pirouettes-dobles", "fouettes-sin-miedo"]],
+  ["pack-giros", "Pack Giros", "Todo lo necesario para girar con confianza.", 3900, true, ["preparacion-de-giros", "pirouettes-dobles", "fouettes-sin-miedo"]],
+  ["pack-flexibilidad", "Pack Flexibilidad", "Elongación progresiva para caderas, isquios y espalda, sin forzar el rango.", 2400, true, ["isquios-y-espalda-baja", "caderas-libres", "split-progresivo", "estiramiento-post-clase"]],
+  ["pack-centro-fuerte", "Pack Centro fuerte", "El abdominal de la bailarina: tres clases para sostener la línea.", 1900, true, ["centro-para-bailarinas", "abdominales-en-fit-ball", "core-express"]],
+  ["pack-temporada", "Pack Temporada", "Fuerza, resistencia y control para llegar a escena en forma.", 4900, true, ["fuerza-para-el-salto", "resistencia-de-escena", "control-del-developpe", "gluteos-y-piernas", "linea-larga"]],
 ];
 const SALAS = [
   ["Demo · Comunidad general", "community", "none", null],

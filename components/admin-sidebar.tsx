@@ -112,7 +112,8 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
           <img src="/brand/isologo-icon.png" alt="" />
         </span>
         <span>
-          <span className="sb-marca-nombre" style={{ display: "block" }}>Brunela</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/brunela-dance-trainer-wordmark.png" alt="Brunela Dance Trainer" className="sb-marca-wm" />
           <span className="sb-marca-sub" style={{ display: "block" }}>Panel del estudio</span>
         </span>
       </Link>

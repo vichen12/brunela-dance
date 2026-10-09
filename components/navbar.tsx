@@ -162,13 +162,10 @@ export function Navbar() {
       >
         <div className="nv-barra">
           <Link href="/" className="nv-marca" aria-label="Brunela Dance Trainer" suppressHydrationWarning>
-            <span className="nv-marca-ico" aria-hidden>
-              <Image src="/brand/isologo-icon.png" alt="" width={30} height={30} priority />
-            </span>
-            <span className="nv-marca-txt" aria-hidden>
-              <strong>Brunela</strong>
-              <small>Dance Trainer</small>
-            </span>
+            {/* El logo de la marca (el mismo del hero y del pie), no el nombre
+                retipografiado: pedido de la duena. */}
+            <Image src="/brand/isologo-icon.png" alt="" width={34} height={34} priority className="nv-marca-iso" />
+            <Image src="/brand/brunela-dance-trainer-wordmark.png" alt="" width={1060} height={306} priority className="nv-marca-wm" />
           </Link>
 
           <nav className="nv-links">
