@@ -1941,3 +1941,19 @@ body:has(.auth-page) {
 .nv-marca:hover .nv-marca-iso { transform: rotate(-8deg) scale(1.06); }
 .nv-marca-wm { height: 34px; width: auto; object-fit: contain; }
 @media (max-width: 420px) { .nv-marca-wm { height: 28px; } .nv-marca-iso { width: 26px; height: 26px; } }
+
+/* Cuenta regresiva del ingreso: protagonista (pedido de la duena: "que llame
+   mas la atencion, mas grande"). Tarjeta coral con numeros grandes. */
+.auth-cuenta { margin-top: 26px; padding: 22px 22px 24px; max-width: 520px; border-radius: 28px; border: 0; background: linear-gradient(135deg, #E64F55 0%, #EB7478 55%, #F29A84 100%); box-shadow: 0 30px 60px -28px rgba(217,52,56,.85); position: relative; overflow: hidden; isolation: isolate; }
+.auth-cuenta::after { content: ""; position: absolute; z-index: -1; width: 280px; height: 280px; right: -90px; top: -130px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.35), transparent 65%); animation: auth-late 6s ease-in-out infinite alternate; }
+@keyframes auth-late { from { transform: scale(1); } to { transform: scale(1.15) translate(-10px, 10px); } }
+.auth-cuenta-titulo { color: #fff; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 16px; }
+.auth-cuenta-titulo span { color: #FFE9DE; }
+.auth-cuenta .cr-fila { gap: 10px; }
+.auth-cuenta .cr-b { background: rgba(255,255,255,.96) !important; border: 0 !important; border-radius: 20px; padding: 14px 4px 12px !important; box-shadow: 0 12px 24px -14px rgba(120,20,30,.5); }
+.auth-cuenta .cr-n { font-size: clamp(38px, 4.2vw, 54px) !important; font-weight: 900; line-height: 1; color: var(--pink-deep, #B03A3E) !important; font-variant-numeric: tabular-nums; }
+.auth-cuenta .cr-l { font-size: 12.5px !important; font-weight: 800; color: var(--muted, #8A6F68) !important; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .auth-cuenta::after { animation: none; } }
+.auth-cuenta .auth-cuenta-titulo { color: #fff !important; }
+.auth-cuenta .auth-cuenta-titulo span { color: #FFE9DE !important; }
+.auth-left .auth-cuenta { margin: 22px 0 22px; }

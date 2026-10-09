@@ -60,7 +60,7 @@ export async function getPacksTienda(): Promise<PackTienda[]> {
     }));
 }
 
-export type ClaseDelPack = { slug: string; titulo: string; minutos: number; categoria: string | null; portada: string | null };
+export type ClaseDelPack = { slug: string; titulo: string; descripcion: string; minutos: number; categoria: string | null; portada: string | null };
 
 /**
  * Las clases de un pack, para su pagina. Con service_role y columnas ACOTADAS:
@@ -71,16 +71,17 @@ export async function getClasesDelPack(packId: string): Promise<ClaseDelPack[]> 
   const admin = createSupabaseAdminClient();
   const { data } = await admin
     .from("pack_videos")
-    .select("display_order, videos(slug, title_i18n, duration_seconds, category_slugs, thumbnail_url, status)")
+    .select("display_order, videos(slug, title_i18n, description_i18n, duration_seconds, category_slugs, thumbnail_url, status)")
     .eq("pack_id", packId)
     .order("display_order");
-  type V = { slug: string; title_i18n: Record<string, string>; duration_seconds: number; category_slugs: string[]; thumbnail_url: string | null; status: string };
+  type V = { slug: string; title_i18n: Record<string, string>; description_i18n: Record<string, string>; duration_seconds: number; category_slugs: string[]; thumbnail_url: string | null; status: string };
   return ((data ?? []) as unknown as { videos: V | V[] | null }[])
     .map((r) => (Array.isArray(r.videos) ? r.videos[0] : r.videos))
     .filter((v): v is V => !!v && v.status === "published")
     .map((v) => ({
       slug: v.slug,
       titulo: resolveI18nText(v.title_i18n) || v.slug,
+      descripcion: resolveI18nText(v.description_i18n) || "",
       minutos: Math.round((v.duration_seconds ?? 0) / 60),
       categoria: v.category_slugs?.[0] ?? null,
       portada: v.thumbnail_url,

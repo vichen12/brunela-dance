@@ -49,14 +49,23 @@ export function contrasenaDeAcceso(): string {
 /**
  * ¿La puerta esta puesta?
  *
- * ⚠️ POR DEFECTO SI. Se apaga poniendo ACCESO_ANTICIPADO_ACTIVO en "0", "false"
- *    o "no". Es deliberado que el default sea cerrado: el dia que se quiera
- *    abrir al publico eso es una decision explicita que alguien toma, no algo
- *    que pasa porque una variable no llego al deploy.
+ * Cerrada hasta la fecha de apertura (la del contador) y ABIERTA SOLA cuando
+ * el contador llega a cero: pedido explicito de la duena (2026-10-09), que
+ * reemplaza la regla anterior de "abrir solo a mano".
+ *
+ * Interruptores, por si el dia no esta listo o hay que abrir antes:
+ *   ACCESO_ANTICIPADO_ACTIVO = "forzar"            -> cerrada aunque haya pasado la fecha
+ *   ACCESO_ANTICIPADO_ACTIVO = "0" / "false" / "no" -> abierta ya, antes de la fecha
+ *
+ * Mientras esta cerrada quedan detras de la contraseña el ingreso, el
+ * registro, la vuelta de Google, el estudio, el panel y el cobro
+ * (ver rutaConPuerta y esApiConPuerta).
  */
-export function puertaActiva(): boolean {
+export function puertaActiva(ahora: number = Date.now()): boolean {
   const v = process.env.ACCESO_ANTICIPADO_ACTIVO?.trim().toLowerCase();
-  return !(v === "0" || v === "false" || v === "no" || v === "off");
+  if (v === "0" || v === "false" || v === "no" || v === "off") return false;
+  if (v === "forzar") return true;
+  return ahora < fechaDeApertura().getTime();
 }
 
 /**
@@ -66,10 +75,9 @@ export function puertaActiva(): boolean {
  *    como UTC y el contador llegaria a cero una hora antes en España, que es
  *    donde esta el estudio. Noviembre es CET (+01:00).
  *
- * ⚠️ Y ES SOLO PARA MOSTRAR: que el contador llegue a cero NO abre el sitio.
- *    Ver la nota de `puertaActiva` -- abrir es apagar la variable a mano. Un
- *    sitio que se destapa solo a medianoche es un sitio que se destapa aunque
- *    ese dia no este listo.
+ * ⚠️ Y ES LA QUE ABRE EL SITIO: cuando el contador llega a cero, la puerta se
+ *    levanta sola (ver puertaActiva). Si ese dia no esta listo, poner
+ *    ACCESO_ANTICIPADO_ACTIVO=forzar en Vercel.
  */
 export function fechaDeApertura(): Date {
   const crudo = process.env.ACCESO_ANTICIPADO_FECHA?.trim();

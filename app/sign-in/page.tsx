@@ -67,6 +67,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <T id="auth.left.description" />
           </p>
 
+          {/* El contador va arriba de los rasgos: es lo primero que tiene que ver. */}
+          {faltaAbrir && (
+            <div className="auth-cuenta">
+              <p className="auth-cuenta-titulo">
+                <T id="puerta.title" />{" "}
+                <span><FechaDeApertura objetivoISO={apertura.toISOString()} /></span>
+              </p>
+              <CuentaRegresiva objetivoISO={apertura.toISOString()} />
+            </div>
+          )}
+
           <div className="auth-feature-list">
             {authFeatures.map((feature, indice) => (
               <div key={feature.label}>
@@ -83,15 +94,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             ))}
           </div>
 
-          {faltaAbrir && (
-            <div className="auth-cuenta">
-              <p className="auth-cuenta-titulo">
-                <T id="puerta.title" />{" "}
-                <span><FechaDeApertura objetivoISO={apertura.toISOString()} /></span>
-              </p>
-              <CuentaRegresiva objetivoISO={apertura.toISOString()} />
-            </div>
-          )}
         </div>
       </section>
 

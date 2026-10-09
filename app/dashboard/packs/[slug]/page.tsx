@@ -34,7 +34,8 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
           <div className="pk-hero-txt">
             <span className="pk-eyebrow">Pack de clases · pago único</span>
             <h1 className="pk-titulo">{pack.nombre}</h1>
-            {pack.descripcion && <p className="pk-lede">{pack.descripcion}</p>}
+            {/* La primera linea como bajada; el texto entero va en "De que se trata". */}
+            {pack.descripcion && <p className="pk-lede">{pack.descripcion.split(/\n+/)[0]}</p>}
             <div className="pk-datos">
               <span className="pk-dato">{clases.length} {clases.length === 1 ? "clase" : "clases"}</span>
               {minutos > 0 && <span className="pk-dato">{minutos} min en total</span>}
@@ -54,6 +55,20 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
           </div>
         </header>
 
+        {pack.descripcion && (
+          <section className="pk-sobre" aria-labelledby="pk-sobre">
+            <h2 id="pk-sobre" className="pk-h2">De qué se trata</h2>
+            <div className="pk-sobre-txt">
+              {pack.descripcion.split(/\n+/).filter(Boolean).map((parrafo, i) => <p key={i}>{parrafo}</p>)}
+            </div>
+            <ul className="pk-sobre-datos">
+              <li><b>{clases.length}</b> {clases.length === 1 ? "clase" : "clases"} en orden, de la primera a la última</li>
+              <li><b>{minutos}</b> minutos de trabajo en total</li>
+              <li>Pagás <b>una sola vez</b> y quedan en tu biblioteca para siempre</li>
+            </ul>
+          </section>
+        )}
+
         <h2 className="pk-h2">Qué trae</h2>
         <ul className="pk-clases">
           {clases.map((c, i) => {
@@ -66,6 +81,7 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
                 </span>
                 <span className="pk-clase-txt">
                   <span className="pk-clase-titulo">{c.titulo}</span>
+                  {c.descripcion && <span className="pk-clase-desc">{c.descripcion}</span>}
                   <span className="pk-clase-meta">
                     <Clock size={11} strokeWidth={2.4} aria-hidden="true" style={{ display: "inline", verticalAlign: "-1px" }} /> {c.minutos} min
                     {" · "}
