@@ -203,6 +203,29 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       if (busy) return;
 
       const form = event.currentTarget;
+
+      /*
+       * Validacion PROPIA y no la del navegador (el form lleva noValidate).
+       *
+       * Con la nativa, un obligatorio vacio cancelaba el envio y el navegador
+       * saltaba hasta ese campo con un globito que dura un segundo: Brunela
+       * completaba todo, tocaba "Subir", la pagina se iba para arriba y no se
+       * creaba nada, sin ningun mensaje al lado del boton. El caso tipico era
+       * Materiales, que es obligatorio y queda lejos del boton.
+       */
+      if (!form.checkValidity()) {
+        const invalidos = Array.from(form.elements).filter(
+          (el): el is HTMLInputElement =>
+            "willValidate" in el && (el as HTMLInputElement).willValidate && !(el as HTMLInputElement).validity.valid
+        );
+        const nombres = [...new Set(invalidos.map((el) => NOMBRE_DEL_CAMPO[el.name] ?? "Materiales"))];
+        setPhase("error");
+        setMessage(`Falta completar: ${nombres.join(", ")}.`);
+        const primero = invalidos[0];
+        primero?.closest("div")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
       const fd = new FormData(form);
       const videoFile = fd.get("videoFile");
 
@@ -419,7 +442,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
   const hasSizeError = Object.keys(sizeErrors).length > 0;
 
   return (
-    <form onSubmit={onSubmit} className="avu">
+    <form onSubmit={onSubmit} className="avu" noValidate>
       <style>{CSS_SUBIDA}</style>
       {/* 1 y 2 — los dos titulos */}
       <div className="avu-g2">
@@ -706,6 +729,21 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
     </form>
   );
 }
+
+/**
+ * Como se llama cada obligatorio en el mensaje "Falta completar". El selector
+ * de Materiales no tiene `name` (sus valores van en hidden aparte), por eso es
+ * el que cae al default en onSubmit.
+ */
+const NOMBRE_DEL_CAMPO: Record<string, string> = {
+  titleEs: "Título en español",
+  descriptionEs: "Descripción en español",
+  categorySlug: "Categoría",
+  durationMinutes: "Duración",
+  slug: "Dirección de la clase",
+  programDayNumber: "Día del plan",
+  videoFile: "Archivo de video",
+};
 
 const CSS_SUBIDA = `
 .avu { padding-top: 16px; }
