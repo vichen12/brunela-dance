@@ -2,12 +2,15 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
 import { requireUser } from "@/src/features/auth/guards";
 import { crearCheckoutDePack, crearCheckoutDeSuscripcion, type ResultadoCheckout } from "@/src/lib/stripe/crear-checkout";
 import { leerAccesoAlEstudio } from "@/src/features/acceso/servidor";
 import { onboardingPideElPago, RUTA_ELEGIR_PLAN } from "@/src/features/acceso/reglas";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { enviarBienvenida } from "@/src/features/correos/disparadores";
 
 /**
  * Alta de cuenta y onboarding.
@@ -252,6 +255,18 @@ export async function completarOnboardingAction(formData: FormData) {
   // antes: la misma regla que la compuerta del estudio (src/features/acceso).
   const acceso = await leerAccesoAlEstudio(user.id);
   if (!acceso || !onboardingPideElPago(acceso)) {
+    // Entra al estudio sin pasar por Stripe (meses gratis, pack ya comprado):
+    // la bienvenida sale de aca. Quien paga la recibe desde el webhook.
+    //
+    // `after()`: corre cuando la redireccion ya salio, asi que el correo no la
+    // demora ni la puede romper. El id es el de la SESION (requireUser), nunca
+    // del formulario. A una admin no se le manda (enviarBienvenida la omite).
+    // La clave bienvenida:<id> impide el segundo si despues paga.
+    if (acceso?.tieneAcceso && !acceso.esAdmin) {
+      after(async () => {
+        await enviarBienvenida(createSupabaseAdminClient(), user.id);
+      });
+    }
     redirect("/dashboard" as never);
   }
 

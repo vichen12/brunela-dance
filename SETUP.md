@@ -67,7 +67,17 @@ no es el que devuelve `ls`:
 35. 20261009_2_sesiones_privadas.sql       <-- DESPUES de la 23: tabla nueva
                                                con su propio grant. No
                                                redefine nada
+36. 20261009_3_correos_enviados.sql        <-- DESPUES de la 23: tabla nueva
+                                               con su propio grant. No
+                                               redefine nada
 ```
+
+> **La 36 (correos enviados) tambien se puede correr sola.** Sin ella la
+> aplicacion NO MANDA los correos del estudio (bienvenida, acceso gratis,
+> recordatorio e invitacion a clases en vivo) y lo dice en los registros:
+> `[correo] falta la migracion 20261009_3_correos_enviados.sql`. Es a
+> proposito: sin el registro no hay forma de saber si ya se mando, y es mejor
+> perder un aviso que mandarlo todos los dias.
 
 > **La 35 (sesiones privadas) se puede correr sola, en cualquier momento.**
 > El codigo ya desplegado la tolera ausente: el panel muestra "falta aplicar la

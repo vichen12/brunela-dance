@@ -3,7 +3,8 @@
  * listo para `enviarCorreo()`. Ninguna envia nada ni consulta la base: reciben
  * los datos ya resueltos.
  *
- * Todavia NO estan conectadas a ningun flujo.
+ * Quien las manda y cuando: src/features/correos/disparadores.ts, siempre por
+ * enviarUnaVez() (nunca dos veces la misma; ver 20261009_3_correos_enviados.sql).
  */
 
 import { plantillaCorreo, textoPlano, SITIO, type PlantillaCorreo } from "./plantilla-base";

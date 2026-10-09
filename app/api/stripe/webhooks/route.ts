@@ -1,8 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getStripeServerEnv } from "@/src/lib/env";
 import { getSubscriptionCatalog, resolveTierFromPriceId } from "@/src/lib/stripe/catalog";
+import { enviarBienvenida } from "@/src/features/correos/disparadores";
+import { alumnaParaBienvenida, type EventoParaBienvenida } from "@/src/features/correos/reglas";
 
 function createServiceRoleClient() {
   const env = getStripeServerEnv();
@@ -332,6 +334,26 @@ export async function POST(request: Request) {
         : { applied: false, reason: suscripcion.reason };
 
     await persistWebhookAudit(event, null);
+
+    /**
+     * Correo de bienvenida, la primera vez que entra (plan nuevo o pack).
+     *
+     * ⚠️ DESPUES de todas las escrituras y FUERA de la respuesta: `after()`
+     *    corre cuando la respuesta ya salio, asi que el correo no cambia ni el
+     *    status ni el cuerpo que ve Stripe, ni demora la entrega. enviarBienvenida
+     *    nunca lanza, y si fallara igual no hay nada que reintentar desde aca:
+     *    el pago ya quedo guardado. Que no salga dos veces lo garantiza
+     *    correos_enviados (clave bienvenida:<alumna>), no este evento.
+     */
+    const bienvenida = alumnaParaBienvenida(event as unknown as EventoParaBienvenida, {
+      suscripcionAplicada: suscripcion.applied,
+      packAplicado: pack.applied,
+    });
+    if (bienvenida) {
+      after(async () => {
+        await enviarBienvenida(createServiceRoleClient(), bienvenida);
+      });
+    }
 
     // A skip is a correct outcome, not an error, so it is audited as processed.
     // The reason travels in the response so it shows up in `stripe listen` and

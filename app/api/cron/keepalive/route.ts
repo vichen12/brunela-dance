@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { aplicarBajasVencidas } from "@/src/features/studio/acceso-gratis";
+import { correosDelCron } from "@/src/features/correos/disparadores";
 
 /**
  * Mantiene despierto el proyecto de Supabase.
@@ -30,6 +31,10 @@ import { aplicarBajasVencidas } from "@/src/features/studio/acceso-gratis";
 // Sin cache: una respuesta cacheada no llega a Supabase, que es justamente lo
 // unico que este endpoint tiene que hacer.
 export const dynamic = "force-dynamic";
+
+// Los correos del estudio van con pausa entre envio y envio (Resend limita a 2
+// por segundo) y cortan solos a los 45 s (src/features/correos/disparadores.ts).
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   /**
@@ -89,12 +94,26 @@ export async function GET(request: Request) {
      */
     const accesoGratis = await aplicarBajasVencidas(supabase);
 
+    /**
+     * TERCER PASO: los correos del dia (src/features/correos/disparadores.ts).
+     *
+     *   - recordatorio de las clases en vivo de HOY (Madrid) a quien reservo
+     *   - "te quedan N dias" del acceso gratis (1 a 3 dias antes)
+     *   - "termino tu acceso gratis" (hasta 7 dias despues)
+     *
+     * Va al final: las bajas ya se aplicaron y el keepalive ya desperto la base.
+     * NUNCA LANZA -- un correo que falla no puede marcar el keepalive como
+     * caido -- y sin 20261009_3_correos_enviados.sql no manda nada.
+     */
+    const correos = await correosDelCron(supabase);
+
     return NextResponse.json({
       ok: true,
       // Se devuelve el conteo para que se vea en los registros de Vercel que la
       // consulta llego de verdad a la base, y no solo que la ruta respondio.
       categorias: count,
       accesoGratis,
+      correos,
       ms: Date.now() - empezo,
     });
   } catch (e) {

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { salaDirecta } from "@/src/features/admin/chat-directo";
+import { avisoDelCorreo, enviarInvitacion } from "@/src/features/correos/disparadores";
 
 /**
  * Acciones de la ficha de una alumna (/admin/users/[id]): escribirle sin salir
@@ -70,10 +71,15 @@ export async function invitarDesdeFichaAction(fd: FormData) {
   // 23505: ya estaba invitada. Es el estado que se queria, no un fallo.
   if (error && error.code !== "23505") volver(alumnaId, "error=" + encodeURIComponent(error.message) + "#vivo");
 
+  // El correo va DESPUES de guardar y no puede deshacer nada: si falla, la
+  // invitacion queda igual y el cartel lo dice. Si ya estaba invitada (23505),
+  // la clave invitacion:<sesion>:<alumna> impide mandarlo otra vez.
+  const correo = await enviarInvitacion(db, sesionId, alumnaId);
+
   revalidatePath(`/admin/users/${alumnaId}`);
   revalidatePath("/admin/live");
   revalidatePath("/dashboard/live");
-  volver(alumnaId, "success=" + encodeURIComponent("Invitación enviada. La ve en su pantalla de En vivo.") + "#vivo");
+  volver(alumnaId, "success=" + encodeURIComponent("Invitación enviada. La ve en su pantalla de En vivo." + avisoDelCorreo(correo)) + "#vivo");
 }
 
 export async function quitarInvitacionDesdeFichaAction(fd: FormData) {

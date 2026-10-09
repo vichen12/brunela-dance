@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { avisoDelCorreo, enviarInvitacion } from "@/src/features/correos/disparadores";
 import { detectarProveedor, validarEnlace } from "@/src/features/studio/enlace-clase";
 
 /**
@@ -236,8 +237,19 @@ export async function inviteToLiveSessionAction(fd: FormData) {
     conMensaje(volverA(fd), "error", error.message);
   }
 
+  // Correo a la alumna, DESPUES de guardar. La clave
+  // invitacion:<sesion>:<alumna> impide el segundo si se invita de nuevo.
+  const correo = await enviarInvitacion(supabase, sessionId, alumna.id);
+
   revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
+
+  // Esta accion no muestra cartel cuando todo sale bien (el panel queda
+  // abierto). Solo se vuelve con mensaje si el correo no salio: la invitacion
+  // esta guardada igual, pero Brunela tiene que saber que no le llego.
+  if (correo.estado === "fallo" || correo.estado === "sin_migracion") {
+    conMensaje(volverA(fd), "success", "Invitación guardada." + avisoDelCorreo(correo));
+  }
 }
 
 export async function uninviteFromLiveSessionAction(fd: FormData) {
