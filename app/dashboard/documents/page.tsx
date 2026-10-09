@@ -2,7 +2,8 @@ import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
-import { FileText, Image, Video, Music, FileType, Paperclip, type LucideIcon } from "lucide-react";
+import { Download, Eye, FileText, Image, MessageCircle, Music, FileType, Paperclip, PlayCircle, Upload, Video, type LucideIcon } from "lucide-react";
+import { AdminBoton, AdminCabecera, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { firmarDescarga } from "@/src/lib/documents/storage";
 
@@ -98,173 +99,157 @@ export default async function DocumentsPage({ searchParams }: {
     ? allDocs
     : allDocs.filter((d) => d.category_slug === activeCategory);
 
+  // La clase a la que va atado cada documento, por su titulo. Con el cliente de
+  // la alumna: si RLS no le deja ver la clase, el documento no la nombra.
+  const slugsDeClase = Array.from(new Set(allDocs.map((d) => d.video_slug).filter(Boolean))) as string[];
+  const { data: clasesData } = slugsDeClase.length
+    ? await supabase.from("videos").select("slug, title_i18n").in("slug", slugsDeClase)
+    : { data: [] as { slug: string; title_i18n: Record<string, string> | null }[] };
+  const claseDe = new Map(((clasesData ?? []) as { slug: string; title_i18n: Record<string, string> | null }[])
+    .map((c) => [c.slug, c.title_i18n?.es ?? c.slug]));
+
+  const peso = (kb: number | null) => (!kb ? null : kb >= 1000 ? `${(kb / 1000).toFixed(1)} MB` : `${kb} KB`);
+  const TIPO: Record<string, string> = { pdf: "PDF", image: "Imagen", video: "Video", audio: "Audio", doc: "Word", other: "Archivo" };
+
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+    <main className="sd">
+      <style>{CSS}</style>
+      <section className="sd-shell">
+        <AdminCabecera
+          eyebrow="Recursos del estudio"
+          titulo="Documentos"
+          lede="Guías, PDFs y material de apoyo que Brunela comparte con tu plan, listos para leer o descargar."
+        />
 
-        <header className="hero-stage">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="eyebrow">Recursos del estudio</p>
-              <h1 className="display mt-5 text-5xl leading-none md:text-7xl">
-                Documentos<span style={{ color: "var(--pink)" }}>.</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-                Guías, PDFs y material de referencia disponibles según tu plan.
-              </p>
-            </div>
-
-            <div className="soft-stat flex min-w-[15rem] items-center gap-4 p-5">
-              <div style={{
-                width: 46, height: 46, borderRadius: 14, flexShrink: 0,
-                background: "var(--pink-wash)", color: "var(--pink)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                  <path d="M1.8 4.2A1.2 1.2 0 013 3h3.2l1.4 1.6h4.4A1.2 1.2 0 0113.2 5.8v6A1.2 1.2 0 0112 13H3a1.2 1.2 0 01-1.2-1.2V4.2z"
-                    stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                </svg>
+        {allDocs.length === 0 ? (
+          <AdminGuia
+            rotuloEjemplo="Así se ven"
+            ejemplo={
+              <div className="ad-guia-flota sd-ejemplo">
+                {[
+                  { Icono: FileText, titulo: "Guía de alineación postural", meta: "PDF · 2,4 MB" },
+                  { Icono: Image, titulo: "Mapa de estiramientos", meta: "Imagen · 860 KB" },
+                  { Icono: Music, titulo: "Respiración guiada", meta: "Audio · 6,1 MB" },
+                ].map((d, i) => (
+                  <div key={d.titulo} className="sd-ejemplo-fila" style={{ animationDelay: `${0.3 + i * 0.18}s` }}>
+                    <span className="sd-ico"><d.Icono size={18} strokeWidth={1.8} /></span>
+                    <span className="sd-ejemplo-txt"><strong>{d.titulo}</strong><small>{d.meta}</small></span>
+                    <span className="sd-ejemplo-bajar"><Download size={15} strokeWidth={2} /></span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="display text-3xl leading-none">{visible.length}</p>
-                <p className="mt-1 text-sm text-[color:var(--ink-soft)]">archivos disponibles</p>
+            }
+            eyebrow="Todavía no hay material para tu plan"
+            titulo="Va a aparecer acá."
+            pasos={[
+              { icono: <Upload size={18} strokeWidth={2} />, titulo: "Brunela sube el material", texto: "Guías, hojas de ejercicios, audios de respiración." },
+              { icono: <Eye size={18} strokeWidth={2} />, titulo: "Lo ves según tu plan", texto: "Algunos son para todas; otros, para planes más avanzados." },
+              { icono: <Download size={18} strokeWidth={2} />, titulo: "Lo abrís o lo descargás", texto: "Desde el celular o la computadora, cuando quieras." },
+            ]}
+            cta={
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {/* No existe un sistema de avisos: estas dos salidas si funcionan hoy. */}
+                <AdminBoton href="/dashboard/chat" lleno><MessageCircle size={16} strokeWidth={2} aria-hidden="true" /> Pedirle material a Brunela</AdminBoton>
+                <AdminBoton href="/dashboard/plan">Ver mi plan</AdminBoton>
               </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Filters */}
-        {categories.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: CATEGORIA_LABEL[c] ?? c }))].map((f) => (
-              <Link
-                key={f.key}
-                href={f.key === "all" ? "/dashboard/documents" : `/dashboard/documents?cat=${f.key}`}
-                style={{
-                  padding: "7px 18px", borderRadius: 99, textDecoration: "none",
-                  fontSize: 12, fontWeight: 700,
-                  background: activeCategory === f.key ? "var(--pink)" : "var(--pink-wash)",
-                  color: activeCategory === f.key ? "#fff" : "var(--muted)",
-                  border: activeCategory === f.key ? "none" : "1.5px solid var(--pink-soft)",
-                  boxShadow: activeCategory === f.key ? "0 4px 12px rgba(230, 79, 85,0.25)" : "none",
-                }}
-              >{f.label}</Link>
-            ))}
-          </div>
-        )}
-
-        {/* Count */}
-        <p className="eyebrow">{visible.length} documentos</p>
-
-        {visible.length === 0 ? (
-          <div style={{
-            border: "1.5px dashed var(--pink-soft)", borderRadius: 26,
-            background: "#fff", padding: "52px 28px", textAlign: "center",
-          }}>
-            <div style={{
-              width: 88, height: 88, borderRadius: "50%", margin: "0 auto 24px",
-              background: "var(--pink-wash)", color: "var(--pink)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <svg width="38" height="38" viewBox="0 0 16 16" fill="none">
-                <path d="M5 1.5h5.5L14 5V14H5V1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-                <path d="M10 1.5V5h4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", color: "var(--pink)", textTransform: "uppercase", marginBottom: 12 }}>
-              Sin documentos
-            </p>
-            <h2 className="display" style={{ fontSize: 27, color: "var(--ink)", lineHeight: 1.3 }}>
-              Todavía no hay <span style={{ color: "var(--pink)", fontStyle: "italic" }}>documentos</span> disponibles
-            </h2>
-            <p style={{ fontSize: 13.5, color: "var(--muted)", marginTop: 12, lineHeight: 1.7 }}>
-              Cuando Brunela suba nuevo material,<br />
-              lo vas a encontrar acá listo para leer o descargar.
-            </p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
-              {/* Antes iba un "Avisarme cuando haya material": no existe ningun
-                  sistema de avisos. Estas dos salidas si funcionan hoy. */}
-              <Link href="/dashboard/chat" style={{
-                background: "var(--pink)", color: "#fff", textDecoration: "none",
-                padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
-              }}>Pedirle material a Brunela</Link>
-              <Link href="/dashboard/plan" style={{
-                background: "#fff", color: "var(--pink)", textDecoration: "none",
-                border: "1px solid var(--pink-wash)",
-                padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 700,
-              }}>Ver mi plan</Link>
-            </div>
-          </div>
+            }
+          />
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-            {visible.map((doc) => (
-              <a
-                key={doc.id}
-                href={doc.file_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{ textDecoration: "none" }}
-              >
-                <div className="feature-tile" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  {/* Icon area */}
-                  <div style={{
-                    height: 80, borderRadius: 14, marginBottom: 14,
-                    background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 32,
-                  }}>
-                    {(() => { const I = FILE_ICONS[doc.file_type] ?? Paperclip; return <I size={30} strokeWidth={1.6} />; })()}
-                  </div>
+          <>
+            {categories.length > 0 && (
+              <nav className="sd-filtros" aria-label="Categorías">
+                {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: CATEGORIA_LABEL[c] ?? c }))].map((f) => (
+                  <Link
+                    key={f.key}
+                    href={(f.key === "all" ? "/dashboard/documents" : `/dashboard/documents?cat=${f.key}`) as never}
+                    className={"sd-filtro" + (activeCategory === f.key ? " es-activo" : "")}
+                    aria-current={activeCategory === f.key ? "page" : undefined}
+                  >{f.label}</Link>
+                ))}
+              </nav>
+            )}
 
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: 1.3, marginBottom: 6 }}>
-                    {doc.title}
-                  </p>
-                  {doc.description && (
-                    <p style={{
-                      fontSize: 11.5, color: "var(--muted)", lineHeight: 1.6, flex: 1,
-                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-                    }}>{doc.description}</p>
-                  )}
+            <p className="sd-cuenta"><strong>{visible.length}</strong> {visible.length === 1 ? "documento" : "documentos"}</p>
 
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <span style={{
-                        fontSize: 8, fontWeight: 700, letterSpacing: "0.1em",
-                        background: "var(--pink-wash)", color: "var(--pink)",
-                        padding: "3px 8px", borderRadius: 99, textTransform: "uppercase",
-                      }}>{doc.file_type}</span>
-                      {doc.membership_tier_required !== "none" && (
-                        <span style={{
-                          fontSize: 8, fontWeight: 700, letterSpacing: "0.1em",
-                          background: "#1c1917", color: "var(--pink-wash)",
-                          padding: "3px 8px", borderRadius: 99,
-                        }}>{TIER_LABELS[doc.membership_tier_required]}</span>
-                      )}
-                    </div>
-                    {doc.file_size_kb && (
-                      <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                        {doc.file_size_kb > 1000
-                          ? `${(doc.file_size_kb / 1000).toFixed(1)} MB`
-                          : `${doc.file_size_kb} KB`}
+            <ul className="sd-grilla">
+              {visible.map((doc) => {
+                const Icono = FILE_ICONS[doc.file_type] ?? Paperclip;
+                const clase = doc.video_slug ? claseDe.get(doc.video_slug) : null;
+                return (
+                  <li key={doc.id} className="sd-card">
+                    <a href={doc.file_url} target="_blank" rel="noreferrer" className="sd-abrir" aria-label={`Abrir ${doc.title}`}>
+                      <span className="sd-ico sd-ico--grande"><Icono size={26} strokeWidth={1.6} aria-hidden="true" /></span>
+                      <span className="sd-info">
+                        <span className="sd-meta">
+                          {TIPO[doc.file_type] ?? doc.file_type}{peso(doc.file_size_kb) ? ` · ${peso(doc.file_size_kb)}` : ""}
+                          {doc.membership_tier_required !== "none" && <span className="sd-plan">{TIER_LABELS[doc.membership_tier_required]}</span>}
+                        </span>
+                        <span className="sd-titulo">{doc.title}</span>
+                        {doc.description && <span className="sd-desc">{doc.description}</span>}
                       </span>
+                      <span className="sd-bajar" aria-hidden="true"><Download size={17} strokeWidth={2} /></span>
+                    </a>
+                    {(clase || doc.category_slug) && (
+                      <div className="sd-atado">
+                        {clase && (
+                          <Link href={`/dashboard/library/${doc.video_slug}` as never} className="sd-clase">
+                            <PlayCircle size={14} strokeWidth={2} aria-hidden="true" /> {clase}
+                          </Link>
+                        )}
+                        {doc.category_slug && <span className="sd-cat">{CATEGORIA_LABEL[doc.category_slug] ?? doc.category_slug}</span>}
+                      </div>
                     )}
-                  </div>
-
-                  <div style={{
-                    marginTop: 12, display: "flex", alignItems: "center", gap: 6,
-                    color: "var(--pink)", fontSize: 11, fontWeight: 700,
-                  }}>
-                    <span>Abrir</span>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 10L10 2M10 2H4M10 2v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </section>
     </main>
   );
 }
+
+const CSS = `
+.sd { padding-bottom: 80px; }
+.sd-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
+.sd .ad-mast { padding-bottom: 4px; }
+.sd-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.sd-filtro { padding: 8px 16px; border-radius: 99px; text-decoration: none; font-size: 13px; font-weight: 600; color: #57534e; border: 1px solid #e7e5e4; transition: border-color .2s, color .2s, background .2s; }
+.sd-filtro:hover { border-color: var(--pink-line); color: var(--pink-deep); }
+.sd-filtro.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; }
+.sd-cuenta { font-size: 13px; color: #78716c; }
+.sd-cuenta strong { color: var(--ink); }
+.sd-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.sd-card {
+  display: flex; flex-direction: column; border: 1px solid #e7e5e4; border-radius: 20px; background: #fff; overflow: hidden;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+}
+.sd-card:hover { transform: translateY(-3px); border-color: var(--pink-line); box-shadow: 0 22px 40px -26px rgba(176,58,62,0.5); }
+.sd-abrir { display: flex; align-items: flex-start; gap: 14px; padding: 18px; text-decoration: none; color: inherit; flex: 1; }
+.sd-ico { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); }
+.sd-ico--grande { width: 56px; height: 56px; border-radius: 16px; }
+.sd-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sd-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a8a29e; }
+.sd-plan { padding: 1px 8px; border-radius: 99px; background: var(--pink-wash); color: var(--pink-deep); letter-spacing: 0.04em; }
+.sd-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; line-height: 1.25; letter-spacing: -0.02em; color: var(--ink); }
+.sd-card:hover .sd-titulo { color: var(--pink-deep); }
+.sd-desc { font-size: 13.5px; line-height: 1.55; color: #57534e; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sd-bajar {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink); color: #fff; box-shadow: 0 8px 18px -10px rgba(230,79,85,0.8); transition: transform .3s cubic-bezier(.16,1,.3,1);
+}
+.sd-card:hover .sd-bajar { transform: translateY(2px); }
+.sd-atado { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 18px 14px; border-top: 1px solid #f5f5f4; }
+.sd-clase { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--pink-deep); text-decoration: none; }
+.sd-clase:hover { text-decoration: underline; }
+.sd-cat { padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; color: #57534e; background: #f5f5f4; }
+.sd-ejemplo { padding: 8px; }
+.sd-ejemplo-fila { display: flex; align-items: center; gap: 12px; padding: 12px; animation: ad-entra .6s cubic-bezier(.16,1,.3,1) both; }
+.sd-ejemplo-fila + .sd-ejemplo-fila { border-top: 1px solid #f5f5f4; }
+.sd-ejemplo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sd-ejemplo-txt strong { font-size: 14px; color: var(--ink); }
+.sd-ejemplo-txt small { font-size: 12px; color: #a8a29e; }
+.sd-ejemplo-bajar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--pink); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .sd-ejemplo-fila { animation: none; } }
+`;
