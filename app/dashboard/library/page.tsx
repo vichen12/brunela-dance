@@ -125,8 +125,10 @@ function catGradient(slugs: string[]): string {
   return "linear-gradient(140deg, #FFF2EE 0%, #FBDDD3 100%)";
 }
 
-/** Cuantas clases por tanda. Con menos, "Ver más" aparece demasiado seguido. */
-const POR_PAGINA = 24;
+/** Clases por pagina: tres filas de cuatro en escritorio. */
+const POR_PAGINA = 12;
+/** Tope de la consulta. El catalogo es de decenas o pocos cientos de clases. */
+const TOPE_CATALOGO = 600;
 
 /**
  * Los chips fijos salen de la MISMA lista que el desplegable de /admin/videos.
@@ -284,10 +286,11 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   const fDuracion = uno("dur",    OPCIONES_DURACION.map((o) => o.key));
   const fEstado   = uno("estado", OPCIONES_ESTADO.map((o) => o.key));
 
-  // Paginacion acumulativa: "Ver más" trae la pagina siguiente SIN perder las
-  // anteriores, que es lo que espera alguien recorriendo un catalogo. Se pide
-  // uno de mas para saber si hay siguiente sin una segunda consulta de conteo.
-  const pagina = Math.max(0, Math.min(50, Number(params.pagina) || 0));
+  // Paginas numeradas (pedido de la duena: "¡paginá!"). Antes era "Ver más"
+  // acumulativo. Se pagina DESPUES de los filtros en memoria (categoria,
+  // nivel, duracion, texto): paginar la consulta y filtrar despues dejaba
+  // paginas con 3 clases y un "Siguiente" que no tenia nada.
+  const pagina = Math.max(0, Math.min(200, Number(params.pagina) || 0));
 
   const profileData = await getCurrentProfile(user.id);
   /**
@@ -377,7 +380,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     consulta
       .order("is_featured", { ascending: false })
       .order("published_at", { ascending: false })
-      .limit(POR_PAGINA * (pagina + 1) + 1),
+      .limit(TOPE_CATALOGO),
     // Mismo progreso memoizado que ya trajo el layout: sin esto era un segundo
     // viaje a Supabase por la misma tabla.
     getProgresoDelUsuario(user.id),
@@ -411,14 +414,8 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     }));
   }
 
-  // Se pidio una fila de mas que el tope de la pagina: si volvio, hay
-  // siguiente. Evita un `count exact` aparte solo para saber si mostrar el
-  // boton -- que seria un viaje mas en cada carga.
   const crudas = (videosData ?? []) as unknown as VideoRecord[];
-  const tope = POR_PAGINA * (pagina + 1);
-  const hayMasPaginas = !modoTodo && crudas.length > tope;
-
-  const videos = (modoTodo ? vitrina : crudas.slice(0, tope));
+  const videos = (modoTodo ? vitrina : crudas);
 
   /**
    * Que clases puede ver DE VERDAD, para poner el candado tarjeta por tarjeta.
@@ -494,6 +491,10 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
     }
     return true;
   });
+
+  const totalPaginas = Math.max(1, Math.ceil(visible.length / POR_PAGINA));
+  const paginaReal = Math.min(pagina, totalPaginas - 1);
+  const enPagina = visible.slice(paginaReal * POR_PAGINA, paginaReal * POR_PAGINA + POR_PAGINA);
 
   /**
    * Arma un enlace de la biblioteca conservando TODO lo que esta puesto
@@ -676,7 +677,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           </div>
         ) : (
           <Grilla className="bib-grilla">
-            {visible.map((video) => {
+            {enPagina.map((video) => {
               const pct = safePercent(progressMap.get(video.id)?.completion_percent);
               const title = resolveI18nText(video.title_i18n);
               // Las miniaturas viven detras de la misma pull zone con token que
@@ -748,14 +749,25 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           </Grilla>
         )}
 
-        {/* Fase D: "Ver más" en vez de traer el catalogo entero de una. Es
-            acumulativo: la pagina siguiente se suma, no reemplaza. */}
-        {hayMasPaginas && (
-          <div className="bib-mas">
-            <Link href={enlace({ pagina: String(pagina + 1) }) as never} className="bib-btn">
-              Ver más clases <ArrowRight size={15} strokeWidth={2.4} />
-            </Link>
-          </div>
+        {totalPaginas > 1 && (
+          <nav className="bib-paginas" aria-label="Páginas">
+            {paginaReal > 0
+              ? <Link href={enlace({ pagina: paginaReal - 1 > 0 ? String(paginaReal - 1) : null }) as never} className="bib-pag-flecha">← Anteriores</Link>
+              : <span className="bib-pag-flecha es-off">← Anteriores</span>}
+            <span className="bib-pag-nums">
+              {Array.from({ length: totalPaginas }, (_, n) => n)
+                .filter((n) => totalPaginas <= 7 || n === 0 || n === totalPaginas - 1 || Math.abs(n - paginaReal) <= 1)
+                .map((n, k, arr) => (
+                  <span key={n} style={{ display: "contents" }}>
+                    {k > 0 && n - arr[k - 1] > 1 && <span className="bib-pag-puntos">…</span>}
+                    <Link href={enlace({ pagina: n > 0 ? String(n) : null }) as never} className={"bib-pag-num" + (n === paginaReal ? " es-activa" : "")} aria-current={n === paginaReal ? "page" : undefined}>{n + 1}</Link>
+                  </span>
+                ))}
+            </span>
+            {paginaReal < totalPaginas - 1
+              ? <Link href={enlace({ pagina: String(paginaReal + 1) }) as never} className="bib-pag-flecha">Siguientes →</Link>
+              : <span className="bib-pag-flecha es-off">Siguientes →</span>}
+          </nav>
         )}
       </section>
       </Movimiento>
@@ -1001,6 +1013,16 @@ const CSS_BIBLIOTECA = `
 .bib-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 22px; letter-spacing: -0.015em; color: var(--ink); }
 .bib-vacio-sub { max-width: 44ch; font-size: 14.5px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; }
 .bib-mas { display: flex; justify-content: center; padding-top: 40px; }
+.bib-paginas { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding-top: 40px; }
+.bib-pag-nums { display: flex; align-items: center; gap: 6px; }
+.bib-pag-num { min-width: 42px; height: 42px; padding: 0 12px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 800; text-decoration: none; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: background .2s, border-color .2s, transform .25s var(--curva); }
+.bib-pag-num:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-1px); }
+.bib-pag-num.es-activa { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
+.bib-pag-puntos { color: var(--muted); font-weight: 800; padding: 0 2px; }
+.bib-pag-flecha { height: 42px; padding: 0 18px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 800; text-decoration: none; color: var(--ink); background: var(--rubor); transition: background .2s; }
+.bib-pag-flecha:hover { background: var(--pink-wash); }
+.bib-pag-flecha.es-off { opacity: .4; pointer-events: none; }
+@media (max-width: 560px) { .bib-pag-flecha { padding: 0 14px; font-size: 12.5px; } .bib-pag-num { min-width: 38px; height: 38px; } }
 
 @media (max-width: 760px) {
   .bib-mast { border-radius: 26px; }

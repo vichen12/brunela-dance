@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, ListChecks, Lock, Sparkles, Star } from "lucide-react";
 import { AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
+import { AdminBuscador } from "@/components/admin-buscador";
 import {
   membershipTierLabel,
   resolveI18nText,
@@ -82,7 +83,14 @@ type ProgressRecord = {
 const COLUMNAS =
   "id, slug, title_i18n, description_i18n, membership_tier_required, duration_days, cover_image_url, is_featured, status";
 
-export default async function DashboardProgramsPage() {
+export default async function DashboardProgramsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = (await searchParams) ?? {};
+  const txt = (k: string) => (typeof params[k] === "string" ? (params[k] as string).trim() : "");
+  const q = txt("q").slice(0, 80);
+  const fAcceso = ["mios", "bloqueados", "en-curso"].includes(txt("ver")) ? txt("ver") : "";
+  const fNivel = ["principiante", "intermedio", "avanzado"].includes(txt("nivel")) ? txt("nivel") : "";
+  const pagina = Math.max(0, Math.min(100, Number(params.pagina) || 0));
+  const POR_PAGINA = 9;
   const { user } = await requireUser();
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -184,6 +192,33 @@ export default async function DashboardProgramsPage() {
   }
 
   const mios = programs.filter((p) => !bloqueado(p.id)).length;
+
+  // Buscador y filtros (pedido de la duena). En memoria: son decenas de planes.
+  const normal = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const filtrados = programs.filter((p) => {
+    const t = (p.title_i18n?.es ?? "") + " " + (p.description_i18n?.es ?? "") + " " + (focoDe(p.id) ?? "");
+    if (q && !normal(t).includes(normal(q))) return false;
+    if (fAcceso === "mios" && bloqueado(p.id)) return false;
+    if (fAcceso === "bloqueados" && !bloqueado(p.id)) return false;
+    if (fAcceso === "en-curso" && (bloqueado(p.id) || (progressByProgram.get(p.id)?.completedDays ?? 0) === 0)) return false;
+    if (fNivel) {
+      const n = nivelPorPrograma.get(p.id);
+      if (fNivel === "avanzado" ? !(n && ["avanzado", "profesional", "maestro"].includes(n)) : n !== fNivel) return false;
+    }
+    return true;
+  });
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaReal = Math.min(pagina, totalPaginas - 1);
+  const enPagina = filtrados.slice(paginaReal * POR_PAGINA, paginaReal * POR_PAGINA + POR_PAGINA);
+  const conPagina = (p: number) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (fAcceso) u.set("ver", fAcceso);
+    if (fNivel) u.set("nivel", fNivel);
+    if (p > 0) u.set("pagina", String(p));
+    const t = u.toString();
+    return "/dashboard/programs" + (t ? "?" + t : "");
+  };
   const enCurso = programs.filter((p) => !bloqueado(p.id) && (progressByProgram.get(p.id)?.completedDays ?? 0) > 0).length;
   const diasHechos = [...progressByProgram.values()].reduce((a, p) => a + p.completedDays, 0);
 
@@ -249,8 +284,27 @@ export default async function DashboardProgramsPage() {
             cta={<AdminBoton href="/dashboard/library" lleno>Mientras tanto, ver clases <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" /></AdminBoton>}
           />
         ) : (
+          <>
+          <AdminBuscador
+            action="/dashboard/programs"
+            q={q}
+            placeholder="Buscar un plan: pies, giros, flexibilidad…"
+            total={programs.length}
+            mostrando={filtrados.length}
+            filtros={[
+              { name: "ver", valor: fAcceso, etiqueta: "Mostrar", opciones: [{ key: "", label: "Todos" }, { key: "mios", label: "Los de mi plan" }, { key: "en-curso", label: "En curso" }, { key: "bloqueados", label: "Con candado" }] },
+              { name: "nivel", valor: fNivel, etiqueta: "Nivel", opciones: [{ key: "", label: "Todos los niveles" }, { key: "principiante", label: "Inicial" }, { key: "intermedio", label: "Intermedio" }, { key: "avanzado", label: "Avanzado" }] },
+            ]}
+          />
+          {filtrados.length === 0 && (
+            <div className="ad-vacio">
+              <p className="ad-vacio-titulo">Ningún plan coincide.</p>
+              <p>Probá con otra palabra o sacá algún filtro.</p>
+              <Link href="/dashboard/programs" className="ad-btn">Ver todos</Link>
+            </div>
+          )}
           <ul className="sp-grilla">
-            {programs.map((program) => {
+            {enPagina.map((program) => {
               const cerrado = bloqueado(program.id);
               const progress = progressByProgram.get(program.id);
               const totalDays = daysByProgram.get(program.id) ?? 0;
@@ -317,6 +371,14 @@ export default async function DashboardProgramsPage() {
               );
             })}
           </ul>
+          {totalPaginas > 1 && (
+            <nav className="sp-paginas" aria-label="Páginas">
+              {paginaReal > 0 ? <Link href={conPagina(paginaReal - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
+              <span className="sp-paginas-txt">Página {paginaReal + 1} de {totalPaginas}</span>
+              {paginaReal < totalPaginas - 1 ? <Link href={conPagina(paginaReal + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
+            </nav>
+          )}
+          </>
         )}
       </section>
     </main>
@@ -324,6 +386,8 @@ export default async function DashboardProgramsPage() {
 }
 
 const CSS = `
+.sp-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 8px; }
+.sp-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); }
 .sp { padding-bottom: 80px; }
 .sp-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
 .sp .ad-mast { padding-bottom: 4px; }
