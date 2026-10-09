@@ -104,8 +104,8 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
           border: 1px solid rgba(233, 207, 197, 0.6);
         }
         .cr-b:nth-child(2) { background: linear-gradient(160deg, #FFE4E4 0%, #FFF4F3 100%); }
-        .cr-b:nth-child(3) { background: linear-gradient(160deg, #F7EBFA 0%, #FCF7FD 100%); }
-        .cr-b:nth-child(4) { background: linear-gradient(160deg, #E7F1E4 0%, #F5FAF3 100%); }
+        .cr-b:nth-child(3) { background: linear-gradient(160deg, #FDE3E0 0%, #FFF5F3 100%); }
+        .cr-b:nth-child(4) { background: linear-gradient(160deg, #FFF0E2 0%, #FFFAF4 100%); }
 
         .cr-n {
           font-family: var(--font-display), sans-serif;
