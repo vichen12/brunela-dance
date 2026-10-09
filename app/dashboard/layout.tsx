@@ -52,7 +52,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     profile?.full_name?.trim().split(/\s+/)[0] ||
     user.email?.split("@")[0] ||
     "alumna"
-  ).toUpperCase();
+  );
+  // Sin mayusculas: el redisenio suave muestra el nombre como se escribe.
 
   const isAdmin = profile?.is_admin ?? false;
 
