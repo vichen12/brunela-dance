@@ -3925,3 +3925,31 @@ details[open] > summary .ad-flecha { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
   .pf-portada-vista img { animation: none; }
 }
+
+/* ── Guia de primer uso (AdminGuia en components/admin-ui.tsx) ── */
+.ad-guia {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 56px); align-items: center;
+  padding: clamp(24px, 3vw, 40px); margin-bottom: 18px; border-radius: 28px;
+  background: radial-gradient(120% 140% at 0% 0%, var(--pink-wash) 0%, #fff 55%); border: 1px solid #f0eeec;
+}
+.ad-guia-ejemplo { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+.ad-guia-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #a8a29e; }
+.ad-guia-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep); }
+.ad-guia-titulo { margin-top: 8px; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: clamp(26px, 2.8vw, 36px); letter-spacing: -0.04em; line-height: 1.05; color: var(--ink); }
+.ad-guia-pasos ol { list-style: none; margin: 22px 0 24px; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.ad-guia-pasos li { display: flex; gap: 14px; align-items: flex-start; }
+.ad-guia-ico {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--pink-mid); border: 1px solid var(--pink-line); box-shadow: 0 6px 14px -10px rgba(176,58,62,0.6);
+}
+.ad-guia-paso { font-weight: 800; font-size: 15px; color: var(--ink); margin-bottom: 2px; }
+.ad-guia-pasos li p:not(.ad-guia-paso) { font-size: 13.5px; line-height: 1.55; color: #57534e; }
+/* La tarjeta de ejemplo flota: es una muestra, no algo que se toca. */
+.ad-guia-flota {
+  width: 100%; max-width: 380px; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid #e7e5e4;
+  box-shadow: 0 30px 60px -34px rgba(176,58,62,0.55); transform: rotate(-2deg); animation: ad-flota 6s ease-in-out infinite;
+}
+@keyframes ad-flota { 0%, 100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(-1deg) translateY(-8px); } }
+@keyframes ad-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (max-width: 900px) { .ad-guia { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .ad-guia-flota { animation: none; } }

@@ -2,13 +2,13 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
 import { requireAdmin } from "@/src/features/auth/guards";
 import {
-  ChevronDown, Eye, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Users, Video,
+  ChevronDown, Download, Eye, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Upload, Users, Video,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { upsertDocumentAction, deleteDocumentAction } from "@/src/features/admin/document-actions";
 import { AdminDocumentUpload } from "@/components/admin-document-upload";
-import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminGuia } from "@/components/admin-ui";
 import { CATEGORIAS, CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 
 export const dynamic = "force-dynamic";
@@ -163,6 +163,52 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
+      {docs.length === 0 ? (
+        <>
+          {/* Sin documentos, las cifras en cero no dicen nada: en su lugar,
+              como los ve la alumna y los tres pasos para subir el primero. */}
+          <AdminGuia
+            rotuloEjemplo="Así los ve la alumna"
+            ejemplo={
+              <div className="ad-guia-flota doc-ejemplo">
+                {[
+                  { Icono: FileText, titulo: "Guía de alineación postural", meta: "PDF · 2,4 MB", plan: "Todas" },
+                  { Icono: Image, titulo: "Mapa de estiramientos", meta: "Imagen · 860 KB", plan: "Solista" },
+                  { Icono: Music, titulo: "Respiración guiada", meta: "Audio · 6,1 MB", plan: "Principal" },
+                ].map((d, i) => (
+                  <div key={d.titulo} className="doc-ejemplo-fila" style={{ animationDelay: `${0.3 + i * 0.18}s` }}>
+                    <span className="doc-ejemplo-ico"><d.Icono size={18} strokeWidth={1.8} /></span>
+                    <span className="doc-ejemplo-txt">
+                      <span className="doc-ejemplo-titulo">{d.titulo}</span>
+                      <span className="doc-ejemplo-meta">{d.meta} · {d.plan}</span>
+                    </span>
+                    <span className="doc-ejemplo-bajar"><Download size={15} strokeWidth={2} /></span>
+                  </div>
+                ))}
+              </div>
+            }
+            eyebrow="Tu primer documento"
+            titulo="Subilo en tres pasos."
+            pasos={[
+              { icono: <Upload size={18} strokeWidth={2} />, titulo: "Subí el archivo", texto: "PDF, imagen, audio, video o Word, hasta 50 MB. El tipo y el peso se completan solos." },
+              { icono: <Users size={18} strokeWidth={2} />, titulo: "Elegí quién lo ve", texto: "Todas las alumnas o desde un plan. Si querés, atalo a una clase o a una categoría." },
+              { icono: <Eye size={18} strokeWidth={2} />, titulo: "Publicalo", texto: "Aparece en «Documentos» de las alumnas que lo pueden ver, listo para leer o descargar." },
+            ]}
+            cta={<AdminBoton href="/admin/documents?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Subir el primero</AdminBoton>}
+          />
+      <AdminNueva abierto={abrirNueva} titulo="Subir un documento" sub="Archivo, quién lo ve y, si querés, a qué clase o categoría va atado">
+        <form action={upsertDocumentAction}>
+          <input name="id" type="hidden" value="" />
+          <Campos clases={clases} />
+          <div className="doc-pie">
+            <BotonEnviar className="ad-btn ad-btn--lleno" pendingLabel="Guardando…">Guardar documento</BotonEnviar>
+          </div>
+        </form>
+      </AdminNueva>
+
+        </>
+      ) : (
+        <>
       <AdminCifras items={[
         { label: "Documentos", value: docs.length, sub: "en total" },
         { label: "Publicados", value: publicados, sub: "visibles para las alumnas" },
@@ -180,12 +226,6 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
         </form>
       </AdminNueva>
 
-      {docs.length === 0 ? (
-        <AdminVacio titulo="Todavía no hay documentos.">
-          <p>Subí guías, hojas de ejercicios o material de referencia. Las alumnas los encuentran en «Documentos», según su plan.</p>
-          <AdminBoton href="/admin/documents?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Subir el primero</AdminBoton>
-        </AdminVacio>
-      ) : (
         <ul className="doc-lista">
           {docs.map((doc) => {
             const Icono = FILE_ICONS[doc.file_type] ?? Paperclip;
@@ -235,6 +275,7 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
             );
           })}
         </ul>
+        </>
       )}
     </main>
   );
@@ -289,6 +330,25 @@ const CSS = `
 .doc-editar > summary .ad-flecha { margin-left: auto; }
 .doc-editar[open] { padding-bottom: 18px; }
 .doc-editar[open] .doc-form { padding-top: 4px; }
+
+.doc-ejemplo { padding: 8px; transform: rotate(-1.5deg); }
+.doc-ejemplo-fila {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px;
+  animation: ad-entra .6s cubic-bezier(.16,1,.3,1) both;
+}
+.doc-ejemplo-fila + .doc-ejemplo-fila { border-top: 1px solid #f5f5f4; border-radius: 0 0 14px 14px; }
+.doc-ejemplo-ico {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink-wash); color: var(--pink-deep);
+}
+.doc-ejemplo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.doc-ejemplo-titulo { font-weight: 700; font-size: 14px; color: var(--ink); }
+.doc-ejemplo-meta { font-size: 12px; color: #a8a29e; }
+.doc-ejemplo-bajar {
+  width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pink); color: #fff;
+}
+@media (prefers-reduced-motion: reduce) { .doc-ejemplo-fila { animation: none; } }
 
 @media (max-width: 640px) {
   .doc-form { grid-template-columns: minmax(0, 1fr); }

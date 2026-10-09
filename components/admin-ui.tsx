@@ -93,3 +93,44 @@ export function AdminAviso({ mensaje, tono }: { mensaje: string | null; tono: "o
   if (!mensaje) return null;
   return <div role="status" className={"ad-aviso ad-aviso--" + tono}>{mensaje}</div>;
 }
+
+/**
+ * La guia de "todavia no hay nada": un ejemplo de como se ve (lo arma cada
+ * pantalla) y los pasos para el primero. Reemplaza cifras en cero y una caja
+ * vacia, que no le dicen nada a quien entra por primera vez.
+ */
+export function AdminGuia({
+  rotuloEjemplo, ejemplo, eyebrow, titulo, pasos, cta,
+}: {
+  rotuloEjemplo: string;
+  ejemplo: React.ReactNode;
+  eyebrow: string;
+  titulo: string;
+  pasos: { icono: React.ReactNode; titulo: string; texto: string }[];
+  cta: React.ReactNode;
+}) {
+  return (
+    <section className="ad-guia" aria-label={titulo}>
+      <div className="ad-guia-ejemplo" aria-hidden="true">
+        <span className="ad-guia-rotulo">{rotuloEjemplo}</span>
+        {ejemplo}
+      </div>
+      <div className="ad-guia-pasos">
+        <p className="ad-guia-eyebrow">{eyebrow}</p>
+        <h2 className="ad-guia-titulo">{titulo}</h2>
+        <ol>
+          {pasos.map((p) => (
+            <li key={p.titulo}>
+              <span className="ad-guia-ico" aria-hidden="true">{p.icono}</span>
+              <div>
+                <p className="ad-guia-paso">{p.titulo}</p>
+                <p>{p.texto}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {cta}
+      </div>
+    </section>
+  );
+}
