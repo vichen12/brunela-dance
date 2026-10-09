@@ -13,6 +13,7 @@ import { AvisoFinGratis } from "@/components/aviso-fin-gratis";
 import { aplicarBajaSiVencio, getAccesoGratis } from "@/src/features/studio/acceso-gratis";
 import { PLAN_LABEL, diasRestantes, estaVencido, fechaLarga } from "@/src/features/studio/acceso-gratis-reglas";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
+import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
 
 type MembershipTier = "none" | "corps_de_ballet" | "solista" | "principal";
 type MemberProfile = { full_name: string | null; membership_tier: MembershipTier; is_admin: boolean };
@@ -37,13 +38,16 @@ const getSeguirViendo = cache(async (userId: string) => {
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const [profile, seguirViendo, { data: fotoData }, acceso] = await Promise.all([
+  const [profile, seguirViendo, { data: fotoData }, acceso, privadas] = await Promise.all([
     getProfile(user.id),
     getSeguirViendo(user.id),
     (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
     // Consulta aparte y tolerante: sin la migracion 20261009 devuelve
     // `disponible: false` y todo lo del acceso gratis se oculta.
     getAccesoGratis(user.id),
+    // Memoizada: la campanita y el inicio la piden en el mismo render. Sin la
+    // migracion 20261009_2 llega con disponible = false.
+    getMisSesionesPrivadas(user.id),
   ]);
 
   // ACCESO GRATIS VENCIDO: baja en el momento, sin esperar al cron.
@@ -88,6 +92,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Sin mayusculas: el redisenio suave muestra el nombre como se escribe.
 
   const isAdmin = profile?.is_admin ?? false;
+  // "Sesiones privadas" en el menu: solo para Principal (que las trae en el
+  // plan) o para quien ya tiene alguna. A las demas no les sirve de nada.
+  const verPrivadas = privadas.disponible && (profile?.membership_tier === "principal" || privadas.sesiones.length > 0);
   const notificaciones = await getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin);
 
   // Recordatorios del acceso gratis en la campanita: a 7 dias, a 1 y el dia
@@ -135,6 +142,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             membershipTier={profile?.membership_tier ?? "none"}
             isAdmin={isAdmin}
             seguirViendo={seguirViendo}
+            verPrivadas={verPrivadas}
           />
         </div>
         <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden", position: "relative" }}>
@@ -142,7 +150,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="nt-barra"><Notificaciones items={[...recordatoriosGratis, ...notificaciones]} /></div>
           {children}
         </div>
-        <MobileDashboardNav isAdmin={isAdmin} />
+        <MobileDashboardNav isAdmin={isAdmin} verPrivadas={verPrivadas} />
         {mostrarAvisoFin && (
           <AvisoFinGratis plan={acceso.plan ? PLAN_LABEL[acceso.plan] : null} nombre={profile?.full_name?.trim().split(/\s+/)[0] ?? ""} />
         )}

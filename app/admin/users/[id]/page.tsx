@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarPlus, Lock, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
 import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
 import { esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -12,6 +12,11 @@ import { resolveI18nText } from "@/src/features/studio/helpers";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { getFichaAlumna } from "@/src/features/admin/analitica/alumna";
 import { Paginacion } from "@/components/paginacion";
+import { CupoMes, FormAgendarPrivada, ListaPrivadasAdmin } from "@/components/sesiones-privadas-admin";
+import {
+  AVISO_FALTA_MIGRACION_PRIVADAS, COLUMNAS_PRIVADA, CUPO_MENSUAL, claveMes, contarDelMes, esFaltaDeTabla, finDe,
+  type SesionPrivada,
+} from "@/src/features/studio/sesiones-privadas-reglas";
 
 /** Clases por pagina en «Sus últimas clases» (la ficha trae hasta 20). */
 const CLASES_POR_PAGINA = 10;
@@ -52,7 +57,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
   // en vivo y lo que compro. service_role: esta pantalla ya paso requireAdmin.
   const db = createSupabaseAdminClient();
   const ahoraIso = new Date().toISOString();
-  const [{ data: salas }, { data: reservasData }, { data: invitData }, { data: proxData }, { data: comprasData }, gratisRes] = await Promise.all([
+  const [{ data: salas }, { data: reservasData }, { data: invitData }, { data: proxData }, { data: comprasData }, gratisRes, privadasRes, { data: tierData }] = await Promise.all([
     db.from("chat_rooms").select("id").eq("type", "dm").contains("participant_ids", [user.id, id]).order("created_at", { ascending: true }).limit(1),
     db.from("live_session_bookings").select("status, live_sessions(id, title_i18n, starts_at, session_timezone)").eq("user_id", id).in("status", ["reserved", "waitlisted"]),
     db.from("live_session_invitations").select("live_session_id, live_sessions(id, title_i18n, starts_at, session_timezone)").eq("user_id", id),
@@ -61,12 +66,26 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
     // Acceso gratis, en su propia consulta: sin la migracion 20261009 la
     // columna no existe y el 42703 solo apaga esta seccion, no la ficha.
     db.from("profiles").select("acceso_gratis_hasta, acceso_gratis_plan").eq("id", id).maybeSingle(),
+    // Sesiones privadas, tambien aparte: sin la migracion 20261009_2 la tabla
+    // no existe (PGRST205) y solo se apaga esta seccion.
+    db.from("sesiones_privadas").select(COLUMNAS_PRIVADA).eq("alumna_id", id).order("starts_at", { ascending: false }).limit(40),
+    db.from("profiles").select("membership_tier").eq("id", id).maybeSingle(),
   ]);
   const gratisDisponible = !gratisRes.error;
   if (gratisRes.error && !esFaltaDeMigracion(gratisRes.error)) console.error("[ficha] acceso gratis:", gratisRes.error.message);
   const gratis: EstadoGratis | null = gratisRes.data
     ? { hasta: gratisRes.data.acceso_gratis_hasta as string | null, plan: gratisRes.data.acceso_gratis_plan as EstadoGratis["plan"] }
     : null;
+  const privadasDisponible = !privadasRes.error;
+  if (privadasRes.error && !esFaltaDeTabla(privadasRes.error)) console.error("[ficha] sesiones privadas:", privadasRes.error.message);
+  const privadas = (privadasRes.data ?? []) as SesionPrivada[];
+  const ahoraMs = Date.now();
+  // Proximas primero (de la mas cercana a la mas lejana); despues, las pasadas
+  // y canceladas recientes, hasta 6.
+  const privadasProximas = privadas.filter((s) => s.estado === "agendada" && finDe(s) > ahoraMs).reverse();
+  const privadasPasadas = privadas.filter((s) => !(s.estado === "agendada" && finDe(s) > ahoraMs)).slice(0, 6);
+  const esPrincipal = tierData?.membership_tier === "principal";
+  const privadasDelMes = contarDelMes(privadas, claveMes(ahoraMs));
   const salaId = salas?.[0]?.id ?? null;
   const { data: mensajesData } = salaId
     ? await db.from("chat_messages").select("id, content, created_at, user_id, author_name, is_deleted").eq("room_id", salaId).eq("is_deleted", false).order("created_at", { ascending: false }).limit(6)
@@ -129,6 +148,9 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
         <div className="fa-acciones">
           <a href="#mensajes" className="fa-btn fa-btn--lleno">
             <MessageCircle size={16} strokeWidth={2.2} aria-hidden="true" /> Escribirle
+          </a>
+          <a href="#privadas" className="fa-btn">
+            <CalendarPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Sesión privada
           </a>
           <a href="#vivo" className="fa-btn">
             <UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar a una clase
@@ -310,6 +332,35 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
         </section>
       </div>
 
+      {/* Sesiones privadas 1 a 1 (el plan Principal trae 2 por mes) */}
+      <section id="privadas" className="fa-tarjeta fa-ancla">
+        <div className="fa-tarjeta-cab">
+          <span className="fa-burbuja fa-burbuja--melo"><Lock size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+          <div>
+            <h2 className="fa-h2">Sesiones privadas</h2>
+            <p className="fa-sub">{esPrincipal ? "Su plan Principal trae 2 por mes." : "Uno a uno, por Meet o Zoom."}</p>
+          </div>
+          {privadasDisponible && esPrincipal && <span className="fa-mini-cupo"><CupoMes hechas={privadasDelMes} cupo={CUPO_MENSUAL} /></span>}
+        </div>
+        {!privadasDisponible ? (
+          <div role="status" className="ad-aviso ad-aviso--error">{AVISO_FALTA_MIGRACION_PRIVADAS}</div>
+        ) : (
+          <>
+            <ListaPrivadasAdmin sesiones={privadasProximas} volverA={`/admin/users/${id}#privadas`} vacio="No tiene ninguna sesión privada agendada." />
+            <details className="fa-agendar" open={privadasProximas.length === 0 && esPrincipal}>
+              <summary><CalendarPlus size={15} strokeWidth={2.2} aria-hidden="true" /> Agendar una sesión privada</summary>
+              <FormAgendarPrivada alumnaId={id} nombre={nombre} volverA={`/admin/users/${id}#privadas`} />
+            </details>
+            {privadasPasadas.length > 0 && (
+              <details className="fa-agendar fa-agendar--suave">
+                <summary>Anteriores y canceladas ({privadasPasadas.length})</summary>
+                <ListaPrivadasAdmin sesiones={privadasPasadas} volverA={`/admin/users/${id}#privadas`} />
+              </details>
+            )}
+          </>
+        )}
+      </section>
+
       {compras.length > 0 && (
         <section className="fa-tarjeta">
           <div className="fa-tarjeta-cab">
@@ -377,6 +428,11 @@ const CSS = `
 .fa-ancla .fa-tarjeta-cab { margin-bottom: 0; }
 .fa-mini { margin-left: auto; align-self: center; padding: 7px 14px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 12.5px; font-weight: 800; text-decoration: none; white-space: nowrap; }
 .fa-mini:hover { background: var(--pink-wash); }
+.fa-mini-cupo { margin-left: auto; align-self: center; }
+.fa-agendar > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 13.5px; font-weight: 800; user-select: none; box-shadow: 0 12px 22px -14px rgba(230,79,85,.9); }
+.fa-agendar > summary::-webkit-details-marker { display: none; }
+.fa-agendar[open] > summary { margin-bottom: 12px; }
+.fa-agendar--suave > summary { background: var(--crema); color: var(--muted); box-shadow: none; border: 1px solid var(--linea); }
 .fa-conv { list-style: none; margin: 0; padding: 14px; display: flex; flex-direction: column; gap: 8px; border-radius: 20px; background: var(--crema); max-height: 320px; overflow-y: auto; }
 .fa-msj { max-width: 82%; align-self: flex-start; }
 .fa-msj p { padding: 9px 13px; border-radius: 16px 16px 16px 6px; background: #fff; border: 1px solid var(--linea); font-size: 13.5px; line-height: 1.5; color: var(--ink); white-space: pre-wrap; }

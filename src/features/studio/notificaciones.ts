@@ -2,6 +2,8 @@ import { cache } from "react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { cuandoClase } from "@/src/features/studio/fecha-clase";
 import { proveedorDe, type Proveedor } from "@/src/features/studio/enlace-clase";
+import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { ZONA_ESTUDIO, finDe, proveedorDePrivada, ventanaUnirse, type SesionPrivada } from "@/src/features/studio/sesiones-privadas-reglas";
 
 /**
  * Lo que va en la campanita de notificaciones de la alumna: invitaciones de
@@ -142,6 +144,45 @@ function recordatorios(clases: ClaseCercana[]): Notificacion[] {
   });
 }
 
+/**
+ * Sus sesiones privadas de los proximos 7 dias, para la campanita.
+ *
+ * Misma idea de etapas que las clases reservadas: el id cambia (semana -> hoy
+ * -> ya), asi que al acercarse vuelve a contar como nueva. En la etapa "ya"
+ * (desde 15 min antes) el aviso abre directo el enlace, si lo hay.
+ */
+const SIETE_DIAS = 7 * 24 * 3600 * 1000;
+
+export function recordatoriosPrivadas(sesiones: SesionPrivada[], ahora = Date.now()): Notificacion[] {
+  return sesiones
+    .filter((s) => s.estado === "agendada" && finDe(s) > ahora && new Date(s.starts_at).getTime() - ahora <= SIETE_DIAS)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .map((s) => {
+      const pagina = "/dashboard/sesiones-privadas";
+      const q = cuandoClase(s.starts_at, ZONA_ESTUDIO, ahora);
+      if (ventanaUnirse(s, ahora) === "abierta") {
+        const prov = proveedorDePrivada(s);
+        return {
+          id: `priv-ya-${s.id}`,
+          tipo: "recordatorio" as const,
+          titulo: "Tu sesión privada empieza ya",
+          texto: s.enlace ? `A las ${q.hora}. Tocá para unirte${prov === "meet" ? " por Meet" : prov === "zoom" ? " por Zoom" : ""}.` : `A las ${q.hora}. Brunela te pasa el enlace en un momento.`,
+          cuando: null,
+          href: s.enlace ?? pagina,
+          externo: !!s.enlace,
+        };
+      }
+      return {
+        id: `priv-${q.esHoy ? "hoy" : "prox"}-${s.id}-${s.starts_at}`,
+        tipo: "recordatorio" as const,
+        titulo: `Tu sesión privada es ${q.dia} a las ${q.hora}`,
+        texto: s.enlace ? "El enlace ya está listo en Sesiones privadas." : "Brunela te pasa el enlace antes de empezar.",
+        cuando: null,
+        href: pagina,
+      };
+    });
+}
+
 const RANGO: Record<string, number> = { none: 0, corps_de_ballet: 1, solista: 2, principal: 3 };
 
 export const getNotificaciones = cache(async (userId: string, tier: string, esAdmin: boolean): Promise<Notificacion[]> => {
@@ -160,13 +201,15 @@ export const getNotificaciones = cache(async (userId: string, tier: string, esAd
     anuncios = anuncios.in("tier_target", ["all", ...Object.keys(RANGO).filter((t) => t !== "none" && RANGO[t] <= r)]);
   }
 
-  const [{ data: an }, { data: inv }, cercanas] = await Promise.all([
+  const [{ data: an }, { data: inv }, cercanas, privadas] = await Promise.all([
     anuncios,
     supabase
       .from("live_session_invitations")
       .select("live_session_id, live_sessions(id, slug, title_i18n, starts_at, status)")
       .eq("user_id", userId),
     getMisClasesCercanas(userId),
+    // Sin la migracion 20261009_2 llega vacia: no aparece nada.
+    getMisSesionesPrivadas(userId),
   ]);
 
   type Ses = { id: string; slug: string; title_i18n: Record<string, string>; starts_at: string; status: string };
@@ -192,5 +235,5 @@ export const getNotificaciones = cache(async (userId: string, tier: string, esAd
   }));
 
   // Los recordatorios van PRIMERO: son lo unico de la lista con hora.
-  return [...recordatorios(cercanas), ...invitaciones, ...avisos];
+  return [...recordatoriosPrivadas(privadas.sesiones), ...recordatorios(cercanas), ...invitaciones, ...avisos];
 });

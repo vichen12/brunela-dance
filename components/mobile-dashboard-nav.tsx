@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarHeart, FileText, House, ListOrdered, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
 
 /**
  * Los MISMOS ocho destinos que el sidebar de escritorio. Antes habia cinco y
@@ -21,6 +21,8 @@ const NAV = [
   { href: '/dashboard/library',   label: 'Clases',     exact: false, Icon: Play },
   { href: '/dashboard/programs',  label: 'Planes de trabajo', exact: false, Icon: ListOrdered },
   { href: '/dashboard/live',      label: 'Clases en vivo', exact: false, Icon: CalendarHeart },
+  // Solo con `verPrivadas` (Principal, o quien tiene alguna agendada).
+  { href: '/dashboard/sesiones-privadas', label: 'Sesiones privadas', exact: false, Icon: Lock },
   { href: '/dashboard/chat',      label: 'Mi chat',    exact: false, Icon: MessageCircleHeart },
   { href: '/dashboard/community', label: 'Comunidad',  exact: false, Icon: Users },
   { href: '/dashboard/documents', label: 'Documentos', exact: false, Icon: FileText },
@@ -31,7 +33,7 @@ const NAV = [
 /** Los que quedan a un toque en la barra. El resto, en la hoja. */
 const PRIMARIOS = ['/dashboard', '/dashboard/library', '/dashboard/chat', '/dashboard/community'];
 
-export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
+export function MobileDashboardNav({ isAdmin, verPrivadas = false }: { isAdmin: boolean; verPrivadas?: boolean }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
 
@@ -51,7 +53,7 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
   }
 
   const enBarra = NAV.filter((i) => PRIMARIOS.includes(i.href));
-  const enHoja = NAV;
+  const enHoja = NAV.filter((i) => verPrivadas || i.href !== '/dashboard/sesiones-privadas');
   // Si estas en una pantalla que no esta en la barra, "Menu" se marca activo:
   // asi la navegacion nunca aparece sin ningun item seleccionado.
   const menuActivo = !enBarra.some((i) => active(i.href, i.exact)) && !pathname.startsWith('/admin');

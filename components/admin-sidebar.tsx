@@ -8,6 +8,7 @@ import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
   MessageCircleHeart, Shield, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
+  Lock, UserPlus,
 } from "lucide-react";
 
 /**
@@ -56,6 +57,10 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: "Comunidad",
     items: [
       { href: "/admin/users",         label: "Alumnas",          Icon: Users },
+      // Crear una alumna vivia solo en un bloque plegado de /admin/users, y la
+      // duena no lo encontraba. Abre ese bloque ya desplegado.
+      { href: "/admin/users?nueva=1#nueva", label: "Nueva alumna", Icon: UserPlus },
+      { href: "/admin/sesiones-privadas", label: "Sesiones privadas", Icon: Lock },
       { href: "/admin/live",          label: "Sesiones en vivo", Icon: CalendarDays },
       // Mensajes y Comunidad vivian mezclados en /dashboard/chat y
       // /dashboard/community (la admin veia ahi la bandeja y las herramientas).
@@ -100,6 +105,8 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
   }, []);
 
   const isActive = (href: string, exact?: boolean) => {
+    // Un item con query (Nueva alumna) no se marca: comparte ruta con Alumnas.
+    if (href.includes("?")) return false;
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
   };

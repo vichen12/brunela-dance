@@ -5,6 +5,9 @@ import { resolveI18nText } from "@/src/features/studio/helpers";
 import { cuandoClase } from "@/src/features/studio/fecha-clase";
 import { proveedorDe, type Proveedor } from "@/src/features/studio/enlace-clase";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
+import {
+  COLUMNAS_PRIVADA, cuandoPrivada, esFaltaDeTabla, finDe, proveedorDePrivada, type SesionPrivada,
+} from "@/src/features/studio/sesiones-privadas-reglas";
 
 /**
  * Recordatorios de la admin sobre las clases en vivo.
@@ -15,6 +18,8 @@ import type { Notificacion } from "@/src/features/studio/notificaciones";
  *      donde entrar);
  *   2. la clase de hoy o la proxima, con cuantas se anotaron;
  *   3. clases que ya terminaron y siguen "scheduled" (falta completarlas).
+ * Y las sesiones privadas de las proximas 48 h: "Sesion privada con Lucia en
+ * 1 h", y si no tienen enlace, como pendiente.
  *
  * Los usan la tarjeta de /admin y /admin/live y la campanita de la cabecera.
  *
@@ -43,7 +48,58 @@ export type RecordatoriosAdminDatos = {
   sinCompletar: { id: string; titulo: string; fecha: string }[];
   /** Cuantas terminadas sin completar hay en total (la lista trae hasta 5). */
   sinCompletarTotal: number;
+  /** Sesiones privadas de las proximas 48 h (o en curso). Vacio sin la migracion 20261009_2. */
+  privadas: RecordatorioPrivada[];
 };
+
+export type RecordatorioPrivada = {
+  id: string;
+  alumnaId: string;
+  nombre: string;
+  /** "en 45 min", "en 1 h", "hoy a las 18:00", "mañana a las 10:00". */
+  cuando: string;
+  /** Para el id de la campanita: cambia al acercarse. */
+  etapa: "ya" | "hoy" | "prox";
+  enCurso: boolean;
+  sinEnlace: boolean;
+  proveedor: Proveedor | null;
+  joinUrl: string | null;
+};
+
+// cuandoPrivada ("en 45 min" / "hoy a las 18:00") vive en sesiones-privadas-reglas.ts: es pura y la prueban los tests.
+
+/** Las privadas de las proximas 48 h, con el nombre de cada alumna. Tolera la falta de la tabla. */
+async function privadasCercanas(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, ahora: number): Promise<RecordatorioPrivada[]> {
+  const { data, error } = await supabase
+    .from("sesiones_privadas").select(COLUMNAS_PRIVADA)
+    .eq("estado", "agendada")
+    .gte("starts_at", new Date(ahora - 4 * 3600 * 1000).toISOString())
+    .lte("starts_at", new Date(ahora + H48).toISOString())
+    .order("starts_at", { ascending: true }).limit(20);
+  if (error) {
+    if (!esFaltaDeTabla(error)) console.error("[recordatorios] sesiones privadas:", error.message);
+    return [];
+  }
+  const filas = ((data ?? []) as SesionPrivada[]).filter((s) => finDe(s) > ahora);
+  if (!filas.length) return [];
+  const { data: perfiles } = await supabase.from("profiles").select("id, full_name, email").in("id", [...new Set(filas.map((s) => s.alumna_id))]);
+  const nombreDe = new Map(((perfiles ?? []) as { id: string; full_name: string | null; email: string }[])
+    .map((p) => [p.id, p.full_name?.trim().split(/\s+/)[0] || p.email.split("@")[0]]));
+  return filas.map((s) => {
+    const c = cuandoPrivada(s.starts_at, ahora);
+    return {
+      id: s.id,
+      alumnaId: s.alumna_id,
+      nombre: nombreDe.get(s.alumna_id) ?? "una alumna",
+      cuando: c.texto,
+      etapa: c.etapa,
+      enCurso: c.enCurso,
+      sinEnlace: !s.enlace,
+      proveedor: proveedorDePrivada(s),
+      joinUrl: s.enlace,
+    };
+  });
+}
 
 type Fila = {
   id: string;
@@ -79,6 +135,7 @@ export const cargarRecordatoriosAdmin = cache(async (): Promise<RecordatoriosAdm
       .order("ends_at", { ascending: false }).limit(5),
   ]);
 
+  const privadas = await privadasCercanas(supabase, ahora);
   const proximas = (cercanas ?? []) as Fila[];
   const prox = ((siguiente ?? []) as Fila[])[0] ?? null;
   const ids = [...new Set([...proximas.map((s) => s.id), ...(prox ? [prox.id] : [])])];
@@ -128,7 +185,7 @@ export const cargarRecordatoriosAdmin = cache(async (): Promise<RecordatoriosAdm
     return { id: s.id, titulo: titulo(s), fecha };
   });
 
-  return { sinEnlace, proxima, sinCompletar, sinCompletarTotal: viejasCount ?? sinCompletar.length };
+  return { sinEnlace, proxima, sinCompletar, sinCompletarTotal: viejasCount ?? sinCompletar.length, privadas };
 });
 
 /**
@@ -159,6 +216,16 @@ export function recordatoriosComoNotificaciones(d: RecordatoriosAdminDatos): Not
       texto: `${p.enCurso ? "Empezó a las" : p.esHoy ? "A las" : p.dia.charAt(0).toUpperCase() + p.dia.slice(1) + " a las"} ${p.hora} · ${p.inscriptas} ${p.inscriptas === 1 ? "inscripta" : "inscriptas"} de ${p.capacidad}`,
       cuando: null,
       href: `/admin/live/${p.id}`,
+    });
+  }
+  for (const p of d.privadas ?? []) {
+    items.push({
+      id: `adm-privada-${p.etapa}-${p.sinEnlace ? "sin" : "con"}-${p.id}`,
+      tipo: p.sinEnlace ? "pendiente" : "recordatorio",
+      titulo: p.enCurso ? `Sesión privada con ${p.nombre}, ahora` : `Sesión privada con ${p.nombre} ${p.cuando}`,
+      texto: p.sinEnlace ? "Sin enlace todavía: cargalo para que pueda entrar." : "El enlace ya está cargado.",
+      cuando: null,
+      href: `/admin/users/${p.alumnaId}#privadas`,
     });
   }
   for (const s of d.sinCompletar) {

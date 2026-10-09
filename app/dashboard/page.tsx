@@ -13,6 +13,9 @@ import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notific
 import { getAccesoGratis } from "@/src/features/studio/acceso-gratis";
 import { estaVencido } from "@/src/features/studio/acceso-gratis-reglas";
 import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
+import { TarjetaSesionPrivada } from "@/components/sesion-privada-tarjeta";
+import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { proximaDe } from "@/src/features/studio/sesiones-privadas-reglas";
 
 export const dynamic = "force-dynamic";
 
@@ -145,6 +148,7 @@ export default async function DashboardPage() {
     { data: invitacionesData },
     cercanas,
     acceso,
+    privadas,
   ] = await Promise.all([
     // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
     // veces y el layout una tercera. Ahora es una sola consulta por request.
@@ -177,12 +181,17 @@ export default async function DashboardPage() {
     // Memoizado: el layout ya lo pidio en este render. Sin la migracion
     // 20261009 llega con disponible = false y no se muestra nada.
     getAccesoGratis(user.id),
+    // Memoizado: el layout ya lo pidio. Sin la migracion 20261009_2 llega
+    // vacio y la tarjeta no aparece.
+    getMisSesionesPrivadas(user.id),
   ]);
   // Mientras dura: la tarjeta. Cuando termino: la franja (el aviso grande lo
   // pone el layout, una sola vez). Las admin no tienen prueba.
   const gratisVigente = acceso.disponible && !isAdmin && tier !== "none" && !!acceso.hasta && !!acceso.plan && !estaVencido(acceso.hasta);
   const gratisTerminado = acceso.disponible && !isAdmin && tier === "none" && !!acceso.hasta && estaVencido(acceso.hasta);
   const inminente = cercanas.find((c) => esInminente(c)) ?? null;
+  const ahoraMs = Date.now();
+  const privadaProxima = proximaDe(privadas.sesiones, ahoraMs);
 
 
   // "Continua viendo" sale de la misma lista, sin otra consulta.
@@ -276,6 +285,9 @@ export default async function DashboardPage() {
           </h1>
           <p className="ini-lede">Tu cuerpo te espera. Seguí donde lo dejaste.</p>
         </header>
+
+        {/* Su proxima sesion privada (plan Principal), con "Unirse" desde 15 min antes. */}
+        {privadaProxima && <TarjetaSesionPrivada s={privadaProxima} ahora={ahoraMs} verTodas />}
 
         {gratisVigente && <TarjetaGratis plan={acceso.plan!} hasta={acceso.hasta!} desde={acceso.desde} />}
 

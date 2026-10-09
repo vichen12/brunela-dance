@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlarmClock, ArrowRight, BellRing, CalendarCheck, Check, Link2Off, Users } from "lucide-react";
+import { AlarmClock, ArrowRight, BellRing, CalendarCheck, Check, Link2Off, Lock, Users } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { ProveedorIcono } from "@/components/proveedor-icono";
 import { updateStatusAction } from "@/src/features/admin/live-actions";
@@ -18,14 +18,15 @@ import type { RecordatoriosAdminDatos } from "@/src/features/admin/recordatorios
  */
 export function RecordatoriosAdmin({ datos, volverA }: { datos: RecordatoriosAdminDatos; volverA: string }) {
   const { sinEnlace, proxima, sinCompletar, sinCompletarTotal } = datos;
-  const pendientes = sinEnlace.length + sinCompletarTotal;
+  const privadas = datos.privadas ?? [];
+  const pendientes = sinEnlace.length + sinCompletarTotal + privadas.filter((p) => p.sinEnlace).length;
 
-  if (!proxima && pendientes === 0) {
+  if (!proxima && pendientes === 0 && privadas.length === 0) {
     return (
       <section className="rca rca--calma" aria-label="Recordatorios">
         <style>{CSS}</style>
         <span className="rca-ico" aria-hidden="true"><Check size={18} strokeWidth={2.6} /></span>
-        <p className="rca-calma-txt"><b>Estás al día.</b> No hay clases en vivo pendientes de enlace ni de completar.</p>
+        <p className="rca-calma-txt"><b>Estás al día.</b> No hay clases en vivo ni sesiones privadas pendientes de enlace ni de completar.</p>
       </section>
     );
   }
@@ -75,6 +76,26 @@ export function RecordatoriosAdmin({ datos, volverA }: { datos: RecordatoriosAdm
           </li>
         )}
 
+        {privadas.map((p) => (
+          <li key={"pv" + p.id} className={"rca-fila es-privada" + (p.sinEnlace ? " es-falta" : "") + (p.etapa === "ya" ? " es-ya" : "")}>
+            <span className="rca-fila-ico" aria-hidden="true">{p.sinEnlace ? <Link2Off size={17} strokeWidth={2.3} /> : <Lock size={17} strokeWidth={2.3} />}</span>
+            <p className="rca-fila-txt">
+              <b>Sesión privada con {p.nombre}</b> {p.enCurso ? "ahora" : p.cuando}
+              <span>{p.sinEnlace ? "Sin enlace todavía: cargalo para que pueda entrar." : "El enlace ya está cargado."}</span>
+            </p>
+            <span className="rca-acc">
+              {!p.sinEnlace && p.joinUrl && p.proveedor && p.etapa === "ya" && (
+                <a href={p.joinUrl} target="_blank" rel="noreferrer" className="rca-btn rca-btn--lleno">
+                  <ProveedorIcono proveedor={p.proveedor} size={15} /> Dar la sesión
+                </a>
+              )}
+              <Link href={`/admin/users/${p.alumnaId}#privadas` as never} className={"rca-btn" + (p.sinEnlace ? " rca-btn--lleno" : "")}>
+                {p.sinEnlace ? <>Cargar enlace <ArrowRight size={14} strokeWidth={2.4} aria-hidden="true" /></> : "Ver"}
+              </Link>
+            </span>
+          </li>
+        ))}
+
         {sinCompletar.map((s) => (
           <li key={"sc" + s.id} className="rca-fila es-completar">
             <span className="rca-fila-ico" aria-hidden="true"><CalendarCheck size={17} strokeWidth={2.2} /></span>
@@ -117,6 +138,7 @@ const CSS = `
 .rca-fila.es-falta { border-color: #F6D9C4; background: linear-gradient(120deg, #FFF8F1, #fff 70%); }
 .rca-fila.es-falta .rca-fila-ico { background: var(--melocoton); color: var(--melocoton-deep); }
 .rca-fila.es-ya .rca-fila-ico { background: var(--pink); color: #fff; }
+.rca-fila.es-privada:not(.es-falta):not(.es-ya) .rca-fila-ico { background: #FFF4E8; color: var(--melocoton-deep); }
 .rca-fila-txt { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; color: var(--ink); }
 .rca-fila-txt b { font-weight: 900; }
 .rca-fila-txt span { display: flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12.5px; color: var(--muted); }

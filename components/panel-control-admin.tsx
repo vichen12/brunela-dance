@@ -7,8 +7,8 @@ import {
   type Variants,
 } from "motion/react";
 import {
-  ArrowRight, ArrowUpRight, BadgeCheck, CalendarHeart, ListChecks, Megaphone, Plus, Play,
-  PlayCircle, Upload, User, Users, Video,
+  ArrowRight, ArrowUpRight, BadgeCheck, CalendarHeart, ListChecks, Lock, Megaphone, Plus, Play,
+  PlayCircle, Upload, User, UserPlus, Users, Video,
 } from "lucide-react";
 import { Saludo } from "@/components/saludo";
 import { HoraSesion } from "@/components/hora-sesion";
@@ -158,6 +158,9 @@ export function PanelControlAdmin({
     { href: "/admin/live",                 label: "Programar en vivo",  sub: "Sesión por Zoom o Meet", Icono: Video },
     { href: "/admin/announcements",        label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora`, Icono: Megaphone },
     { href: "/admin/programs",             label: "Armar un plan",      sub: "Planes de trabajo por día", Icono: ListChecks },
+    // Crear una alumna solo estaba en un bloque plegado de /admin/users.
+    { href: "/admin/users?nueva=1#nueva",  label: "Nueva alumna",       sub: "Cuenta y meses gratis", Icono: UserPlus },
+    { href: "/admin/sesiones-privadas",    label: "Sesión privada",     sub: "Agendar uno a uno", Icono: Lock },
   ];
 
   return (
@@ -652,7 +655,7 @@ const CSS = `
 
 /* ── atajos ── */
 .pc-atajos-titulo { font-size: 18px; font-weight: 900; color: var(--ink); margin-bottom: 12px; }
-.pc-atajos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pc-atajos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .pc-atajo {
   display: flex; align-items: center; gap: 14px; padding: 16px 18px; height: 100%;
   text-decoration: none; color: inherit; border-radius: 24px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra);
@@ -663,6 +666,8 @@ const CSS = `
 .pc-atajos li:nth-child(2) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
 .pc-atajos li:nth-child(3) .pc-atajo-ico { background: #FFF0EA; color: #B4533A; }
 .pc-atajos li:nth-child(4) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
+.pc-atajos li:nth-child(5) .pc-atajo-ico { background: var(--rubor); color: var(--pink-deep); }
+.pc-atajos li:nth-child(6) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
 .pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pc-atajo-label { font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .pc-atajo-sub { font-size: 12.5px; color: var(--muted); }

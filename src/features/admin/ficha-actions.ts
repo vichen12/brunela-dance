@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { salaDirecta } from "@/src/features/admin/chat-directo";
 
 /**
  * Acciones de la ficha de una alumna (/admin/users/[id]): escribirle sin salir
@@ -17,31 +18,7 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 const UUID = z.string().uuid();
 const volver = (id: string, q: string) => redirect(`/admin/users/${id}?${q}` as never);
 
-/**
- * Busca la sala de DM entre la admin y la alumna; si no hay, la crea.
- *
- * Si hay varias (la pantalla de chat las duplicaba al cargarse en paralelo),
- * usa la MAS VIEJA, que es la que ya tiene la conversacion. Asi el mensaje
- * nuevo cae donde ella ya estaba leyendo.
- */
-async function salaDirecta(db: ReturnType<typeof createSupabaseAdminClient>, adminId: string, alumnaId: string, nombre: string) {
-  const { data: existentes } = await db
-    .from("chat_rooms")
-    .select("id")
-    .eq("type", "dm")
-    .contains("participant_ids", [adminId, alumnaId])
-    .order("created_at", { ascending: true })
-    .limit(1);
-  if (existentes?.[0]) return existentes[0].id as string;
-
-  const { data, error } = await db
-    .from("chat_rooms")
-    .insert({ type: "dm", name: `DM: Brunela — ${nombre}`, participant_ids: [adminId, alumnaId], tier_required: "none" })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return data.id as string;
-}
+// La sala de DM sale de chat-directo.ts (modulo sin "use server": ver ahi).
 
 export async function enviarMensajeDesdeFichaAction(fd: FormData) {
   const { user } = await requireAdmin();

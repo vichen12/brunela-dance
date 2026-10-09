@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import {
   CalendarHeart, FileText, Flower2, House, LayoutGrid, ListOrdered,
-  LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
+  Lock, LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
 } from 'lucide-react';
 import { signOutAction } from '@/src/features/auth/actions';
 
@@ -38,6 +38,8 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/library', label: 'Clases', Icon: Play },
       { href: '/dashboard/programs', label: 'Planes de trabajo', Icon: ListOrdered },
       { href: '/dashboard/live', label: 'Clases en vivo', Icon: CalendarHeart },
+      // Solo si `verPrivadas` (Principal, o quien ya tiene alguna): ver abajo.
+      { href: '/dashboard/sesiones-privadas', label: 'Sesiones privadas', Icon: Lock },
     ],
   },
   {
@@ -64,7 +66,10 @@ export function StudioSidebar({
   isAdmin,
   seguirViendo,
   foto,
+  verPrivadas = false,
 }: {
+  /** Mostrar "Sesiones privadas": Principal o quien tiene alguna agendada. */
+  verPrivadas?: boolean;
   /** Foto de perfil, si subio una. */
   foto?: string | null;
   userName: string;
@@ -108,7 +113,7 @@ export function StudioSidebar({
         {NAV.map((grupo) => (
           <div key={grupo.label} className="sb-grupo">
             <p className="sb-grupo-titulo">{grupo.label}</p>
-            {grupo.items.map(({ href, exact, label, Icon }) => {
+            {grupo.items.filter((i) => verPrivadas || i.href !== '/dashboard/sesiones-privadas').map(({ href, exact, label, Icon }) => {
               const active = isActive(href, exact);
               return (
                 <Link key={href} href={href as Route} className={'sb-item' + (active ? ' es-activo' : '')} aria-current={active ? 'page' : undefined}>

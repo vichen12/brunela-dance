@@ -57,7 +57,24 @@ no es el que devuelve `ls`:
 27. 20260805_invitaciones_a_sesiones.sql    <-- DESPUES de phase_b y phase_b1
 28. 20260805_packs_de_clases.sql           <-- DESPUES de phase_a y de la 20260728
 29. 20260806_documentos_y_progreso_por_plan.sql  <-- DESPUES de 20260421 y 20260728
+30. 20260917_portada_editable.sql          <-- al final; no redefine nada
+31. 20260921_formulario_de_clases.sql      <-- DESPUES de la 28 (redefine
+                                               videos_select_allowed_by_tier)
+32. 20260921_2_vaciar_planes_no_se_repara.sql      <-- DESPUES de la 31
+33. 20260921_3_la_lista_vacia_ahora_si_se_rechaza.sql  <-- DESPUES de la 32
+34. 20261009_acceso_gratis.sql             <-- DESPUES de la 16 (redefine
+                                               protect_profile_admin_fields)
+35. 20261009_2_sesiones_privadas.sql       <-- DESPUES de la 23: tabla nueva
+                                               con su propio grant. No
+                                               redefine nada
 ```
+
+> **La 35 (sesiones privadas) se puede correr sola, en cualquier momento.**
+> El codigo ya desplegado la tolera ausente: el panel muestra "falta aplicar la
+> migracion" en la ficha, en /admin/sesiones-privadas y en el calendario, y del
+> lado de la alumna simplemente no aparece nada. Ojo: `20261009_2_...` ordena
+> ANTES que `20261009_acceso_...` en `ls` (`'2'` < `'a'`), pero son
+> independientes entre si.
 
 > **La 28 hace lo mismo con `videos_select_allowed_by_tier`**, que nace en
 > phase_a y se reescribe en la 20260728. Corrida antes de esas, los packs dejan
