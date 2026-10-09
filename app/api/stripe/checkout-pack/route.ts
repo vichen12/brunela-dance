@@ -139,6 +139,16 @@ export async function POST(request: Request) {
     )}`,
     cancel_url: `${appUrl}/dashboard/plan?error=${encodeURIComponent("Compra cancelada")}`,
     allow_promotion_codes: true,
+    // Consentimiento expreso para empezar ya y perder el desistimiento
+    // (art. 103.m TRLGDCU). Tiene que coincidir con el punto 7 de
+    // app/legal/condiciones/page.tsx.
+    custom_text: {
+      submit: {
+        message:
+          "Al pagar aceptás las Condiciones de contratación (bruneladance.com/legal/condiciones). " +
+          "Pedís acceso inmediato a las clases del pack y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.",
+      },
+    },
   });
 
   return NextResponse.json({ url: session.url });

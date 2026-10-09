@@ -113,7 +113,19 @@ export async function POST(request: Request) {
     metadata: { user_id: user.id, tier: parsed.data.tier },
     success_url: `${appUrl}/dashboard/plan?success=Suscripcion%20activada`,
     cancel_url: `${appUrl}/dashboard/plan?error=Pago%20cancelado`,
-    allow_promotion_codes: true
+    allow_promotion_codes: true,
+    // Consentimiento expreso para empezar ya y perder el desistimiento
+    // (art. 103.m TRLGDCU). Va justo encima del boton de pagar: pulsarlo es
+    // el acto expreso. Tiene que coincidir con el punto 7 de
+    // app/legal/condiciones/page.tsx.
+    custom_text: {
+      submit: {
+        message:
+          "Al confirmar aceptás las Condiciones de contratación (bruneladance.com/legal/condiciones). " +
+          "Tenés 7 días de prueba gratis: si cancelás antes, no se cobra nada. " +
+          "Pedís acceso inmediato al contenido digital y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.",
+      },
+    },
   });
 
   return NextResponse.json({ url: session.url });

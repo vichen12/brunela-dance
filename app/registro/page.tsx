@@ -123,8 +123,12 @@ export default async function RegistroPage({ searchParams }: Props) {
         <OAuthButtons callbackUrl={destinoGoogle} />
 
         <p className="reg-legal">
-          Al crear la cuenta aceptás los términos del estudio. El plan se cobra
-          después de los 7 días de prueba, y podés cancelarlo cuando quieras.
+          Al crear la cuenta aceptás las{" "}
+          <Link href="/legal/condiciones" target="_blank">Condiciones de contratación</Link>{" "}
+          y leíste la{" "}
+          <Link href="/legal/privacidad" target="_blank">Política de privacidad</Link>.
+          El plan se cobra después de los 7 días de prueba, y podés cancelarlo
+          cuando quieras.
         </p>
       </section>
 

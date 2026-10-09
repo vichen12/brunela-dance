@@ -33,6 +33,13 @@ const navLinks = [
   { label: "footer.nav.contact", href: `mailto:${EMAIL}` },
 ] as const;
 
+const legalLinks = [
+  { label: "footer.legal.notice", href: "/legal/aviso-legal" },
+  { label: "footer.legal.privacy", href: "/legal/privacidad" },
+  { label: "footer.legal.cookies", href: "/legal/cookies" },
+  { label: "footer.legal.terms", href: "/legal/condiciones" },
+] as const;
+
 const socialLinks = [
   { label: "Instagram", href: "https://www.instagram.com/brunela.dance/", icon: FaInstagram },
   { label: "TikTok",    href: "https://www.tiktok.com/@brunela.dance",     icon: FaTiktok   },
@@ -217,6 +224,15 @@ export function BrunelaFooter() {
         </div>
 
         <div className="footer-bottom">
+          {/* Las paginas legales, en todas las paginas publicas: la LSSI pide
+              que el aviso legal este accesible de forma permanente y directa. */}
+          <nav className="footer-legal" aria-label="Información legal">
+            {legalLinks.map((link) => (
+              <Link href={link.href as never} key={link.href}>
+                {t(link.label)}
+              </Link>
+            ))}
+          </nav>
           <span>{t("footer.copyright")}</span>
         </div>
       </div>
