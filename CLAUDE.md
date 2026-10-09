@@ -1074,7 +1074,7 @@ ocupando espacio y facturando.
 
 ### Bloqueantes para dar por cerrada la migración
 
-- [ ] **Subir un video real** desde `/admin/videos` y reproducirlo. Valida Bunny,
+- [x] ~~**Subir un video real**~~ — probado por el equipo (confirmado el 2026-10-09). Valida Bunny,
       el worker de mux y el proxy de manifests de punta a punta. Es lo único de
       las 7 pruebas de corte que quedó sin hacer.
 - [ ] **Checkout de prueba** con `4242 4242 4242 4242` contra la base nueva:
