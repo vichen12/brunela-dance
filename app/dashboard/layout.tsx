@@ -48,7 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // El nombre de quien entro. Antes cualquier admin leia "BRUNELA", y hay tres.
   const userName = (
-    profile?.full_name?.trim().split(/s+/)[0] ||
+    profile?.full_name?.trim().split(/\s+/)[0] ||
     user.email?.split("@")[0] ||
     "alumna"
   ).toUpperCase();
@@ -66,7 +66,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           .chat-col-sidebar { display: none !important; }
         }
       `}</style>
-      <div style={{ display: "flex", minHeight: "100vh", background: "#fafaf9" }}>
+      {/* overflow-x: clip y no hidden: hidden rompe position: sticky de adentro. */}
+      <div style={{ display: "flex", minHeight: "100vh", background: "#fafaf9", overflowX: "clip" }}>
         <div className="studio-sidebar-wrapper">
           <StudioSidebar
             userName={userName}

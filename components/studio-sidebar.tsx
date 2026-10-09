@@ -136,7 +136,7 @@ export function StudioSidebar({
       </div>
 
       {/* Navegacion */}
-      <nav style={{ flex: 1, padding: '0 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <nav style={{ flex: 1, padding: '0 20px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {NAV.map((item) => {
           const active = isActive(item.href, item.exact);
           return (

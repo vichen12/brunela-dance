@@ -3663,3 +3663,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .zona-app main > section > *, .zona-app > main > * { animation: none; }
 }
+
+/* El contorno de foco, solo para quien navega con teclado. Con el mouse,
+   Chrome dejaba un recuadro negro alrededor del ultimo enlace clicado (se veia
+   en el menu lateral). :focus-visible sigue mostrandolo con Tab. */
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible) { outline: none; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }

@@ -570,3 +570,23 @@ describe("los desplegables son todos del sistema", () => {
     expect(src).toMatch(/addEventListener\("reset"/);
   });
 });
+
+// ── El nombre de pila se corta en los ESPACIOS ──────────────────────────────
+
+describe("el nombre de pila se corta bien", () => {
+  /**
+   * El 2026-10-09 aparecio `split(/s+/)` en cuatro lugares: una barra perdida
+   * al escribir por consola. Corta el nombre en cada letra «s» y no en los
+   * espacios: «Sofía» saludaba como «So». No tira error ni falla tsc.
+   */
+  it("ningun split(/s+/) sin la barra invertida", () => {
+    const archivos = (dir: string): string[] =>
+      readdirSync(dir).flatMap((n) => {
+        const p = join(dir, n);
+        return statSync(p).isDirectory() ? archivos(p) : /\.tsx?$/.test(p) ? [p] : [];
+      });
+    const malos = [...archivos("app"), ...archivos("components"), ...archivos("src")]
+      .filter((f) => leer(f).includes("split(/s+/)"));
+    expect(malos).toEqual([]);
+  });
+});

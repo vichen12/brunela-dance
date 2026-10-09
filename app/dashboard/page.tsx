@@ -132,9 +132,9 @@ export default async function DashboardPage() {
   const tier = profile?.membership_tier ?? "none";
   // El nombre de QUIEN entro. Antes toda cuenta admin leia "Brunela", y hay
   // tres admins: el saludo le hablaba a otra persona.
-  const nombreReal = profile?.full_name?.trim().split(/s+/)[0] || null;
+  const nombreReal = profile?.full_name?.trim().split(/\s+/)[0] || null;
   const firstName =
-    profile?.full_name?.trim().split(/s+/)[0] || user.email?.split("@")[0] || "alumna";
+    profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "alumna";
 
   // La admin ve el panel del estudio y nada mas, y se resuelve ANTES de las
   // consultas de alumna (progreso, sugerencias, invitaciones), que en su cuenta

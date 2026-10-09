@@ -7,10 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, profile } = await requireAdmin();
   const nombre =
-    profile?.full_name?.trim().split(/s+/)[0] || user.email?.split("@")[0] || "admin";
+    profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "admin";
 
+  // overflow-x: clip y no hidden: hidden rompe position: sticky de adentro.
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#faf9f8" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#faf9f8", overflowX: "clip" }}>
       <AdminSidebar nombre={nombre} />
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} />

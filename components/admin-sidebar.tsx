@@ -142,7 +142,7 @@ export function AdminSidebar({ nombre }: { nombre: string }) {
       </div>
 
       {/* Navegación */}
-      <nav style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
+      <nav style={{ flex: 1, padding: "0 20px", overflowY: "auto", overflowX: "hidden" }}>
         {NAV.map((grupo, gi) => (
           <div key={grupo.label} style={{ marginTop: gi === 0 ? 0 : 18 }}>
             <p style={{
