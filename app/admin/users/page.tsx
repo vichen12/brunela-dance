@@ -11,7 +11,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /** Alumnas por pagina. Con 50 entra una pantalla larga sin scroll infinito. */
-const POR_PAGINA = 50;
+const POR_PAGINA = 10;
 
 /**
  * Filtro por plan, por URL: el panel de inicio enlaza cada cifra a su lista
@@ -87,7 +87,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
   let consulta = supabase
     .from("profiles")
-    .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at");
+    .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at", { count: "exact" });
   if (plan === "con-plan") consulta = consulta.neq("membership_tier", "none");
   else if (plan) consulta = consulta.eq("membership_tier", plan as "none");
   if (q) {
@@ -101,16 +101,17 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   //    porque parece que el estudio anda peor de lo que anda.
   //
   //    Trae una sola columna, asi que pesa poco aunque no se pagine.
-  const [{ data }, { data: todosLosTiers }] = await Promise.all([
+  const [{ data, count: totalFiltradas }, { data: todosLosTiers }] = await Promise.all([
     consulta
       .order("created_at", { ascending: false })
-      .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA),
+      .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1),
     supabase.from("profiles").select("membership_tier, is_admin"),
   ]);
 
   const crudas = (data ?? []) as ProfileRow[];
-  const hayMasPaginas = crudas.length > POR_PAGINA;
-  const profiles = crudas.slice(0, POR_PAGINA);
+  const profiles = crudas;
+  const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
+  const hayMasPaginas = pagina < totalPaginas - 1;
 
   const tierCounts = (todosLosTiers ?? []).reduce<Record<string, number>>((acc, p) => {
     acc[p.membership_tier] = (acc[p.membership_tier] ?? 0) + 1;
@@ -258,7 +259,16 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       {(pagina > 0 || hayMasPaginas) && (
         <nav className="au-paginas" aria-label="Páginas">
           {pagina > 0 ? <Link href={conPlan(pagina - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
-          <span className="au-paginas-txt">{pagina * POR_PAGINA + 1}–{pagina * POR_PAGINA + profiles.length}</span>
+          <span className="au-paginas-nums">
+            {Array.from({ length: totalPaginas }, (_, n) => n)
+              .filter((n) => totalPaginas <= 7 || n === 0 || n === totalPaginas - 1 || Math.abs(n - pagina) <= 1)
+              .map((n, k, arr) => (
+                <span key={n} style={{ display: "contents" }}>
+                  {k > 0 && n - arr[k - 1] > 1 && <span className="au-puntos">…</span>}
+                  <Link href={conPlan(n) as never} className={"au-num" + (n === pagina ? " es-activa" : "")} aria-current={n === pagina ? "page" : undefined}>{n + 1}</Link>
+                </span>
+              ))}
+          </span>
           {hayMasPaginas ? <Link href={conPlan(pagina + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
         </nav>
       )}
@@ -304,7 +314,12 @@ const CSS = `
 .au-plan--principal { background: var(--pink); color: #fff; box-shadow: 0 8px 16px -10px rgba(230,79,85,0.85); }
 .au-nivel { padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; color: var(--melocoton-deep); background: #FFF4E8; text-transform: capitalize; }
 .au-onb { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--crema); }
-.au-onb.es-ok { color: var(--salvia-deep); background: var(--salvia); }
+.au-onb.es-ok { color: var(--pink-deep); background: var(--rubor); }
+.au-paginas-nums { display: flex; align-items: center; gap: 6px; }
+.au-num { min-width: 40px; height: 40px; padding: 0 12px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 800; text-decoration: none; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); }
+.au-num:hover { background: var(--rubor); }
+.au-num.es-activa { background: var(--pink); border-color: var(--pink); color: #fff; }
+.au-puntos { color: var(--muted); font-weight: 800; }
 .au-ficha { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: border-color .2s, background .2s, gap .25s var(--curva), color .2s; }
 .au-ficha:hover { border-color: var(--pink); background: var(--pink); color: #fff; gap: 9px; }
 .au-editar { border-top: 1px dashed var(--linea-fuerte); margin: 0 20px; }
