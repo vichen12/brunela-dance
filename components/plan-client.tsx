@@ -1,4 +1,6 @@
 'use client';
+import { Check, Settings } from 'lucide-react';
+import { AdminCabecera } from '@/components/admin-ui';
 
 import Link from "next/link";
 
@@ -249,56 +251,53 @@ export function PlanClient({
   })();
 
   return (
-    <div style={{
-      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-      background: 'linear-gradient(160deg, #FDF8F6 0%, #FAF3F0 60%, #FDF6F4 100%)',
-      minHeight: '100vh', overflowY: 'auto',
-    }}>
-      <style>{`@media(max-width:767px){.plan-header{padding:24px 20px 20px!important}.plan-body{padding:24px 20px!important}}`}</style>
+    <div style={{ background: '#fff', minHeight: '100vh', overflowY: 'auto' }}>
+      <style>{`@media(max-width:767px){.plan-header{padding:20px 16px 0!important}.plan-body{padding:20px 16px 40px!important}}`}</style>
 
-      {/* Header */}
-      <div className="plan-header" style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #EDE0DB', padding: '36px 48px 32px' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', color: 'var(--pink)', marginBottom: 14 }}>SUSCRIPCIÓN</div>
-        <h1 style={{
-          fontFamily: 'var(--font-display), sans-serif',
-          fontSize: 44, fontWeight: 800, color: 'var(--ink)', lineHeight: 1, marginBottom: 12,
-        }}>
-          Mi <span style={{ color: 'var(--pink)', fontStyle: 'italic' }}>plan.</span>
-        </h1>
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          Cambiá tu plan en cualquier momento. Sin compromisos.
-          {renewDate && <span style={{ color: 'var(--pink)' }}> · Renueva el {renewDate}</span>}
-        </div>
+      {/* Cabecera: la misma del resto del sistema. */}
+      <div className="plan-header" style={{ maxWidth: 1320, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0' }}>
+        <AdminCabecera
+          eyebrow="Suscripción"
+          titulo="Mi plan"
+          lede={<>Cambiá de plan cuando quieras, sin permanencias.{renewDate && <> Tu plan se renueva el <strong>{renewDate}</strong>.</>}</>}
+        />
       </div>
 
-      <div className="plan-body" style={{ padding: '40px 48px' }}>
+      <div className="plan-body" style={{ maxWidth: 1320, margin: '0 auto', padding: '18px clamp(16px, 3.4vw, 48px) 60px' }}>
 
         {error && (
-          <div style={{ background: '#FFF0F0', border: '1px solid #F0A0A0', borderRadius: 10, padding: '12px 20px', marginBottom: 24, fontSize: 11, color: '#8C3A3A' }}>
-            {error}
-          </div>
+          <div role="alert" className="ad-aviso ad-aviso--error">{error}</div>
         )}
 
         {/* Active subscription banner + manage */}
         {hasActiveSub && (
           <div style={{
-            background: '#DFF0E8', border: '1px solid rgba(76,175,130,0.4)',
-            borderRadius: 10, padding: '14px 20px', marginBottom: 28,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+            padding: '16px 20px', marginBottom: 30, borderRadius: 18,
+            background: 'linear-gradient(90deg, #f0fdf4 0%, #fff 70%)', border: '1px solid #bbf7d0',
           }}>
-            <span style={{ fontSize: 11, color: '#2E7D5E', fontWeight: 600 }}>
-              {subscriptionStatus === 'trialing' ? 'Prueba gratuita activa' : 'Suscripción activa'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ width: 38, height: 38, borderRadius: 12, background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Check size={18} strokeWidth={2.6} aria-hidden="true" />
+              </span>
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#166534' }}>
+                  {subscriptionStatus === 'trialing' ? 'Estás en tu prueba gratuita' : 'Tu suscripción está activa'}
+                </span>
+                <span style={{ fontSize: 13, color: '#57534e' }}>Desde «Gestionar» cambiás la tarjeta, ves tus facturas o cancelás.</span>
+              </span>
             </span>
             <button
               onClick={openPortal}
               disabled={loadingTier === 'portal'}
               style={{
-                fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, padding: '8px 16px',
-                background: '#2E7D5E', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer',
-                opacity: loadingTier === 'portal' ? 0.6 : 1,
+                display: 'inline-flex', alignItems: 'center', gap: 8, height: 42, padding: '0 18px', borderRadius: 99,
+                background: '#15803d', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 13.5, fontWeight: 700, opacity: loadingTier === 'portal' ? 0.6 : 1,
               }}
             >
-              {loadingTier === 'portal' ? 'ABRIENDO…' : 'GESTIONAR PLAN'}
+              <Settings size={15} strokeWidth={2} aria-hidden="true" />
+              {loadingTier === 'portal' ? 'Abriendo…' : 'Gestionar'}
             </button>
           </div>
         )}
