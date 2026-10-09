@@ -21,6 +21,7 @@ export const publicMessages = {
     "nav.viewPlans": "Ver planes",
     "nav.openMenu": "Abrir menú",
     "nav.closeMenu": "Cerrar menú",
+    "nav.close": "Cerrar",
 
     "hero.kicker": "ESTUDIO ONLINE",
     "hero.subtitle":
@@ -226,6 +227,7 @@ export const publicMessages = {
     "nav.viewPlans": "View plans",
     "nav.openMenu": "Open menu",
     "nav.closeMenu": "Close menu",
+    "nav.close": "Close",
 
     "hero.kicker": "ONLINE STUDIO",
     "hero.subtitle":
@@ -429,6 +431,7 @@ export const publicMessages = {
     "nav.viewPlans": "Voir les formules",
     "nav.openMenu": "Ouvrir le menu",
     "nav.closeMenu": "Fermer le menu",
+    "nav.close": "Fermer",
 
     "hero.kicker": "STUDIO EN LIGNE",
     "hero.subtitle":
@@ -633,6 +636,7 @@ export const publicMessages = {
     "nav.viewPlans": "Vedi piani",
     "nav.openMenu": "Apri menu",
     "nav.closeMenu": "Chiudi menu",
+    "nav.close": "Chiudi",
 
     "hero.kicker": "STUDIO ONLINE",
     "hero.subtitle":

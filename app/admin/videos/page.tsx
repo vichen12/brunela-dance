@@ -1,6 +1,6 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
-import Link from "next/link";
-import { Archive, BarChart3, Check, ChevronDown, Clock, Eye, EyeOff, Languages, Play, Plus, Rocket, Star, Tag, Users, X } from "lucide-react";
+import { Archive, BarChart3, Check, Clapperboard, Clock, Eye, EyeOff, Languages, Play, Plus, Rocket, Search, Star, Tag, Users, X } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { EditarClase } from "@/components/admin-video-drawer";
@@ -124,10 +124,10 @@ type MuxJob = {
 };
 
 const MUX_STYLE: Record<MuxJob["status"], { bg: string; border: string; color: string; label: string }> = {
-  pending:    { bg: "#fffbeb", border: "#fde68a", color: "#92400e", label: "Idiomas en cola" },
-  processing: { bg: "#eff6ff", border: "#bfdbfe", color: "#1e40af", label: "Muxeando ahora" },
-  failed:     { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", label: "Muxeo fallido" },
-  done:       { bg: "#f0fdf4", border: "#bbf7d0", color: "#166534", label: "Muxeo listo" },
+  pending:    { bg: "#FFF4E8", border: "#FFE2D3", color: "#8A4A2E", label: "Idiomas en cola" },
+  processing: { bg: "#F7F0FA", border: "#EADCF0", color: "#6B4A7A", label: "Muxeando ahora" },
+  failed:     { bg: "#FDECEC", border: "#F2C6C6", color: "#B03A3E", label: "Muxeo fallido" },
+  done:       { bg: "#F2F7EF", border: "#CFE3C9", color: "#3F7A45", label: "Muxeo listo" },
 };
 
 /** The worker polls every 30s, so this much waiting means nobody is polling. */
@@ -164,14 +164,14 @@ function MuxStatus({ job }: { job: MuxJob }) {
 
   return (
     <div style={{
-      background: style.bg, borderTop: `1px solid ${style.border}`,
-      padding: "10px 18px", display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap",
+      background: style.bg, border: `1px solid ${style.border}`, borderRadius: 18,
+      margin: "0 14px 14px", padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap",
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: style.color, padding: "2px 8px", borderRadius: 99, background: "#fff", flexShrink: 0 }}>
+      <span style={{ fontSize: 12, fontWeight: 800, color: style.color, padding: "4px 11px", borderRadius: 99, background: "#fff", flexShrink: 0 }}>
         {style.label}
       </span>
 
-      <div style={{ flex: 1, minWidth: 200, fontSize: 11, color: style.color, lineHeight: 1.6 }}>
+      <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: style.color, lineHeight: 1.6, paddingTop: 2 }}>
         {locales && <span style={{ fontWeight: 600 }}>{locales}</span>}
         <span style={{ opacity: 0.75 }}>
           {locales ? " — " : ""}
@@ -190,8 +190,8 @@ function MuxStatus({ job }: { job: MuxJob }) {
 
         {job.status === "failed" && job.last_error && (
           <div style={{
-            marginTop: 6, padding: "6px 9px", background: "#fff", borderRadius: 8,
-            border: "1px solid #fecaca", fontSize: 10.5, color: "#7f1d1d",
+            marginTop: 8, padding: "8px 11px", background: "#fff", borderRadius: 12,
+            border: "1px solid #F2C6C6", fontSize: 11.5, color: "#8A2E32",
             fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
             wordBreak: "break-word", maxHeight: 90, overflow: "auto",
           }}>
@@ -204,66 +204,22 @@ function MuxStatus({ job }: { job: MuxJob }) {
         <form action={requeueMuxJobAction} style={{ flexShrink: 0 }}>
           <input type="hidden" name="jobId" value={job.id} />
           <BotonEnviar pendingLabel="Reintentando…" style={{
-            fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-            background: "#991b1b", color: "#fff", border: "none", cursor: "pointer",
-          }}>REINTENTAR</BotonEnviar>
+            fontSize: 13, fontWeight: 800, fontFamily: "inherit", padding: "8px 16px", borderRadius: 99,
+            background: "var(--pink)", color: "#fff", border: "none", cursor: "pointer",
+            boxShadow: "0 10px 20px -12px rgba(230,79,85,.85)",
+          }}>Reintentar</BotonEnviar>
         </form>
       )}
     </div>
   );
 }
 
-// ── Shared styles ──────────────────────────────────────────────────────────────
-
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
-
-function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: "flex", flexDirection: "column" }}>
-      <Lbl>{label}</Lbl>
-      {children}
-    </label>
-  );
-}
-
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
-  return (
-    <div style={{
-      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-      background: tone === "success" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "success" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "success" ? "#bbf7d0" : "#fecaca"}`,
-      marginBottom: 20,
-    }}>{message}</div>
-  );
-}
-
-
 // ── Upload form (real Bunny upload: video file + audio file per language) ────────
 
 function UploadForm({ bunnyReady, programas }: { bunnyReady: boolean; programas: PlanParaElegir[] }) {
   if (!bunnyReady) {
     return (
-      <div style={{ fontSize: 13, color: "#9a3412", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "14px 16px", lineHeight: 1.6 }}>
+      <div style={{ marginTop: 16, fontSize: 13.5, color: "#8A4A2E", background: "#FFF4E8", border: "1px solid #FFE2D3", borderRadius: 20, padding: "16px 18px", lineHeight: 1.6 }}>
         Para subir videos falta configurar <strong>Bunny Stream</strong> en las variables de entorno:
         <code style={{ display: "block", marginTop: 8, fontSize: 12 }}>
           BUNNY_STREAM_API_KEY · BUNNY_STREAM_LIBRARY_ID · BUNNY_STREAM_CDN_HOSTNAME
@@ -392,53 +348,27 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
     <main className="acl">
       <style>{CSS_CLASES}</style>
 
-      <header className="acl-mast">
-        <div style={{ minWidth: 0 }}>
-          <p className="acl-eyebrow"><span className="acl-raya" />Gestión de contenido</p>
-          <h1 className="acl-titulo">Clases<em>.</em></h1>
-          <p className="acl-lede">
-            Subí, editá y publicá las clases del estudio, con su video, sus pistas de audio y los planes que las ven.
-          </p>
-        </div>
-        <div className="acl-mast-acciones">
-          <Link href="/admin/videos?nueva=1#nueva" className="acl-btn acl-btn--lleno">
-            <Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva clase
-          </Link>
-          <Link href="/dashboard/library" className="acl-btn">
-            <Eye size={15} strokeWidth={2} aria-hidden="true" /> Ver como alumna
-          </Link>
-        </div>
-      </header>
+      <AdminCabecera
+        eyebrow="Gestión de contenido"
+        titulo="Clases"
+        lede="Subí, editá y publicá las clases del estudio, con su video, sus pistas de audio y los planes que las ven."
+        acciones={<>
+          <AdminBoton href="/admin/videos?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva clase</AdminBoton>
+          <AdminBoton href="/dashboard/library"><Eye size={15} strokeWidth={2} aria-hidden="true" /> Ver como alumna</AdminBoton>
+        </>}
+      />
 
-      <Flash message={success} tone="success" />
-      <Flash message={error} tone="error" />
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
       {/* Cifras. Con filtro, la cuenta de la lista ya dice "x de y" en el buscador:
           estas son siempre las del catalogo entero. */}
-      <div className="acl-cifras" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
-        {stats.map((s) => (
-          <div key={s.label} className="acl-cifra">
-            <span className="acl-cifra-label">{s.label}</span>
-            <span className="acl-cifra-num">{s.value}</span>
-            <span className="acl-cifra-sub">{s.sub}</span>
-          </div>
-        ))}
-      </div>
+      <AdminCifras items={stats} />
 
       {/* Subir una clase, plegado. */}
-      <details className="acl-nueva" id="nueva" open={abrirNueva}>
-        <summary>
-          <span className="acl-nueva-ico" aria-hidden="true"><Plus size={18} strokeWidth={2.2} /></span>
-          <span className="acl-nueva-txt">
-            <span className="acl-nueva-titulo">Subir una clase nueva</span>
-            <span className="acl-nueva-sub">Video, idiomas, categoría, nivel, materiales y planes</span>
-          </span>
-          <ChevronDown size={18} strokeWidth={2} className="acl-nueva-flecha" aria-hidden="true" />
-        </summary>
-        <div className="acl-nueva-cuerpo">
-          <UploadForm bunnyReady={bunnyReady} programas={programas} />
-        </div>
-      </details>
+      <AdminNueva abierto={abrirNueva} titulo="Subir una clase nueva" sub="Video, idiomas, categoría, nivel, materiales y planes">
+        <UploadForm bunnyReady={bunnyReady} programas={programas} />
+      </AdminNueva>
 
       <AdminBuscador
         action="/admin/videos"
@@ -453,12 +383,15 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
       />
 
       {videos.length === 0 ? (
-        <div className="acl-vacio">
-          <p className="acl-vacio-titulo">{hayFiltro ? "Ninguna clase coincide." : "Todavía no hay clases."}</p>
+        <AdminVacio titulo={hayFiltro ? "Ninguna clase coincide." : "Todavía no hay clases."}>
+          <span className="acl-vacio-ico" aria-hidden="true">
+            {hayFiltro ? <Search size={22} strokeWidth={2} /> : <Clapperboard size={22} strokeWidth={2} />}
+          </span>
+          <p>{hayFiltro ? "Probá con otra palabra o sacá algún filtro." : "Subí la primera y aparece acá, con todo lo que le falta para publicarla."}</p>
           {hayFiltro
-            ? <Link href="/admin/videos" className="acl-btn">Ver todas</Link>
-            : <Link href="/admin/videos?nueva=1#nueva" className="acl-btn acl-btn--lleno"><Plus size={16} strokeWidth={2.2} /> Subir la primera</Link>}
-        </div>
+            ? <AdminBoton href="/admin/videos">Ver todas</AdminBoton>
+            : <AdminBoton href="/admin/videos?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Subir la primera</AdminBoton>}
+        </AdminVacio>
       ) : (
         <ul className="acl-lista">
           {videos.map((video) => {
@@ -495,7 +428,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
               <li key={video.id} className={"acl-card acl-card--" + video.status}>
                 <div className="acl-card-cuerpo">
                   <div className="acl-mini">
-                    {miniatura ? <img src={miniatura} alt="" /> : <span className="acl-mini-vacia"><Play size={22} strokeWidth={1.8} aria-hidden="true" /></span>}
+                    {miniatura ? <img src={miniatura} alt="" /> : <span className="acl-mini-vacia"><span className="acl-mini-play"><Play size={20} strokeWidth={2} fill="currentColor" aria-hidden="true" /></span></span>}
                     <span className="acl-mini-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {durMin} min</span>
                     {video.is_featured && <span className="acl-mini-dest" title="Destacada"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /></span>}
                   </div>
@@ -518,16 +451,26 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                       {allLocales.length > 0 && <li title="Idiomas"><Languages size={14} strokeWidth={2} aria-hidden="true" /> {allLocales.map((l) => LOCALE_FLAGS[l] ?? l).join(" · ")}</li>}
                     </ul>
 
-                    <div className="acl-listo" aria-label={`Lista para publicar: ${cuantosListos} de ${listo.length}`}>
-                      <span className="acl-listo-barra" aria-hidden="true">
-                        <span style={{ width: `${(cuantosListos / listo.length) * 100}%` }} className={cuantosListos === listo.length ? "es-completa" : ""} />
-                      </span>
-                      {listo.map((l) => (
-                        <span key={l.clave} className={"acl-check" + (l.ok ? " es-ok" : "")}>
-                          {l.ok ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <X size={12} strokeWidth={3} aria-hidden="true" />}
-                          {l.clave}
+                    <div className={"acl-listo" + (cuantosListos === listo.length ? " es-completa" : "")} aria-label={`Lista para publicar: ${cuantosListos} de ${listo.length}`}>
+                      <span className="acl-listo-cab" aria-hidden="true">
+                        <span className="acl-listo-txt">
+                          {cuantosListos === listo.length ? "Lista para publicar" : "Para publicarla falta"}
                         </span>
-                      ))}
+                        <span className="acl-listo-barra">
+                          <span style={{ width: `${(cuantosListos / listo.length) * 100}%` }} />
+                        </span>
+                        <span className="acl-listo-n">{cuantosListos}/{listo.length}</span>
+                      </span>
+                      <span className="acl-checks">
+                        {listo.map((l) => (
+                          <span key={l.clave} className={"acl-check" + (l.ok ? " es-ok" : "")}>
+                            <span className="acl-check-ico">
+                              {l.ok ? <Check size={11} strokeWidth={3.2} aria-hidden="true" /> : <X size={11} strokeWidth={3.2} aria-hidden="true" />}
+                            </span>
+                            {l.clave}
+                          </span>
+                        ))}
+                      </span>
                     </div>
                   </div>
 
@@ -597,159 +540,127 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
 const CSS_CLASES = `
 .acl { display: flex; flex-direction: column; }
-.acl-mast {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px 28px; flex-wrap: wrap;
-  padding-bottom: clamp(22px, 3vw, 30px);
-}
-.acl-eyebrow {
-  display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep);
-}
-.acl-raya { display: inline-block; width: 28px; height: 1.5px; background: var(--pink); }
-.acl-titulo {
-  font-family: var(--font-display), sans-serif; font-weight: 800;
-  font-size: clamp(40px, 5vw, 68px); line-height: 1; letter-spacing: -0.045em; color: var(--ink);
-}
-.acl-titulo em { font-style: normal; color: var(--pink); }
-.acl-lede { margin-top: 14px; max-width: 56ch; font-size: 15px; line-height: 1.7; color: #6E5550; }
-.acl-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 6px; }
-.acl-btn {
-  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 99px;
-  border: 1.5px solid #E6CCC2; background: #fff; color: var(--ink); text-decoration: none;
-  font-size: 13px; font-weight: 700; white-space: nowrap; transition: border-color .2s, transform .2s, background .2s;
-}
-.acl-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
-.acl-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
-.acl-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
+.acl .ad-vacio .acl-vacio-ico { order: -1; }
+.acl-vacio-ico { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
 
-.acl-cifras { display: grid; border-top: 1px solid var(--ink); border-bottom: 1px solid #F0DED6; margin-bottom: 18px; }
-.acl-cifra { display: flex; flex-direction: column; gap: 8px; padding: 18px 22px 20px; }
-.acl-cifra:first-child { padding-left: 0; }
-.acl-cifra + .acl-cifra { border-left: 1px solid #F0DED6; }
-.acl-cifra-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #8A6F68; }
-.acl-cifra-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 40px; line-height: 0.95; letter-spacing: -0.045em; color: var(--ink); }
-.acl-cifra-sub { font-size: 12px; color: var(--pink-muted); }
-
-.acl-nueva { margin-bottom: 8px; border: 1.5px dashed #F0DED6; border-radius: 20px; transition: border-color .2s, background .2s; }
-.acl-nueva:hover { border-color: var(--pink-line); }
-.acl-nueva[open] { border-style: solid; border-color: var(--pink-line); background: #fff; }
-.acl-nueva summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; user-select: none; }
-.acl-nueva summary::-webkit-details-marker { display: none; }
-.acl-nueva-ico {
-  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--pink); color: #fff; transition: transform .35s cubic-bezier(.16,1,.3,1);
-}
-.acl-nueva-ico svg { transition: transform .35s cubic-bezier(.16,1,.3,1); }
-.acl-nueva[open] .acl-nueva-ico svg { transform: rotate(45deg); }
-.acl-nueva-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.acl-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
-.acl-nueva-sub { font-size: 12.5px; color: #8A6F68; }
-.acl-nueva-flecha { color: #B39189; transition: transform .3s; }
-.acl-nueva[open] .acl-nueva-flecha { transform: rotate(180deg); }
-.acl-nueva-cuerpo { padding: 4px 22px 24px; border-top: 1px solid #F6E7E1; }
-
-.acl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.acl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .acl-card {
-  position: relative; border: 1px solid #F0DED6; border-radius: 20px; background: #fff; overflow: hidden;
-  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+  position: relative; border: 1px solid var(--linea); border-radius: 28px; background: #fff; overflow: hidden;
+  box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s, border-color .25s;
+  animation: acl-entra .7s var(--curva) both;
 }
-.acl-card::before {
-  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #F0DED6;
-}
-.acl-card--published::before { background: var(--pink); }
-.acl-card--draft::before { background: var(--pink-line); }
-.acl-card:hover { transform: translateY(-2px); border-color: var(--pink-line); box-shadow: 0 22px 40px -26px rgba(176,58,62,0.5); }
-.acl-card-cuerpo { display: grid; grid-template-columns: 196px minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 16px 18px 16px 22px; }
+.acl-lista > li:nth-child(2) { animation-delay: .05s; }
+.acl-lista > li:nth-child(3) { animation-delay: .1s; }
+.acl-lista > li:nth-child(n+4) { animation-delay: .15s; }
+@keyframes acl-entra { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: none; } }
+.acl-card:hover { transform: translateY(-3px); border-color: var(--linea-fuerte); box-shadow: var(--sombra-alta); }
+.acl-card--archived { opacity: .72; }
+.acl-card-cuerpo { display: grid; grid-template-columns: 232px minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 14px 20px 14px 14px; }
 
 .acl-mini {
-  position: relative; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
-  background: linear-gradient(145deg, var(--pink-wash), var(--pink-soft));
+  position: relative; aspect-ratio: 16 / 10; border-radius: 20px; overflow: hidden;
+  background:
+    radial-gradient(120px 90px at 85% 15%, rgba(255,205,185,.9), transparent 70%),
+    linear-gradient(145deg, #FFF1EC, #FDE3E0);
 }
-.acl-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.16,1,.3,1); }
+.acl-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--curva); }
 .acl-card:hover .acl-mini img { transform: scale(1.05); }
-.acl-mini-vacia { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--pink-mid); }
-.acl-mini-dur {
-  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 700; color: #fff; padding: 3px 8px; border-radius: 8px;
-  background: rgba(28,25,23,0.55); backdrop-filter: blur(6px);
+.acl-mini-vacia { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.acl-mini-play {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; padding-left: 3px;
+  background: rgba(255,255,255,.92); color: var(--pink); box-shadow: 0 12px 26px -14px rgba(176,70,70,.6);
+  transition: transform .4s var(--curva);
 }
+.acl-card:hover .acl-mini-play { transform: scale(1.08); }
+.acl-mini-dur {
+  position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 800; color: var(--ink); padding: 4px 10px; border-radius: 99px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);
+}
+.acl-mini-dur svg { color: var(--pink-deep); }
 .acl-mini-dest {
-  position: absolute; left: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #ea580c;
-  box-shadow: 0 4px 10px -4px rgba(28,25,23,0.3);
+  position: absolute; left: 10px; top: 10px; width: 30px; height: 30px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--melocoton-deep);
+  box-shadow: 0 6px 14px -8px rgba(176,70,70,0.5);
 }
 
 .acl-info { min-width: 0; }
-.acl-linea-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
-.acl-estado { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-.acl-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.acl-chip--pub { color: #15803d; }
-.acl-chip--pub .acl-punto { box-shadow: 0 0 0 4px rgba(21,128,61,0.14); animation: acl-latido 2.4s ease-in-out infinite; }
-.acl-chip--borr { color: var(--pink-deep); }
-.acl-chip--arch { color: #8A6F68; }
-@keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 3px rgba(21,128,61,0.16); } 50% { box-shadow: 0 0 0 6px rgba(21,128,61,0.04); } }
-.acl-tipo, .acl-uso { font-size: 11.5px; font-weight: 600; color: #8A6F68; padding: 2px 9px; border-radius: 99px; background: #FBF0EB; }
+.acl-linea-estado { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.acl-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; }
+.acl-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.acl-chip--pub { color: var(--salvia-deep); background: var(--salvia); }
+.acl-chip--pub .acl-punto { animation: acl-latido 2.4s ease-in-out infinite; }
+.acl-chip--borr { color: var(--melocoton-deep); background: #FFEBDF; }
+.acl-chip--arch { color: var(--muted); background: #F6EEEA; }
+@keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 2px rgba(63,122,69,0.18); } 50% { box-shadow: 0 0 0 5px rgba(63,122,69,0.04); } }
+.acl-tipo, .acl-uso { font-size: 12.5px; font-weight: 800; color: #6B4A7A; padding: 5px 12px; border-radius: 99px; background: #F7F0FA; }
+.acl-uso { color: var(--muted); background: var(--rubor); }
 .acl-uso--cero { color: var(--pink-deep); background: var(--pink-wash); }
 .acl-titulo-clase {
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 21px; line-height: 1.15; letter-spacing: -0.03em;
+  font-weight: 900; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em;
   color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.acl-datos { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.acl-datos li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #6E5550; }
-.acl-datos svg { color: #B39189; flex-shrink: 0; }
+.acl-datos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.acl-datos li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px; border-radius: 99px; font-size: 13px; font-weight: 700; color: #6E5550; background: var(--crema); border: 1px solid var(--linea); }
+.acl-datos svg { color: var(--pink); flex-shrink: 0; }
 
-.acl-listo { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.acl-listo-barra { width: 56px; height: 5px; border-radius: 99px; background: #F6E7E1; overflow: hidden; margin-right: 4px; }
-.acl-listo-barra span { display: block; height: 100%; border-radius: 99px; background: var(--pink); transition: width .6s; }
-.acl-listo-barra span.es-completa { background: #16a34a; }
+.acl-listo { margin-top: 12px; padding: 10px 12px; border-radius: 18px; background: #FFF8F3; border: 1px dashed var(--linea-fuerte); display: flex; flex-direction: column; gap: 8px; max-width: 560px; }
+.acl-listo.es-completa { background: #F6FAF3; border: 1px solid #DCEBD6; }
+.acl-listo-cab { display: flex; align-items: center; gap: 10px; }
+.acl-listo-txt { font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); white-space: nowrap; }
+.acl-listo.es-completa .acl-listo-txt { color: var(--salvia-deep); }
+.acl-listo-barra { flex: 1; max-width: 140px; height: 7px; border-radius: 99px; background: #FFE9DC; overflow: hidden; }
+.acl-listo-barra span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #FFB59A, var(--pink)); transition: width .6s var(--curva); }
+.acl-listo.es-completa .acl-listo-barra { background: #E1EEDB; }
+.acl-listo.es-completa .acl-listo-barra span { background: linear-gradient(90deg, #9CCB98, #5E9E62); }
+.acl-listo-n { font-size: 12px; font-weight: 800; color: var(--muted); }
+.acl-checks { display: flex; flex-wrap: wrap; gap: 6px; }
 .acl-check {
-  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 99px;
-  font-size: 11.5px; font-weight: 600; color: var(--pink-deep); background: var(--pink-wash);
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 5px; border-radius: 99px;
+  font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF;
 }
-.acl-check.es-ok { color: #6E5550; background: #FBF0EB; }
-.acl-check.es-ok svg { color: #16a34a; }
+.acl-check-ico { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--melocoton-deep); }
+.acl-check.es-ok { color: var(--salvia-deep); background: var(--salvia); }
+.acl-check.es-ok .acl-check-ico { background: var(--salvia-deep); color: #fff; }
 
-.acl-acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.acl-acciones-fila { display: flex; align-items: center; gap: 6px; }
+.acl-acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.acl-acciones-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .acl-acciones form { display: contents; }
 .acl-accion, .acl-editar {
-  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border-radius: 11px; cursor: pointer;
-  border: 1.5px solid #F0DED6; background: #fff; color: #5A4440; font: inherit; font-size: 13px; font-weight: 700;
-  white-space: nowrap; transition: border-color .2s, background .2s, color .2s, transform .2s;
+  display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 18px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 800;
+  white-space: nowrap; transition: border-color .2s, background .2s, color .2s, transform .3s var(--curva), box-shadow .3s;
 }
-.acl-editar { border-color: var(--ink); color: var(--ink); }
-.acl-editar:hover { background: var(--ink); color: #fff; }
-.acl-accion--publicar { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 18px -10px rgba(230,79,85,0.8); }
-.acl-accion--publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); transform: translateY(-1px); }
+.acl-editar:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-2px); }
+.acl-editar svg { color: var(--pink-deep); }
+.acl-accion--publicar { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.acl-accion--publicar:hover { background: var(--pink-mid); border-color: var(--pink-mid); transform: translateY(-2px); }
 .acl-icono {
-  width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid transparent; background: transparent; color: #B39189; transition: background .2s, color .2s, border-color .2s;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--linea); background: #fff; color: var(--muted); transition: background .2s, color .2s, border-color .2s, transform .3s var(--curva);
 }
-.acl-icono:hover { background: #FBF0EB; color: var(--ink); border-color: #F0DED6; }
-.acl-icono.es-activo { color: #ea580c; }
+.acl-icono:hover { background: var(--rubor); color: var(--pink-deep); border-color: var(--pink-line); transform: scale(1.06); }
+.acl-icono.es-activo { color: var(--melocoton-deep); background: #FFEBDF; border-color: #FFD6C2; }
+.acl-guardado {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px;
+  font-size: 12.5px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia);
+}
 
-@media (max-width: 1080px) {
-  .acl-card-cuerpo { grid-template-columns: 160px minmax(0, 1fr); }
-  .acl-acciones { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+@media (max-width: 1180px) {
+  .acl-card-cuerpo { grid-template-columns: 190px minmax(0, 1fr); }
+  .acl-acciones { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--linea); }
 }
 @media (max-width: 640px) {
-  .acl-card-cuerpo { grid-template-columns: minmax(0, 1fr); padding: 14px 14px 14px 18px; }
-  .acl-titulo-clase { white-space: normal; }
+  .acl-card { border-radius: 24px; }
+  .acl-card-cuerpo { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 12px 12px 16px; }
+  .acl-titulo-clase { white-space: normal; font-size: 19px; }
+  .acl-info { padding: 0 4px; }
+  .acl-acciones { flex-wrap: wrap; gap: 10px; }
+  .acl-listo-txt { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .acl-chip--pub .acl-punto { animation: none; }
-}
-
-.acl-vacio {
-  display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 52px 24px; text-align: center;
-  border: 1.5px dashed #F0DED6; border-radius: 22px;
-}
-.acl-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.025em; color: var(--ink); }
-
-@media (max-width: 640px) {
-  .acl-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .acl-cifra:nth-child(3) { border-left: 0; padding-left: 0; }
-  .acl-cifra:nth-child(n+3) { border-top: 1px solid #F0DED6; }
+  .acl-chip--pub .acl-punto, .acl-card { animation: none; }
+  .acl-card:hover { transform: none; }
 }
 `;
-

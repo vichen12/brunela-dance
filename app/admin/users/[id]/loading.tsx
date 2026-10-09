@@ -3,8 +3,8 @@ import { SkHero, SkTarjeta, Sk } from "@/components/skeleton";
 /** Ficha de alumna: numeros de un vistazo y despues plan, objetivos y clases. */
 export default function Loading() {
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+    <main style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <section style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <SkHero conBoton />
         <SkTarjeta style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 20 }}>
           {[0, 1, 2, 3, 4].map((i) => (

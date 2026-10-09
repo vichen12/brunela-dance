@@ -11,6 +11,8 @@ import {
 import { HoraSesion } from "@/components/hora-sesion";
 import { EditarSesion, LiveForm, type LiveSession } from "@/components/admin-live-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { AdminAviso, AdminCabecera, AdminCifras, AdminNueva } from "@/components/admin-ui";
+import { CalendarDays, Check, Clock, Users, Video } from "lucide-react";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
@@ -38,60 +40,18 @@ const ESTADOS_LIVE = [
 
 // ── UI helpers ─────────────────────────────────────────────────────────────────
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  draft:     { bg: "#fef9c3", color: "#854d0e", label: "Borrador" },
-  scheduled: { bg: "#dcfce7", color: "#166534", label: "Publicada" },
-  completed: { bg: "#f1f5f9", color: "#475569", label: "Completada" },
-  canceled:  { bg: "#fee2e2", color: "#991b1b", label: "Cancelada" },
+const STATUS_STYLE: Record<string, { clase: string; label: string }> = {
+  draft:     { clase: "lv-chip--borrador", label: "Borrador" },
+  scheduled: { clase: "lv-chip--ok", label: "Publicada" },
+  completed: { clase: "lv-chip--hecha", label: "Completada" },
+  canceled:  { clase: "lv-chip--cancelada", label: "Cancelada" },
 };
 
-const TIER_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)", label: "Corps de Ballet" },
-  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)", label: "Solista" },
-  principal:       { bg: "#3B2A2C", color: "var(--pink-wash)", label: "Principal" },
+const TIER_STYLE: Record<string, { clase: string; label: string }> = {
+  corps_de_ballet: { clase: "lv-plan--corps", label: "Corps de Ballet" },
+  solista:         { clase: "lv-plan--solista", label: "Solista" },
+  principal:       { clase: "lv-plan--principal", label: "Principal" },
 };
-
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-const sel: React.CSSProperties = {
-  ...inp, appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23a8a29e' strokeWidth='1.5' strokeLinecap='round' fill='none'/%3E%3C/svg%3E")`,
-  backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 34,
-};
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
-
-function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: "flex", flexDirection: "column" }}>
-      <Lbl>{label}</Lbl>
-      {children}
-    </label>
-  );
-}
-
-function Flash({ msg, tone }: { msg: string | null; tone: "ok" | "err" }) {
-  if (!msg) return null;
-  return (
-    <div style={{
-      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-      background: tone === "ok" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "ok" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "ok" ? "#bbf7d0" : "#fecaca"}`,
-      marginBottom: 20,
-    }}>{msg}</div>
-  );
-}
 
 function toLocalDatetime(iso: string | null) {
   if (!iso) return "";
@@ -200,67 +160,33 @@ export default async function AdminLivePage({
   const total = sessions.length;
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Gestión de contenido</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Sesiones en vivo.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Programá las clases en directo, definí el cupo y controlá quién puede reservar según su plan.
-        </p>
-      </header>
+    <main className="lv">
+      <style>{CSS}</style>
 
-      <Flash msg={success} tone="ok" />
-      <Flash msg={error} tone="err" />
+      <AdminCabecera
+        eyebrow="Gestión de contenido"
+        titulo="Sesiones en vivo"
+        lede="Programá las clases en directo, definí el cupo y controlá quién puede reservar según su plan."
+      />
+
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
       {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[
-          { value: total,     label: "Sesiones totales", sub: "en el sistema" },
-          { value: scheduled, label: "Publicadas",        sub: "visibles a alumnas" },
-          { value: upcoming,  label: "Próximas",          sub: "pendientes de dar" },
-        ].map((s) => (
-          <div key={s.label} style={{
-            background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
-            padding: "20px 22px",
-          }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#3B2A2C", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#5A4440", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#B39189", marginTop: 2 }}>{s.sub}</p>
-          </div>
-        ))}
-      </div>
+      <AdminCifras items={[
+        { value: total,     label: "Sesiones totales", sub: "en el sistema" },
+        { value: scheduled, label: "Publicadas",        sub: "visibles a alumnas" },
+        { value: upcoming,  label: "Próximas",          sub: "pendientes de dar" },
+      ]} />
 
       {/* Create new session */}
-      <details style={{ marginBottom: 16 }}>
-        <summary style={{
-          listStyle: "none", cursor: "pointer",
-          background: "#fff", border: "1px solid #F6E7E1", borderRadius: 14,
-          padding: "14px 20px", display: "flex", alignItems: "center", gap: 10,
-          fontSize: 13, fontWeight: 700, color: "#3B2A2C",
-          userSelect: "none",
-        }}>
-          <span style={{
-            width: 24, height: 24, borderRadius: 8,
-            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontSize: 16, fontWeight: 800, lineHeight: 1, flexShrink: 0,
-          }}>+</span>
-          Nueva sesion en vivo
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#B39189", fontWeight: 500 }}>Clic para desplegar formulario</span>
-        </summary>
-        <div style={{
-          background: "#fff", border: "1px solid #F6E7E1", borderTop: "none",
-          borderRadius: "0 0 14px 14px", padding: "24px 22px",
-        }}>
-          <LiveForm />
-        </div>
-      </details>
+      <AdminNueva titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom">
+        <LiveForm />
+      </AdminNueva>
 
       {/* Session list */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 12 }}>
-          Sesiones — {total}
-        </p>
+      <section className="lv-seccion">
+        <h2 className="lv-h2">Sesiones <span>{total}</span></h2>
         <AdminBuscador
           action="/admin/live"
           q={q}
@@ -270,16 +196,23 @@ export default async function AdminLivePage({
           mostrando={sessions.length}
         />
         {sessions.length === 0 ? (
-          <div style={{
-            background: "#fff", border: "1.5px dashed #F6E7E1", borderRadius: 16,
-            padding: "40px 24px", textAlign: "center", color: "#B39189", fontSize: 13,
-          }}>
-            {q || fEstado
-              ? "Ninguna sesión coincide con la búsqueda."
-              : "No hay sesiones todavía. Creá la primera arriba."}
+          <div className="lv-vacio">
+            <div className="lv-vacio-burbujas" aria-hidden="true">
+              <span><Video size={20} strokeWidth={2.2} /></span>
+              <span><CalendarDays size={22} strokeWidth={2.2} /></span>
+              <span><Users size={20} strokeWidth={2.2} /></span>
+            </div>
+            <p className="lv-vacio-titulo">
+              {q || fEstado ? "Ninguna sesión coincide." : "Todavía no hay sesiones."}
+            </p>
+            <p className="lv-vacio-txt">
+              {q || fEstado
+                ? "Probá con otra palabra o con otro estado."
+                : "Creá la primera desde «Nueva sesión en vivo», arriba: fecha, cupo y el enlace de Zoom."}
+            </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <ul className="lv-lista">
             {sessions.map((session) => {
               const st = STATUS_STYLE[session.status] ?? STATUS_STYLE.draft;
               const tier = TIER_STYLE[session.membership_tier_required] ?? TIER_STYLE.corps_de_ballet;
@@ -287,115 +220,142 @@ export default async function AdminLivePage({
               const isPast = startDate < new Date();
 
               return (
-                <div key={session.id} style={{ background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16, overflow: "hidden" }}>
+                <li key={session.id} className="lv-fila">
                   {/* Header row */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 14, padding: "16px 20px",
-                    borderBottom: "1px solid #f9f7f6",
-                  }}>
+                  <div className="lv-fila-cuerpo">
                     {/* Cover */}
-                    <div style={{
-                      width: 64, height: 42, borderRadius: 10, flexShrink: 0, overflow: "hidden",
-                      background: "linear-gradient(145deg, var(--pink-soft), var(--rose))",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
+                    <div className="lv-portada">
                       {session.cover_image_url ? (
-                        <img src={session.cover_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={session.cover_image_url} alt="" />
                       ) : (
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                          <circle cx="10" cy="10" r="8" stroke="rgba(230, 79, 85,0.5)" strokeWidth="1.5" />
-                          <polygon points="8,7 14,10 8,13" fill="rgba(230, 79, 85,0.6)" />
-                        </svg>
+                        <Video size={22} strokeWidth={2} aria-hidden="true" />
                       )}
                     </div>
 
                     {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>
+                    <div className="lv-info">
+                      <div className="lv-titulo-fila">
+                        <span className="lv-titulo">
                           {session.title_i18n.es ?? session.slug}
                         </span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99,
-                          background: st.bg, color: st.color,
-                        }}>{st.label}</span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99,
-                          background: tier.bg, color: tier.color,
-                        }}>{tier.label}</span>
+                        <span className={"lv-chip " + st.clase}>{st.label}</span>
+                        <span className={"lv-chip " + tier.clase}>{tier.label}</span>
                       </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#B39189", flexWrap: "wrap" }}>
-                        <span style={{ color: isPast ? "#B39189" : "#3B2A2C", fontWeight: isPast ? 400 : 600 }}>
+                      <div className="lv-meta">
+                        <span className={"lv-hora" + (isPast ? " es-pasada" : "")}>
+                          <Clock size={13} strokeWidth={2.2} aria-hidden="true" />
                           {/* perspectiva="admin": Brunela ve primero la hora de
                               la zona en la que programo la clase, que es la que
                               tiene en la cabeza. */}
                           <HoraSesion iso={session.starts_at} zonaEstudio={session.session_timezone} perspectiva="admin" />
                         </span>
-                        <span>{session.bookings_count} / {session.capacity} reservas</span>
+                        <span className="lv-dato">
+                          <Users size={13} strokeWidth={2.2} aria-hidden="true" />
+                          {session.bookings_count} / {session.capacity} reservas
+                        </span>
                         {session.invitations.length > 0 && (
-                          <span style={{ color: "var(--pink-mid)", fontWeight: 600 }}>
+                          <span className="lv-dato lv-dato--inv">
                             {session.invitations.length === 1
                               ? "1 invitada"
                               : `${session.invitations.length} invitadas`}
                           </span>
                         )}
                         {session.access_link && (
-                          <span style={{ color: "#059669", fontWeight: 600 }}>Zoom OK</span>
+                          <span className="lv-dato lv-dato--ok"><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Zoom OK</span>
                         )}
                       </div>
                     </div>
 
                     {/* Quick status change */}
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <div className="lv-rapido">
                       {session.status === "draft" && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="scheduled" />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-                            background: "#dcfce7", color: "#166534", border: "none", cursor: "pointer",
-                          }}>Publicar</BotonEnviar>
+                          <BotonEnviar className="lv-accion lv-accion--publicar">Publicar</BotonEnviar>
                         </form>
                       )}
                       {session.status === "scheduled" && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="completed" />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-                            background: "#f1f5f9", color: "#475569", border: "none", cursor: "pointer",
-                          }}>Completar</BotonEnviar>
+                          <BotonEnviar className="lv-accion lv-accion--completar">Completar</BotonEnviar>
                         </form>
                       )}
                       {(session.status === "draft" || session.status === "scheduled") && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="canceled" />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-                            background: "#fee2e2", color: "#991b1b", border: "none", cursor: "pointer",
-                          }}>Cancelar</BotonEnviar>
+                          <BotonEnviar className="lv-accion lv-accion--cancelar">Cancelar</BotonEnviar>
                         </form>
                       )}
                     </div>
                   </div>
 
-                  {/* Collapsible edit form */}
                   {/* Edicion en panel lateral. Antes el formulario de 17
                       campos de CADA sesion vivia aca dentro de un <details>:
                       oculto, pero renderizado igual. */}
-                  <div style={{
-                    padding: "10px 20px", borderTop: "1px solid #f9f7f6",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
+                  <div className="lv-pie">
                     <EditarSesion session={session} />
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
     </main>
   );
 }
+
+const CSS = `
+.lv { display: flex; flex-direction: column; }
+.lv .ad-nueva { margin-bottom: 26px; }
+.lv-seccion { display: flex; flex-direction: column; }
+.lv-h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.lv-h2 span { padding: 3px 11px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; letter-spacing: 0; }
+
+.lv-lista { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.lv-fila { background: #fff; border: 1px solid var(--linea); border-radius: var(--radio); box-shadow: var(--sombra); transition: transform .35s var(--curva), box-shadow .35s var(--curva), border-color .2s; }
+.lv-fila:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); border-color: var(--linea-fuerte); }
+.lv-fila-cuerpo { display: flex; align-items: center; gap: 16px; padding: 16px 20px; flex-wrap: wrap; }
+.lv-portada { width: 84px; height: 58px; border-radius: 18px; flex-shrink: 0; overflow: hidden; display: grid; place-items: center; background: linear-gradient(140deg, #FFE2D3, #FDECEC); color: var(--pink-deep); }
+.lv-portada img { width: 100%; height: 100%; object-fit: cover; }
+.lv-info { flex: 1 1 280px; min-width: 0; }
+.lv-titulo-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.lv-titulo { font-size: 16px; font-weight: 800; color: var(--ink); }
+.lv-chip { padding: 4px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; }
+.lv-chip--ok { background: var(--salvia); color: var(--salvia-deep); }
+.lv-chip--borrador { background: #FFF4E8; color: var(--melocoton-deep); }
+.lv-chip--hecha { background: #F7F0FA; color: #7A4F8C; }
+.lv-chip--cancelada { background: var(--rubor); color: var(--pink-deep); }
+.lv-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.lv-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.lv-plan--principal { background: var(--pink); color: #fff; }
+.lv-meta { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.lv-hora, .lv-dato { display: inline-flex; align-items: center; gap: 6px; }
+.lv-hora { color: var(--ink); font-weight: 700; }
+.lv-hora.es-pasada { color: var(--muted); font-weight: 500; }
+.lv-dato--inv { color: var(--pink-deep); font-weight: 700; }
+.lv-dato--ok { padding: 2px 10px; border-radius: 99px; background: var(--salvia); color: var(--salvia-deep); font-weight: 800; font-size: 12px; }
+.lv-rapido { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.lv-accion { height: 34px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), filter .2s; }
+.lv-accion:hover { transform: translateY(-1px); filter: brightness(.97); }
+.lv-accion--publicar { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
+.lv-accion--completar { background: #F7F0FA; color: #7A4F8C; border-color: #E9DAF0; }
+.lv-accion--cancelar { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
+.lv-pie { display: flex; align-items: center; gap: 8px; padding: 12px 0 14px; border-top: 1px dashed var(--linea-fuerte); margin: 0 20px; }
+
+.lv-vacio { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 14px; padding: 46px 24px; text-align: center; border-radius: 28px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); }
+.lv-vacio-burbujas { display: flex; gap: 10px; margin-bottom: 6px; }
+.lv-vacio-burbujas span { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
+.lv-vacio-burbujas span:nth-child(2) { transform: translateY(-8px); background: var(--rubor); }
+.lv-vacio-titulo { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.lv-vacio-txt { max-width: 44ch; font-size: 14px; line-height: 1.6; color: var(--muted); }
+@media (max-width: 760px) {
+  .lv-fila-cuerpo { padding: 14px 16px; gap: 12px; }
+  .lv-portada { width: 64px; height: 48px; border-radius: 14px; }
+  .lv-pie { margin: 0 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .lv-fila { transition: none; } .lv-fila:hover { transform: none; } }
+`;

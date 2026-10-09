@@ -1,4 +1,6 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { Check, CreditCard, Crown, FlaskConical, Info, Package } from "lucide-react";
+import { AdminCabecera } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getSubscriptionCatalog, stripeMode, type StripeMode } from "@/src/lib/stripe/catalog";
@@ -54,38 +56,10 @@ const MODOS: { modo: StripeMode; label: string; ayuda: string }[] = [
   { modo: "live", label: "Producción", ayuda: "El que cobra de verdad" },
 ];
 
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-const caja: React.CSSProperties = {
-  borderRadius: 22, border: "1.5px solid var(--pink-line)",
-  background: "#fff", padding: "22px 24px",
-};
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
-
 /** El cartelito debajo de cada price id. */
 function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
-  const c =
-    tono === "ok" ? { fg: "#166534", bg: "#f0fdf4", bd: "#bbf7d0" }
-    : tono === "aviso" ? { fg: "#92400e", bg: "#fffbeb", bd: "#fde68a" }
-    : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F6E7E1" };
-
   return (
-    <p style={{
-      marginTop: 6, fontSize: 11.5, lineHeight: 1.45, fontWeight: 600,
-      color: c.fg, background: c.bg, border: `1px solid ${c.bd}`,
-      borderRadius: 9, padding: "6px 10px",
-    }}>{texto}</p>
+    <p className={"pr-aviso pr-aviso--" + tono}>{texto}</p>
   );
 }
 
@@ -109,9 +83,9 @@ async function CampoPrecio({
   const leido = r ? leerVerificacion(r, esperadoCentimos, moneda) : null;
 
   return (
-    <label style={{ display: "block" }}>
-      <Lbl>{etiqueta}</Lbl>
-      <input style={inp} name={name} defaultValue={valor ?? ""} placeholder="price_1AbC..." autoComplete="off" spellCheck={false} />
+    <label className="pf-campo pr-campo">
+      <span className="pf-etq">{etiqueta}</span>
+      <input className="pr-inp pr-inp--id" name={name} defaultValue={valor ?? ""} placeholder="price_1AbC..." autoComplete="off" spellCheck={false} />
       {leido && <Aviso tono={leido.tono} texto={leido.texto} />}
     </label>
   );
@@ -140,84 +114,86 @@ export default async function AdminPreciosPage({
   const moneda = catalogo?.currency ?? "eur";
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Precios</p>
-        <h1 className="display" style={{ fontSize: 34, marginTop: 6 }}>Planes y packs</h1>
-        <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>
+    <main className="pr">
+      <style>{CSS}</style>
+
+      <AdminCabecera
+        eyebrow="Precios"
+        titulo="Planes y packs"
+        lede={<>
           Acá cambiás lo que se cobra. Cada precio tiene dos partes: el <strong>importe
           que se muestra</strong> en la web, y el <strong>identificador de Stripe</strong>,
           que es lo que cobra de verdad. Tienen que decir lo mismo — debajo de cada
           identificador te digo cuánto vale en Stripe.
-        </p>
-      </header>
+        </>}
+      />
 
-      <section style={{ maxWidth: 980, margin: "0 auto", padding: "26px 28px", display: "flex", flexDirection: "column", gap: 18 }}>
+      <section className="pr-cuerpo">
 
         {error && (
-          <div style={{
-            borderRadius: 14, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-            background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca",
-          }}>{error}</div>
+          <div role="status" className="ad-aviso ad-aviso--error">{error}</div>
         )}
 
         {/* Cual de los dos juegos esta cobrando ahora mismo. Sin esto, los dos
             bloques se ven igual de importantes y no lo son. */}
-        <div style={{
-          borderRadius: 14, padding: "11px 16px", fontSize: 13,
-          background: modoActivo === "live" ? "#f0fdf4" : "#fffbeb",
-          color: modoActivo === "live" ? "#166534" : "#92400e",
-          border: `1px solid ${modoActivo === "live" ? "#bbf7d0" : "#fde68a"}`,
-        }}>
+        <div className={"pr-modo " + (modoActivo === "live" ? "pr-modo--live" : "pr-modo--test")}>
+          <span className="pr-modo-ico" aria-hidden="true">
+            {modoActivo === "live" ? <CreditCard size={18} strokeWidth={2.2} /> : <FlaskConical size={18} strokeWidth={2.2} />}
+          </span>
+          <span>
           {modoActivo === "live"
             ? "El sistema está cobrando DE VERDAD. Los identificadores de «Producción» son los que se usan."
             : "El sistema está en modo prueba. Se usan los identificadores de «Prueba»; los de «Producción» todavía no cobran nada."}
+          </span>
         </div>
 
         {/* ── PLANES ─────────────────────────────────────────────────────── */}
 
         {!catalogo ? (
-          <div style={caja}>
-            <p style={{ fontSize: 13, color: "#991b1b" }}>
+          <div className="pr-caja">
+            <p className="pr-error">
               No se encontró el catálogo de planes en la configuración. Avisale a Vincenzo.
             </p>
           </div>
         ) : (
-          <form action={guardarPreciosDePlanesAction} style={{ ...caja, display: "flex", flexDirection: "column", gap: 22 }}>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 800 }}>Los tres planes</h2>
-              <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 4 }}>
-                Los importes van en euros. Para el anual poné el total del año, no el mensual.
-              </p>
+          <form action={guardarPreciosDePlanesAction} className="pr-caja pr-planes">
+            <div className="pr-caja-cab">
+              <span className="pr-burbuja"><Crown size={19} strokeWidth={2.2} aria-hidden="true" /></span>
+              <div>
+                <h2 className="pr-h2">Los tres planes</h2>
+                <p className="pr-sub">
+                  Los importes van en euros. Para el anual poné el total del año, no el mensual.
+                </p>
+              </div>
             </div>
 
             {catalogo.tiers.map((t) => (
-              <div key={t.tier} style={{ borderTop: "1px solid #F6E7E1", paddingTop: 18 }}>
-                <p style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>
+              <div key={t.tier} className={"pr-plan pr-plan--" + t.tier}>
+                <p className="pr-plan-nombre">
                   {t.tier === "corps_de_ballet" ? "Corps de Ballet" : t.tier === "solista" ? "Solista" : "Principal"}
                 </p>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-                  <label>
-                    <Lbl>Precio por mes (€)</Lbl>
-                    <input style={inp} name={`${t.tier}_mensual`} defaultValue={t.amount_monthly} inputMode="decimal" />
+                <div className="pr-grilla pr-importes">
+                  <label className="pf-campo">
+                    <span className="pf-etq">Precio por mes (€)</span>
+                    <input className="pr-inp pr-inp--importe" name={`${t.tier}_mensual`} defaultValue={t.amount_monthly} inputMode="decimal" />
                   </label>
-                  <label>
-                    <Lbl>Precio del año entero (€)</Lbl>
-                    <input style={inp} name={`${t.tier}_anual`} defaultValue={t.amount_yearly} inputMode="decimal" />
+                  <label className="pf-campo">
+                    <span className="pf-etq">Precio del año entero (€)</span>
+                    <input className="pr-inp pr-inp--importe" name={`${t.tier}_anual`} defaultValue={t.amount_yearly} inputMode="decimal" />
                   </label>
                 </div>
 
                 {MODOS.map(({ modo, label, ayuda }) => (
-                  <div key={modo} style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#6E5550", marginBottom: 8 }}>
+                  <div key={modo} className={"pr-modo-bloque" + (modo === modoActivo ? " es-en-uso" : "")}>
+                    <p className="pr-modo-titulo">
                       {label}{" "}
-                      <span style={{ fontWeight: 500, color: "#B39189" }}>— {ayuda}</span>
+                      <span className="pr-modo-ayuda">— {ayuda}</span>
                       {modo === modoActivo && (
-                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--pink-mid)" }}>EN USO</span>
+                        <span className="pr-en-uso">En uso</span>
                       )}
                     </p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <div className="pr-grilla">
                       <CampoPrecio
                         name={`${t.tier}_${modo}_mensual`}
                         valor={t.prices?.[modo]?.monthly ?? null}
@@ -241,48 +217,53 @@ export default async function AdminPreciosPage({
             ))}
 
             <div>
-              <BotonEnviar pendingLabel="Guardando…" style={{
-                background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
-                padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
-              }}>GUARDAR PRECIOS</BotonEnviar>
+              <BotonEnviar pendingLabel="Guardando…" className="pf-guardar">
+                <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar precios
+              </BotonEnviar>
             </div>
           </form>
         )}
 
         {/* ── PACKS ──────────────────────────────────────────────────────── */}
 
-        <div style={caja}>
-          <h2 style={{ fontSize: 16, fontWeight: 800 }}>Packs de clases</h2>
-          <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 4, marginBottom: 16 }}>
-            Se pagan una vez y el acceso queda para siempre. Qué clases trae cada
-            pack se arma en <strong>Packs</strong>; acá sólo el precio.
-          </p>
+        <div className="pr-caja">
+          <div className="pr-caja-cab">
+            <span className="pr-burbuja pr-burbuja--melo"><Package size={19} strokeWidth={2.2} aria-hidden="true" /></span>
+            <div>
+              <h2 className="pr-h2">Packs de clases</h2>
+              <p className="pr-sub">
+                Se pagan una vez y el acceso queda para siempre. Qué clases trae cada
+                pack se arma en <strong>Packs</strong>; acá sólo el precio.
+              </p>
+            </div>
+          </div>
 
           {packs.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#B39189" }}>
-              Todavía no hay ningún pack.
-            </p>
+            <div className="pr-vacio">
+              <span className="pr-burbuja pr-burbuja--melo"><Package size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+              <p>Todavía no hay ningún pack.</p>
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <div className="pr-packs">
               {packs.map((p) => (
                 <form
                   key={p.id}
                   action={guardarPrecioDePackAction}
-                  style={{ borderTop: "1px solid #F6E7E1", paddingTop: 16 }}
+                  className="pr-pack"
                 >
                   <input type="hidden" name="id" value={p.id} />
 
-                  <p style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>
+                  <p className="pr-plan-nombre">
                     {p.name_i18n?.es ?? p.slug}
                     {!p.is_published && (
-                      <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#B39189" }}>SIN PUBLICAR</span>
+                      <span className="pr-sin-publicar">Sin publicar</span>
                     )}
                   </p>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 1fr", gap: 14, alignItems: "start" }}>
-                    <label>
-                      <Lbl>Precio (€)</Lbl>
-                      <input style={inp} name="precio" defaultValue={(p.price_cents / 100).toString()} inputMode="decimal" />
+                  <div className="pr-grilla pr-grilla--pack">
+                    <label className="pf-campo">
+                      <span className="pf-etq">Precio (€)</span>
+                      <input className="pr-inp pr-inp--importe" name="precio" defaultValue={(p.price_cents / 100).toString()} inputMode="decimal" />
                     </label>
                     <CampoPrecio
                       name="priceTest"
@@ -302,12 +283,10 @@ export default async function AdminPreciosPage({
                     />
                   </div>
 
-                  <div style={{ marginTop: 12 }}>
-                    <BotonEnviar pendingLabel="Guardando…" style={{
-                      background: "transparent", color: "#3B2A2C", border: "1px solid #F0DED6",
-                      borderRadius: 99, padding: "8px 18px", fontSize: 11, fontWeight: 700,
-                      letterSpacing: "0.08em", cursor: "pointer",
-                    }}>GUARDAR ESTE PACK</BotonEnviar>
+                  <div className="pr-pack-pie">
+                    <BotonEnviar pendingLabel="Guardando…" className="pr-btn-sec">
+                      <Check size={15} strokeWidth={2.4} aria-hidden="true" /> Guardar este pack
+                    </BotonEnviar>
                   </div>
                 </form>
               ))}
@@ -315,12 +294,82 @@ export default async function AdminPreciosPage({
           )}
         </div>
 
-        <p style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.6 }}>
+        <p className="pr-nota">
+          <span className="pr-burbuja pr-burbuja--chica"><Info size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+          <span>
           <strong>Un identificador de Stripe no se edita: se reemplaza.</strong> Si querés
           cambiar un precio, en Stripe se crea uno nuevo y se pega acá el nuevo
           identificador. Quien ya está suscripta sigue pagando lo que contrató.
+          </span>
         </p>
       </section>
     </main>
   );
 }
+
+const CSS = `
+.pr { display: flex; flex-direction: column; }
+.pr .ad-mast { margin-bottom: 0; }
+.pr .ad-lede strong { color: var(--ink); }
+.pr-cuerpo { width: 100%; padding: 22px 0 40px; display: flex; flex-direction: column; gap: 18px; }
+
+.pr-modo { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; line-height: 1.5; }
+.pr-modo-ico { width: 38px; height: 38px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; background: #fff; }
+.pr-modo--live { background: var(--salvia); color: var(--salvia-deep); border: 1px solid #CFE3C9; }
+.pr-modo--test { background: #FFF4E8; color: var(--melocoton-deep); border: 1px solid #F6D9C6; }
+
+.pr-caja { padding: clamp(20px, 3vw, 30px); border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.pr-planes { display: flex; flex-direction: column; gap: 16px; }
+.pr-caja-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
+.pr-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
+.pr-burbuja--melo { background: #FFF4E8; color: var(--melocoton-deep); }
+.pr-burbuja--chica { width: 32px; height: 32px; border-radius: 11px; background: #F7F0FA; color: #7A4F8C; }
+.pr-h2 { font-size: 19px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.pr-sub { margin-top: 3px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.pr-sub strong { color: var(--ink); }
+.pr-error { font-size: 14px; font-weight: 700; color: var(--pink-deep); }
+
+.pr-plan { padding: 20px; border-radius: 24px; border: 1px solid var(--linea); }
+.pr-plan--corps_de_ballet { background: linear-gradient(150deg, #FFF6F2, #fff 60%); }
+.pr-plan--solista { background: linear-gradient(150deg, #FFEEDB, #fff 60%); }
+.pr-plan--principal { background: linear-gradient(150deg, #FFE5E3, #fff 60%); }
+.pr-plan-nombre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: 16px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }
+.pr-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.pr-grilla--pack { grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); }
+.pr-importes { margin-bottom: 14px; }
+.pr-inp { width: 100%; height: 46px; padding: 0 14px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
+.pr-inp:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.pr-inp--importe { font-size: 16px; font-weight: 800; }
+.pr-inp--id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+.pr-campo { min-width: 0; }
+
+.pr-modo-bloque { padding: 14px; border-radius: 20px; background: rgba(255,255,255,.75); border: 1px dashed var(--linea-fuerte); }
+.pr-modo-bloque + .pr-modo-bloque { margin-top: 10px; }
+.pr-modo-bloque.es-en-uso { border-style: solid; border-color: var(--pink-line); background: #fff; }
+.pr-modo-titulo { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.pr-modo-ayuda { font-weight: 600; color: var(--muted); }
+.pr-en-uso { margin-left: 4px; padding: 2px 10px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11.5px; font-weight: 800; }
+
+.pr-aviso { display: flex; align-items: flex-start; gap: 7px; margin-top: 4px; padding: 8px 12px; border-radius: 14px; font-size: 12.5px; line-height: 1.45; font-weight: 700; }
+.pr-aviso svg { flex-shrink: 0; margin-top: 1px; }
+.pr-aviso--ok { background: var(--salvia); color: var(--salvia-deep); }
+.pr-aviso--aviso { background: #FFF4E8; color: var(--melocoton-deep); border: 1px solid #F6D9C6; }
+.pr-aviso--gris { background: var(--crema); color: var(--muted); border: 1px solid var(--linea); }
+
+.pr-packs { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.pr-pack { padding: 18px 20px; border-radius: 24px; background: var(--crema); border: 1px solid var(--linea); }
+.pr-sin-publicar { padding: 2px 10px; border-radius: 99px; background: #FFF4E8; color: var(--melocoton-deep); font-size: 11.5px; font-weight: 800; letter-spacing: 0; }
+.pr-pack-pie { margin-top: 14px; }
+.pr-btn-sec { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 18px; border-radius: 99px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 800; transition: background .2s, border-color .2s, transform .3s var(--curva); }
+.pr-btn-sec:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-1px); }
+.pr-vacio { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 16px; border-radius: 20px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); font-size: 14px; color: var(--muted); }
+
+.pr-nota { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-radius: 20px; background: #FBF8FD; border: 1px solid #EFE3F4; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+.pr-nota strong { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .pr-grilla, .pr-grilla--pack { grid-template-columns: minmax(0, 1fr); }
+  .pr-plan, .pr-pack { padding: 16px; }
+  .pr-modo-bloque { padding: 12px; }
+}
+`;

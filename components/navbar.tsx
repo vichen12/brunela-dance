@@ -119,7 +119,21 @@ export function Navbar() {
     };
   }, [menuOpen]);
 
-  const close = () => setMenuOpen(false);
+  // El overflow del body se suelta ACA, sincronico, y no solo en el efecto:
+  // si el Link salta al ancla mientras el body sigue en overflow hidden, el
+  // navegador a veces no se mueve (pasaba en el celular con Metodo/Clases).
+  const close = () => {
+    document.body.style.overflow = "";
+    setMenuOpen(false);
+  };
+
+  // Escape cierra el menu, como cualquier panel.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [menuOpen]);
 
   if (isAuthPage) {
     return null;

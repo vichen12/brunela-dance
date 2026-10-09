@@ -37,6 +37,14 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
   // Cerrar al navegar: sin esto la hoja queda abierta sobre la pantalla nueva.
   useEffect(() => { setAbierto(false); }, [pathname]);
 
+  // Escape cierra la hoja de "Mas".
+  useEffect(() => {
+    if (!abierto) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setAbierto(false); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [abierto]);
+
   function active(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
@@ -92,7 +100,7 @@ export function MobileDashboardNav({ isAdmin }: { isAdmin: boolean }) {
             type="button"
             onClick={() => setAbierto((v) => !v)}
             aria-expanded={abierto}
-            aria-label="Abrir menú completo"
+            aria-label={abierto ? 'Cerrar menú' : 'Abrir menú completo'}
             className={'mn-item' + (abierto || menuActivo ? ' es-activo' : '')}
           >
             <span className="mn-item-ico">{abierto ? <X size={19} strokeWidth={2.2} aria-hidden="true" /> : <Menu size={19} strokeWidth={2} aria-hidden="true" />}</span>

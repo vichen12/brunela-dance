@@ -76,7 +76,7 @@ export function SelectorMultiple({
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {opciones.map((opcion) => {
           const activo = elegidos.includes(opcion.slug);
           return (
@@ -89,22 +89,25 @@ export function SelectorMultiple({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 7,
-                padding: "6px 12px",
+                gap: 8,
+                minHeight: 38,
+                padding: "7px 14px 7px 9px",
                 borderRadius: 99,
                 cursor: disabled ? "default" : "pointer",
                 fontFamily: "inherit",
-                fontSize: 12,
-                fontWeight: 600,
-                lineHeight: 1.4,
+                fontSize: 13,
+                fontWeight: activo ? 800 : 700,
+                lineHeight: 1.3,
                 textAlign: "left",
                 opacity: disabled ? 0.55 : 1,
-                // --pink-mid y no --pink: aca hay texto que se lee, no una
-                // superficie que se mira de reojo. Ver CLAUDE.md, decisiones.
-                background: activo ? "var(--pink-mid)" : "#fff",
-                color: activo ? "#fff" : "#6E5550",
-                border: `1px solid ${activo ? "var(--pink-mid)" : "#F0DED6"}`,
-                transition: "background 0.12s, border-color 0.12s",
+                // Elegida: rubor con texto en --pink-deep, que es el coral que
+                // se lee sobre claro. Un relleno coral entero con texto blanco
+                // no llega a 4.5:1 (ver CLAUDE.md, decisiones).
+                background: activo ? "#FDECEC" : "#fff",
+                color: activo ? "#B03A3E" : "#3B2A2C",
+                border: `1.5px solid ${activo ? "#E64F55" : "#E9CFC5"}`,
+                boxShadow: activo ? "0 8px 18px -12px rgba(230,79,85,.7)" : "none",
+                transition: "background .2s, border-color .2s, box-shadow .2s, color .2s",
               }}
             >
               <span
@@ -113,20 +116,21 @@ export function SelectorMultiple({
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: 13,
-                  height: 13,
-                  borderRadius: 4,
+                  width: 20,
+                  height: 20,
+                  borderRadius: 99,
                   flexShrink: 0,
-                  background: activo ? "#fff" : "transparent",
-                  border: `1px solid ${activo ? "#fff" : "#E6CCC2"}`,
+                  background: activo ? "#E64F55" : "#FFF2EE",
+                  border: `1.5px solid ${activo ? "#E64F55" : "#E9CFC5"}`,
+                  transition: "background .2s, border-color .2s",
                 }}
               >
                 {activo && (
-                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                     <path
                       d="M1.5 5.2l2.4 2.4L8.5 3"
-                      stroke="var(--pink-mid)"
-                      strokeWidth="1.8"
+                      stroke="#fff"
+                      strokeWidth="1.9"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />

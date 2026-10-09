@@ -1,12 +1,12 @@
 "use client";
-import { Check, Image as ImageIcon, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Check, Image as ImageIcon, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
-import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
+import { AdminDrawer, BloqueAvanzado, botonPrincipal, campoSuave, etiquetaSuave } from "@/components/admin-drawer";
 import {
   deleteProgramAction,
   deleteProgramDayAction,
@@ -41,23 +41,10 @@ export type ProgramRecord = {
 export type ProgramDayRecord = { id: string; program_id: string; day_number: number; video_id: string };
 export type VideoLookup = { id: string; slug: string; title_i18n: Record<string, string> | null };
 
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-
-const tarjeta: React.CSSProperties = {
-  background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
-};
+const inp = campoSuave;
 
 function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
+  return <span style={etiquetaSuave}>{children}</span>;
 }
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return <label style={{ display: "flex", flexDirection: "column" }}><Lbl>{label}</Lbl>{children}</label>;
@@ -111,14 +98,14 @@ export function ProgramForm({ actionLabel, program, onGuardado }: { actionLabel:
           <div className="pf-campo">
             <span className="pf-etq" id="pf-dias-etq">Cuántos días dura</span>
             <div className="pf-dias">
-              <button type="button" className="pf-paso" aria-label="Un día menos" onClick={() => setDias((d) => Math.max(1, d - 1))}>
+              <button type="button" className="pf-paso" aria-label="Un día menos" disabled={dias <= 1} onClick={() => setDias((d) => Math.max(1, d - 1))}>
                 <Minus size={16} strokeWidth={2.2} />
               </button>
               <input
                 aria-labelledby="pf-dias-etq" name="durationDays" type="number" min={1} max={365} required
                 value={dias} onChange={(e) => setDias(Math.max(1, Number(e.target.value) || 1))}
               />
-              <button type="button" className="pf-paso" aria-label="Un día más" onClick={() => setDias((d) => Math.min(365, d + 1))}>
+              <button type="button" className="pf-paso" aria-label="Un día más" disabled={dias >= 365} onClick={() => setDias((d) => Math.min(365, d + 1))}>
                 <Plus size={16} strokeWidth={2.2} />
               </button>
             </div>
@@ -276,11 +263,11 @@ export function EditarPrograma({
       </button>
 
       {guardado && (
-        <span style={{
-          marginLeft: 8, fontSize: 10.5, fontWeight: 700,
-          color: "#166534", background: "#f0fdf4",
-          padding: "4px 10px", borderRadius: 99,
-        }}>Guardado</span>
+        <span role="status" style={{
+          display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8,
+          fontSize: 12.5, fontWeight: 800, color: "var(--salvia-deep, #3F7A45)",
+          background: "var(--salvia, #E7F1E4)", padding: "6px 12px", borderRadius: 99,
+        }}><Check size={13} strokeWidth={3} aria-hidden="true" /> Guardado</span>
       )}
 
       <AdminDrawer
@@ -290,52 +277,61 @@ export function EditarPrograma({
         onCerrar={() => setAbierto(false)}
       >
 
-              <div style={{ borderTop: "1px solid #F6E7E1", padding: "22px" }}>
+              <div>
                 <ProgramForm actionLabel="Guardar cambios" program={program} onGuardado={() => { setAbierto(false); setGuardado(true); }} />
 
                 {/* Días */}
-                <div style={{ marginTop: 26, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
-                  <Lbl>Días del plan</Lbl>
+                <div className="adr-caja" style={{ marginTop: 26 }}>
+                  <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: 0 }}>
+                    <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFE2D3", color: "#C25E3A" }}>
+                      <CalendarDays size={17} strokeWidth={2} />
+                    </span>
+                    Días del plan
+                    <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 800, color: "#8A6F68", background: "#fff", padding: "4px 11px", borderRadius: 99 }}>
+                      {days.length} de {program.duration_days}
+                    </span>
+                  </p>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
                     {days.length === 0 && (
-                      <p style={{ fontSize: 12.5, color: "#B39189" }}>
+                      <p style={{ fontSize: 13, color: "#8A6F68" }}>
                         Todavía no hay días. Agregá el primero abajo.
                       </p>
                     )}
                     {days.map((day) => (
                       <div key={day.id} style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        gap: 14, borderRadius: 12, border: "1px solid #F6E7E1",
-                        background: "#FFFAF6", padding: "10px 14px",
+                        gap: 12, borderRadius: 18, border: "1px solid #F3E3DC",
+                        background: "#fff", padding: 8,
                       }}>
-                        <span style={{ fontSize: 13, color: "#3B2A2C" }}>
-                          <strong style={{ fontWeight: 700 }}>Día {day.day_number}</strong>
+                        <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, fontSize: 13.5, color: "#3B2A2C" }}>
+                          <strong title={`Día ${day.day_number}`} style={{ flexShrink: 0, minWidth: 40, height: 34, padding: "0 8px", borderRadius: 12, display: "grid", placeItems: "center", background: "#FFF2EE", color: "#B03A3E", fontWeight: 900, fontSize: 13 }}>{day.day_number}</strong>
                           {/* El titulo, no el slug: Brunela no tiene por que saber
                               que "demo-barra-suelo-i" es "Barra de suelo I". */}
-                          <span style={{ color: "#8A6F68" }}> — {tituloDe(videoById.get(day.video_id), day.video_id)}</span>
+                          <span style={{ minWidth: 0, fontWeight: 700 }}>{tituloDe(videoById.get(day.video_id), day.video_id)}</span>
                         </span>
                         <form action={deleteProgramDayAction}>
                           <input name="id" type="hidden" value={day.id} />
-                          <BotonEnviar style={{
-                            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-                            borderRadius: 99, padding: "5px 14px", fontSize: 10, fontWeight: 700,
-                            letterSpacing: "0.08em", cursor: "pointer",
-                          }}>QUITAR</BotonEnviar>
+                          <BotonEnviar pendingLabel="Quitando…" style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "#fff", color: "var(--pink-deep)", border: "1.5px solid var(--pink-line)",
+                            borderRadius: 99, padding: "6px 12px", fontSize: 12.5, fontWeight: 800,
+                            fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
+                          }}><X size={13} strokeWidth={2.4} aria-hidden="true" /> Quitar</BotonEnviar>
                         </form>
                       </div>
                     ))}
                   </div>
 
                   <form action={upsertProgramDayAction} style={{
-                    display: "grid", gridTemplateColumns: "120px 1fr auto",
-                    gap: 12, alignItems: "end", marginTop: 14,
+                    display: "flex", flexWrap: "wrap",
+                    gap: 10, alignItems: "flex-end", marginTop: 16,
                   }}>
                     <input name="programId" type="hidden" value={program.id} />
-                    <F label="Día número">
+                    <div style={{ flex: "0 0 104px" }}><F label="Día número">
                       <input style={inp} min={1} max={program.duration_days} name="dayNumber" required type="number" />
-                    </F>
-                    <F label="Clase de ese día">
+                    </F></div>
+                    <div style={{ flex: "1 1 200px", minWidth: 0 }}><F label="Clase de ese día">
                       {/* Antes era un input donde habia que escribir el slug de
                           memoria. El datalist autocompletaba, pero listaba slugs:
                           en la practica, memorizar codigos. */}
@@ -347,12 +343,10 @@ export function EditarPrograma({
                         placeholder="Elegí una clase…"
                         opciones={videos.map((v) => ({ value: v.slug, label: tituloDe(v, v.slug) }))}
                       />
-                    </F>
-                    <BotonEnviar style={{
-                      background: "var(--pink)", color: "#fff", border: "none", borderRadius: 99,
-                      padding: "9px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-                      cursor: "pointer", whiteSpace: "nowrap",
-                    }}>AGREGAR DÍA</BotonEnviar>
+                    </F></div>
+                    <BotonEnviar pendingLabel="Agregando…" style={{ ...botonPrincipal, height: 46, padding: "0 20px" }}>
+                      <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Agregar día
+                    </BotonEnviar>
                   </form>
                 </div>
               </div>

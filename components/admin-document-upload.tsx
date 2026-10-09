@@ -103,7 +103,12 @@ export function AdminDocumentUpload({ valorInicial, nombreCampo = "fileUrl" }: P
       setEstado("listo");
     } catch (err) {
       setEstado("error");
-      setError(err instanceof Error ? err.message : "No se pudo subir el archivo.");
+      // Un fallo de red llega del navegador en ingles y sin contexto
+      // ("Failed to fetch"). Los mensajes propios (del servidor o de Storage)
+      // ya vienen en espanol y se muestran tal cual.
+      const crudo = err instanceof Error ? err.message : "";
+      const deRed = !crudo || err instanceof TypeError || /failed to fetch|network|load failed/i.test(crudo);
+      setError(deRed ? "No se pudo subir el archivo. Revisá tu conexión y probá de nuevo." : crudo);
     }
   }
 
@@ -173,7 +178,28 @@ export function AdminDocumentUpload({ valorInicial, nombreCampo = "fileUrl" }: P
         )}
       </div>
 
-      {error && <p className="dup-error">{error}</p>}
+      {error && <p className="dup-error" role="alert">{error}</p>}
+      <style>{CSS_DUP}</style>
     </div>
   );
 }
+
+/* La zona de carga en clave suave: pisa las reglas de globals.css solo
+   dentro del sistema. */
+const CSS_DUP = `
+.sistema .dup { min-height: 88px; padding: 18px 20px; border-radius: 22px; border-color: var(--linea-fuerte); background: linear-gradient(150deg, #FFF6F2, #fff 70%); transition: border-color .2s, background .2s, transform .35s var(--curva), box-shadow .3s; }
+.sistema .dup:hover { border-color: var(--pink); background: #FFF2EE; box-shadow: var(--sombra); }
+.sistema .dup:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230,79,85,.18); }
+.sistema .dup.es-arrastre { background: var(--rubor); transform: scale(1.01); }
+.sistema .dup.es-listo { border-style: solid; border-color: #CFE3C9; background: linear-gradient(150deg, #F2F7EF, #fff 75%); }
+.sistema .dup.es-error { border-color: var(--pink-line); background: var(--pink-wash); }
+.sistema .dup-ico { width: 50px; height: 50px; border-radius: 16px; background: #fff; color: var(--pink); box-shadow: var(--sombra); }
+.sistema .dup-ico--listo { background: var(--salvia); color: var(--salvia-deep); box-shadow: none; }
+.sistema .dup-titulo { font-weight: 800; }
+.sistema .dup-cambiar { padding: 8px 15px; border: 1.5px solid var(--linea-fuerte); font-weight: 800; transition: background .2s; }
+.sistema .dup:hover .dup-cambiar { background: var(--rubor); }
+.sistema .dup-barra { height: 8px; background: #FFE9DC; }
+.sistema .dup-barra span { background: linear-gradient(90deg, #FFB59A, var(--pink)); }
+.sistema .dup-pct { font-weight: 900; }
+.dup-error { margin-top: 8px; padding: 10px 14px; border-radius: 14px; font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--pink-deep); background: var(--pink-wash); }
+`;

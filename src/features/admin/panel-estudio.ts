@@ -38,7 +38,7 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
     contar(perfiles().gte("created_at", inicioDeMes)),
     contar(db.from("studio_announcements").select("*", { count: "exact", head: true })
       .eq("is_active", true).or("expires_at.is.null,expires_at.gt." + ahora)),
-    db.from("profiles").select("id, full_name, membership_tier, created_at")
+    db.from("profiles").select("id, full_name, email, membership_tier, created_at")
       .order("created_at", { ascending: false }).limit(6),
     // Lo ultimo que se subio, en cualquier estado: un borrador olvidado es
     // justo lo que la admin tiene que ver al entrar.
@@ -62,8 +62,10 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
       { tier: "corps_de_ballet", cantidad: corps },
       { tier: "none", cantidad: sinPlan },
     ],
-    ultimas: ((ultimas ?? []) as { id: string; full_name: string | null; membership_tier: TierClave; created_at: string }[])
-      .map((u) => ({ id: u.id, nombre: u.full_name?.trim() || null, tier: u.membership_tier, cuando: haceCuanto(u.created_at) })),
+    ultimas: ((ultimas ?? []) as { id: string; full_name: string | null; email: string | null; membership_tier: TierClave; created_at: string }[])
+      // El correo va para mostrar su prefijo cuando no hay nombre, igual que
+      // la lista de alumnas: antes eran tres textos para la misma persona.
+      .map((u) => ({ id: u.id, nombre: u.full_name?.trim() || null, correo: u.email, tier: u.membership_tier, cuando: haceCuanto(u.created_at) })),
     clases: ((clases ?? []) as { id: string; title_i18n: Record<string, string>; status: string; thumbnail_url: string | null; duration_seconds: number | null }[])
       .map((v) => ({
         id: v.id,

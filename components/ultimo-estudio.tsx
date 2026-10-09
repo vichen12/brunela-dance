@@ -434,7 +434,7 @@ export function UltimoEstudio() {
               type="button"
               className="ultimo-detalle-cerrar"
               onClick={() => setDetalle(null)}
-              aria-label={t("nav.closeMenu")}
+              aria-label={t("nav.close")}
             >
               <X size={18} strokeWidth={2.2} aria-hidden />
             </button>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, Euro, Lock } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Euro, Lock, MessageCircle, Settings2 } from "lucide-react";
 import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -116,7 +116,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       {/* ── 01 Reservas ── */}
       <form action={guardarAjusteDeReservasAction} className="cf-bloque">
         <div className="cf-cab">
-          <span className="pf-num">01</span>
+          <span className="cf-ico cf-ico--coral" aria-hidden="true"><CalendarDays size={19} strokeWidth={2.2} /></span>
           <div>
             <h2>{TITULOS["live_sessions.booking"].titulo}</h2>
             <p>{TITULOS["live_sessions.booking"].ayuda}</p>
@@ -147,7 +147,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       {/* ── 02 Chat privado ── */}
       <form action={guardarAjusteDeChatAction} className="cf-bloque">
         <div className="cf-cab">
-          <span className="pf-num">02</span>
+          <span className="cf-ico cf-ico--melo" aria-hidden="true"><MessageCircle size={19} strokeWidth={2.2} /></span>
           <div>
             <h2>{TITULOS["chat.dm_access"].titulo}</h2>
             <p>{TITULOS["chat.dm_access"].ayuda} Podés elegir varios.</p>
@@ -173,7 +173,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       {/* ── 03 Solo lectura ── */}
       <section className="cf-bloque cf-bloque--tecnico">
         <div className="cf-cab">
-          <span className="pf-num">03</span>
+          <span className="cf-ico cf-ico--lila" aria-hidden="true"><Settings2 size={19} strokeWidth={2.2} /></span>
           <div>
             <h2>Ajustes técnicos</h2>
             <p>
@@ -214,29 +214,40 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
 }
 
 const CSS = `
-.cf { display: flex; flex-direction: column; gap: 18px; }
-.cf .ad-mast { padding-bottom: 6px; }
-.cf-bloque { border: 1px solid #F0DED6; border-radius: 24px; background: #fff; padding: clamp(18px, 2.4vw, 28px); }
-.cf-bloque--tecnico { background: #FFFAF6; border-style: dashed; }
-.cf-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
-.cf-cab .pf-num { margin-top: 3px; }
-.cf-cab h2 { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
-.cf-cab p { margin-top: 3px; max-width: 68ch; font-size: 13.5px; line-height: 1.6; color: #8A6F68; }
-.cf-filas { display: flex; flex-direction: column; border-top: 1px solid #F6E7E1; }
-.cf-fila { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid #F6E7E1; cursor: pointer; }
+.cf { display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
+.cf .ad-mast { margin-bottom: 4px; }
+.cf-bloque { border: 1px solid var(--linea); border-radius: 28px; background: #fff; padding: clamp(18px, 2.6vw, 30px); box-shadow: var(--sombra); }
+.cf-bloque--tecnico { background: linear-gradient(150deg, #FBF8FD, #FFFAF6 65%); box-shadow: none; border-color: #EFE3F4; }
+.cf-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.cf-ico { width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; display: grid; place-items: center; }
+.cf-ico--coral { background: var(--rubor); color: var(--pink-deep); }
+.cf-ico--melo { background: #FFEEDB; color: var(--melocoton-deep); }
+.cf-ico--lila { background: #F1E7F6; color: #7A4F8C; }
+.cf-cab h2 { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); }
+.cf-cab p { margin-top: 3px; max-width: 68ch; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.cf-filas { display: flex; flex-direction: column; gap: 10px; }
+.cf-fila { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 18px; border-radius: 20px; background: var(--crema); border: 1.5px solid var(--linea); cursor: pointer; transition: border-color .2s, background .2s; }
+.cf-fila:hover { border-color: var(--linea-fuerte); }
+.cf-fila:has(input:checked) { background: var(--rubor); border-color: var(--pink-line); }
 .cf-fila-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.cf-fila-titulo { font-size: 14.5px; font-weight: 700; color: var(--ink); }
-.cf-fila-sub { font-size: 13px; line-height: 1.5; color: #8A6F68; }
+.cf-fila-titulo { font-size: 15px; font-weight: 800; color: var(--ink); }
+.cf-fila-sub { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .cf-planes { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 0; }
+.cf-planes .pf-plan-caja { border-radius: 20px; }
 .cf-pie { display: flex; justify-content: flex-end; margin-top: 20px; }
 .cf-precios {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px; margin-bottom: 12px; border-radius: 16px; text-decoration: none;
-  background: #fff; border: 1.5px solid var(--pink-line); color: var(--pink-deep); transition: border-color .2s, transform .2s;
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin-bottom: 12px; border-radius: 20px; text-decoration: none;
+  background: #fff; border: 1.5px solid var(--pink-line); color: var(--pink-deep); box-shadow: var(--sombra);
+  transition: border-color .2s, transform .35s var(--curva), box-shadow .35s var(--curva);
 }
-.cf-precios:hover { border-color: var(--pink); transform: translateY(-1px); }
+.cf-precios:hover { border-color: var(--pink); transform: translateY(-2px); box-shadow: var(--sombra-alta); }
 .cf-precios .cf-fila-txt { flex: 1; }
-.cf-precios-ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); }
-.cf-tecnicos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
-.cf-tecnicos li { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 14px; background: #fff; border: 1px solid #F6E7E1; }
-.cf-tecnicos li > svg { color: #B39189; margin-top: 3px; flex-shrink: 0; }
+.cf-precios-ico { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink); color: #fff; box-shadow: 0 10px 20px -10px rgba(230,79,85,.8); }
+.cf-tecnicos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.cf-tecnicos li { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 20px; background: #fff; border: 1px solid var(--linea); }
+.cf-tecnicos li > svg { box-sizing: content-box; padding: 7px; border-radius: 11px; background: #F1E7F6; color: #7A4F8C; flex-shrink: 0; }
+@media (max-width: 560px) {
+  .cf-fila { padding: 14px; gap: 14px; }
+  .cf-pie .pf-guardar { width: 100%; justify-content: center; }
+}
 `;

@@ -60,28 +60,28 @@ export function SelectorDePlanes({
           style={{
             display: "flex",
             alignItems: "flex-start",
-            gap: 8,
-            marginTop: 10,
-            padding: "9px 12px",
-            borderRadius: 10,
-            // Ambar y no rojo: rojo se lee como "esto está mal y no podés
+            gap: 10,
+            marginTop: 12,
+            padding: "12px 14px",
+            borderRadius: 16,
+            // Melocoton y no rojo: rojo se lee como "esto está mal y no podés
             // seguir", y acá se puede seguir perfectamente.
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            color: "#854d0e",
-            fontSize: 11.5,
-            lineHeight: 1.6,
+            background: "#FFF4E8",
+            border: "1px solid #FFE2D3",
+            color: "#8A4A2E",
+            fontSize: 13,
+            lineHeight: 1.55,
           }}
         >
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden
-            style={{ flexShrink: 0, marginTop: 1 }}>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden
+            style={{ flexShrink: 0, marginTop: 2, color: "#C25E3A" }}>
             <path d="M8 2.2l6 11.6H2L8 2.2Z" stroke="currentColor" strokeWidth="1.3"
               strokeLinejoin="round" />
             <path d="M8 6.6v3.1M8 11.5v.5" stroke="currentColor" strokeWidth="1.5"
               strokeLinecap="round" />
           </svg>
           <span>
-            <strong style={{ fontWeight: 700 }}>{aviso}</strong>{" "}
+            <strong style={{ fontWeight: 800, color: "#7A3E24" }}>{aviso}</strong>{" "}
             Los planes más caros suelen ver todo lo de los más baratos. Si es a propósito,
             dejalo así.
           </span>

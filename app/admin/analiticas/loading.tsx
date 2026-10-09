@@ -3,8 +3,8 @@ import { SkHero, SkMetricas, SkTarjeta, Sk } from "@/components/skeleton";
 /** Analiticas: cuatro numeros y despues los bloques con nombre de pregunta. */
 export default function Loading() {
   return (
-    <main className="pb-20 pt-6 md:pb-28 md:pt-10">
-      <section className="page-shell space-y-6">
+    <main style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <section style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <SkHero conBoton />
         <SkMetricas n={4} />
         {[0, 1, 2, 3].map((i) => (

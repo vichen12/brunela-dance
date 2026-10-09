@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { AdminAviso, AdminCabecera, AdminCifras } from "@/components/admin-ui";
+import { Bell, Heart, Megaphone, Send } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -74,40 +76,12 @@ const TIER_LABELS: Record<string, string> = {
   principal: "Principal",
 };
 
-const TIER_STYLE: Record<string, { bg: string; color: string }> = {
-  all:             { bg: "#f1f5f9", color: "#475569" },
-  corps_de_ballet: { bg: "var(--pink-wash)", color: "var(--pink-deep)" },
-  solista:         { bg: "var(--pink-soft)", color: "var(--pink-deep)" },
-  principal:       { bg: "#3B2A2C", color: "var(--pink-wash)" },
+const TIER_STYLE: Record<string, string> = {
+  all:             "an-plan--todas",
+  corps_de_ballet: "an-plan--corps",
+  solista:         "an-plan--solista",
+  principal:       "an-plan--principal",
 };
-
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
-
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
-
-function Flash({ msg, tone }: { msg: string | null; tone: "ok" | "err" }) {
-  if (!msg) return null;
-  return (
-    <div style={{
-      borderRadius: 12, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-      background: tone === "ok" ? "#f0fdf4" : "#fef2f2",
-      color: tone === "ok" ? "#166534" : "#991b1b",
-      border: `1px solid ${tone === "ok" ? "#bbf7d0" : "#fecaca"}`,
-      marginBottom: 20,
-    }}>{msg}</div>
-  );
-}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -131,53 +105,44 @@ export default async function AdminAnnouncementsPage({
   const active = announcements.filter((a) => a.is_active).length;
 
   return (
-    <main style={{ fontFamily: "inherit" }}>
-      <header className="hero-stage">
-        <p className="eyebrow">Comunicación</p>
-        <h1 className="display mt-5 text-5xl leading-none md:text-6xl">Anuncios.</h1>
-        <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--ink-soft)]">
-          Avisos que ven las alumnas al entrar al estudio. Podés dirigirlos a un plan concreto y darlos de baja cuando dejan de aplicar.
-        </p>
-      </header>
+    <main className="an">
+      <style>{CSS}</style>
 
-      <Flash msg={success} tone="ok" />
-      <Flash msg={error} tone="err" />
+      <AdminCabecera
+        eyebrow="Comunicación"
+        titulo="Anuncios"
+        lede="Avisos que ven las alumnas al entrar al estudio. Podés dirigirlos a un plan concreto y darlos de baja cuando dejan de aplicar."
+      />
+
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[
-          { value: announcements.length, label: "Total",  sub: "anuncios creados" },
-          { value: active,               label: "Activos", sub: "visibles en el studio" },
-          { value: announcements.length - active, label: "Inactivos", sub: "desactivados o vencidos" },
-        ].map((s) => (
-          <div key={s.label} style={{
-            background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16, padding: "20px 22px",
-          }}>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#3B2A2C", letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#5A4440", marginTop: 6 }}>{s.label}</p>
-            <p style={{ fontSize: 11, color: "#B39189", marginTop: 2 }}>{s.sub}</p>
-          </div>
-        ))}
-      </div>
+      <AdminCifras items={[
+        { value: announcements.length, label: "Total",  sub: "anuncios creados" },
+        { value: active,               label: "Activos", sub: "visibles en el studio" },
+        { value: announcements.length - active, label: "Inactivos", sub: "desactivados o vencidos" },
+      ]} />
 
       {/* Create form */}
-      <div style={{
-        background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
-        padding: "24px 22px", marginBottom: 20,
-      }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 18 }}>
-          Nuevo anuncio
-        </p>
-        <form action={createAnnouncementAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <label style={{ display: "flex", flexDirection: "column" }}>
-              <Lbl>Título</Lbl>
-              <input style={inp} name="title" required placeholder="Nuevos horarios disponibles" />
+      <section className="an-nuevo">
+        <div className="an-nuevo-cab">
+          <span className="an-burbuja"><Megaphone size={19} strokeWidth={2.2} aria-hidden="true" /></span>
+          <div>
+            <h2 className="an-h2">Nuevo anuncio</h2>
+            <p className="an-sub">Aparece en el inicio de cada alumna a la que va dirigido.</p>
+          </div>
+        </div>
+        <form action={createAnnouncementAction} className="an-form">
+          <div className="an-grilla">
+            <label className="pf-campo">
+              <span className="pf-etq">Título</span>
+              <input className="an-inp" name="title" required placeholder="Nuevos horarios disponibles" />
             </label>
-            <label style={{ display: "flex", flexDirection: "column" }}>
-              <Lbl>Destinatarias</Lbl>
+            <label className="pf-campo">
+              <span className="pf-etq">Destinatarias</span>
               <Desplegable
-                style={inp} name="tierTarget" defaultValue="all"
+                name="tierTarget" defaultValue="all"
                 opciones={[
                   { value: "all", label: "Todas las alumnas" },
                   { value: "corps_de_ballet", label: "Corps de Ballet y superiores" },
@@ -187,106 +152,153 @@ export default async function AdminAnnouncementsPage({
               />
             </label>
           </div>
-          <label style={{ display: "flex", flexDirection: "column" }}>
-            <Lbl>Mensaje</Lbl>
+          <label className="pf-campo">
+            <span className="pf-etq">Mensaje</span>
             <textarea
-              style={{ ...inp, minHeight: 84, resize: "vertical" }}
+              className="an-inp an-inp--area"
               name="content"
               required
               placeholder="El mensaje que van a ver las alumnas en su dashboard..."
             />
           </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <label style={{ display: "flex", flexDirection: "column" }}>
-              <Lbl>Vence el (opcional)</Lbl>
-              <input style={inp} name="expiresAt" type="datetime-local" />
+          <div className="an-pie">
+            <label className="pf-campo an-vence">
+              <span className="pf-etq">Vence el <small>opcional</small></span>
+              <input className="an-inp" name="expiresAt" type="datetime-local" />
             </label>
+            <BotonEnviar className="pf-guardar">
+              <Send size={15} strokeWidth={2.4} aria-hidden="true" /> Publicar anuncio
+            </BotonEnviar>
           </div>
-          <BotonEnviar style={{
-            background: "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-            color: "#fff", border: "none", borderRadius: 99,
-            padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            cursor: "pointer", alignSelf: "flex-start",
-          }}>PUBLICAR ANUNCIO</BotonEnviar>
         </form>
-      </div>
+      </section>
 
       {/* Announcement list */}
-      <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: "#B39189", textTransform: "uppercase", marginBottom: 12 }}>
-          Historial — {announcements.length}
-        </p>
+      <section>
+        <h2 className="an-h2 an-h2--lista">Historial <span>{announcements.length}</span></h2>
         {announcements.length === 0 ? (
-          <div style={{
-            background: "#fff", border: "1.5px dashed #F6E7E1", borderRadius: 16,
-            padding: "40px 24px", textAlign: "center", color: "#B39189", fontSize: 13,
-          }}>
-            No hay anuncios. Crea el primero arriba.
+          <div className="an-vacio">
+            <div className="an-vacio-burbujas" aria-hidden="true">
+              <span><Bell size={20} strokeWidth={2.2} /></span>
+              <span><Megaphone size={24} strokeWidth={2.2} /></span>
+              <span><Heart size={20} strokeWidth={2.2} /></span>
+            </div>
+            <p className="an-vacio-titulo">Todavía no hay anuncios.</p>
+            <p className="an-vacio-txt">No hay anuncios. Crea el primero arriba.</p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <ul className="an-lista">
             {announcements.map((a) => {
-              const tierStyle = TIER_STYLE[a.tier_target] ?? TIER_STYLE.all;
+              const tierClase = TIER_STYLE[a.tier_target] ?? TIER_STYLE.all;
               const pubDate = new Date(a.published_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
               const isExpired = a.expires_at ? new Date(a.expires_at) < new Date() : false;
 
               return (
-                <div key={a.id} style={{
-                  background: "#fff", border: "1px solid #F6E7E1", borderRadius: 16,
-                  padding: "18px 20px", opacity: !a.is_active ? 0.6 : 1,
-                }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                    {/* Left: content */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                        {a.title && (
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>{a.title}</span>
-                        )}
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99,
-                          background: tierStyle.bg, color: tierStyle.color,
-                        }}>{TIER_LABELS[a.tier_target] ?? a.tier_target}</span>
-                        {a.is_active && !isExpired ? (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99, background: "#dcfce7", color: "#166534" }}>Activo</span>
-                        ) : (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99, background: "#f1f5f9", color: "#64748b" }}>
-                            {isExpired ? "Vencido" : "Inactivo"}
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 13, color: "#5A4440", lineHeight: 1.5, marginBottom: 8 }}>{a.content}</p>
-                      <p style={{ fontSize: 11, color: "#B39189" }}>
-                        Publicado: {pubDate}
-                        {a.expires_at && ` · Vence: ${new Date(a.expires_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}`}
-                      </p>
-                    </div>
-
-                    {/* Right: actions */}
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      {a.is_active && (
-                        <form action={deactivateAnnouncementAction}>
-                          <input type="hidden" name="id" value={a.id} />
-                          <BotonEnviar style={{
-                            fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-                            background: "#fef9c3", color: "#854d0e", border: "none", cursor: "pointer",
-                          }}>Desactivar</BotonEnviar>
-                        </form>
+                <li key={a.id} className={"an-fila" + (!a.is_active ? " es-inactivo" : "")}>
+                  <span className="an-fila-ico" aria-hidden="true"><Megaphone size={18} strokeWidth={2.2} /></span>
+                  {/* Left: content */}
+                  <div className="an-fila-txt">
+                    <div className="an-fila-cab">
+                      {a.title && (
+                        <span className="an-titulo">{a.title}</span>
                       )}
-                      <form action={deleteAnnouncementAction}>
-                        <input type="hidden" name="id" value={a.id} />
-                        <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este anuncio? No se puede deshacer." style={{
-                          fontSize: 10, fontWeight: 700, padding: "5px 13px", borderRadius: 99,
-                          background: "#fee2e2", color: "#991b1b", border: "none", cursor: "pointer",
-                        }}>Eliminar</BotonEnviar>
-                      </form>
+                      <span className={"an-chip " + tierClase}>{TIER_LABELS[a.tier_target] ?? a.tier_target}</span>
+                      {a.is_active && !isExpired ? (
+                        <span className="an-chip an-chip--ok">Activo</span>
+                      ) : (
+                        <span className="an-chip an-chip--off">
+                          {isExpired ? "Vencido" : "Inactivo"}
+                        </span>
+                      )}
                     </div>
+                    <p className="an-contenido">{a.content}</p>
+                    <p className="an-fecha">
+                      Publicado: {pubDate}
+                      {a.expires_at && ` · Vence: ${new Date(a.expires_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}`}
+                    </p>
                   </div>
-                </div>
+
+                  {/* Right: actions */}
+                  <div className="an-acciones">
+                    {a.is_active && (
+                      <form action={deactivateAnnouncementAction}>
+                        <input type="hidden" name="id" value={a.id} />
+                        <BotonEnviar className="an-accion an-accion--pausar">Desactivar</BotonEnviar>
+                      </form>
+                    )}
+                    <form action={deleteAnnouncementAction}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este anuncio? No se puede deshacer." className="an-accion an-accion--borrar">Eliminar</BotonEnviar>
+                    </form>
+                  </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
     </main>
   );
 }
+
+const CSS = `
+.an { display: flex; flex-direction: column; }
+.an > section + section { margin-top: 26px; }
+.an-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
+.an-h2 { font-size: 19px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.an-h2--lista { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.an-h2--lista span { padding: 2px 10px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; letter-spacing: 0; }
+.an-sub { margin-top: 2px; font-size: 13.5px; color: var(--muted); }
+
+.an-nuevo { padding: clamp(20px, 3vw, 30px); border-radius: 28px; background: linear-gradient(140deg, #FFF6F2, #fff 62%); border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.an-nuevo-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.an-form { display: flex; flex-direction: column; gap: 14px; }
+.an-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 16px; }
+.an-inp { width: 100%; height: 48px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
+.an-inp:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.an-inp--area { height: auto; min-height: 104px; padding: 12px 16px; resize: vertical; line-height: 1.55; }
+.an-pie { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.an-vence { flex: 0 1 300px; }
+.an-vence small { margin-left: 4px; font-weight: 600; color: var(--muted); }
+
+.an-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.an-fila { display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px; border-radius: var(--radio); background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); transition: transform .35s var(--curva), box-shadow .35s var(--curva); }
+.an-fila:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+.an-fila.es-inactivo { background: var(--crema); box-shadow: none; }
+.an-fila.es-inactivo .an-fila-txt { opacity: .7; }
+.an-fila-ico { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
+.an-fila.es-inactivo .an-fila-ico { background: #fff; color: var(--muted); }
+.an-fila-txt { flex: 1; min-width: 0; }
+.an-fila-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.an-titulo { font-size: 15.5px; font-weight: 800; color: var(--ink); }
+.an-chip { padding: 3px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; }
+.an-plan--todas { background: #F7F0FA; color: #7A4F8C; }
+.an-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.an-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.an-plan--principal { background: var(--pink); color: #fff; }
+.an-chip--ok { background: var(--salvia); color: var(--salvia-deep); }
+.an-chip--off { background: #FFF4E8; color: var(--melocoton-deep); }
+.an-contenido { font-size: 14px; line-height: 1.6; color: var(--ink); margin-bottom: 8px; overflow-wrap: anywhere; }
+.an-fecha { font-size: 12.5px; color: var(--muted); }
+.an-acciones { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.an-accion { height: 36px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), background .2s; }
+.an-accion:hover { transform: translateY(-1px); }
+.an-accion--pausar { background: #FFF4E8; color: var(--melocoton-deep); border-color: #F6D9C6; }
+.an-accion--borrar { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
+.an-accion--borrar:hover { background: var(--rubor); }
+
+.an-vacio { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 46px 24px; text-align: center; border-radius: 28px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); }
+.an-vacio-burbujas { display: flex; gap: 10px; margin-bottom: 8px; }
+.an-vacio-burbujas span { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
+.an-vacio-burbujas span:nth-child(2) { width: 56px; height: 56px; border-radius: 20px; transform: translateY(-8px); background: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.an-vacio-titulo { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.an-vacio-txt { font-size: 14px; color: var(--muted); }
+@media (max-width: 640px) {
+  .an-fila { flex-wrap: wrap; padding: 16px; }
+  .an-fila-ico { display: none; }
+  .an-acciones { width: 100%; }
+  .an-pie .pf-guardar { width: 100%; justify-content: center; }
+  .an-vence { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .an-fila { transition: none; } .an-fila:hover { transform: none; } }
+`;

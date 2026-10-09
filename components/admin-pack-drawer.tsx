@@ -1,11 +1,11 @@
 "use client";
-import { Pencil } from "lucide-react";
+import { AlertTriangle, Check, CreditCard, PlayCircle, Plus, Pencil, Trash2, X } from "lucide-react";
 
 import { Desplegable } from "@/components/desplegable";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
-import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
+import { AdminDrawer, BloqueAvanzado, botonBorrar, botonPrincipal, campoSuave, etiquetaSuave } from "@/components/admin-drawer";
 import {
   addVideoToPackAction,
   deletePackAction,
@@ -55,19 +55,13 @@ export type PackAdmin = {
 
 export type ClaseElegible = { id: string; titulo: string };
 
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
+/** Numero positivo con hasta dos decimales, con punto o coma. */
+const PATRON_PRECIO = "\\d+([.,]\\d{1,2})?";
 
+const inp = campoSuave;
 
 function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
+  return <span style={etiquetaSuave}>{children}</span>;
 }
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -81,14 +75,14 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 /** El aviso de Stripe debajo de un identificador. */
 function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
   const c =
-    tono === "ok" ? { fg: "#166534", bg: "#f0fdf4", bd: "#bbf7d0" }
-    : tono === "aviso" ? { fg: "#92400e", bg: "#fffbeb", bd: "#fde68a" }
-    : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F6E7E1" };
+    tono === "ok" ? { fg: "#3F7A45", bg: "#F2F7EF", bd: "#CFE3C9" }
+    : tono === "aviso" ? { fg: "#8A4A2E", bg: "#FFF4E8", bd: "#FFE2D3" }
+    : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F3E3DC" };
   return (
     <p style={{
-      marginTop: 6, fontSize: 11.5, lineHeight: 1.45, fontWeight: 600,
+      marginTop: 8, fontSize: 12.5, lineHeight: 1.45, fontWeight: 700,
       color: c.fg, background: c.bg, border: `1px solid ${c.bd}`,
-      borderRadius: 9, padding: "6px 10px",
+      borderRadius: 14, padding: "8px 12px",
     }}>{texto}</p>
   );
 }
@@ -116,19 +110,25 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
   const disponibles = elegibles.filter((c) => !yaEstan.has(c.id));
 
   return (
-    <section style={{ marginTop: 22, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 6 }}>
-        Clases del pack ({pack.clases.length})
+    <section className="adr-caja" style={{ marginTop: 24 }}>
+      <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: "0 0 6px" }}>
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFE2D3", color: "#C25E3A" }}>
+          <PlayCircle size={17} strokeWidth={2} />
+        </span>
+        Clases del pack
+        <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 800, color: "#8A6F68", background: "#fff", padding: "4px 11px", borderRadius: 99 }}>
+          {pack.clases.length}
+        </span>
       </p>
-      <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
+      <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.55, marginBottom: 14 }}>
         Quien compre este pack va a poder ver estas clases para siempre, tenga el
         plan que tenga.
       </p>
 
       {disponibles.length > 0 && (
-        <form action={addVideoToPackAction} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginBottom: 14 }}>
+        <form action={addVideoToPackAction} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 14 }}>
           <input type="hidden" name="packId" value={pack.id} />
-          <F label="Agregar una clase">
+          <div style={{ flex: "1 1 220px", minWidth: 0 }}><F label="Agregar una clase">
             <Desplegable
               style={inp}
               name="videoId"
@@ -136,34 +136,34 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
               placeholder="Elegí una clase…"
               opciones={disponibles.map((c) => ({ value: c.id, label: c.titulo }))}
             />
-          </F>
-          <BotonEnviar pendingLabel="Agregando…" style={{
-            background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
-            padding: "10px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            cursor: "pointer", whiteSpace: "nowrap",
-          }}>AGREGAR</BotonEnviar>
+          </F></div>
+          <BotonEnviar pendingLabel="Agregando…" style={{ ...botonPrincipal, height: 46, padding: "0 20px" }}>
+            <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Agregar
+          </BotonEnviar>
         </form>
       )}
 
       {pack.clases.length === 0 ? (
-        <p style={{ fontSize: 12.5, color: "#B39189" }}>
+        <p style={{ fontSize: 13, color: "#8A6F68" }}>
           Todavía no tiene ninguna clase. Sin al menos una, no se puede publicar.
         </p>
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {pack.clases.map((c) => (
             <li key={c.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-              background: "#FFFAF6", border: "1px solid #F6E7E1", borderRadius: 10, padding: "8px 12px",
+              background: "#fff", border: "1px solid #F3E3DC", borderRadius: 18, padding: "8px 8px 8px 14px",
             }}>
-              <span style={{ fontSize: 12.5, color: "#3B2A2C", minWidth: 0 }}>{c.titulo}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "#3B2A2C", minWidth: 0 }}>{c.titulo}</span>
               <form action={removeVideoFromPackAction}>
                 <input type="hidden" name="packId" value={pack.id} />
                 <input type="hidden" name="videoId" value={c.id} />
                 <BotonEnviar pendingLabel="…" style={{
-                  background: "transparent", border: "none", color: "#B39189",
-                  fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "4px 6px",
-                }}>Quitar</BotonEnviar>
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  background: "#fff", color: "var(--pink-deep)", border: "1.5px solid var(--pink-line)",
+                  borderRadius: 99, padding: "6px 12px", fontSize: 12.5, fontWeight: 800,
+                  fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
+                }}><X size={13} strokeWidth={2.4} aria-hidden="true" /> Quitar</BotonEnviar>
               </form>
             </li>
           ))}
@@ -172,12 +172,14 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
 
       {pack.compras > 0 && (
         <p style={{
-          marginTop: 12, fontSize: 11.5, lineHeight: 1.5, fontWeight: 600,
-          color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a",
-          borderRadius: 9, padding: "8px 11px",
+          display: "flex", gap: 8, alignItems: "flex-start",
+          marginTop: 12, fontSize: 13, lineHeight: 1.5, fontWeight: 700,
+          color: "#8A4A2E", background: "#FFF4E8", border: "1px solid #FFE2D3",
+          borderRadius: 16, padding: "10px 13px",
         }}>
-          ⚠️ {pack.compras === 1 ? "Una alumna ya compró" : `${pack.compras} alumnas ya compraron`} este
-          pack. Si quitás una clase, también deja de verla quien ya lo pagó.
+          <AlertTriangle size={15} strokeWidth={2.2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2, color: "#C25E3A" }} />
+          <span>{pack.compras === 1 ? "Una alumna ya compró" : `${pack.compras} alumnas ya compraron`} este
+          pack. Si quitás una clase, también deja de verla quien ya lo pagó.</span>
         </p>
       )}
     </section>
@@ -203,7 +205,7 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
           <CerrarAlGuardar onExito={() => setAbierto(false)} />
           <input type="hidden" name="id" value={pack.id} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="adr-g2">
             <F label="Nombre">
               <input style={inp} name="nombreEs" required defaultValue={pack.name_i18n?.es ?? ""} />
             </F>
@@ -224,18 +226,25 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               vuelta sin motivo: se carga donde se crea. En /admin/precios
               siguen viendose todos juntos para revisar de un vistazo, y las dos
               pantallas guardan con el MISMO interprete. */}
-          <div style={{ borderRadius: 12, border: "1px solid #F6E7E1", padding: "16px 18px", background: "#FFFAF6" }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 4 }}>
+          <div className="adr-caja">
+            <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: "0 0 6px" }}>
+              <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFF2EE", color: "#B03A3E" }}>
+                <CreditCard size={17} strokeWidth={2} />
+              </span>
               Precio y cobro
             </p>
-            <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.55, marginBottom: 14 }}>
               El importe es lo que se anuncia. El identificador es lo que cobra
               Stripe. Abajo de cada uno te digo cuánto vale ahí de verdad.
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 1fr", gap: 14, alignItems: "start" }}>
+            <div className="adr-g3">
               <F label={`Precio (${pack.currency.toUpperCase()})`}>
+                {/* pattern: solo un numero positivo con hasta dos decimales, con
+                    punto o coma. "abc" o "-5" no llegan a la accion. Se queda
+                    como texto (no type=number) porque se escribe "24,90". */}
                 <input style={inp} name="precio" required inputMode="decimal"
+                  pattern={PATRON_PRECIO} title="Un importe como 24,90 (sin signo menos)"
                   defaultValue={(pack.price_cents / 100).toString()} />
               </F>
 
@@ -254,7 +263,7 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               </label>
             </div>
 
-            <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.5, marginTop: 12 }}>
+            <p style={{ fontSize: 12.5, color: "#8A6F68", lineHeight: 1.5, marginTop: 12 }}>
               Un identificador de Stripe no se edita: se reemplaza. Para cambiar
               el precio, en Stripe se crea uno nuevo y se pega acá.
             </p>
@@ -279,20 +288,17 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
             </F>
           </BloqueAvanzado>
 
-          <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-            <button type="submit" style={{
-              background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
-              padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer",
-            }}>GUARDAR CAMBIOS</button>
+          <div className="adr-acciones" style={{ paddingTop: 6 }}>
+            <button type="submit" style={botonPrincipal}>
+              <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar cambios
+            </button>
 
             {/* Sin compras se puede borrar; con compras la accion lo frena con un
                 mensaje legible antes de que Postgres devuelva un error de clave
                 foranea en crudo. */}
-            <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este pack? No se puede deshacer." formAction={deletePackAction} style={{
-              background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-              borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-              letterSpacing: "0.1em", cursor: "pointer",
-            }}>ELIMINAR</BotonEnviar>
+            <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar este pack? No se puede deshacer." formAction={deletePackAction} style={{ ...botonBorrar, marginLeft: "auto" }}>
+              <Trash2 size={15} strokeWidth={2} aria-hidden="true" /> Eliminar
+            </BotonEnviar>
           </div>
         </form>
 

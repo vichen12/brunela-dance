@@ -3,6 +3,7 @@ import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 
 import { useEffect, useRef, useState } from "react";
+import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
@@ -42,24 +43,56 @@ export type LiveSession = {
   invitations: { user_id: string; full_name: string | null; email: string; note: string | null }[];
 };
 
-const inp: React.CSSProperties = {
-  width: "100%", borderRadius: 10, border: "1px solid #F0DED6",
-  background: "#fff", color: "#3B2A2C", padding: "9px 13px",
-  fontSize: 13, outline: "none", fontFamily: "inherit",
-};
+/* Estilos del formulario y de las invitaciones. Viven aca porque el mismo
+   formulario se monta en la pagina (crear) y en el panel lateral (editar). */
+const CSS = `
+.lvf { display: flex; flex-direction: column; gap: 14px; }
+.lvf-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 16px; }
+.lvf .pf-campo input, .lvf .pf-campo textarea { width: 100%; height: 48px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
+.lvf .pf-campo textarea { height: auto; min-height: 92px; padding: 12px 16px; resize: vertical; line-height: 1.55; }
+.lvf .pf-campo input:focus, .lvf .pf-campo textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+/* El bloque plegable trae su CSS dentro de AdminDrawer, que solo se monta al
+   EDITAR. Al crear (formulario en la pagina) quedaba sin estilo: se repite aca. */
+.lvf .adr-avanzado { border: 1px solid var(--linea); border-radius: 20px; background: #fff; transition: border-color .2s, background .2s; }
+.lvf .adr-avanzado[open] { background: var(--crema); }
+.lvf .adr-avanzado:hover { border-color: var(--linea-fuerte); }
+.lvf .adr-avanzado > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
+.lvf .adr-avanzado > summary::-webkit-details-marker { display: none; }
+.lvf .adr-avanzado-tit { flex: 1; font-size: 14px; font-weight: 800; color: var(--ink); }
+.lvf .adr-avanzado-n { font-size: 12px; font-weight: 800; color: var(--melocoton-deep); background: var(--melocoton); padding: 3px 10px; border-radius: 99px; }
+.lvf .adr-avanzado-flecha { color: var(--muted); transition: transform .3s; }
+.lvf .adr-avanzado[open] .adr-avanzado-flecha { transform: rotate(180deg); }
+.lvf .adr-avanzado-cuerpo { padding: 2px 16px 16px; display: grid; gap: 12px; }
+.lvf-pie { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 6px; }
+.lvf-pie .pf-borrar { margin-left: 0; }
+.lvi { margin-top: 24px; padding: 20px; border-radius: 24px; background: linear-gradient(150deg, #FFF4E8, #FFFAF6 70%); border: 1px solid var(--linea); }
+.lvi-cab { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.lvi-ico { width: 38px; height: 38px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--melocoton-deep); box-shadow: var(--sombra); }
+.lvi-titulo { font-size: 16px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }
+.lvi-txt { font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-bottom: 14px; }
+.lvi-txt strong { color: var(--ink); }
+.lvi-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.lvi-form .pf-campo input { width: 100%; height: 48px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; font: inherit; font-size: 14px; outline: none; }
+.lvi-form .pf-campo input:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.lvi-form .pf-guardar { height: 48px; }
+.lvi-lista { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lvi-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 18px; background: #fff; border: 1px solid var(--linea); }
+.lvi-quien { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13.5px; color: var(--ink); }
+.lvi-ini { width: 32px; height: 32px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); font-weight: 900; font-size: 13px; }
+.lvi-quien strong { font-weight: 800; }
+.lvi-correo { margin-left: 6px; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lvi-quitar { height: 32px; padding: 0 12px; border-radius: 99px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.lvi-quitar:hover { background: var(--rubor); color: var(--pink-deep); border-color: var(--pink-line); }
+.lve-editar { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 99px; cursor: pointer; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; transition: background .2s, border-color .2s, color .2s, transform .3s var(--curva); }
+.lve-editar:hover { background: var(--pink); border-color: var(--pink); color: #fff; transform: translateY(-1px); }
+.lve-ok { margin-left: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia); }
+@media (max-width: 560px) { .lvi-form { grid-template-columns: 1fr; } .lvi-correo { display: none; } }
+`;
 
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 5 }}>
-      {children}
-    </span>
-  );
-}
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column" }}>
-      <Lbl>{label}</Lbl>
+    <label className="pf-campo">
+      <span className="pf-etq">{label}</span>
       {children}
     </label>
   );
@@ -97,19 +130,20 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
   const tz = session?.session_timezone ?? "America/Buenos_Aires";
 
   return (
-    <form action={isNew ? createLiveSessionAction : updateLiveSessionAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <form action={isNew ? createLiveSessionAction : updateLiveSessionAction} className="lvf">
+      <style>{CSS}</style>
         {onGuardado && <CerrarAlGuardar onExito={onGuardado} />}
       {!isNew && <input type="hidden" name="id" value={session.id} />}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="lvf-grilla">
         <F label="Dirección">
-          <input style={inp} name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
+          <input name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
           {/* Solo al CREAR. Al editar, regenerarla romperia los enlaces compartidos. */}
           <AutoDireccion desde="titleEs" activo={isNew} />
         </F>
         <F label="Estado">
           <Desplegable
-            style={inp} name="status" defaultValue={session?.status ?? "draft"}
+            name="status" defaultValue={session?.status ?? "draft"}
             opciones={[
               { value: "draft", label: "Borrador" },
               { value: "scheduled", label: "Publicada" },
@@ -120,19 +154,19 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
         </F>
 
         <F label="Título en español">
-          <input style={inp} name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
+          <input name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
         </F>
 
         <F label="Inicio (fecha y hora)">
-          <input style={inp} name="startsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.starts_at ?? null)} />
+          <input name="startsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.starts_at ?? null)} />
         </F>
         <F label="Fin (fecha y hora)">
-          <input style={inp} name="endsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.ends_at ?? null)} />
+          <input name="endsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.ends_at ?? null)} />
         </F>
 
         <F label="Plan que la puede ver">
           <Desplegable
-            style={inp} name="membershipTierRequired" defaultValue={session?.membership_tier_required ?? "corps_de_ballet"}
+            name="membershipTierRequired" defaultValue={session?.membership_tier_required ?? "corps_de_ballet"}
             opciones={[
               { value: "corps_de_ballet", label: "Corps de Ballet" },
               { value: "solista", label: "Solista" },
@@ -141,15 +175,15 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
           />
         </F>
         <F label="Capacidad">
-          <input style={inp} name="capacity" type="number" min={1} required defaultValue={session?.capacity ?? 20} />
+          <input name="capacity" type="number" min={1} required defaultValue={session?.capacity ?? 20} />
         </F>
 
 
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="lvf-grilla">
         <F label="Descripción en español">
-          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEs" defaultValue={session?.description_i18n?.es ?? ""} placeholder="Descripción de la sesión…" />
+          <textarea name="descriptionEs" defaultValue={session?.description_i18n?.es ?? ""} placeholder="Descripción de la sesión…" />
         </F>
       </div>
 
@@ -160,59 +194,52 @@ export function LiveForm({ session, onGuardado }: { session?: LiveSession; onGua
 
         <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>
         <F label="Título en inglés">
-          <input style={inp} name="titleEn" defaultValue={session?.title_i18n?.en ?? ""} placeholder="Ballet Class — Monday" />
+          <input name="titleEn" defaultValue={session?.title_i18n?.en ?? ""} placeholder="Ballet Class — Monday" />
         </F>
         <F label="Descripción en inglés">
-          <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descriptionEn" defaultValue={session?.description_i18n?.en ?? ""} placeholder="Session description..." />
+          <textarea name="descriptionEn" defaultValue={session?.description_i18n?.en ?? ""} placeholder="Session description..." />
         </F>
         </BloqueAvanzado>
 
         <BloqueAvanzado titulo="Reservas" cantidad={2}>
         <F label="Apertura de reservas">
-          <input style={inp} name="bookingOpensAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_opens_at ?? null)} />
+          <input name="bookingOpensAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_opens_at ?? null)} />
         </F>
         <F label="Cierre de reservas">
-          <input style={inp} name="bookingClosesAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_closes_at ?? null)} />
+          <input name="bookingClosesAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_closes_at ?? null)} />
         </F>
         </BloqueAvanzado>
 
         <BloqueAvanzado titulo="Enlace de Zoom" cantidad={2}>
           <F label="URL de ingreso">
-            <input style={inp} name="zoomJoinUrl" type="url" defaultValue={session?.access_link?.join_url ?? ""} placeholder="https://zoom.us/j/..." />
+            <input name="zoomJoinUrl" type="url" defaultValue={session?.access_link?.join_url ?? ""} placeholder="https://zoom.us/j/..." />
           </F>
           <F label="Código de acceso">
-            <input style={inp} name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
+            <input name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
           </F>
         </BloqueAvanzado>
 
         <BloqueAvanzado titulo="Portada y zona horaria" cantidad={2}>
         <F label="URL de portada">
-          <input style={inp} name="coverImageUrl" type="url" defaultValue={session?.cover_image_url ?? ""} placeholder="https://..." />
+          <input name="coverImageUrl" type="url" defaultValue={session?.cover_image_url ?? ""} placeholder="https://..." />
         </F>
         <F label="Zona horaria">
-          <input style={inp} name="sessionTimezone" defaultValue={tz} placeholder="America/Buenos_Aires" />
+          <input name="sessionTimezone" defaultValue={tz} placeholder="America/Buenos_Aires" />
         </F>
         </BloqueAvanzado>
 
-      <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-        <button type="submit" style={{
-          background: isNew ? "linear-gradient(135deg, var(--pink), var(--pink-mid))" : "#3B2A2C",
-          color: "#fff", border: "none", borderRadius: 99,
-          padding: "10px 24px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-          cursor: "pointer",
-        }}>
-          {isNew ? "CREAR SESION" : "GUARDAR CAMBIOS"}
+      <div className="lvf-pie">
+        <button type="submit" className="pf-guardar">
+          <Check size={16} strokeWidth={2.4} aria-hidden="true" /> {isNew ? "Crear sesión" : "Guardar cambios"}
         </button>
         {/* formAction en el boton, sin anidar formularios: ver la nota en
             app/admin/videos/page.tsx. Anidado, el parser descartaba este form y
             ELIMINAR terminaba llamando a updateLiveSessionAction. El id ya
             viaja en el hidden del formulario externo. */}
         {!isNew && (
-          <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar esta sesión en vivo? Se pierden sus reservas. No se puede deshacer." formAction={deleteLiveSessionAction} style={{
-            background: "transparent", color: "#ef4444", border: "1px solid #fecaca",
-            borderRadius: 99, padding: "10px 22px", fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.1em", cursor: "pointer",
-          }}>ELIMINAR</BotonEnviar>
+          <BotonEnviar pendingLabel="Borrando…" confirmar="¿Borrar esta sesión en vivo? Se pierden sus reservas. No se puede deshacer." formAction={deleteLiveSessionAction} className="pf-borrar">
+            <Trash2 size={15} strokeWidth={2.2} aria-hidden="true" /> Eliminar
+          </BotonEnviar>
         )}
       </div>
     </form>
@@ -232,54 +259,39 @@ function Invitaciones({ session }: { session: LiveSession }) {
   const hay = session.invitations.length;
 
   return (
-    <section style={{ marginTop: 22, borderTop: "1px solid #F6E7E1", paddingTop: 20 }}>
-      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "#8A6F68", textTransform: "uppercase", marginBottom: 6 }}>
-        Invitar a alguien en particular
-      </p>
-      <p style={{ fontSize: 12, color: "#8A6F68", lineHeight: 1.5, marginBottom: 14 }}>
+    <section className="lvi">
+      <div className="lvi-cab">
+        <span className="lvi-ico" aria-hidden="true"><UserPlus size={18} strokeWidth={2.2} /></span>
+        <p className="lvi-titulo">Invitar a alguien en particular</p>
+      </div>
+      <p className="lvi-txt">
         Quien invites entra a <strong>esta</strong> clase aunque su plan no le alcance.
         Sigue teniendo que reservar, y si el cupo está lleno queda en lista de espera.
       </p>
 
-      <form
-        action={inviteToLiveSessionAction}
-        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "end", marginBottom: hay ? 16 : 0 }}
-      >
+      <form action={inviteToLiveSessionAction} className="lvi-form">
         <input type="hidden" name="liveSessionId" value={session.id} />
         <F label="Correo o nombre de la alumna">
-          <input style={inp} name="alumna" required placeholder="ana@ejemplo.com" autoComplete="off" />
+          <input name="alumna" required placeholder="ana@ejemplo.com" autoComplete="off" />
         </F>
-        <BotonEnviar pendingLabel="Invitando…" style={{
-          background: "#3B2A2C", color: "#fff", border: "none", borderRadius: 99,
-          padding: "10px 20px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-          cursor: "pointer", whiteSpace: "nowrap",
-        }}>INVITAR</BotonEnviar>
+        <BotonEnviar pendingLabel="Invitando…" className="pf-guardar">Invitar</BotonEnviar>
       </form>
 
       {hay > 0 && (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        <ul className="lvi-lista">
           {session.invitations.map((i) => (
-            <li
-              key={i.user_id}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                background: "#FFFAF6", border: "1px solid #F6E7E1", borderRadius: 10, padding: "8px 12px",
-              }}
-            >
-              <span style={{ fontSize: 12.5, color: "#3B2A2C", minWidth: 0 }}>
-                <strong style={{ fontWeight: 700 }}>{i.full_name || i.email}</strong>
+            <li key={i.user_id} className="lvi-item">
+              <span className="lvi-quien">
+                <span className="lvi-ini" aria-hidden="true">{(i.full_name || i.email)[0]?.toUpperCase()}</span>
+                <strong>{i.full_name || i.email}</strong>
                 {i.full_name && (
-                  <span style={{ color: "#B39189", marginLeft: 8, fontSize: 11.5 }}>{i.email}</span>
+                  <span className="lvi-correo">{i.email}</span>
                 )}
               </span>
               <form action={uninviteFromLiveSessionAction}>
                 <input type="hidden" name="liveSessionId" value={session.id} />
                 <input type="hidden" name="userId" value={i.user_id} />
-                <BotonEnviar pendingLabel="…" style={{
-                  background: "transparent", border: "none", color: "#B39189",
-                  fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                  padding: "4px 6px",
-                }}>Quitar</BotonEnviar>
+                <BotonEnviar pendingLabel="…" className="lvi-quitar">Quitar</BotonEnviar>
               </form>
             </li>
           ))}
@@ -302,21 +314,13 @@ export function EditarSesion({ session }: { session: LiveSession }) {
 
   return (
     <>
-      <button
-        onClick={() => setAbierto(true)}
-        style={{
-          padding: "6px 14px", borderRadius: 8, cursor: "pointer",
-          border: "1px solid #F6E7E1", background: "#fff",
-          color: "#6E5550", fontSize: 11, fontWeight: 700, fontFamily: "inherit",
-        }}
-      >Editar</button>
+      <style>{CSS}</style>
+      <button type="button" onClick={() => setAbierto(true)} className="lve-editar">
+        <Pencil size={14} strokeWidth={2.2} aria-hidden="true" /> Editar
+      </button>
 
       {guardado && (
-        <span style={{
-          marginLeft: 8, fontSize: 10.5, fontWeight: 700,
-          color: "#166534", background: "#f0fdf4",
-          padding: "4px 10px", borderRadius: 99,
-        }}>Guardado</span>
+        <span className="lve-ok"><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Guardado</span>
       )}
 
       <AdminDrawer

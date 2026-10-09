@@ -3,6 +3,8 @@
 import { Desplegable } from "@/components/desplegable";
 import { useState } from "react";
 import { BotonEnviar } from "@/components/boton-enviar";
+import { campoSuave, etiquetaSuave } from "@/components/admin-drawer";
+import { CalendarDays, Plus, X } from "lucide-react";
 import { agregarClaseAPlanAction, quitarClaseDePlanAction } from "@/src/features/admin/actions";
 import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/planes-de-trabajo";
 
@@ -27,28 +29,8 @@ import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/plane
  *    el bloque no se usa: ahi la clase todavia no existe y no tiene id.
  */
 
-const inp: React.CSSProperties = {
-  width: "100%",
-  borderRadius: 10,
-  border: "1px solid #F0DED6",
-  background: "#fff",
-  color: "#3B2A2C",
-  padding: "9px 13px",
-  fontSize: 13,
-  outline: "none",
-  fontFamily: "inherit",
-};
-
-
-const lbl: React.CSSProperties = {
-  display: "block",
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.09em",
-  color: "#8A6F68",
-  textTransform: "uppercase",
-  marginBottom: 5,
-};
+const inp = campoSuave;
+const lbl = etiquetaSuave;
 
 export function ClaseEnPlanes({
   videoId,
@@ -67,13 +49,13 @@ export function ClaseEnPlanes({
   const yaEstaAhi = ubicaciones.some((u) => u.programId === programId && String(u.dia) === dia);
 
   return (
-    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F0DED6" }}>
+    <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px dashed #E9CFC5" }}>
       <span style={lbl}>Agregar a un plan de trabajo</span>
 
       {planes.length === 0 ? (
-        <p style={{ fontSize: 11.5, color: "#8A6F68", lineHeight: 1.7, marginTop: 6 }}>
+        <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.6, marginTop: 2 }}>
           Todavía no hay ningún plan de trabajo armado. Se crean en{" "}
-          <a href="/admin/programs" style={{ color: "var(--pink-mid)", fontWeight: 700 }}>
+          <a href="/admin/programs" style={{ color: "var(--pink-deep)", fontWeight: 800 }}>
             Planes de trabajo
           </a>
           .
@@ -82,11 +64,11 @@ export function ClaseEnPlanes({
         <>
           {/* Donde ya esta puesta */}
           {ubicaciones.length === 0 ? (
-            <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.7, margin: "4px 0 12px" }}>
+            <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.6, margin: "2px 0 12px" }}>
               Esta clase no está en ningún plan: se ve suelta en la biblioteca.
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "8px 0 14px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 14px" }}>
               {ubicaciones.map((u) => (
                 <div
                   key={u.programDayId}
@@ -95,15 +77,20 @@ export function ClaseEnPlanes({
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
-                    borderRadius: 10,
-                    border: "1px solid #F0DED6",
+                    borderRadius: 18,
+                    border: "1px solid #F3E3DC",
                     background: "#fff",
-                    padding: "8px 12px",
+                    padding: "8px 8px 8px 10px",
                   }}
                 >
-                  <span style={{ fontSize: 12.5, color: "#3B2A2C", lineHeight: 1.5 }}>
-                    <strong style={{ fontWeight: 700 }}>{u.titulo}</strong>
-                    <span style={{ color: "#8A6F68" }}> — Día {u.dia}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, fontSize: 13.5, color: "#3B2A2C", lineHeight: 1.4 }}>
+                    <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 12, flexShrink: 0, display: "grid", placeItems: "center", background: "#FFF2EE", color: "#B03A3E" }}>
+                      <CalendarDays size={16} strokeWidth={2} />
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <strong style={{ fontWeight: 800 }}>{u.titulo}</strong>
+                      <span style={{ color: "#8A6F68" }}> · Día {u.dia}</span>
+                    </span>
                   </span>
                   {/*
                     🔴 EL ID VA EN EL BOTON, NO EN UN <input type="hidden">.
@@ -118,19 +105,22 @@ export function ClaseEnPlanes({
                     name="programDayId"
                     value={u.programDayId}
                     style={{
-                      background: "transparent",
-                      color: "#ef4444",
-                      border: "1px solid #fecaca",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      background: "#fff",
+                      color: "var(--pink-deep)",
+                      border: "1.5px solid var(--pink-line)",
                       borderRadius: 99,
-                      padding: "4px 12px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
+                      padding: "6px 12px",
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      fontFamily: "inherit",
                       cursor: "pointer",
                       flexShrink: 0,
                     }}
                   >
-                    QUITAR
+                    <X size={13} strokeWidth={2.4} aria-hidden="true" /> Quitar
                   </BotonEnviar>
                 </div>
               ))}
@@ -138,8 +128,8 @@ export function ClaseEnPlanes({
           )}
 
           {/* Agregarla a uno mas */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 110px auto", gap: 10, alignItems: "end" }}>
-            <label style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+            <label style={{ display: "flex", flexDirection: "column", flex: "1 1 220px", minWidth: 0 }}>
               <span style={lbl}>Plan</span>
               <Desplegable
                 style={inp}
@@ -154,10 +144,10 @@ export function ClaseEnPlanes({
               />
             </label>
 
-            <label style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ display: "flex", flexDirection: "column", flex: "0 0 96px" }}>
               <span style={lbl}>Día</span>
               <input
-                style={{ ...inp, ...(programId ? null : { background: "#FBF0EB", color: "#B39189" }) }}
+                style={{ ...inp, ...(programId ? null : { background: "#FFF2EE", color: "#B39189", borderColor: "#F3E3DC" }) }}
                 type="number"
                 min={1}
                 value={dia}
@@ -181,23 +171,28 @@ export function ClaseEnPlanes({
               formAction={agregarClaseAPlanAction}
               disabled={!programId || !dia || yaEstaAhi}
               style={{
-                background: !programId || !dia || yaEstaAhi ? "#E6CCC2" : "var(--pink)",
-                color: "#fff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                height: 46,
+                background: !programId || !dia || yaEstaAhi ? "#F3E3DC" : "var(--pink)",
+                color: !programId || !dia || yaEstaAhi ? "#B39189" : "#fff",
                 border: "none",
                 borderRadius: 99,
-                padding: "9px 18px",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
+                padding: "0 20px",
+                fontSize: 14,
+                fontWeight: 800,
+                fontFamily: "inherit",
+                boxShadow: !programId || !dia || yaEstaAhi ? "none" : "0 14px 26px -14px rgba(230,79,85,.85)",
                 cursor: !programId || !dia || yaEstaAhi ? "default" : "pointer",
                 whiteSpace: "nowrap",
               }}
             >
-              AGREGAR
+              <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Agregar
             </BotonEnviar>
           </div>
 
-          <p style={{ fontSize: 11, color: "#B39189", marginTop: 8, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 12.5, color: "#8A6F68", marginTop: 10, lineHeight: 1.55 }}>
             {yaEstaAhi
               ? "Esta clase ya está en ese día."
               : elegido

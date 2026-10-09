@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { ChevronDown, Info, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Info, Pencil, Plus, Search, Shapes, Trash2 } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 import { AdminBuscador } from "@/components/admin-buscador";
@@ -32,11 +32,6 @@ const PLANES = [
 const PLAN_CORTO: Record<string, string> = {
   none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
 };
-
-function Flash({ message, tone }: { message: string | null; tone: "success" | "error" }) {
-  if (!message) return null;
-  return <div role="status" className={"cat-aviso " + (tone === "success" ? "cat-aviso--ok" : "cat-aviso--error")}>{message}</div>;
-}
 
 /** Los campos de una categoria: los mismos para crear y para editar. */
 function Campos({ cat }: { cat?: CategoryRecord }) {
@@ -106,18 +101,12 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
     <main className="cat">
       <style>{CSS}</style>
 
-      <header className="cat-mast">
-        <div style={{ minWidth: 0 }}>
-          <p className="cat-eyebrow"><span className="cat-raya" />Gestión de contenido</p>
-          <h1 className="cat-titulo">Categorías<em>.</em></h1>
-          <p className="cat-lede">
-            Ordenan los canales de la comunidad: cada categoría puede tener su sala de chat, y decidís qué plan entra.
-          </p>
-        </div>
-        <Link href="/admin/categories?nueva=1#nueva" className="cat-btn cat-btn--lleno">
-          <Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva categoría
-        </Link>
-      </header>
+      <AdminCabecera
+        eyebrow="Gestión de contenido"
+        titulo="Categorías"
+        lede="Ordenan los canales de la comunidad: cada categoría puede tener su sala de chat, y decidís qué plan entra."
+        acciones={<AdminBoton href="/admin/categories?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nueva categoría</AdminBoton>}
+      />
 
       {/* ⚠️ Lo que esta pantalla NO hace, dicho donde se ve.
           Las categorias del formulario de clases son una lista fija en el
@@ -125,33 +114,25 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
           agrega ahi: sin este aviso, se crea una esperando verla al subir una
           clase, no aparece, y se vuelve a crear. */}
       <div className="cat-nota">
-        <Info size={17} strokeWidth={2} aria-hidden="true" />
+        <span className="cat-nota-ico" aria-hidden="true"><Info size={18} strokeWidth={2.2} /></span>
         <p>
           <strong>Las categorías de las clases son fijas</strong> (Ballet, Técnica, Giros y las demás que aparecen al subir una clase).
           Lo que cambies acá afecta a los canales de la comunidad, no a esa lista. Si necesitás una categoría nueva para clases, pedísela a Vincenzo.
         </p>
       </div>
 
-      <Flash message={success} tone="success" />
-      <Flash message={error} tone="error" />
+      <AdminAviso mensaje={success} tono="ok" />
+      <AdminAviso mensaje={error} tono="error" />
 
-      <details className="cat-nueva" id="nueva" open={abrirNueva}>
-        <summary>
-          <span className="cat-nueva-ico" aria-hidden="true"><Plus size={18} strokeWidth={2.2} /></span>
-          <span className="cat-nueva-txt">
-            <span className="cat-nueva-titulo">Crear una categoría</span>
-            <span className="cat-nueva-sub">Nombre, quién la ve, portada y orden</span>
-          </span>
-          <ChevronDown size={18} strokeWidth={2} className="cat-flecha" aria-hidden="true" />
-        </summary>
+      <AdminNueva abierto={abrirNueva} titulo="Crear una categoría" sub="Nombre, quién la ve, portada y orden">
         <form action={upsertCategoryAction} className="cat-form">
           <input name="id" type="hidden" value="" />
           <Campos />
           <div className="cat-form-pie">
-            <BotonEnviar className="cat-btn cat-btn--lleno" pendingLabel="Creando…">Crear categoría</BotonEnviar>
+            <BotonEnviar className="cat-btn cat-btn--lleno" pendingLabel="Creando…"><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear categoría</BotonEnviar>
           </div>
         </form>
-      </details>
+      </AdminNueva>
 
       <AdminBuscador
         action="/admin/categories"
@@ -162,13 +143,16 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
       />
 
       {categories.length === 0 ? (
-        <div className="cat-vacio">
-          <p className="cat-vacio-titulo">{q ? "Ninguna categoría coincide." : "Todavía no hay categorías."}</p>
-          {q && <Link href="/admin/categories" className="cat-btn">Ver todas</Link>}
-        </div>
+        <AdminVacio titulo={q ? "Ninguna categoría coincide." : "Todavía no hay categorías."}>
+          <span className="cat-vacio-ico" aria-hidden="true">{q ? <Search size={22} strokeWidth={2} /> : <Shapes size={22} strokeWidth={2} />}</span>
+          {q ? <AdminBoton href="/admin/categories">Ver todas</AdminBoton> : <p>Creá la primera con «Nueva categoría».</p>}
+        </AdminVacio>
       ) : (
         <>
-          <p className="cat-cuenta">{activas} {activas === 1 ? "activa" : "activas"} · {categories.length - activas} {categories.length - activas === 1 ? "inactiva" : "inactivas"}</p>
+          <p className="cat-cuenta">
+            <span className="cat-cuenta-chip es-on">{activas} {activas === 1 ? "activa" : "activas"}</span>
+            <span className="cat-cuenta-chip">{categories.length - activas} {categories.length - activas === 1 ? "inactiva" : "inactivas"}</span>
+          </p>
           <ul className="cat-grilla">
             {categories.map((cat) => (
               <li key={cat.id} className={"cat-card" + (cat.is_active ? "" : " es-inactiva")}>
@@ -178,7 +162,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                 </div>
                 <div className="cat-cuerpo">
                   <div className="cat-chips">
-                    <span className={"cat-chip" + (cat.membership_tier_required === "none" ? "" : " cat-chip--plan")}>
+                    <span className={"cat-chip cat-chip--" + cat.membership_tier_required}>
                       {PLAN_CORTO[cat.membership_tier_required] ?? cat.membership_tier_required}
                     </span>
                     {!cat.is_active && <span className="cat-chip cat-chip--off">Inactiva</span>}
@@ -203,7 +187,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                       <span>Activa <small>si la apagás, deja de aparecer pero no se borra</small></span>
                     </label>
                     <div className="cat-form-pie">
-                      <BotonEnviar className="cat-btn cat-btn--lleno" pendingLabel="Guardando…">Guardar</BotonEnviar>
+                      <BotonEnviar className="cat-btn cat-btn--lleno" pendingLabel="Guardando…"><Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar</BotonEnviar>
                       <BotonEnviar
                         className="cat-btn cat-btn--borrar"
                         pendingLabel="Borrando…"
@@ -226,100 +210,99 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
 
 const CSS = `
 .cat { display: flex; flex-direction: column; }
-.cat-mast { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px 28px; flex-wrap: wrap; padding-bottom: clamp(20px, 3vw, 28px); }
-.cat-eyebrow { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pink-deep); }
-.cat-raya { display: inline-block; width: 28px; height: 1.5px; background: var(--pink); }
-.cat-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: clamp(40px, 5vw, 68px); line-height: 1; letter-spacing: -0.045em; color: var(--ink); }
-.cat-titulo em { font-style: normal; color: var(--pink); }
-.cat-lede { margin-top: 14px; max-width: 56ch; font-size: 15px; line-height: 1.7; color: #6E5550; }
+.cat .ad-vacio .cat-vacio-ico { order: -1; }
+.cat-vacio-ico { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
 
 .cat-btn {
-  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 99px; cursor: pointer;
-  border: 1.5px solid #E6CCC2; background: #fff; color: var(--ink); text-decoration: none;
-  font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; transition: border-color .2s, transform .2s, background .2s, color .2s;
+  display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); text-decoration: none;
+  font: inherit; font-size: 14px; font-weight: 800; white-space: nowrap; transition: border-color .2s, transform .3s var(--curva), background .2s, color .2s;
 }
-.cat-btn:hover { border-color: var(--ink); transform: translateY(-1px); }
-.cat-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 8px 22px -10px rgba(230,79,85,0.7); }
+.cat-btn:hover { border-color: var(--pink-line); background: var(--rubor); transform: translateY(-2px); }
+.cat-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
 .cat-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
 .cat-btn--borrar { margin-left: auto; color: var(--pink-deep); border-color: var(--pink-line); }
 .cat-btn--borrar:hover { background: var(--pink-wash); border-color: var(--pink); }
 
 .cat-nota {
-  display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; margin-bottom: 18px; border-radius: 16px;
-  background: #FFFAF6; border: 1px solid #F0DED6; font-size: 13.5px; line-height: 1.6; color: #6E5550;
+  display: flex; gap: 14px; align-items: flex-start; padding: 16px 20px; margin-bottom: 18px; border-radius: 24px;
+  background: linear-gradient(140deg, #FFF4E8, #FFFAF6 70%); border: 1px solid #FFE2D3; font-size: 14px; line-height: 1.6; color: #6E5550;
 }
-.cat-nota svg { flex-shrink: 0; margin-top: 2px; color: var(--pink-mid); }
-.cat-nota strong { color: var(--ink); }
-.cat-aviso { border-radius: 14px; padding: 12px 16px; margin-bottom: 16px; font-size: 13.5px; font-weight: 600; }
-.cat-aviso--ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.cat-aviso--error { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.cat-nota-ico { width: 38px; height: 38px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; background: #FFE2D3; color: var(--melocoton-deep); }
+.cat-nota p { padding-top: 6px; }
+.cat-nota strong { color: var(--ink); font-weight: 800; }
 
-.cat-nueva { margin-bottom: 8px; border: 1.5px dashed #F0DED6; border-radius: 20px; transition: border-color .2s; }
-.cat-nueva:hover { border-color: var(--pink-line); }
-.cat-nueva[open] { border-style: solid; border-color: var(--pink-line); }
-.cat-nueva > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; user-select: none; }
-.cat-nueva > summary::-webkit-details-marker, .cat-editar > summary::-webkit-details-marker { display: none; }
-.cat-nueva-ico { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink); color: #fff; transition: transform .35s cubic-bezier(.16,1,.3,1); }
-.cat-nueva-ico svg { transition: transform .35s cubic-bezier(.16,1,.3,1); }
-.cat-nueva[open] .cat-nueva-ico svg { transform: rotate(45deg); }
-.cat-nueva-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cat-nueva-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
-.cat-nueva-sub { font-size: 12.5px; color: #8A6F68; }
-.cat-flecha { color: #B39189; transition: transform .3s; }
-details[open] > summary .cat-flecha { transform: rotate(180deg); }
-
-.cat-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; padding: 6px 22px 22px; }
-.cat-form--chico { padding: 14px 0 4px; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.cat-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cat-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; padding: 16px 0 0; }
+.cat-form--chico { padding: 4px 0 4px; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.cat-campo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .cat-campo--ancho { grid-column: 1 / -1; }
-.cat-etq { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8A6F68; }
-.cat-etq small { margin-left: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #B39189; }
-.cat-campo input, .cat-campo textarea { border-radius: 12px; border: 1.5px solid #F0DED6; padding: 0.75rem 0.95rem; font-size: 14px; }
-.cat-campo input:focus, .cat-campo textarea:focus { border-color: var(--pink); }
-.cat-form-pie { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; padding-top: 4px; }
-.cat-activa { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
-.cat-activa input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--pink); padding: 0; }
-.cat-activa small { display: block; font-size: 12px; font-weight: 400; color: #B39189; }
+.cat-etq { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.cat-etq small { margin-left: 6px; font-size: 11.5px; font-weight: 800; color: var(--muted); background: var(--rubor); padding: 2px 9px; border-radius: 99px; }
+.cat-campo input, .cat-campo textarea { border-radius: 16px; border: 1.5px solid var(--linea-fuerte); padding: 0.75rem 0.95rem; font-size: 14px; background: #fff; }
+.cat-campo input:focus, .cat-campo textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.cat-form-pie { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 4px; }
+.cat-activa { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--linea); font-size: 14px; font-weight: 800; color: var(--ink); cursor: pointer; }
+.cat-activa input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--pink); padding: 0; }
+.cat-activa small { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); }
 
-.cat-cuenta { font-size: 12.5px; color: #8A6F68; margin-bottom: 14px; }
-.cat-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+.cat-cuenta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.cat-cuenta-chip { font-size: 12.5px; font-weight: 800; color: var(--muted); background: #F6EEEA; padding: 5px 12px; border-radius: 99px; }
+.cat-cuenta-chip.es-on { color: var(--salvia-deep); background: var(--salvia); }
+.cat-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 18px; align-items: start; }
 .cat-card {
-  border: 1px solid #F0DED6; border-radius: 20px; background: #fff; overflow: hidden;
-  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .25s;
+  border: 1px solid var(--linea); border-radius: 28px; background: #fff; overflow: hidden; box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s, border-color .25s;
 }
-.cat-card:hover { transform: translateY(-3px); border-color: var(--pink-line); box-shadow: 0 20px 36px -22px rgba(176,58,62,0.45); }
-.cat-card.es-inactiva { opacity: 0.6; }
+.cat-card:hover { transform: translateY(-3px); border-color: var(--linea-fuerte); box-shadow: var(--sombra-alta); }
+.cat-card:has(.cat-editar[open]) { transform: none; }
+.cat-card.es-inactiva { opacity: 0.62; }
 .cat-portada {
   position: relative; aspect-ratio: 16 / 7; display: flex; align-items: center; justify-content: center; overflow: hidden;
-  background: linear-gradient(145deg, var(--pink-wash), var(--pink-soft));
+  margin: 10px 10px 0; border-radius: 20px;
+  background: radial-gradient(140px 100px at 85% 10%, rgba(255,205,185,.9), transparent 70%), linear-gradient(140deg, #FFF1EC 0%, #FDE3E0 100%);
 }
+.cat-card:nth-child(4n+2) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,226,211,.95), transparent 70%), linear-gradient(140deg, #FFF4E8 0%, #FFE6D6 100%); }
+.cat-card:nth-child(4n+3) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(220,235,214,.95), transparent 70%), linear-gradient(140deg, #F6FAF3 0%, #E7F1E4 100%); }
+.cat-card:nth-child(4n+4) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(234,220,240,.95), transparent 70%), linear-gradient(140deg, #FBF6FC 0%, #F1E6F5 100%); }
 .cat-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cat-inicial { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 44px; letter-spacing: -0.04em; color: rgba(176,58,62,0.55); }
+.cat-inicial {
+  width: 58px; height: 58px; border-radius: 20px; display: grid; place-items: center;
+  font-weight: 900; font-size: 28px; color: var(--pink-deep); background: rgba(255,255,255,.85); box-shadow: 0 12px 24px -16px rgba(176,70,70,.6);
+  transition: transform .45s var(--curva);
+}
+.cat-card:hover .cat-inicial { transform: rotate(-6deg) scale(1.06); }
 .cat-orden {
-  position: absolute; top: 10px; left: 10px; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 99px;
-  display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800;
+  position: absolute; top: 10px; left: 10px; min-width: 28px; height: 28px; padding: 0 9px; border-radius: 99px;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;
   background: rgba(255,255,255,0.92); color: var(--ink);
 }
-.cat-cuerpo { padding: 16px 18px 10px; }
-.cat-chips { display: flex; gap: 6px; margin-bottom: 8px; }
-.cat-chip { padding: 3px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: #FBF0EB; color: #6E5550; }
-.cat-chip--plan { background: var(--pink-wash); color: var(--pink-deep); border: 1px solid var(--pink-line); }
-.cat-chip--off { background: #fff; color: #8A6F68; border: 1px solid #F0DED6; }
-.cat-nombre { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 19px; letter-spacing: -0.025em; color: var(--ink); }
-.cat-slug { font-size: 12px; color: #B39189; margin-top: 2px; }
-.cat-desc { margin-top: 8px; font-size: 13px; line-height: 1.55; color: #6E5550; }
-.cat-editar { border-top: 1px solid #F6E7E1; margin: 6px 18px 0; }
+.cat-cuerpo { padding: 14px 18px 10px; }
+.cat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.cat-chip { padding: 4px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; background: var(--crema); color: #6E5550; border: 1px solid var(--linea); }
+.cat-chip--corps_de_ballet { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
+.cat-chip--solista { background: var(--rubor); color: var(--pink-deep); border-color: var(--pink-line); }
+.cat-chip--principal { background: var(--pink); color: #fff; border-color: var(--pink); }
+.cat-chip--off { background: #F6EEEA; color: var(--muted); border-color: transparent; }
+.cat-nombre { font-weight: 900; font-size: 19px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
+.cat-slug { font-size: 12.5px; font-weight: 600; color: #B39189; margin-top: 2px; }
+.cat-desc { margin-top: 8px; font-size: 13.5px; line-height: 1.55; color: #6E5550; }
+.cat-editar { margin: 6px 12px 12px; border-radius: 18px; background: var(--crema); border: 1px solid var(--linea); }
+.cat-editar[open] { background: #fff; padding: 0 12px 12px; }
 .cat-editar > summary {
-  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 12px 0 14px;
-  font-size: 13px; font-weight: 700; color: var(--ink); user-select: none;
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 0 14px; min-height: 46px; border-radius: 18px;
+  font-size: 14px; font-weight: 800; color: var(--ink); user-select: none; transition: background .2s;
 }
+.cat-editar[open] > summary { padding: 0 2px; }
+.cat-editar > summary:hover { background: var(--rubor); }
+.cat-editar > summary::-webkit-details-marker { display: none; }
+.cat-editar > summary svg:first-child { color: var(--pink-deep); }
+.cat-flecha { color: #B39189; transition: transform .3s; }
+details[open] > summary .cat-flecha { transform: rotate(180deg); }
 .cat-editar > summary .cat-flecha { margin-left: auto; }
-.cat-editar[open] { padding-bottom: 16px; }
-
-.cat-vacio { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 52px 24px; text-align: center; border: 1.5px dashed #F0DED6; border-radius: 22px; }
-.cat-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.025em; color: var(--ink); }
 
 @media (max-width: 640px) {
-  .cat-form { grid-template-columns: minmax(0, 1fr); padding: 6px 16px 18px; }
+  .cat-form { grid-template-columns: minmax(0, 1fr); }
+  .cat-nota { padding: 14px 16px; }
 }
+@media (prefers-reduced-motion: reduce) { .cat-card:hover { transform: none; } }
 `;

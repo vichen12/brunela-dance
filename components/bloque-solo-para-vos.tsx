@@ -1,3 +1,5 @@
+import { Lock } from "lucide-react";
+
 /**
  * El recuadro que separa los campos internos de los que ve la alumna.
  *
@@ -20,27 +22,31 @@ export function BloqueSoloParaVos({ children }: { children: React.ReactNode }) {
   return (
     <section
       style={{
-        marginTop: 18,
-        borderRadius: 14,
-        border: "1px solid #F0DED6",
-        background: "#FFFAF6",
-        padding: "16px 18px",
+        marginTop: 20,
+        borderRadius: 24,
+        border: "1px solid #F3E3DC",
+        background: "linear-gradient(150deg, #FFF4EE 0%, #FFFAF6 60%, #fff 100%)",
+        padding: "18px 20px 20px",
       }}
     >
-      <header style={{ display: "flex", alignItems: "baseline", gap: 9, flexWrap: "wrap", marginBottom: 14 }}>
+      <header style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <span
+          aria-hidden="true"
           style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.09em",
-            textTransform: "uppercase",
-            color: "#5A4440",
+            width: 38, height: 38, borderRadius: 13, flexShrink: 0,
+            display: "grid", placeItems: "center",
+            background: "#FFE2D3", color: "#C25E3A",
           }}
         >
-          Solo para vos
+          <Lock size={17} strokeWidth={2.2} />
         </span>
-        <span style={{ fontSize: 11, color: "#B39189", lineHeight: 1.6 }}>
-          Nada de esto se muestra en la ficha de la clase.
+        <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 900, color: "#3B2A2C", letterSpacing: "-0.01em" }}>
+            Solo para vos
+          </span>
+          <span style={{ fontSize: 12.5, color: "#8A6F68", lineHeight: 1.5 }}>
+            Nada de esto se muestra en la ficha de la clase.
+          </span>
         </span>
       </header>
       {children}

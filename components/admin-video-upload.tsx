@@ -12,6 +12,8 @@ import {
   oversizeMessage
 } from "@/src/lib/audio/config";
 import { SelectorMultiple } from "@/components/selector-multiple";
+import { campoSuave, etiquetaSuave } from "@/components/admin-drawer";
+import { Film, Languages, UploadCloud } from "lucide-react";
 import { SelectorDePlanes } from "@/components/selector-de-planes";
 import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
 import {
@@ -131,26 +133,8 @@ function xhrSend(
   });
 }
 
-const inp: React.CSSProperties = {
-  width: "100%",
-  borderRadius: 10,
-  border: "1px solid #F0DED6",
-  background: "#fff",
-  color: "#3B2A2C",
-  padding: "9px 13px",
-  fontSize: 13,
-  outline: "none",
-  fontFamily: "inherit"
-};
-const lbl: React.CSSProperties = {
-  display: "block",
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.09em",
-  color: "#8A6F68",
-  textTransform: "uppercase",
-  marginBottom: 5
-};
+const inp = campoSuave;
+const lbl = etiquetaSuave;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -433,9 +417,10 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
   const hasSizeError = Object.keys(sizeErrors).length > 0;
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="avu">
+      <style>{CSS_SUBIDA}</style>
       {/* 1 y 2 — los dos titulos */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div className="avu-g2">
         <Field label="Título en español">
           <input style={inp} name="titleEs" required placeholder="Ballet centro basico" disabled={busy} />
         </Field>
@@ -445,7 +430,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       </div>
 
       {/* 3 y 4 — las dos descripciones */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+      <div className="avu-g2" style={{ marginTop: 14 }}>
         <Field label="Descripción en español">
           <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} name="descriptionEs" required disabled={busy} placeholder="Descripción de la clase…" />
         </Field>
@@ -455,7 +440,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       </div>
 
       {/* 5 a 8 — como se clasifica la clase */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+      <div className="avu-g2" style={{ marginTop: 14 }}>
         <Field label="Tipo de contenido">
           <Desplegable
             style={inp}
@@ -522,7 +507,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
           disabled={busy}
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <div className="avu-g2" style={{ marginTop: 14 }}>
           <Field label="Estado">
             <Desplegable
               style={inp}
@@ -547,24 +532,24 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
             Es opcional a proposito: una clase suelta (lo que ve Corps de
             Ballet) no pertenece a ningun plan, y ese es el caso normal.
         */}
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F0DED6" }}>
-          <span style={lbl}>Agregar a un plan de trabajo (opcional)</span>
+        <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px dashed #E9CFC5" }}>
+          <span style={lbl}>Agregar a un plan de trabajo <small className="avu-opc">opcional</small></span>
 
           {programas.length === 0 ? (
-            <p style={{ fontSize: 11.5, color: "#8A6F68", lineHeight: 1.7, marginTop: 6 }}>
+            <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.6, marginTop: 2 }}>
               Todavía no hay ningún plan de trabajo armado. Se crean en{" "}
-              <a href="/admin/programs" style={{ color: "var(--pink-mid)", fontWeight: 700 }}>
+              <a href="/admin/programs" style={{ color: "var(--pink-deep)", fontWeight: 800 }}>
                 Planes de trabajo
               </a>
               , y una vez creados aparecen acá para enganchar la clase directo al subirla.
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 11.5, color: "#B39189", lineHeight: 1.7, margin: "4px 0 10px" }}>
+              <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.6, margin: "2px 0 12px" }}>
                 Un plan de trabajo es una serie de días en orden — «Trabajo de pies, 14 días».
                 Si esta clase es uno de esos días, elegí cuál.
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="avu-g2">
                 <Field label="Plan de trabajo">
                   <Desplegable
                     style={inp}
@@ -584,7 +569,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
                 </Field>
                 <Field label="Día del plan">
                   <input
-                    style={{ ...inp, ...(programId ? null : { background: "#FBF0EB", color: "#B39189" }) }}
+                    style={{ ...inp, ...(programId ? null : { background: "#FFF2EE", color: "#B39189", borderColor: "#F3E3DC" }) }}
                     type="number"
                     min={1}
                     name="programDayNumber"
@@ -597,7 +582,7 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
                 </Field>
               </div>
               {programId && (
-                <p style={{ fontSize: 11, color: "#B39189", marginTop: 8, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 12.5, color: "#8A6F68", marginTop: 10, lineHeight: 1.55 }}>
                   Si ese día ya tenía otra clase, esta la reemplaza.
                 </p>
               )}
@@ -607,39 +592,52 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
       </BloqueSoloParaVos>
 
       {/* Video file */}
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#FFFAF6", border: "1px solid #F6E7E1" }}>
-        <span style={lbl}>Archivo de video (obligatorio)</span>
-        <input type="file" name="videoFile" accept="video/*" required disabled={busy} style={{ fontSize: 13, marginTop: 6 }} />
-        <p style={{ fontSize: 11, color: "#B39189", marginTop: 6, lineHeight: 1.6 }}>
-          Va del navegador directo a Bunny, sin pasar por el servidor. El audio de este archivo es el
-          idioma original (Espanol).
-        </p>
+      <div className="avu-archivo avu-archivo--video">
+        <div className="avu-archivo-cab">
+          <span className="avu-burbuja" aria-hidden="true"><Film size={19} strokeWidth={2} /></span>
+          <span>
+            <span className="avu-archivo-tit">Archivo de video <small className="avu-req">obligatorio</small></span>
+            <span className="avu-archivo-sub">
+              Va del navegador directo a Bunny, sin pasar por el servidor. El audio de este archivo es el
+              idioma original (Espanol).
+            </span>
+          </span>
+        </div>
+        <label className="avu-file">
+          <UploadCloud size={18} strokeWidth={2} aria-hidden="true" className="avu-file-ico" />
+          <input type="file" name="videoFile" accept="video/*" required disabled={busy} aria-label="Archivo de video" />
+        </label>
       </div>
 
       {/* Per-language audio */}
-      <div style={{ marginTop: 14, borderRadius: 12, padding: "16px 18px", background: "#FFFAF6", border: "1px solid #F6E7E1" }}>
-        <span style={lbl}>Idiomas adicionales (opcional)</span>
-        <p style={{ fontSize: 11, color: "#B39189", margin: "4px 0 10px", lineHeight: 1.6 }}>
-          Un mp3 por idioma, a {AUDIO_BITRATE_KBPS} kbps (hasta {maxAudioMinutes()} minutos, maximo{" "}
-          {Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB). Se unen al video automaticamente; puede tardar
-          una o dos horas. Mientras tanto la clase se ve normal en Espanol.
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div className="avu-archivo">
+        <div className="avu-archivo-cab">
+          <span className="avu-burbuja avu-burbuja--melocoton" aria-hidden="true"><Languages size={19} strokeWidth={2} /></span>
+          <span>
+            <span className="avu-archivo-tit">Idiomas adicionales <small className="avu-opc">opcional</small></span>
+            <span className="avu-archivo-sub">
+              Un mp3 por idioma, a {AUDIO_BITRATE_KBPS} kbps (hasta {maxAudioMinutes()} minutos, maximo{" "}
+              {Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB). Se unen al video automaticamente; puede tardar
+              una o dos horas. Mientras tanto la clase se ve normal en Espanol.
+            </span>
+          </span>
+        </div>
+        <div className="avu-g3">
           {AUDIO_LOCALES.map((entry) => (
-            <label key={entry.locale} style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#8A6F68", marginBottom: 5 }}>
-                {entry.locale.toUpperCase()} {entry.label}
+            <label key={entry.locale} className="avu-idioma">
+              <span className="avu-idioma-tit">
+                <span className="avu-idioma-cod">{entry.locale.toUpperCase()}</span> {entry.label}
               </span>
               <input
                 type="file"
                 name={`audio_${entry.locale}`}
                 accept="audio/*"
                 disabled={busy}
-                style={{ fontSize: 12 }}
+                className="avu-file-chico"
                 onChange={(e) => checkSize(entry.locale, entry.label, e.target.files?.[0])}
               />
               {sizeErrors[entry.locale] && (
-                <span style={{ fontSize: 10, color: "#991b1b", marginTop: 5, lineHeight: 1.5 }}>
+                <span style={{ fontSize: 12, color: "var(--pink-deep)", fontWeight: 700, lineHeight: 1.5 }}>
                   {sizeErrors[entry.locale]}
                 </span>
               )}
@@ -648,27 +646,27 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         </div>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, cursor: "pointer" }}>
-        <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 16, height: 16, accentColor: "var(--pink-mid)" }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#5A4440" }}>Destacar este video</span>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18, cursor: "pointer" }}>
+        <input name="isFeatured" type="checkbox" disabled={busy} style={{ width: 18, height: 18, accentColor: "var(--pink)" }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#3B2A2C" }}>Destacar este video</span>
       </label>
 
       {(busy || phase === "done" || phase === "error") && (
         <div
           style={{
             marginTop: 18,
-            borderRadius: 14,
-            padding: "14px 18px",
-            background: phase === "error" ? "#fef2f2" : phase === "done" ? "#f0fdf4" : "var(--pink-wash)",
-            border: `1px solid ${phase === "error" ? "#fecaca" : phase === "done" ? "#bbf7d0" : "var(--pink-line)"}`
+            borderRadius: 20,
+            padding: "16px 20px",
+            background: phase === "error" ? "var(--pink-wash)" : phase === "done" ? "var(--salvia, #E7F1E4)" : "#FFF4E8",
+            border: `1px solid ${phase === "error" ? "var(--pink-line)" : phase === "done" ? "#CFE3C9" : "#FFE2D3"}`
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: phase === "error" ? "#991b1b" : phase === "done" ? "#166534" : "var(--pink-mid)" }}>
+            <span style={{ fontSize: 13.5, fontWeight: 800, lineHeight: 1.5, color: phase === "error" ? "var(--pink-deep)" : phase === "done" ? "var(--salvia-deep, #3F7A45)" : "#8A4A2E" }}>
               {message ?? phaseLabel[phase]}
             </span>
             {(phase === "video" || phase === "audio") && (
-              <button type="button" onClick={cancel} style={{ fontSize: 11, fontWeight: 700, color: "#991b1b", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+              <button type="button" onClick={cancel} style={{ fontSize: 13, fontWeight: 800, fontFamily: "inherit", color: "var(--pink-deep)", background: "#fff", border: "1.5px solid var(--pink-line)", borderRadius: 99, padding: "6px 14px", cursor: "pointer", flexShrink: 0 }}>
                 Cancelar
               </button>
             )}
@@ -676,34 +674,74 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
 
           {(phase === "video" || phase === "audio" || phase === "saving" || phase === "done") && (
             <>
-              <div style={{ height: 6, background: "var(--pink-soft)", borderRadius: 99, marginTop: 10, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${progress}%`, borderRadius: 99, background: phase === "done" ? "#22c55e" : "linear-gradient(90deg, var(--pink), var(--pink-mid))", transition: "width 0.2s" }} />
+              <div style={{ height: 10, background: "#fff", borderRadius: 99, marginTop: 12, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(194,94,58,.12)" }}>
+                <div style={{ height: "100%", width: `${progress}%`, borderRadius: 99, background: phase === "done" ? "#6FAF72" : "linear-gradient(90deg, #FFB59A, var(--pink))", transition: "width 0.3s" }} />
               </div>
-              <p style={{ fontSize: 11, color: "#B39189", marginTop: 6 }}>{progress}%</p>
+              <p style={{ fontSize: 12.5, fontWeight: 800, color: "#8A6F68", marginTop: 6 }}>{progress}%</p>
             </>
           )}
         </div>
       )}
 
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 22 }}>
         <button
           type="submit"
           disabled={busy || hasSizeError}
-          style={{
-            background: busy || hasSizeError ? "#E6CCC2" : "linear-gradient(135deg, var(--pink), var(--pink-mid))",
-            color: "#fff",
-            border: "none",
-            borderRadius: 99,
-            padding: "10px 24px",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            cursor: busy || hasSizeError ? "default" : "pointer"
-          }}
+          className="avu-enviar"
         >
-          {busy ? "SUBIENDO..." : "SUBIR Y CREAR VIDEO"}
+          <UploadCloud size={17} strokeWidth={2.2} aria-hidden="true" />
+          {busy ? "Subiendo…" : "Subir y crear la clase"}
         </button>
       </div>
     </form>
   );
 }
+
+const CSS_SUBIDA = `
+.avu { padding-top: 16px; }
+.avu input:not([type=checkbox]):not([type=file]):focus, .avu textarea:focus { border-color: var(--pink) !important; box-shadow: 0 0 0 4px rgba(230,79,85,.12); }
+.avu-g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.avu-g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.avu-opc, .avu-req { margin-left: 6px; font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; vertical-align: 1px; }
+.avu-opc { color: #8A6F68; background: #FFF2EE; }
+.avu-req { color: #B03A3E; background: #FDECEC; }
+.avu-archivo { margin-top: 16px; border-radius: 24px; border: 1px solid #F3E3DC; background: #fff; padding: 18px 20px 20px; box-shadow: var(--sombra); }
+.avu-archivo--video { background: linear-gradient(150deg, #FFF1EC 0%, #fff 70%); }
+.avu-archivo-cab { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.avu-archivo-cab > span:last-child { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.avu-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: #FFF2EE; color: #B03A3E; }
+.avu-burbuja--melocoton { background: #FFE2D3; color: #C25E3A; }
+.avu-archivo-tit { font-size: 15px; font-weight: 900; color: #3B2A2C; letter-spacing: -0.01em; }
+.avu-archivo-sub { font-size: 13px; line-height: 1.55; color: #8A6F68; }
+.avu-file {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; cursor: pointer;
+  border: 1.5px dashed #E9CFC5; background: #fff; transition: border-color .2s, background .2s;
+}
+.avu-file:hover { border-color: var(--pink); background: #FFFAF8; }
+.avu-file:focus-within { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.12); }
+.avu-file-ico { color: var(--pink); flex-shrink: 0; }
+.avu .avu-file input[type=file], .avu input.avu-file-chico { min-width: 0; width: 100%; font: inherit; font-size: 13px; color: #8A6F68; border: 0 !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; border-radius: 0 !important; height: auto !important; }
+.avu-file input::file-selector-button, .avu-file-chico::file-selector-button {
+  margin-right: 12px; padding: 8px 16px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid #E9CFC5; background: #FFF2EE; color: #3B2A2C;
+  font: inherit; font-size: 13px; font-weight: 800; transition: background .2s, border-color .2s;
+}
+.avu-file input::file-selector-button:hover, .avu-file-chico::file-selector-button:hover { background: #FFE2D3; border-color: #FFC9B0; }
+.avu-idioma { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px; border-radius: 18px; border: 1px solid #F3E3DC; background: #FFFAF6; cursor: pointer; transition: border-color .2s; }
+.avu-idioma:hover { border-color: #E9CFC5; }
+.avu-idioma-tit { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; color: #3B2A2C; }
+.avu-idioma-cod { font-size: 11.5px; font-weight: 900; color: #C25E3A; background: #FFE2D3; padding: 3px 8px; border-radius: 99px; }
+.avu-file-chico::file-selector-button { display: block; margin: 0 0 6px; }
+.avu-enviar {
+  display: inline-flex; align-items: center; gap: 9px; height: 50px; padding: 0 26px; border-radius: 99px; border: none; cursor: pointer;
+  background: var(--pink); color: #fff; font: inherit; font-size: 15px; font-weight: 800;
+  box-shadow: 0 14px 26px -14px rgba(230,79,85,.85);
+  transition: transform .3s cubic-bezier(.22,1,.36,1), background .2s, box-shadow .3s;
+}
+.avu-enviar:hover:not(:disabled) { background: var(--pink-mid); transform: translateY(-2px); }
+.avu-enviar:disabled { background: #F3E3DC; color: #B39189; box-shadow: none; cursor: default; }
+@media (max-width: 760px) {
+  .avu-g2, .avu-g3 { grid-template-columns: minmax(0, 1fr); }
+  .avu-archivo { padding: 16px; }
+}
+`;

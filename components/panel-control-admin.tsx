@@ -6,7 +6,10 @@ import {
   motion, MotionConfig, animate, useInView, useMotionValue, useReducedMotion, useTransform,
   type Variants,
 } from "motion/react";
-import { ArrowRight, ArrowUpRight, Plus, Play, Upload, User } from "lucide-react";
+import {
+  ArrowRight, ArrowUpRight, BadgeCheck, CalendarHeart, ListChecks, Megaphone, Plus, Play,
+  PlayCircle, Upload, User, Users, Video,
+} from "lucide-react";
 import { Saludo } from "@/components/saludo";
 import { HoraSesion } from "@/components/hora-sesion";
 
@@ -14,11 +17,11 @@ import { HoraSesion } from "@/components/hora-sesion";
  * Panel del estudio: la portada del dashboard para una cuenta admin.
  *
  * DIRECCION
- *   Editorial, como el programa de mano de una funcion: titulares en Bodoni,
- *   cifras grandes separadas por filetes y no metidas en cajas, y una sola
- *   superficie oscura (el estudio) para que el ojo tenga donde apoyarse. La
- *   version anterior repetia tarjetas blancas iguales y se leia como una
- *   plantilla de SaaS.
+ *   Suave y calida, como el resto del sistema desde el rediseno de 2026-10:
+ *   una tarjeta de bienvenida en rubor, cifras en tarjetas pastel, clases con
+ *   portada redondeada y estados en pastillas (salvia publicada, melocoton
+ *   borrador). Nada oscuro: la version editorial anterior tenia un boton negro
+ *   y filetes de tinta que la duena pidio sacar.
  *
  * POR QUE ES DE CLIENTE
  *   Solo por las animaciones. Los datos se leen en el servidor y llegan como
@@ -49,45 +52,22 @@ export type DatosPanel = {
     anuncios: number;
   };
   porPlan: { tier: TierClave; cantidad: number }[];
-  /** nombre null = el perfil no tiene nombre cargado. */
-  ultimas: { id: string; nombre: string | null; tier: TierClave; cuando: string }[];
+  /**
+   * nombre null = el perfil no tiene nombre cargado. `correo` es opcional: si
+   * llega, sin nombre se muestra su prefijo, igual que la lista de alumnas.
+   */
+  ultimas: { id: string; nombre: string | null; correo?: string | null; tier: TierClave; cuando: string }[];
   clases: { id: string; titulo: string; estado: string; portada: string | null; minutos: number | null }[];
   enVivo: { id: string; titulo: string; iso: string; zona: string; reservas: number }[];
 };
 
-/** color: relleno de butacas y marcas. tinta: texto, con contraste sobre blanco. */
-const TIER: Record<TierClave, { label: string; color: string; tinta: string }> = {
-  principal:       { label: "Principal",       color: "#B03A3E", tinta: "#B03A3E" },
-  solista:         { label: "Solista",         color: "#E64F55", tinta: "#B03A3E" },
-  corps_de_ballet: { label: "Corps de Ballet", color: "#F2A3A6", tinta: "#8C5F5F" },
-  none:            { label: "Sin plan",        color: "#E6CCC2", tinta: "#8A6F68" },
+/** color: relleno de la barra y marcas. tinta: texto, con contraste sobre claro. chip: clase de la pastilla. */
+const TIER: Record<TierClave, { label: string; color: string; tinta: string; chip: string }> = {
+  principal:       { label: "Principal",       color: "#E64F55", tinta: "#B03A3E", chip: "pc-tier--principal" },
+  solista:         { label: "Solista",         color: "#F59A8E", tinta: "#B03A3E", chip: "pc-tier--solista" },
+  corps_de_ballet: { label: "Corps de Ballet", color: "#FFC9B0", tinta: "#B03A3E", chip: "pc-tier--corps" },
+  none:            { label: "Sin plan",        color: "#EADFD9", tinta: "#8A6F68", chip: "pc-tier--none" },
 };
-
-const BUTACAS = 20;
-
-/**
- * Reparte las 20 butacas por plan con el metodo del resto mayor: la suma da
- * siempre 20, y un plan con alguna alumna nunca queda en cero butacas.
- */
-function repartirButacas(porPlan: { tier: TierClave; cantidad: number }[], total: number): (TierClave | null)[] {
-  if (total === 0) return Array(BUTACAS).fill(null);
-  const exactas = porPlan.map((p) => (p.cantidad / total) * BUTACAS);
-  const asignadas = porPlan.map((p, i) => (p.cantidad > 0 ? Math.max(1, Math.floor(exactas[i])) : 0));
-  let resto = BUTACAS - asignadas.reduce((a, b) => a + b, 0);
-  const porFraccion = exactas
-    .map((x, i) => ({ i, frac: x - Math.floor(x) }))
-    .filter(({ i }) => porPlan[i].cantidad > 0)
-    .sort((a, b) => b.frac - a.frac);
-  for (let k = 0; resto > 0; k = (k + 1) % porFraccion.length) {
-    asignadas[porFraccion[k].i]++;
-    resto--;
-  }
-  while (resto < 0) {
-    asignadas[asignadas.indexOf(Math.max(...asignadas))]--;
-    resto++;
-  }
-  return porPlan.flatMap((p, i) => Array<TierClave>(asignadas[i]).fill(p.tier));
-}
 
 const ESTADO: Record<string, { label: string; clase: string }> = {
   published: { label: "Publicada", clase: "pc-estado--pub" },
@@ -96,16 +76,16 @@ const ESTADO: Record<string, { label: string; clase: string }> = {
   archived:  { label: "Archivada", clase: "pc-estado--arch" },
 };
 
-const SUAVE = [0.16, 1, 0.3, 1] as const;
+const SUAVE = [0.22, 1, 0.36, 1] as const;
 
 const grupo: Variants = {
   oculto: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
 };
 
 const sube: Variants = {
-  oculto: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: SUAVE } },
+  oculto: { opacity: 0, y: 16, scale: 0.985 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.7, ease: SUAVE } },
 };
 
 /** Numero que cuenta desde 0 la primera vez que entra en pantalla. */
@@ -126,22 +106,6 @@ function Contador({ valor }: { valor: number }) {
   return <motion.span ref={ref}>{texto}</motion.span>;
 }
 
-/** Una linea de titular que sube desde abajo de una mascara. */
-function Linea({ children, retraso = 0 }: { children: React.ReactNode; retraso?: number }) {
-  return (
-    <span className="pc-linea">
-      <motion.span
-        className="pc-linea-in"
-        initial={{ y: "105%" }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.9, delay: retraso, ease: SUAVE }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
-
 /** Dia y mes en la zona DEL ESTUDIO: es la misma en servidor y cliente. */
 function partesFecha(iso: string, zona: string) {
   try {
@@ -154,6 +118,13 @@ function partesFecha(iso: string, zona: string) {
   } catch {
     return { dia: "—", mes: "", semana: "" };
   }
+}
+
+/** Lo que se muestra de una alta: su nombre o, si no tiene, el prefijo del correo. */
+function nombreVisible(u: { nombre: string | null; correo?: string | null }): string | null {
+  if (u.nombre) return u.nombre;
+  const prefijo = u.correo?.split("@")[0]?.trim();
+  return prefijo || null;
 }
 
 /**
@@ -170,20 +141,19 @@ export function PanelControlAdmin({
   const m = datos.metricas;
   const total = datos.porPlan.reduce((a, p) => a + p.cantidad, 0);
   const huecos = Math.max(0, 4 - datos.clases.length);
-  const butacas = repartirButacas(datos.porPlan, total);
 
   const cifras = [
-    { valor: m.alumnas,    label: "Alumnas",           sub: `+${m.altasDelMes} este mes`, href: "/admin/users" },
-    { valor: m.conPlan,    label: "Con plan activo",   sub: `${m.principal} en Principal`, href: "/admin/users?plan=con-plan" },
-    { valor: m.publicadas, label: "Clases publicadas", sub: `${m.borradores} ${m.borradores === 1 ? "borrador" : "borradores"} · ${m.totales} en total`, href: "/admin/videos?estado=published" },
-    { valor: m.reservas,   label: "Reservas en vivo",  sub: `${m.sesiones} ${m.sesiones === 1 ? "sesión" : "sesiones"} en agenda`, href: "/admin/live?estado=scheduled" },
+    { valor: m.alumnas,    label: "Alumnas",           sub: `+${m.altasDelMes} este mes`, href: "/admin/users", Icono: Users },
+    { valor: m.conPlan,    label: "Con plan activo",   sub: `${m.principal} en Principal`, href: "/admin/users?plan=con-plan", Icono: BadgeCheck },
+    { valor: m.publicadas, label: "Clases publicadas", sub: `${m.borradores} ${m.borradores === 1 ? "borrador" : "borradores"} · ${m.totales} en total`, href: "/admin/videos?estado=published", Icono: PlayCircle },
+    { valor: m.reservas,   label: "Reservas en vivo",  sub: `${m.sesiones} ${m.sesiones === 1 ? "sesión" : "sesiones"} en agenda`, href: "/admin/live?estado=scheduled", Icono: CalendarHeart },
   ];
 
   const atajos = [
-    { href: "/admin/videos",        label: "Subir una clase",    sub: "Video, categoría y planes" },
-    { href: "/admin/live",          label: "Programar en vivo",  sub: "Sesión por Zoom" },
-    { href: "/admin/announcements", label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora` },
-    { href: "/admin/programs",      label: "Armar un plan",      sub: "Planes de trabajo por día" },
+    { href: "/admin/videos?nueva=1#nueva", label: "Subir una clase",    sub: "Video, categoría y planes", Icono: Upload },
+    { href: "/admin/live",                 label: "Programar en vivo",  sub: "Sesión por Zoom", Icono: Video },
+    { href: "/admin/announcements",        label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora`, Icono: Megaphone },
+    { href: "/admin/programs",             label: "Armar un plan",      sub: "Planes de trabajo por día", Icono: ListChecks },
   ];
 
   return (
@@ -191,50 +161,40 @@ export function PanelControlAdmin({
       <style>{CSS}</style>
       <div className="pc">
 
-        {/* ── Cabecera ── */}
-        <header className="pc-mast">
+        {/* ── Bienvenida ── */}
+        <motion.header
+          className="pc-mast"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: SUAVE }}
+        >
           <div className="pc-mast-texto">
-            <motion.p
-              className="pc-eyebrow"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
-            >
-              <motion.span
-                className="pc-eyebrow-raya"
-                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, delay: 0.1, ease: SUAVE }}
-              />
-              {datos.fecha} · Panel del estudio
-            </motion.p>
+            <p className="pc-eyebrow"><span aria-hidden="true" />{datos.fecha.charAt(0).toUpperCase() + datos.fecha.slice(1)}</p>
             <h1 className="pc-titulo">
-              <Linea retraso={0.05}>
-                <Saludo />{datos.nombre ? "," : "."}
-              </Linea>
-              {datos.nombre && (
-                <Linea retraso={0.16}><em>{datos.nombre}.</em></Linea>
-              )}
+              <Saludo />{datos.nombre ? <>, <span className="pc-titulo-nombre">{datos.nombre}</span>.</> : "."}
             </h1>
+            <p className="pc-lede">Así está tu estudio hoy. Todo lo importante, a un toque.</p>
           </div>
-          <motion.div
-            className="pc-mast-acciones"
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35, ease: SUAVE }}
-          >
-            <Link href="/admin/videos" className="pc-btn pc-btn--lleno">
-              <Upload size={15} strokeWidth={2.2} /> Subir clase
+          <div className="pc-mast-acciones">
+            <Link href="/admin/videos?nueva=1#nueva" className="pc-btn pc-btn--lleno">
+              <Upload size={16} strokeWidth={2.2} aria-hidden="true" /> Subir clase
             </Link>
             <Link href={secundario.href as never} className="pc-btn">
-              {secundario.label} <ArrowUpRight size={15} strokeWidth={2.2} />
+              {secundario.label} <ArrowUpRight size={15} strokeWidth={2.2} aria-hidden="true" />
             </Link>
-          </motion.div>
-        </header>
+          </div>
+        </motion.header>
 
         {/* ── Cifras ── */}
         <motion.div className="pc-cifras" variants={grupo} initial="oculto" animate="visible">
           {cifras.map((c) => (
             <motion.div key={c.label} variants={sube}>
               <Link href={c.href as never} className="pc-cifra">
-                <span className="pc-cifra-label">{c.label}</span>
+                <span className="pc-cifra-cab">
+                  <span className="pc-cifra-ico" aria-hidden="true"><c.Icono size={18} strokeWidth={2} /></span>
+                  <ArrowUpRight size={15} strokeWidth={2.2} className="pc-cifra-flecha" aria-hidden="true" />
+                </span>
                 <span className="pc-cifra-num"><Contador valor={c.valor} /></span>
+                <span className="pc-cifra-label">{c.label}</span>
                 <span className="pc-cifra-sub">{c.sub}</span>
               </Link>
             </motion.div>
@@ -246,10 +206,10 @@ export function PanelControlAdmin({
           {/* ── Columna principal ── */}
           <motion.div className="pc-principal" variants={grupo} initial="oculto" animate="visible">
 
-            <motion.section variants={sube}>
+            <motion.section variants={sube} className="pc-bloque">
               <div className="pc-cab">
-                <h2 className="pc-h2">Clases recientes</h2>
-                <Link href="/admin/videos" className="pc-mas">Ver todas <ArrowRight size={14} strokeWidth={2} /></Link>
+                <h2 className="pc-h2"><span className="pc-h2-ico" aria-hidden="true"><Play size={15} strokeWidth={2.4} /></span>Clases recientes</h2>
+                <Link href="/admin/videos" className="pc-mas">Ver todas <ArrowRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
               </div>
               <div className="pc-clases">
                 {datos.clases.map((c) => {
@@ -265,9 +225,17 @@ export function PanelControlAdmin({
                               transition={{ duration: 0.8, ease: SUAVE }}
                             />
                           ) : (
-                            <div className="pc-clase-sinimg"><Play size={22} strokeWidth={1.6} /></div>
+                            <div className="pc-clase-sinimg">
+                              <motion.span
+                                className="pc-clase-play"
+                                variants={{ reposo: { scale: 1 }, hover: { scale: 1.1 } }}
+                                transition={{ type: "spring", stiffness: 300, damping: 16 }}
+                              >
+                                <Play size={18} strokeWidth={2} fill="currentColor" aria-hidden="true" />
+                              </motion.span>
+                            </div>
                           )}
-                          <span className={"pc-estado " + e.clase}>{e.label}</span>
+                          <span className={"pc-estado " + e.clase}><span className="pc-punto" aria-hidden="true" />{e.label}</span>
                         </div>
                         <p className="pc-clase-titulo">{c.titulo}</p>
                         <p className="pc-clase-meta">{c.minutos ? `${c.minutos} min` : "Sin duración"}</p>
@@ -276,13 +244,13 @@ export function PanelControlAdmin({
                   );
                 })}
                 {Array.from({ length: huecos }).map((_, i) => (
-                  <Link key={"hueco" + i} href="/admin/videos" className={"pc-hueco" + (i > 0 ? " pc-hueco--extra" : "")}>
+                  <Link key={"hueco" + i} href="/admin/videos?nueva=1#nueva" className={"pc-hueco" + (i > 0 ? " pc-hueco--extra" : "")}>
                     <motion.span
                       className="pc-hueco-ico"
                       whileHover={{ rotate: 90, scale: 1.1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 14 }}
                     >
-                      <Plus size={20} strokeWidth={1.8} />
+                      <Plus size={20} strokeWidth={2.2} aria-hidden="true" />
                     </motion.span>
                     {i === 0 && <span className="pc-hueco-txt">Subir una clase</span>}
                   </Link>
@@ -290,22 +258,26 @@ export function PanelControlAdmin({
               </div>
             </motion.section>
 
-            <motion.section variants={sube}>
+            <motion.section variants={sube} className="pc-bloque">
               <div className="pc-cab">
-                <h2 className="pc-h2">Próximas en vivo</h2>
-                <Link href="/admin/live" className="pc-mas">Agenda <ArrowRight size={14} strokeWidth={2} /></Link>
+                <h2 className="pc-h2"><span className="pc-h2-ico" aria-hidden="true"><Video size={15} strokeWidth={2.2} /></span>Próximas en vivo</h2>
+                <Link href="/admin/live" className="pc-mas">Agenda <ArrowRight size={14} strokeWidth={2.2} aria-hidden="true" /></Link>
               </div>
               {datos.enVivo.length === 0 ? (
                 <Link href="/admin/live" className="pc-vivo-vacio">
-                  <span>No hay ninguna sesión en agenda.</span>
-                  <span className="pc-vivo-vacio-cta">Programar una <ArrowRight size={14} strokeWidth={2} /></span>
+                  <span className="pc-vivo-vacio-ico" aria-hidden="true"><CalendarHeart size={20} strokeWidth={2} /></span>
+                  <span className="pc-vivo-vacio-txt">
+                    <strong>No hay ninguna sesión en agenda.</strong>
+                    <span>Cuando programes una, aparece acá con sus reservas.</span>
+                  </span>
+                  <span className="pc-vivo-vacio-cta">Programar una <ArrowRight size={14} strokeWidth={2.2} aria-hidden="true" /></span>
                 </Link>
               ) : (
                 <ul className="pc-vivo">
                   {datos.enVivo.map((s) => {
                     const f = partesFecha(s.iso, s.zona);
                     return (
-                      <motion.li key={s.id} whileHover={{ x: 6 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
+                      <motion.li key={s.id} whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
                         <Link href={`/admin/live?q=${encodeURIComponent(s.titulo)}` as never} className="pc-vivo-fila">
                           <span className="pc-vivo-fecha">
                             <span className="pc-vivo-dia">{f.dia}</span>
@@ -335,8 +307,8 @@ export function PanelControlAdmin({
             <motion.section variants={sube} className="pc-estudio">
               <div className="pc-estudio-a">
                 <div className="pc-estudio-cab">
-                  <p className="pc-estudio-eyebrow">El estudio</p>
-                  <Link href="/admin/users" className="pc-estudio-link">Alumnas <ArrowUpRight size={13} strokeWidth={2.2} /></Link>
+                  <p className="pc-estudio-eyebrow">Tu estudio</p>
+                  <Link href="/admin/users" className="pc-estudio-link">Alumnas <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden="true" /></Link>
                 </div>
                 <div className="pc-estudio-total">
                   <span className="pc-estudio-num"><Contador valor={total} /></span>
@@ -346,22 +318,26 @@ export function PanelControlAdmin({
                   </span>
                 </div>
 
-                {/* Butacas: 20 asientos, cada uno es el 5% del estudio. Con 4 o con
-                    400 alumnas se lee igual, y es mas danza que una barra. */}
+                {/* Una barra redondeada partida por plan: se lee igual con 4 que
+                    con 400 alumnas, y cada tramo tiene el color de su pastilla. */}
                 <div
-                  className="pc-butacas" role="img"
+                  className="pc-barra" role="img"
                   aria-label={datos.porPlan.map((p) => TIER[p.tier].label + ": " + p.cantidad).join(", ")}
                 >
-                  {butacas.map((tier, i) => (
-                    <motion.span
-                      key={i}
-                      className="pc-butaca"
-                      style={{ background: tier ? TIER[tier].color : undefined }}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.35 + i * 0.03 }}
-                    />
-                  ))}
+                  {total === 0 ? (
+                    <span className="pc-barra-vacia" />
+                  ) : (
+                    datos.porPlan.filter((p) => p.cantidad > 0).map((p, i) => (
+                      <motion.span
+                        key={p.tier}
+                        className="pc-barra-tramo"
+                        style={{ background: TIER[p.tier].color }}
+                        initial={{ flexGrow: 0 }}
+                        animate={{ flexGrow: p.cantidad }}
+                        transition={{ duration: 1.1, delay: 0.3 + i * 0.08, ease: SUAVE }}
+                      />
+                    ))
+                  )}
                 </div>
 
                 <ul className="pc-reparto">
@@ -370,11 +346,10 @@ export function PanelControlAdmin({
                     return (
                       <li key={p.tier}>
                         <Link href={`/admin/users?plan=${p.tier}` as never} className="pc-reparto-fila">
-                        <span className="pc-reparto-marca" style={{ background: TIER[p.tier].color }} />
-                        <span className="pc-reparto-nombre">{TIER[p.tier].label}</span>
-                        <span className="pc-reparto-puntos" aria-hidden="true" />
-                        <span className="pc-reparto-pct">{pct}%</span>
-                        <span className="pc-reparto-num">{p.cantidad}</span>
+                          <span className="pc-reparto-marca" style={{ background: TIER[p.tier].color }} />
+                          <span className="pc-reparto-nombre">{TIER[p.tier].label}</span>
+                          <span className="pc-reparto-pct">{pct}%</span>
+                          <span className="pc-reparto-num">{p.cantidad}</span>
                         </Link>
                       </li>
                     );
@@ -387,7 +362,7 @@ export function PanelControlAdmin({
               <div className="pc-estudio-b">
                 <div className="pc-estudio-cab">
                   <p className="pc-estudio-eyebrow">Últimas altas</p>
-                  <Link href="/admin/users" className="pc-estudio-link">Ver todas <ArrowUpRight size={13} strokeWidth={2.2} /></Link>
+                  <Link href="/admin/users" className="pc-estudio-link">Ver todas <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden="true" /></Link>
                 </div>
                 {datos.ultimas.length === 0 ? (
                   <p className="pc-estudio-vacio">Todavía no hay alumnas.</p>
@@ -395,19 +370,20 @@ export function PanelControlAdmin({
                   <ul className="pc-altas">
                     {datos.ultimas.slice(0, 5).map((u) => {
                       const t = TIER[u.tier] ?? TIER.none;
+                      const visible = nombreVisible(u);
                       return (
                         <li key={u.id}>
                           <Link href={`/admin/users?plan=${u.tier}` as never} className="pc-altas-fila">
-                          <span className="pc-inicial" style={{ borderColor: t.color, color: t.tinta }}>
-                            {u.nombre ? u.nombre.trim()[0]?.toUpperCase() : <User size={15} strokeWidth={1.8} />}
-                          </span>
-                          <span className="pc-altas-txt">
-                            {u.nombre
-                              ? <span className="pc-altas-nombre">{u.nombre}</span>
-                              : <span className="pc-altas-nombre pc-altas-nombre--sin">Sin nombre cargado</span>}
-                            <span className="pc-altas-plan" style={{ color: t.tinta }}>{t.label}</span>
-                          </span>
-                          <span className="pc-altas-cuando">{u.cuando}</span>
+                            <span className="pc-inicial">
+                              {visible ? visible.trim()[0]?.toUpperCase() : <User size={15} strokeWidth={2} aria-hidden="true" />}
+                            </span>
+                            <span className="pc-altas-txt">
+                              {visible
+                                ? <span className="pc-altas-nombre">{visible}</span>
+                                : <span className="pc-altas-nombre pc-altas-nombre--sin">Sin nombre cargado</span>}
+                              <span className={"pc-tier " + t.chip}>{t.label}</span>
+                            </span>
+                            <span className="pc-altas-cuando">{u.cuando}</span>
                           </Link>
                         </li>
                       );
@@ -421,23 +397,24 @@ export function PanelControlAdmin({
         </div>
 
         {/* ── Atajos, a lo ancho ── */}
-        <motion.section className="pc-atajos" variants={sube} initial="oculto" animate="visible" transition={{ delay: 0.5 }}>
-          <p className="pc-atajos-titulo">Atajos</p>
+        <motion.section className="pc-atajos" variants={grupo} initial="oculto" animate="visible" aria-label="Atajos">
+          <h2 className="pc-atajos-titulo">Atajos</h2>
           <ol>
-            {atajos.map((a, i) => (
-              <motion.li key={a.href} whileHover="hover" initial="reposo">
+            {atajos.map((a) => (
+              <motion.li key={a.href} variants={sube} whileHover="hover">
                 <Link href={a.href as never} className="pc-atajo">
-                  <span className="pc-atajo-num">{String(i + 1).padStart(2, "0")}</span>
+                  <motion.span
+                    className="pc-atajo-ico" aria-hidden="true"
+                    variants={{ hover: { rotate: -8, scale: 1.08 } }}
+                    transition={{ type: "spring", stiffness: 300, damping: 14 }}
+                  >
+                    <a.Icono size={19} strokeWidth={2} />
+                  </motion.span>
                   <span className="pc-atajo-txt">
                     <span className="pc-atajo-label">{a.label}</span>
                     <span className="pc-atajo-sub">{a.sub}</span>
                   </span>
-                  <motion.span
-                    className="pc-atajo-flecha"
-                    variants={{ reposo: { x: 0, opacity: 0.35 }, hover: { x: 4, opacity: 1 } }}
-                  >
-                    <ArrowRight size={16} strokeWidth={2} />
-                  </motion.span>
+                  <ArrowRight size={16} strokeWidth={2.2} className="pc-atajo-flecha" aria-hidden="true" />
                 </Link>
               </motion.li>
             ))}
@@ -449,281 +426,256 @@ export function PanelControlAdmin({
 }
 
 const CSS = `
-.pc { display: flex; flex-direction: column; }
+.pc { display: flex; flex-direction: column; gap: 22px; }
 .pc a:focus { outline: none; }
-.pc a:focus-visible { outline: 2px solid var(--pink); outline-offset: 3px; border-radius: 12px; }
+.pc a:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230,79,85,.22); }
 
-/* ── cabecera ── */
+/* ── bienvenida ── */
 .pc-mast {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
-  padding-bottom: clamp(22px, 3vw, 34px);
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px 28px; flex-wrap: wrap;
+  padding: clamp(24px, 3.4vw, 42px) clamp(22px, 3.4vw, 46px);
+  border-radius: 32px; border: 1px solid var(--linea);
+  background: linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%);
 }
+.pc-mast::before, .pc-mast::after { content: ""; position: absolute; z-index: -1; border-radius: 50%; pointer-events: none; }
+.pc-mast::before { width: 340px; height: 340px; right: -90px; top: -170px; background: radial-gradient(circle, rgba(255,205,185,.8), transparent 68%); animation: pc-flota 12s ease-in-out infinite alternate; }
+.pc-mast::after { width: 240px; height: 240px; right: 26%; bottom: -160px; background: radial-gradient(circle, rgba(242,198,198,.7), transparent 70%); animation: pc-flota 15s ease-in-out infinite alternate-reverse; }
+@keyframes pc-flota { from { transform: translate(0, 0) scale(1); } to { transform: translate(-24px, 18px) scale(1.08); } }
 .pc-mast-texto { min-width: 0; }
 .pc-eyebrow {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--pink-deep); margin-bottom: 18px;
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 6px 13px 6px 10px; border-radius: 99px;
+  background: #fff; box-shadow: var(--sombra); font-size: 12.5px; font-weight: 800; color: var(--pink-deep);
 }
-.pc-eyebrow-raya { display: inline-block; width: 36px; height: 1.5px; background: var(--pink); transform-origin: left; }
-.pc-titulo {
-  font-family: var(--font-display), sans-serif; font-weight: 800;
-  font-size: clamp(38px, 5vw, 72px); line-height: 1; letter-spacing: -0.04em;
-  color: var(--ink);
-}
-.pc-titulo em { font-style: normal; color: var(--pink-mid); }
-.pc-linea { display: block; overflow: hidden; padding-bottom: 0.08em; }
-.pc-linea-in { display: block; }
-
-.pc-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 10px; }
+.pc-eyebrow span { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); }
+.pc-titulo { font-weight: 900; font-size: clamp(32px, 4.2vw, 54px); line-height: 1.06; letter-spacing: -0.03em; color: var(--ink); }
+.pc-titulo-nombre { color: var(--pink); }
+.pc-lede { margin-top: 10px; font-size: 15.5px; line-height: 1.6; color: var(--muted); }
+.pc-mast-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
 .pc-btn {
   display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-  height: 44px; padding: 0 20px; border-radius: 99px; text-decoration: none;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
-  color: var(--ink); border: 1.5px solid #E6CCC2; background: transparent;
-  transition: border-color .2s, background .2s, color .2s, transform .2s;
+  height: 48px; padding: 0 22px; border-radius: 99px; text-decoration: none;
+  font-size: 14px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte);
+  transition: border-color .2s, background .2s, transform .3s var(--curva), box-shadow .3s;
 }
-.pc-btn:hover { border-color: var(--ink); background: #fff; }
-.pc-btn--lleno { background: var(--ink); border-color: var(--ink); color: #fff; }
-.pc-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); color: #fff; }
+.pc-btn:hover { border-color: var(--pink-line); background: var(--rubor); transform: translateY(-2px); }
+.pc-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.pc-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
 
 /* ── cifras ── */
-.pc-cifras {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--ink); border-bottom: 1px solid #F0DED6;
-}
-.pc-cifras > div + div { border-left: 1px solid #F0DED6; }
+.pc-cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pc-cifras > div { min-width: 0; }
 .pc-cifra {
-  position: relative; display: flex; flex-direction: column; gap: 10px; height: 100%;
-  padding: 22px 26px 24px; text-decoration: none; color: inherit;
-  transition: background .25s;
+  position: relative; display: flex; flex-direction: column; gap: 4px; height: 100%;
+  padding: 18px 20px 20px; text-decoration: none; color: inherit;
+  border-radius: var(--radio); border: 1px solid var(--linea); box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s, border-color .25s;
 }
-.pc-cifras > div:first-child .pc-cifra { padding-left: 0; }
-.pc-cifra::after {
-  content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 3px;
-  background: var(--pink); transform: scaleX(0); transform-origin: left;
-  transition: transform .5s cubic-bezier(.16,1,.3,1);
-}
-.pc-cifra:hover::after { transform: scaleX(1); }
-.pc-cifra-label {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #8A6F68;
-}
-.pc-cifra-num {
-  font-family: var(--font-display), sans-serif; font-weight: 800;
-  font-size: clamp(40px, 4.2vw, 60px); line-height: 0.95; letter-spacing: -0.045em;
-  color: var(--ink); font-variant-numeric: lining-nums tabular-nums;
-}
-.pc-cifra:hover .pc-cifra-num { color: var(--pink-mid); }
-.pc-cifra-sub { font-size: 12.5px; color: var(--pink-muted); }
+.pc-cifras > div:nth-child(1) .pc-cifra { background: linear-gradient(160deg, #FFF1EC, #fff 72%); }
+.pc-cifras > div:nth-child(2) .pc-cifra { background: linear-gradient(160deg, #F2F7EF, #fff 72%); }
+.pc-cifras > div:nth-child(3) .pc-cifra { background: linear-gradient(160deg, #FFF4E8, #fff 72%); }
+.pc-cifras > div:nth-child(4) .pc-cifra { background: linear-gradient(160deg, #F7F0FA, #fff 72%); }
+.pc-cifra:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); border-color: var(--linea-fuerte); }
+.pc-cifra-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pc-cifra-ico { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: 0 8px 18px -12px rgba(176,90,80,.55); }
+.pc-cifras > div:nth-child(2) .pc-cifra-ico { color: var(--salvia-deep); }
+.pc-cifras > div:nth-child(3) .pc-cifra-ico { color: var(--melocoton-deep); }
+.pc-cifras > div:nth-child(4) .pc-cifra-ico { color: #7A5490; }
+.pc-cifra-flecha { color: #C9AFA7; transition: transform .3s var(--curva), color .2s; }
+.pc-cifra:hover .pc-cifra-flecha { color: var(--pink-deep); transform: translate(2px, -2px); }
+.pc-cifra-num { font-weight: 900; font-size: clamp(34px, 3.2vw, 44px); line-height: 1; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: lining-nums tabular-nums; }
+.pc-cifra-label { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--ink); }
+.pc-cifra-sub { font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 /* ── cuerpo ── */
-.pc-cuerpo {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  gap: clamp(24px, 3vw, 44px); padding-top: clamp(28px, 3vw, 40px);
-}
-.pc-principal { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
-.pc-cab {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  padding-bottom: 12px; margin-bottom: 18px; border-bottom: 1px solid #F0DED6;
-}
-.pc-h2 {
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 24px;
-  letter-spacing: -0.03em; color: var(--ink); line-height: 1;
-}
+.pc-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 22px; align-items: start; }
+.pc-principal { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.pc-bloque { padding: 22px 22px 24px; border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.pc-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.pc-h2 { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
+.pc-h2-ico { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
 .pc-mas {
-  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pink-deep);
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; white-space: nowrap;
+  padding: 7px 14px; border-radius: 99px; font-size: 13px; font-weight: 800; color: var(--pink-deep); background: var(--rubor);
+  transition: background .2s;
 }
-.pc-mas:hover { color: var(--ink); }
+.pc-mas:hover { background: var(--pink-wash); }
 
 /* clases */
-.pc-clases { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.pc-clases { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .pc-clase { display: block; text-decoration: none; color: inherit; }
 .pc-clase-img {
-  position: relative; aspect-ratio: 4 / 5; border-radius: 16px; overflow: hidden;
-  background: linear-gradient(160deg, var(--pink-wash), var(--pink-soft));
+  position: relative; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden;
+  background:
+    radial-gradient(130px 110px at 85% 12%, rgba(255,205,185,.95), transparent 70%),
+    linear-gradient(160deg, #FFF1EC, #FDE3E0);
+  transition: box-shadow .35s;
 }
+.pc-clase:hover .pc-clase-img { box-shadow: var(--sombra-alta); }
 .pc-clase-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pc-clase-sinimg {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--pink-deep);
-}
+.pc-clase-sinimg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.pc-clase-play { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; padding-left: 3px; background: rgba(255,255,255,.92); color: var(--pink); box-shadow: 0 12px 24px -14px rgba(176,70,70,.6); }
 .pc-estado {
-  position: absolute; top: 10px; left: 10px;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 5px 10px; border-radius: 99px; backdrop-filter: blur(8px);
+  position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 800; padding: 5px 11px 5px 9px; border-radius: 99px;
 }
-.pc-estado--pub  { background: rgba(28,25,23,0.82); color: #fff; }
-.pc-estado--borr { background: rgba(255,255,255,0.9); color: var(--pink-deep); }
-.pc-estado--arch { background: rgba(255,255,255,0.9); color: #8A6F68; }
+.pc-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pc-estado--pub  { background: var(--salvia); color: var(--salvia-deep); }
+.pc-estado--borr { background: #FFEBDF; color: var(--melocoton-deep); }
+.pc-estado--arch { background: #F6EEEA; color: var(--muted); }
 .pc-clase-titulo {
-  margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
+  margin-top: 12px; font-size: 14.5px; font-weight: 800; color: var(--ink); line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .pc-clase:hover .pc-clase-titulo { color: var(--pink-deep); }
-.pc-clase-meta { margin-top: 3px; font-size: 12px; color: #B39189; }
+.pc-clase-meta { margin-top: 3px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 .pc-hueco {
-  aspect-ratio: 4 / 5; border-radius: 16px; border: 1.5px dashed #E6CCC2;
+  aspect-ratio: 4 / 5; border-radius: 22px; border: 1.5px dashed var(--linea-fuerte); background: var(--crema);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  text-decoration: none; color: #B39189; transition: border-color .2s, background .2s, color .2s;
+  text-decoration: none; color: var(--pink-deep); transition: border-color .2s, background .2s;
 }
-.pc-hueco:hover { border-color: var(--pink); background: var(--pink-wash); color: var(--pink-deep); }
+.pc-hueco:hover { border-color: var(--pink-line); background: var(--rubor); }
 .pc-hueco--extra { opacity: 0.55; }
-.pc-hueco-ico {
-  width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid currentColor;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-.pc-hueco-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.pc-hueco-ico { width: 46px; height: 46px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; background: #fff; box-shadow: var(--sombra); }
+.pc-hueco-txt { font-size: 13px; font-weight: 800; }
 
 /* en vivo */
-.pc-vivo { list-style: none; margin: 0; padding: 0; }
-.pc-vivo li + li { border-top: 1px solid #F6E7E1; }
-.pc-vivo-fila { display: flex; align-items: center; gap: 22px; padding: 14px 0; text-decoration: none; color: inherit; }
-.pc-vivo-fecha { display: flex; flex-direction: column; align-items: center; width: 56px; flex-shrink: 0; }
-.pc-vivo-dia { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 32px; line-height: 0.95; letter-spacing: -0.04em; color: var(--ink); }
-.pc-vivo-mes { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pink-deep); margin-top: 4px; }
-.pc-vivo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pc-vivo-titulo { font-size: 15px; font-weight: 700; color: var(--ink); }
-.pc-vivo-hora { font-size: 12.5px; color: #8A6F68; }
-.pc-vivo-res { font-size: 12px; color: #8A6F68; white-space: nowrap; }
-.pc-vivo-res strong { font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 800; color: var(--ink); margin-right: 3px; }
-.pc-vivo-vacio {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 22px 24px; border-radius: 16px; border: 1.5px dashed #E6CCC2;
-  text-decoration: none; font-size: 14px; color: #8A6F68;
-  transition: border-color .2s, background .2s;
+.pc-vivo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pc-vivo-fila {
+  display: flex; align-items: center; gap: 16px; padding: 10px 14px 10px 10px; text-decoration: none; color: inherit;
+  border-radius: 20px; background: var(--crema); border: 1px solid var(--linea); transition: background .2s, border-color .2s;
 }
-.pc-vivo-vacio:hover { border-color: var(--pink); background: var(--pink-wash); }
+.pc-vivo-fila:hover { background: var(--rubor); border-color: var(--pink-line); }
+.pc-vivo-fecha { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 58px; flex-shrink: 0; border-radius: 18px; background: #fff; box-shadow: var(--sombra); }
+.pc-vivo-dia { font-weight: 900; font-size: 22px; line-height: 1; color: var(--ink); }
+.pc-vivo-mes { font-size: 12px; font-weight: 800; color: var(--pink-deep); margin-top: 2px; }
+.pc-vivo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pc-vivo-titulo { font-size: 15px; font-weight: 800; color: var(--ink); }
+.pc-vivo-hora { font-size: 13px; color: var(--muted); }
+.pc-vivo-res { font-size: 12.5px; font-weight: 700; color: var(--muted); white-space: nowrap; padding: 5px 12px; border-radius: 99px; background: #fff; }
+.pc-vivo-res strong { font-size: 15px; font-weight: 900; color: var(--ink); margin-right: 2px; }
+.pc-vivo-vacio {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 16px 18px; border-radius: 22px; border: 1.5px dashed var(--linea-fuerte); background: var(--crema);
+  text-decoration: none; color: inherit; transition: border-color .2s, background .2s;
+}
+.pc-vivo-vacio:hover { border-color: var(--pink-line); background: var(--rubor); }
+.pc-vivo-vacio-ico { width: 46px; height: 46px; border-radius: 16px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
+.pc-vivo-vacio-txt { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
+.pc-vivo-vacio-txt strong { font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .pc-vivo-vacio-cta {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pink-deep);
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 99px;
+  font-size: 13px; font-weight: 800; color: #fff; background: var(--pink); box-shadow: 0 12px 22px -14px rgba(230,79,85,.85);
 }
 
 /* ── lateral ── */
 .pc-lateral { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .pc-estudio {
-  position: relative; background: #fff; border: 1px solid #F0DED6; border-radius: 24px;
-  padding: 24px 26px 22px; overflow: hidden;
+  position: relative; overflow: hidden; border-radius: 28px; padding: 22px 22px 18px;
+  background: linear-gradient(170deg, #FFF6F2 0%, #fff 45%); border: 1px solid var(--linea); box-shadow: var(--sombra);
 }
-.pc-estudio::before {
-  content: ""; position: absolute; left: 26px; right: 26px; top: 0; height: 3px;
-  background: var(--pink); border-radius: 0 0 3px 3px;
-}
-.pc-estudio-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-.pc-estudio-eyebrow {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8A6F68;
-}
+.pc-estudio-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.pc-estudio-eyebrow { font-size: 15px; font-weight: 900; color: var(--ink); }
 .pc-estudio-link {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 11.5px; font-weight: 700; color: var(--pink-deep); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 3px; padding: 5px 11px; border-radius: 99px;
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep); background: var(--rubor); text-decoration: none;
 }
-.pc-estudio-link:hover { text-decoration: underline; }
-.pc-estudio-total { display: flex; align-items: flex-end; gap: 14px; }
-.pc-estudio-num {
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 60px; line-height: 0.85;
-  color: var(--ink); letter-spacing: -0.05em;
-}
-.pc-estudio-total-txt { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; font-size: 15px; color: var(--ink); }
-.pc-estudio-altas { font-size: 12px; color: var(--pink-muted); }
+.pc-estudio-link:hover { background: var(--pink-wash); }
+.pc-estudio-total { display: flex; align-items: flex-end; gap: 12px; }
+.pc-estudio-num { font-weight: 900; font-size: 56px; line-height: 0.9; color: var(--ink); letter-spacing: -0.03em; }
+.pc-estudio-total-txt { display: flex; flex-direction: column; gap: 2px; padding-bottom: 3px; font-size: 15px; font-weight: 800; color: var(--ink); }
+.pc-estudio-altas { font-size: 12.5px; font-weight: 700; color: var(--salvia-deep); background: var(--salvia); padding: 2px 9px; border-radius: 99px; align-self: flex-start; }
 
-.pc-butacas {
-  display: grid; grid-template-columns: repeat(10, minmax(0, 18px)); justify-content: space-between;
-  row-gap: 9px; margin: 24px 0 20px;
-}
-.pc-butaca {
-  position: relative; display: block; height: 15px;
-  border-radius: 7px 7px 3px 3px; background: #ece9e7;
-}
-.pc-butaca::after {
-  content: ""; position: absolute; left: 2px; right: 2px; bottom: -4px; height: 2px;
-  border-radius: 2px; background: inherit; opacity: 0.45;
-}
+.pc-barra { display: flex; gap: 4px; height: 14px; margin: 20px 0 16px; padding: 3px; border-radius: 99px; background: var(--rubor); }
+.pc-barra-tramo { display: block; flex-basis: 0; min-width: 10px; border-radius: 99px; }
+.pc-barra-vacia { flex: 1; border-radius: 99px; background: var(--linea); }
 
-.pc-reparto { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.pc-reparto { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .pc-reparto-fila {
-  display: flex; align-items: baseline; gap: 10px; text-decoration: none;
-  padding: 3px 8px; margin: 0 -8px; border-radius: 10px; transition: background .2s;
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+  padding: 8px 10px; border-radius: 14px; transition: background .2s;
 }
-.pc-reparto-fila:hover { background: var(--pink-wash); }
-.pc-reparto-fila:hover .pc-reparto-nombre { color: var(--pink-deep); }
-.pc-reparto-marca { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; align-self: center; }
-.pc-reparto-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
-.pc-reparto-puntos { flex: 1; min-width: 12px; border-bottom: 1.5px dotted #E6CCC2; transform: translateY(-4px); }
-.pc-reparto-pct { font-size: 11px; color: #B39189; font-variant-numeric: tabular-nums; }
-.pc-reparto-num {
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 19px; line-height: 1; color: var(--ink);
-  min-width: 22px; text-align: right; font-variant-numeric: lining-nums tabular-nums;
-}
+.pc-reparto-fila:hover { background: var(--rubor); }
+.pc-reparto-marca { width: 12px; height: 12px; border-radius: 5px; flex-shrink: 0; }
+.pc-reparto-nombre { flex: 1; font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.pc-reparto-pct { font-size: 12px; font-weight: 800; color: var(--muted); background: #fff; border: 1px solid var(--linea); padding: 2px 8px; border-radius: 99px; font-variant-numeric: tabular-nums; }
+.pc-reparto-num { font-weight: 900; font-size: 18px; line-height: 1; color: var(--ink); min-width: 22px; text-align: right; font-variant-numeric: lining-nums tabular-nums; }
 
-.pc-estudio-sep { height: 1px; background: #F6E7E1; margin: 22px 0 18px; }
-.pc-estudio-vacio { font-size: 13px; color: #B39189; }
-.pc-altas { list-style: none; margin: 0; padding: 0; }
+.pc-estudio-sep { height: 1px; background: var(--linea); margin: 16px 0 16px; }
+.pc-estudio-vacio { font-size: 13.5px; color: var(--muted); }
+.pc-altas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .pc-altas-fila {
-  display: flex; align-items: center; gap: 12px; padding: 9px 8px; margin: 0 -8px;
-  text-decoration: none; border-radius: 12px; transition: background .2s;
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px;
+  text-decoration: none; border-radius: 16px; transition: background .2s;
 }
-.pc-altas-fila:hover { background: #FFFAF6; }
-.pc-altas li + li { border-top: 1px solid #FBF0EB; }
+.pc-altas-fila:hover { background: var(--rubor); }
 .pc-inicial {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1.5px solid; background: #fff;
-  font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 14px;
+  background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep);
+  font-weight: 900; font-size: 15px;
 }
-.pc-altas-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.pc-altas-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pc-altas-nombre--sin { font-weight: 400; font-style: italic; color: #B39189; }
-.pc-altas-plan { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.pc-altas-cuando { font-size: 11.5px; color: #B39189; white-space: nowrap; }
+.pc-altas-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.pc-altas-nombre { max-width: 100%; font-size: 14px; font-weight: 800; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-altas-nombre--sin { font-weight: 600; color: var(--muted); }
+.pc-tier { font-size: 11.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; border: 1px solid transparent; }
+.pc-tier--principal { background: var(--pink); color: #fff; }
+.pc-tier--solista { background: var(--rubor); color: var(--pink-deep); border-color: var(--pink-line); }
+.pc-tier--corps { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
+.pc-tier--none { background: #F6EEEA; color: var(--muted); }
+.pc-altas-cuando { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 
-.pc-atajos { margin-top: 40px; border-top: 1px solid var(--ink); padding-top: 18px; }
-.pc-atajos-titulo {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8A6F68;
-  margin-bottom: 8px;
-}
-.pc-atajos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.pc-atajos li + li { border-left: 1px solid #F0DED6; }
+/* ── atajos ── */
+.pc-atajos-titulo { font-size: 18px; font-weight: 900; color: var(--ink); margin-bottom: 12px; }
+.pc-atajos ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .pc-atajo {
-  display: flex; align-items: center; gap: 16px; padding: 16px 22px; height: 100%;
-  text-decoration: none; color: inherit; border-radius: 16px; transition: background .2s;
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px; height: 100%;
+  text-decoration: none; color: inherit; border-radius: 24px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra);
+  transition: background .2s, border-color .2s, box-shadow .35s, transform .35s var(--curva);
 }
-.pc-atajos li:first-child .pc-atajo { padding-left: 0; }
-.pc-atajo:hover { background: var(--pink-wash); }
-.pc-atajo-num { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--pink-mid); width: 36px; flex-shrink: 0; }
-.pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pc-atajo-label { font-size: 14px; font-weight: 700; color: var(--ink); }
-.pc-atajo:hover .pc-atajo-label { color: var(--pink-deep); }
-.pc-atajo-sub { font-size: 12px; color: #B39189; }
-.pc-atajo-flecha { color: var(--pink-deep); display: inline-flex; }
+.pc-atajo:hover { background: var(--crema); border-color: var(--pink-line); box-shadow: var(--sombra-alta); transform: translateY(-2px); }
+.pc-atajo-ico { width: 44px; height: 44px; border-radius: 16px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--rubor); color: var(--pink-deep); }
+.pc-atajos li:nth-child(2) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
+.pc-atajos li:nth-child(3) .pc-atajo-ico { background: #F7F0FA; color: #7A5490; }
+.pc-atajos li:nth-child(4) .pc-atajo-ico { background: #F2F7EF; color: var(--salvia-deep); }
+.pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pc-atajo-label { font-size: 14.5px; font-weight: 800; color: var(--ink); }
+.pc-atajo-sub { font-size: 12.5px; color: var(--muted); }
+.pc-atajo-flecha { color: #C9AFA7; flex-shrink: 0; transition: transform .3s var(--curva), color .2s; }
+.pc-atajo:hover .pc-atajo-flecha { color: var(--pink-deep); transform: translateX(3px); }
 
 /* ── responsive ── */
 @media (max-width: 1180px) {
   .pc-cuerpo { grid-template-columns: minmax(0, 1fr); }
-  .pc-estudio { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 0 32px; }
+  .pc-estudio { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 0 28px; }
   .pc-estudio-sep { margin: 0; height: auto; }
   .pc-atajos ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pc-atajos li:nth-child(3) { border-left: 0; }
-  .pc-atajos li:nth-child(n+3) { border-top: 1px solid #F0DED6; }
-  .pc-atajos li:nth-child(3) .pc-atajo { padding-left: 0; }
 }
 @media (max-width: 860px) {
   .pc-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pc-cifras > div:nth-child(3) { border-left: 0; }
-  .pc-cifras > div:nth-child(n+3) { border-top: 1px solid #F0DED6; }
-  .pc-cifras > div:nth-child(3) .pc-cifra { padding-left: 0; }
   .pc-clases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pc-estudio { display: block; }
-  .pc-estudio-sep { margin: 22px 0 18px; height: 1px; }
+  .pc-estudio-sep { margin: 16px 0; height: 1px; }
 }
 @media (max-width: 520px) {
+  .pc { gap: 16px; }
+  .pc-mast { border-radius: 28px; }
   .pc-mast-acciones { width: 100%; }
-  .pc-mast-acciones .pc-btn { flex: 1; justify-content: center; }
-  .pc-cifra { padding: 18px 16px 20px; }
-  .pc-cifras > div:nth-child(odd) .pc-cifra { padding-left: 0; }
-  .pc-vivo-fila { gap: 14px; }
+  .pc-mast-acciones .pc-btn { flex: 1; justify-content: center; padding: 0 14px; }
+  .pc-cifras { gap: 10px; }
+  .pc-cifra { padding: 14px 14px 16px; }
+  .pc-cifra-ico { width: 34px; height: 34px; border-radius: 12px; }
+  .pc-cifra-label { font-size: 13px; }
+  .pc-bloque { padding: 18px 14px 18px; border-radius: 24px; }
+  .pc-clases { gap: 10px; }
+  .pc-vivo-fila { gap: 12px; }
   .pc-vivo-res { display: none; }
   .pc-hueco--extra { display: none; }
-  .pc-atajos ol { grid-template-columns: minmax(0, 1fr); }
-  .pc-atajos li + li { border-left: 0; border-top: 1px solid #F0DED6; }
-  .pc-atajo { padding-left: 0; }
+  .pc-atajos ol { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-mast::before, .pc-mast::after { animation: none; }
+  .pc-cifra:hover, .pc-atajo:hover, .pc-btn:hover { transform: none; }
 }
 `;

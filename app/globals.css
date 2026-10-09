@@ -4282,3 +4282,6 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .sb-nav::-webkit-scrollbar-track { background: transparent; }
 .sb-nav::-webkit-scrollbar-thumb { background: var(--linea-fuerte); border-radius: 99px; }
 .sb-nav::-webkit-scrollbar-thumb:hover { background: var(--pink-line); }
+
+/* Prefijo de los desplegables en pildora ("Plan", "Estado"): en oracion, no en mayusculas. */
+.sistema .dsp-prefijo { font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--muted); }

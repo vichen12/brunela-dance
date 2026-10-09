@@ -12,8 +12,8 @@ export default function Loading() {
   return (
     <main style={{ fontFamily: "inherit" }}>
       <SkHero />
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "26px 28px", display: "flex", flexDirection: "column", gap: 18 }}>
-        <div className="sk" style={{ height: 42, borderRadius: 14 }} />
+      <div style={{ padding: "22px 0 40px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="sk" style={{ height: 66, borderRadius: 20 }} />
         <SkFormulario campos={6} />
         <SkFormulario campos={3} />
       </div>
