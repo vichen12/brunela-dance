@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { ArrowRight, Download, ExternalLink, Hourglass, ListChecks, Moon, PieChart, PlayCircle, Sparkles, Sprout, UserMinus, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, CalendarDays, Download, ExternalLink, Hourglass, ListChecks, Moon, Package, PieChart, PlayCircle, Receipt, Repeat, Sparkles, Sprout, UserMinus, Users, Wallet } from "lucide-react";
 import { AdminCabecera } from "@/components/admin-ui";
 import {
   getAnalitica,
   type Umbral,
 } from "@/src/features/admin/analitica/queries";
+import { getFacturacion, type Facturacion } from "@/src/features/admin/analitica/facturacion";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ const TONOS = ["coral", "melo", "salvia", "lila"] as const;
 type Tono = (typeof TONOS)[number];
 
 function Tarjeta({
-  valor, etiqueta, ayuda, tono = "normal", color, icono,
+  valor, etiqueta, ayuda, tono = "normal", color, icono, extra,
 }: {
   valor: string | number;
   etiqueta: string;
@@ -46,10 +47,12 @@ function Tarjeta({
   tono?: "normal" | "alerta";
   color: Tono;
   icono: React.ReactNode;
+  extra?: React.ReactNode;
 }) {
   return (
     <div className={`aa-tarjeta aa-tarjeta--${color}` + (tono === "alerta" ? " es-alerta" : "")}>
       <span className="aa-tarjeta-ico" aria-hidden="true">{icono}</span>
+      {extra && <span className="aa-tarjeta-extra">{extra}</span>}
       <p className="aa-tarjeta-num">{valor}</p>
       <p className="aa-tarjeta-etq">{etiqueta}</p>
       <p className="aa-tarjeta-ayuda">{ayuda}</p>
@@ -120,11 +123,202 @@ function Barras({ filas }: { filas: { etiqueta: string; cantidad: number }[] }) 
   );
 }
 
+// ── Facturacion ──────────────────────────────────────────────────────────────
+
+const EUR = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+const EUR_REDONDO = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const euros = (centimos: number) => EUR.format(centimos / 100);
+const eurosRedondo = (centimos: number) => EUR_REDONDO.format(Math.round(centimos / 100));
+
+const NOMBRE_PLAN: Record<string, string> = {
+  corps_de_ballet: "Corps de Ballet",
+  solista: "Solista",
+  principal: "Principal",
+  otro: "Otros precios",
+};
+
+/** Los ultimos 12 meses, en barras. Una sola serie: no lleva leyenda. */
+function GraficoMeses({ meses }: { meses: Extract<Facturacion, { estado: "ok" }>["meses"] }) {
+  const max = Math.max(...meses.map((m) => m.netoCentimos), 1);
+  const iMax = meses.findIndex((m) => m.netoCentimos === max);
+  return (
+    <figure className="aa-graf" aria-label="Facturado por mes, últimos 12 meses">
+      <div className="aa-graf-zona">
+        {meses.map((m, i) => {
+          const alto = m.netoCentimos > 0 ? Math.max(2, (m.netoCentimos / max) * 100) : 0;
+          const esActual = i === meses.length - 1;
+          const conEtiqueta = (esActual || i === iMax) && m.netoCentimos !== 0;
+          return (
+            <div
+              key={m.clave}
+              className={"aa-graf-col" + (esActual ? " es-actual" : "")}
+              tabIndex={0}
+              aria-label={`${m.largo}: ${euros(m.netoCentimos)}`}
+            >
+              <span className="aa-graf-tip" aria-hidden="true">
+                <strong>{euros(m.netoCentimos)}</strong> {m.largo}
+              </span>
+              <div className="aa-graf-pista">
+                {conEtiqueta && <span className="aa-graf-valor" style={{ bottom: `calc(${alto}% + 6px)` }}>{eurosRedondo(m.netoCentimos)}</span>}
+                <div className="aa-graf-barra" style={{ height: `${alto}%`, animationDelay: `${i * 0.03}s` }} />
+              </div>
+              <span className="aa-graf-mes">{m.corto}</span>
+            </div>
+          );
+        })}
+      </div>
+      <figcaption className="aa-graf-pie">Neto por mes, ya descontadas comisiones y reembolsos. Pasá el cursor por una barra para ver el importe.</figcaption>
+    </figure>
+  );
+}
+
+function BloqueFacturacion({ f }: { f: Facturacion }) {
+  const abrirStripe = (
+    <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer" className="aa-bloque-accion">
+      Abrir Stripe <ExternalLink size={13} strokeWidth={2.4} aria-hidden="true" />
+    </a>
+  );
+
+  return (
+    <section className="aa-bloque aa-fact">
+      <div className="aa-bloque-cab">
+        <span className="aa-burbuja aa-burbuja--coral" aria-hidden="true"><Wallet size={18} strokeWidth={2.2} /></span>
+        <h2 className="aa-bloque-titulo">¿Cuánto facturé?</h2>
+        {f.estado === "ok" && f.modo === "test" && <span className="aa-chip aa-chip--melo">Datos de prueba de Stripe</span>}
+        {abrirStripe}
+      </div>
+
+      {f.estado !== "ok" ? (
+        <div className="aa-sindatos">
+          <span className="aa-burbuja aa-burbuja--lila" aria-hidden="true"><Wallet size={18} strokeWidth={2.2} /></span>
+          <div>
+            <p className="aa-sindatos-titulo">
+              {f.estado === "sin_clave" ? "Stripe no está conectado acá" : "Ahora no pudimos leer Stripe"}
+            </p>
+            <p className="aa-txt">
+              {f.estado === "sin_clave"
+                ? "Falta la clave de Stripe en la configuración del servidor. Mientras tanto, las cifras están en el panel de Stripe."
+                : "Puede ser un corte momentáneo. Probá recargar en unos minutos; mientras tanto, las cifras están en el panel de Stripe. El resto de esta página no depende de esto."}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="aa-tarjetas">
+            <Tarjeta
+              color="coral"
+              icono={<Wallet size={18} strokeWidth={2.2} />}
+              valor={euros(f.esteMes.netoCentimos)}
+              etiqueta="Facturado este mes"
+              ayuda={`Cobraste ${euros(f.esteMes.brutoCentimos)}; se fueron ${euros(f.esteMes.comisionesCentimos)} en comisiones` +
+                (f.esteMes.reembolsosCentimos > 0 ? ` y ${euros(f.esteMes.reembolsosCentimos)} en reembolsos.` : ".")}
+              extra={f.variacionPct !== null && (
+                <span className={"aa-var" + (f.variacionPct < 0 ? " es-baja" : "")}>
+                  {f.variacionPct < 0
+                    ? <ArrowDownRight size={13} strokeWidth={2.6} aria-hidden="true" />
+                    : <ArrowUpRight size={13} strokeWidth={2.6} aria-hidden="true" />}
+                  {f.variacionPct > 0 ? "+" : ""}{f.variacionPct}% vs. mes pasado
+                </span>
+              )}
+            />
+            <Tarjeta
+              color="melo"
+              icono={<CalendarDays size={18} strokeWidth={2.2} />}
+              valor={euros(f.mesPasado.netoCentimos)}
+              etiqueta="Facturado el mes pasado"
+              ayuda="Neto, igual que el de este mes: lo que te queda después de comisiones y reembolsos."
+            />
+            <Tarjeta
+              color="salvia"
+              icono={<Repeat size={18} strokeWidth={2.2} />}
+              valor={euros(f.mrrCentimos)}
+              etiqueta="Ingreso mensual recurrente"
+              ayuda={
+                f.mrrDePruebaCentimos > 0
+                  ? `Lo que suman tus suscripciones por mes (las anuales, divididas por 12). ${euros(f.mrrDePruebaCentimos)} son de alumnas en prueba que todavía no pagaron.`
+                  : "Lo que suman tus suscripciones por mes. Las anuales cuentan divididas por 12."
+              }
+            />
+            <Tarjeta
+              color="lila"
+              icono={<Receipt size={18} strokeWidth={2.2} />}
+              valor={f.ticketPromedioCentimos !== null ? euros(f.ticketPromedioCentimos) : "—"}
+              etiqueta="Pago promedio"
+              ayuda={
+                f.pagos12m > 0
+                  ? `Sobre ${f.pagos12m} ${f.pagos12m === 1 ? "pago" : "pagos"} de los últimos 12 meses, antes de comisiones.`
+                  : "Todavía no entró ningún pago en los últimos 12 meses."
+              }
+            />
+          </div>
+
+          <div className="aa-fact-cuerpo">
+            <div className="aa-segmento aa-fact-graf">
+              <p className="aa-segmento-titulo">Últimos 12 meses</p>
+              <GraficoMeses meses={f.meses} />
+            </div>
+
+            <div className="aa-fact-lado">
+              <div className="aa-segmento">
+                <p className="aa-segmento-titulo">Suscripciones hoy</p>
+                <div className="aa-filas">
+                  {f.planes.map((p) => (
+                    <div key={p.tier} className="aa-fila aa-fila--blanca">
+                      <span className={"aa-plan aa-plan--" + p.tier}>{NOMBRE_PLAN[p.tier]}</span>
+                      <span className="aa-fila-txt aa-fila-sub">
+                        {p.enPrueba > 0 ? `${p.enPrueba} en prueba` : ""}
+                      </span>
+                      <span className="aa-fila-num">{p.activas}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="aa-txt aa-txt--chico">
+                  <strong>{f.activasTotal}</strong> {f.activasTotal === 1 ? "activa" : "activas"}
+                  {" · "}<strong>{f.enPruebaTotal}</strong> en prueba
+                  {" · "}<strong>{f.canceladasEsteMes}</strong> {f.canceladasEsteMes === 1 ? "se dio" : "se dieron"} de baja este mes
+                  {f.avisaronQueSeVan > 0 && <>{" · "}<strong>{f.avisaronQueSeVan}</strong> avisaron que no renuevan</>}
+                </p>
+              </div>
+
+              <div className="aa-segmento">
+                <p className="aa-segmento-titulo">De dónde viene, últimos 12 meses</p>
+                <div className="aa-filas">
+                  <div className="aa-fila aa-fila--blanca">
+                    <span className="aa-fila-ini" aria-hidden="true"><Repeat size={16} strokeWidth={2.2} /></span>
+                    <span className="aa-fila-txt aa-fila-titulo">Suscripciones</span>
+                    <span className="aa-fila-num">{euros(f.suscripciones12m.netoCentimos)}</span>
+                  </div>
+                  <div className="aa-fila aa-fila--blanca">
+                    <span className="aa-fila-ini aa-fila-ini--melo" aria-hidden="true"><Package size={16} strokeWidth={2.2} /></span>
+                    <span className="aa-fila-txt">
+                      <span className="aa-fila-titulo">Packs de clases</span>
+                      <span className="aa-fila-sub aa-bloquecito">{f.packs12m.cantidad} {f.packs12m.cantidad === 1 ? "vendido" : "vendidos"}</span>
+                    </span>
+                    <span className="aa-fila-num">{euros(f.packs12m.netoCentimos)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="aa-txt aa-txt--sep aa-fact-nota">
+            Todo sale de Stripe, que es donde se cobra: no hay un cálculo propio al
+            lado que pueda dar otro número. Se actualiza cada pocos minutos.
+            {f.otrasMonedas > 0 && ` Hay ${f.otrasMonedas} movimientos en otra moneda que no se sumaron.`}
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
 // ── Pantalla ─────────────────────────────────────────────────────────────────
 
 export default async function AnaliticasPage() {
   await requireAdmin();
-  const a = await getAnalitica();
+  // En paralelo: Stripe no frena a la base ni al reves. getFacturacion nunca
+  // tira: si Stripe falla devuelve un estado y el resto de la pagina sigue.
+  const [a, facturacion] = await Promise.all([getAnalitica(), getFacturacion()]);
 
   return (
     <main className="aa">
@@ -204,6 +398,16 @@ export default async function AnaliticasPage() {
           tono={a.inactividad.alumnas.length > 0 ? "alerta" : "normal"}
         />
       </div>
+
+      {/*
+        ── Ingresos ──
+        Los numeros salen de Stripe, la MISMA fuente donde se cobra, leidos en
+        vivo (con unos minutos de cache). No hay una cuenta propia al lado: si
+        la hubiera, tarde o temprano daria otro numero y no habria forma de
+        saber cual mirar. Aca hay una sola verdad, la de Stripe, y el enlace
+        para abrirla.
+      */}
+      <BloqueFacturacion f={facturacion} />
 
       <div className="aa-dos">
         {/* ── Inactividad ────────────────────────────────────────────────── */}
@@ -295,8 +499,7 @@ export default async function AnaliticasPage() {
         )}
       </Bloque>
 
-      <div className="aa-dos">
-        {/* ── Planes de trabajo ──────────────────────────────────────────── */}
+      {/* ── Planes de trabajo ──────────────────────────────────────────── */}
         <Bloque
           pregunta="¿Terminan los planes de trabajo?"
           accion={{ href: "/admin/programs", texto: "Ir a planes de trabajo" }}
@@ -338,26 +541,6 @@ export default async function AnaliticasPage() {
           )}
         </Bloque>
 
-        {/* ── Ingresos: se enlaza, no se recalcula ───────────────────────── */}
-        <Bloque pregunta="¿Cuánto facturé?" icono={<Wallet size={18} strokeWidth={2.2} />} color="salvia">
-          <p className="aa-txt">
-            Los ingresos están en <strong>Stripe</strong>, que es donde se cobran
-            los pagos. Ahí ves cuánto entró este mes, cómo viene contra el
-            anterior, y los reembolsos e impuestos ya descontados.
-          </p>
-          <p className="aa-txt aa-txt--sep">
-            No lo repetimos acá a propósito: un cálculo propio daría un número
-            distinto al de Stripe, y no habría forma de saber cuál de los dos
-            mirar.
-          </p>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noreferrer"
-            className="ad-btn aa-stripe"
-          >Abrir Stripe <ExternalLink size={14} strokeWidth={2.4} aria-hidden="true" /></a>
-        </Bloque>
-      </div>
     </main>
   );
 }
@@ -447,11 +630,58 @@ const CSS = `
 .aa-barra-num { font-size: 14px; font-weight: 900; color: var(--ink); text-align: right; }
 @keyframes aa-crece { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-@media (max-width: 1100px) { .aa-dos { grid-template-columns: minmax(0, 1fr); } }
+/* Facturacion */
+.aa-fact .aa-tarjetas { margin-bottom: 16px; }
+.aa-fact .aa-tarjeta-num { font-size: 34px; }
+.aa-tarjeta-extra { position: absolute; z-index: 1; top: 22px; right: 18px; }
+.aa-var { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px 5px 8px; border-radius: 99px; font-size: 12px; font-weight: 800; background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); white-space: nowrap; }
+.aa-var.es-baja { color: var(--melocoton-deep); border-color: #F6D2BD; }
+.aa-fact-cuerpo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.aa-fact-graf { display: flex; flex-direction: column; }
+.aa-fact-graf .aa-graf { flex: 1; display: flex; flex-direction: column; }
+.aa-fact-lado { display: grid; gap: 16px; }
+.aa-fact-nota { margin-top: 16px; font-size: 13px; }
+.aa-fila--blanca { background: #fff; padding: 10px 14px; }
+.aa-fila-num { font-size: 15px; font-weight: 900; color: var(--ink); white-space: nowrap; }
+.aa-bloquecito { display: block; }
+.aa-plan { padding: 5px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.aa-plan--principal { background: var(--pink); color: #fff; }
+.aa-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.aa-plan--corps_de_ballet { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.aa-plan--otro { background: #FFEEDB; color: var(--melocoton-deep); }
+
+.aa-graf { margin: 0; }
+.aa-graf-zona { flex: 1; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; min-height: 230px; padding-top: 26px; }
+.aa-graf-col { position: relative; display: flex; flex-direction: column; min-width: 0; outline: none; cursor: default; }
+.aa-graf-pista { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1.5px solid var(--linea-fuerte); }
+.aa-graf-barra { width: min(100%, 34px); border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, #FFC9AE, #F7A88A); transform-origin: bottom; animation: aa-sube .9s var(--curva) both; transition: filter .2s; }
+.aa-graf-col.es-actual .aa-graf-barra { background: linear-gradient(180deg, #F58A8E, var(--pink)); }
+.aa-graf-col:hover .aa-graf-barra, .aa-graf-col:focus-visible .aa-graf-barra { filter: brightness(.94) saturate(1.1); }
+.aa-graf-valor { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11.5px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.aa-graf-mes { margin-top: 8px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.aa-graf-col.es-actual .aa-graf-mes { color: var(--pink-deep); font-weight: 900; }
+.aa-graf-tip { position: absolute; z-index: 3; bottom: calc(100% - 18px); left: 50%; transform: translate(-50%, 4px); padding: 7px 11px; border-radius: 12px; background: #fff; border: 1px solid var(--linea-fuerte); box-shadow: var(--sombra-alta); font-size: 12px; color: var(--muted); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s var(--curva); }
+.aa-graf-tip strong { color: var(--ink); font-weight: 900; }
+.aa-graf-col:hover .aa-graf-tip, .aa-graf-col:focus-visible .aa-graf-tip { opacity: 1; transform: translate(-50%, 0); }
+.aa-graf-col:first-child .aa-graf-tip { left: 0; transform: translate(0, 4px); }
+.aa-graf-col:first-child:hover .aa-graf-tip, .aa-graf-col:first-child:focus-visible .aa-graf-tip { transform: none; }
+.aa-graf-col:last-child .aa-graf-tip, .aa-graf-col:nth-last-child(2) .aa-graf-tip { left: auto; right: 0; transform: translate(0, 4px); }
+.aa-graf-col:last-child:hover .aa-graf-tip, .aa-graf-col:last-child:focus-visible .aa-graf-tip,
+.aa-graf-col:nth-last-child(2):hover .aa-graf-tip, .aa-graf-col:nth-last-child(2):focus-visible .aa-graf-tip { transform: none; }
+.aa-graf-pie { margin-top: 12px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+@keyframes aa-sube { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+@media (max-width: 1100px) { .aa-dos, .aa-fact-cuerpo { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .aa-graf-zona { gap: 4px; min-height: 190px; }
+  .aa-graf-mes { font-size: 10.5px; }
+  .aa-graf-valor { font-size: 10.5px; }
+  .aa-fact .aa-tarjeta-num { font-size: 30px; }
+}
 @media (max-width: 560px) {
   .aa-barra { grid-template-columns: 96px minmax(0, 1fr) 32px; gap: 8px; }
   .aa-tarjeta-num { font-size: 34px; }
   .aa .ad-mast-acciones, .aa .ad-mast-acciones a { width: 100%; justify-content: center; }
 }
-@media (prefers-reduced-motion: reduce) { .aa-barra-relleno { animation: none; } .aa-tarjeta { transition: none; } .aa-tarjeta:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .aa-barra-relleno, .aa-graf-barra { animation: none; } .aa-tarjeta { transition: none; } .aa-tarjeta:hover { transform: none; } }
 `;

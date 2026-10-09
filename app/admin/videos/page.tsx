@@ -23,6 +23,7 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { hasBunnyStreamEnv } from "@/src/lib/env";
 import { bunnySignedUrls, bunnyVideoIdFromUrl } from "@/src/lib/video/bunny";
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -127,8 +128,11 @@ const MUX_STYLE: Record<MuxJob["status"], { bg: string; border: string; color: s
   pending:    { bg: "#FFF4E8", border: "#FFE2D3", color: "#8A4A2E", label: "Idiomas en cola" },
   processing: { bg: "#FFF0EA", border: "#F6D9CF", color: "#A0472F", label: "Muxeando ahora" },
   failed:     { bg: "#FDECEC", border: "#F2C6C6", color: "#B03A3E", label: "Muxeo fallido" },
-  done:       { bg: "#FFF4E8", border: "#CFE3C9", color: "#3F7A45", label: "Muxeo listo" },
+  done:       { bg: "#FFF2EE", border: "#F2C6C6", color: "#B03A3E", label: "Muxeo listo" },
 };
+
+/** Clases por pagina del listado. */
+const POR_PAGINA = 10;
 
 /** The worker polls every 30s, so this much waiting means nobody is polling. */
 const WORKER_SILENT_MINUTES = 10;
@@ -245,36 +249,70 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   //
   // Filtrar en memoria sobre lo ya traido parece mas simple y miente: el
   // contador de arriba diria "3 borradores" contando solo los de la pagina.
-  // Y con paginacion futura seria directamente incorrecto.
+  // Por eso, con la paginacion, las cifras salen de consultas `count` propias
+  // (head: true, sin filas) y NUNCA de las 10 clases que trae la pagina.
   const q = (typeof params.q === "string" ? params.q : "").trim();
   const fEstado = ESTADOS.some((e) => e.key === params.estado) ? (params.estado as string) : "";
   const fPlan = PLANES.some((e) => e.key === params.plan) ? (params.plan as string) : "";
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
 
-  let consultaVideos = supabase
-    .from("videos")
-    .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, planes_permitidos, content_type, recommended_min_level, recommended_max_level, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured");
+  const COLUMNAS = "id, slug, title_i18n, description_i18n, status, membership_tier_required, planes_permitidos, content_type, recommended_min_level, recommended_max_level, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured";
 
-  if (fEstado) consultaVideos = consultaVideos.eq("status", fEstado);
-  // `contains` y no `eq`: desde la migracion 20260921 el acceso vive en la
-  // LISTA. Con `eq` sobre el minimo derivado, filtrar por "Solista" no
-  // encontraria una clase {corps, solista} -- su minimo es corps -- aunque
-  // Solista la vea perfectamente.
-  if (fPlan) consultaVideos = consultaVideos.contains("planes_permitidos", [fPlan]);
-  if (q) {
-    // Titulo en espanol o slug. `or` de PostgREST: una sola consulta.
-    const t = q.replace(/[,()]/g, " ");
-    consultaVideos = consultaVideos.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
-  }
+  // El mismo filtro va a dos consultas: la de la pagina (con filas) y la del
+  // total filtrado (solo count). Por eso es una funcion y no una variable: un
+  // builder de PostgREST no se reusa.
+  const conFiltros = (soloContar: boolean) => {
+    let c = soloContar
+      ? supabase.from("videos").select("id", { count: "exact", head: true })
+      : supabase.from("videos").select(COLUMNAS);
+    if (fEstado) c = c.eq("status", fEstado);
+    // `contains` y no `eq`: desde la migracion 20260921 el acceso vive en la
+    // LISTA. Con `eq` sobre el minimo derivado, filtrar por "Solista" no
+    // encontraria una clase {corps, solista} -- su minimo es corps -- aunque
+    // Solista la vea perfectamente.
+    if (fPlan) c = c.contains("planes_permitidos", [fPlan]);
+    if (q) {
+      // Titulo en espanol o slug. `or` de PostgREST: una sola consulta.
+      const t = q.replace(/[,()]/g, " ");
+      c = c.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
+    }
+    return c;
+  };
 
-  const [{ data }, { data: jobData }, { count: totalVideos }, { data: programsData }, { data: programDaysData }] =
+  // Cuantas coinciden con el filtro: decide cuantas paginas hay. Va ANTES de
+  // pedir la pagina para no pedir un rango fuera de la lista (PostgREST
+  // contesta 416 si ?pagina=99 cae despues del final).
+  const { count: coincidenCount } = await conFiltros(true);
+  const coinciden = coincidenCount ?? 0;
+  const totalPaginas = Math.max(1, Math.ceil(coinciden / POR_PAGINA));
+  const pagina = Math.min(paginaPedida, totalPaginas - 1);
+  const desde = pagina * POR_PAGINA;
+
+  const [
+    { data },
+    { data: jobData },
+    { count: totalVideos },
+    { count: publicadasCount },
+    { count: borradoresCount },
+    { data: programsData },
+    { data: programDaysData },
+  ] =
     await Promise.all([
-      consultaVideos.order("created_at", { ascending: false }),
+      // `id` como desempate: con dos clases del mismo instante, el orden por
+      // fecha solo no es estable y una podria repetirse entre paginas.
+      conFiltros(false)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(desde, desde + POR_PAGINA - 1),
       supabase
         .from("video_mux_jobs")
         .select("id, video_id, status, attempts, last_error, expected_locales, created_at, claimed_at")
         .order("created_at", { ascending: false }),
       // El total SIN filtrar, para que el contador diga "5 de 19" y no "5 de 5".
       supabase.from("videos").select("*", { count: "exact", head: true }),
+      // Las cifras de arriba son del catalogo ENTERO, no de la pagina.
+      supabase.from("videos").select("id", { count: "exact", head: true }).eq("status", "published"),
+      supabase.from("videos").select("id", { count: "exact", head: true }).eq("status", "draft"),
       // Los planes de trabajo, para poder enganchar la clase a uno al subirla
       // o desde su propio panel. Van en el mismo Promise.all y no en una
       // consulta aparte: son dos viajes mas a Frankfurt, ~30 ms cada uno, y en
@@ -294,9 +332,9 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   );
   const SIN_UBICACION: UbicacionEnPlan[] = [];
 
-  const videos = (data ?? []) as VideoRecord[];
-  const published = videos.filter((v) => v.status === "published").length;
-  const drafts = videos.filter((v) => v.status === "draft").length;
+  const videos = (data ?? []) as unknown as VideoRecord[];
+  const published = publicadasCount ?? 0;
+  const drafts = borradoresCount ?? 0;
 
   // Cuantas alumnas EMPEZARON cada clase.
   //
@@ -327,7 +365,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const openJobs = [...latestJob.values()].filter((j) => j.status !== "done");
 
   const stats = [
-    { value: videos.length, label: "Total",      sub: "en el catalogo" },
+    { value: totalVideos ?? 0, label: "Total",      sub: "en el catalogo" },
     { value: published,     label: "Publicados", sub: "visibles a alumnas" },
     { value: drafts,        label: "Borradores", sub: "sin publicar" },
     ...(openJobs.length > 0
@@ -343,6 +381,17 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   // con un ancla, asi que se pide por la URL y el servidor lo pinta abierto.
   const abrirNueva = params.nueva === "1";
   const hayFiltro = Boolean(q || fEstado || fPlan);
+
+  // Enlace a otra pagina conservando buscador y filtros.
+  const conPagina = (p: number) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (fEstado) u.set("estado", fEstado);
+    if (fPlan) u.set("plan", fPlan);
+    if (p > 0) u.set("pagina", String(p));
+    const s = u.toString();
+    return s ? `/admin/videos?${s}` : "/admin/videos";
+  };
 
   return (
     <main className="acl">
@@ -374,8 +423,8 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
         action="/admin/videos"
         q={q}
         placeholder="Buscar por título o dirección"
-        total={totalVideos ?? videos.length}
-        mostrando={videos.length}
+        total={totalVideos ?? coinciden}
+        mostrando={coinciden}
         filtros={[
           { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS },
           { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES },
@@ -534,6 +583,14 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
           })}
         </ul>
       )}
+
+      {totalPaginas > 1 && (
+        <nav className="acl-paginas" aria-label="Páginas">
+          {pagina > 0 ? <Link href={conPagina(pagina - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
+          <span className="acl-paginas-txt">Página {pagina + 1} de {totalPaginas}</span>
+          {pagina < totalPaginas - 1 ? <Link href={conPagina(pagina + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
+        </nav>
+      )}
     </main>
   );
 }
@@ -589,11 +646,11 @@ const CSS_CLASES = `
 .acl-linea-estado { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .acl-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; }
 .acl-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.acl-chip--pub { color: var(--salvia-deep); background: var(--salvia); }
+.acl-chip--pub { color: var(--pink-deep); background: var(--pink-wash); }
 .acl-chip--pub .acl-punto { animation: acl-latido 2.4s ease-in-out infinite; }
 .acl-chip--borr { color: var(--melocoton-deep); background: #FFEBDF; }
 .acl-chip--arch { color: var(--muted); background: #F6EEEA; }
-@keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 2px rgba(63,122,69,0.18); } 50% { box-shadow: 0 0 0 5px rgba(63,122,69,0.04); } }
+@keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 2px rgba(230,79,85,0.2); } 50% { box-shadow: 0 0 0 5px rgba(230,79,85,0.04); } }
 .acl-tipo, .acl-uso { font-size: 12.5px; font-weight: 800; color: #A0472F; padding: 5px 12px; border-radius: 99px; background: #FFF0EA; }
 .acl-uso { color: var(--muted); background: var(--rubor); }
 .acl-uso--cero { color: var(--pink-deep); background: var(--pink-wash); }
@@ -606,14 +663,14 @@ const CSS_CLASES = `
 .acl-datos svg { color: var(--pink); flex-shrink: 0; }
 
 .acl-listo { margin-top: 12px; padding: 10px 12px; border-radius: 18px; background: #FFF8F3; border: 1px dashed var(--linea-fuerte); display: flex; flex-direction: column; gap: 8px; max-width: 560px; }
-.acl-listo.es-completa { background: #F6FAF3; border: 1px solid #DCEBD6; }
+.acl-listo.es-completa { background: var(--rubor); border: 1px solid var(--pink-line); }
 .acl-listo-cab { display: flex; align-items: center; gap: 10px; }
 .acl-listo-txt { font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); white-space: nowrap; }
-.acl-listo.es-completa .acl-listo-txt { color: var(--salvia-deep); }
+.acl-listo.es-completa .acl-listo-txt { color: var(--pink-deep); }
 .acl-listo-barra { flex: 1; max-width: 140px; height: 7px; border-radius: 99px; background: #FFE9DC; overflow: hidden; }
 .acl-listo-barra span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #FFB59A, var(--pink)); transition: width .6s var(--curva); }
-.acl-listo.es-completa .acl-listo-barra { background: #E1EEDB; }
-.acl-listo.es-completa .acl-listo-barra span { background: linear-gradient(90deg, #9CCB98, #5E9E62); }
+.acl-listo.es-completa .acl-listo-barra { background: var(--pink-soft); }
+.acl-listo.es-completa .acl-listo-barra span { background: linear-gradient(90deg, #F58A8E, var(--pink)); }
 .acl-listo-n { font-size: 12px; font-weight: 800; color: var(--muted); }
 .acl-checks { display: flex; flex-wrap: wrap; gap: 6px; }
 .acl-check {
@@ -621,8 +678,8 @@ const CSS_CLASES = `
   font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF;
 }
 .acl-check-ico { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--melocoton-deep); }
-.acl-check.es-ok { color: var(--salvia-deep); background: var(--salvia); }
-.acl-check.es-ok .acl-check-ico { background: var(--salvia-deep); color: #fff; }
+.acl-check.es-ok { color: var(--pink-deep); background: var(--pink-wash); }
+.acl-check.es-ok .acl-check-ico { background: var(--pink); color: #fff; }
 
 .acl-acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .acl-acciones-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -644,8 +701,11 @@ const CSS_CLASES = `
 .acl-icono.es-activo { color: var(--melocoton-deep); background: #FFEBDF; border-color: #FFD6C2; }
 .acl-guardado {
   display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px;
-  font-size: 12.5px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep); background: var(--pink-wash);
 }
+
+.acl-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 22px; }
+.acl-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); white-space: nowrap; }
 
 @media (max-width: 1180px) {
   .acl-card-cuerpo { grid-template-columns: 190px minmax(0, 1fr); }
@@ -658,6 +718,8 @@ const CSS_CLASES = `
   .acl-info { padding: 0 4px; }
   .acl-acciones { flex-wrap: wrap; gap: 10px; }
   .acl-listo-txt { white-space: normal; }
+  .acl-paginas { gap: 8px; }
+  .acl-paginas .ad-btn { padding-left: 14px; padding-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .acl-chip--pub .acl-punto, .acl-card { animation: none; }
