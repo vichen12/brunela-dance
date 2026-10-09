@@ -414,6 +414,13 @@ export function VideoPlayer({
         poster={poster ?? undefined}
         controls
         playsInline
+        // Sin "Descargar" en el menu de los controles ni "Guardar video como"
+        // con el clic derecho. El video ya llega en pedacitos HLS con enlaces
+        // firmados que vencen, asi que no hay un archivo para bajar; esto saca
+        // ademas los atajos del navegador. Grabar la pantalla no se puede
+        // impedir desde una web: para eso estan las condiciones (uso personal).
+        controlsList="nodownload noremoteplayback"
+        onContextMenu={(e) => e.preventDefault()}
         style={{ width: "100%", height: "100%", objectFit: "contain", background: "#1C1618" }}
       />
 
