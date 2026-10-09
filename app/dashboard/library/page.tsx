@@ -324,7 +324,9 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
    */
   const { count: comprasPropias } = await supabase
     .from("pack_purchases")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true })
+    // Las de ELLA: a la admin RLS le cuenta las de todas.
+    .eq("user_id", user.id);
 
   const sinNada =
     (profileData?.membership_tier ?? "none") === "none" &&

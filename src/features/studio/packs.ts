@@ -61,13 +61,17 @@ const modoEsLive = () => /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY 
 
 export async function getPacksTienda(tierActual: string | null = null): Promise<PackTienda[]> {
   const supabase = await createSupabaseServerClient();
+  // Las compras se filtran por QUIEN MIRA: RLS le devuelve a una admin las de
+  // todas las alumnas, y sin este filtro Brunela veria "Ya es tuyo" en los
+  // packs que compro cualquiera.
+  const { data: { user } } = await supabase.auth.getUser();
   const [{ data: packs }, { data: compras }, { data: rel }, restricciones] = await Promise.all([
     supabase
       .from("packs")
       .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, is_published, stripe_price_id_test, stripe_price_id_live")
       .eq("is_published", true)
       .order("display_order"),
-    supabase.from("pack_purchases").select("pack_id, purchased_at"),
+    supabase.from("pack_purchases").select("pack_id, purchased_at").eq("user_id", user?.id ?? "00000000-0000-0000-0000-000000000000"),
     supabase.from("pack_videos").select("pack_id"),
     getRestriccionesDePacks(),
   ]);

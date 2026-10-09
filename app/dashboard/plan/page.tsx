@@ -38,8 +38,10 @@ export default async function PlanPage() {
         .from("packs")
         .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, stripe_price_id_test, stripe_price_id_live")
         .order("display_order"),
-      // Las suyas: `pack_purchases_select_own` no devuelve las de nadie mas.
-      supabase.from("pack_purchases").select("pack_id, purchased_at"),
+      // Las suyas. Filtrado por user_id A PROPOSITO: a una alumna RLS solo le
+      // da las propias, pero a la admin le da las de todas, y Brunela veria
+      // "Ya es tuyo" en packs que compro otra.
+      supabase.from("pack_purchases").select("pack_id, purchased_at").eq("user_id", user.id),
       // ⚠️ VA EN EL MISMO PARALELO. Estaba despues del Promise.all, en serie:
       //    un sexto viaje a Frankfurt (~30 ms) encadenado detras de los otros
       //    cinco, en una pantalla que ya hacia cinco. No depende de ninguno, asi
