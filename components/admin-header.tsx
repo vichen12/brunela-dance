@@ -55,7 +55,8 @@ export function AdminHeader({ inicial }: { inicial: string }) {
           <Eye size={15} strokeWidth={2} aria-hidden="true" />
           <span>Ver como alumna</span>
         </Link>
-        <span className="ah-avatar" aria-hidden="true">{inicial}</span>
+        {/* El avatar lleva a la configuracion del estudio. */}
+        <Link href="/admin/settings" className="ah-avatar" title="Configuración" aria-label="Configuración">{inicial}</Link>
       </div>
     </header>
   );

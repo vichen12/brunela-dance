@@ -138,7 +138,7 @@ export function AdminSidebar({ nombre }: { nombre: string }) {
       <div className="sb-pie">
         {/* "Ver como alumna" vive en la cabecera: aca restaba alto a un menu de 14 items. */}
         <div className="sb-perfil">
-          <span className="sb-avatar" aria-hidden="true">{(nombre.trim()[0] ?? "A").toUpperCase()}</span>
+          <Link href={"/admin/settings" as Route} className="sb-avatar" title="Configuración" aria-label="Configuración">{(nombre.trim()[0] ?? "A").toUpperCase()}</Link>
           <div className="sb-perfil-txt">
             <p className="sb-perfil-nombre" style={{ textTransform: "capitalize" }}>{nombre}</p>
             <span className="sb-perfil-plan">Administración</span>

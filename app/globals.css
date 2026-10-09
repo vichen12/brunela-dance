@@ -4235,6 +4235,8 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .ah-der { display: flex; align-items: center; gap: 10px; }
 .ah-vista { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px; border-radius: 99px; text-decoration: none; font-size: 13px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: border-color .2s, background .2s; }
 .ah-vista:hover { border-color: var(--pink-line); background: var(--rubor); }
+.ah-avatar { text-decoration: none; transition: transform .3s var(--curva), box-shadow .3s; }
+.ah-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-line); }
 .ah-avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep); font-weight: 900; font-size: 15px; }
 @media (max-width: 560px) { .ah-vista span { display: none; } .ah-vista { width: 38px; padding: 0; justify-content: center; } .ah-raiz, .ah-sep { display: none; } }
 
@@ -4285,3 +4287,7 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 
 /* Prefijo de los desplegables en pildora ("Plan", "Estado"): en oracion, no en mayusculas. */
 .sistema .dsp-prefijo { font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
+/* El avatar del menu de admin lleva a Configuracion. */
+a.sb-avatar { text-decoration: none; transition: transform .3s var(--curva), box-shadow .3s; }
+a.sb-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-line); }
