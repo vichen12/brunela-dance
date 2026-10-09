@@ -1,4 +1,5 @@
 "use server";
+import { bunnyThumbnailUrl } from "@/src/lib/video/bunny";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -224,6 +225,14 @@ export async function upsertVideoAction(formData: FormData) {
     redirectWithMessage("/admin/videos", "error", `Revisá: ${detalleZod(parsed.error)}`);
   }
 
+  // Portada: la foto que eligio Brunela; si la quito, vuelve el cuadro del
+  // video en Bunny (si la clase tiene video), en vez de quedar sin imagen.
+  let portada = parsed.data.thumbnailUrl?.trim() || null;
+  if (!portada && parsed.data.id) {
+    const { data: actual } = await supabase.from("videos").select("bunny_video_id").eq("id", parsed.data.id).maybeSingle();
+    if (actual?.bunny_video_id) portada = bunnyThumbnailUrl(actual.bunny_video_id);
+  }
+
   const payload = {
     slug: parsed.data.slug.trim(),
     title_i18n: buildI18n(parsed.data.titleEs.trim(), parsed.data.titleEn),
@@ -242,7 +251,7 @@ export async function upsertVideoAction(formData: FormData) {
     recommended_min_level: nivelARango(parsed.data.nivel).min,
     recommended_max_level: nivelARango(parsed.data.nivel).max,
     equipment: parsed.data.equipment,
-    thumbnail_url: parsed.data.thumbnailUrl?.trim() || null,
+    thumbnail_url: portada,
 
     // 🔴 stream_playback_id y stream_asset_id NO se escriben desde aca.
     //

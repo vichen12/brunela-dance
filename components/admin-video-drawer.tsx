@@ -1,4 +1,5 @@
 "use client";
+import { SubirPortadaClase } from "@/components/subir-portada-clase";
 
 import { Desplegable } from "@/components/desplegable";
 import { Check, Pencil, Trash2 } from "lucide-react";
@@ -295,11 +296,11 @@ function VideoForm({
             La portada queda escondida porque no se toca nunca: la escribe sola
             la subida a Bunny. Sigue siendo editable por si hay que reemplazar
             una imagen a mano. */}
-        <BloqueAvanzado titulo="Imagen de portada" cantidad={1}>
-        <F label="Imagen de portada">
-          <input style={inp} defaultValue={video.thumbnail_url ?? ""} name="thumbnailUrl" placeholder="https://..." type="url" />
-        </F>
-        </BloqueAvanzado>
+        {/* Portada a la vista y con subida de foto (pedido de la duena). Si se
+            deja vacia, el sistema vuelve a usar el cuadro del video. */}
+        <div style={{ marginTop: 18 }}>
+          <SubirPortadaClase name="thumbnailUrl" defaultValue={video.thumbnail_url ?? ""} />
+        </div>
 
       <div className="adr-acciones" style={{ marginTop: 22 }}>
         <BotonEnviar style={botonPrincipal}>

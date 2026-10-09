@@ -16,6 +16,7 @@ import { campoSuave, etiquetaSuave } from "@/components/admin-drawer";
 import { Film, Languages, UploadCloud } from "lucide-react";
 import { SelectorDePlanes } from "@/components/selector-de-planes";
 import { BloqueSoloParaVos } from "@/components/bloque-solo-para-vos";
+import { SubirPortadaClase } from "@/components/subir-portada-clase";
 import {
   CATEGORIAS,
   ESTADOS,
@@ -367,7 +368,8 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
             // igual y no se engancha a nada.
             programId: fd.get("programId") || null,
             programDayNumber: fd.get("programDayNumber") || null,
-            isFeatured: fd.get("isFeatured") === "on"
+            isFeatured: fd.get("isFeatured") === "on",
+            portadaUrl: String(fd.get("portadaUrl") ?? "") || null
           })
         });
         const finalizeJson = await finalizeRes.json();
@@ -591,6 +593,11 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
           <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
           <AutoDireccion desde="titleEs" />
         </Field>
+      </div>
+
+      {/* Foto de portada, opcional: si no se elige, sale sola del video. */}
+      <div style={{ marginTop: 18 }}>
+        <SubirPortadaClase name="portadaUrl" ayudaVacio="Opcional. Si no elegís una, la portada sale sola de un cuadro del video." />
       </div>
 
       {/* Video file */}

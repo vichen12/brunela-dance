@@ -42,7 +42,7 @@ const serifFont = Bodoni_Moda({
 
 export const metadata: Metadata = {
   title: "Brunela Dance Trainer",
-  description: "Pilates y acondicionamiento para bailarines. Estudio online con clases a demanda, programas y sesiones en vivo.",
+  description: "Ballet y preparación integral para bailarines. Clases online, programas de entrenamiento y técnica para progresar en tu danza.",
   icons: {
     icon: "/brand/isologo-icon.png",
     apple: "/brand/isologo-icon.png",

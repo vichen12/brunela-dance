@@ -39,6 +39,8 @@ const CAMPO_LEGIBLE: Record<string, string> = {
 
 const schema = z.object({
   bunnyVideoId: z.string().min(1),
+  /** Foto de portada elegida por Brunela (URL https). Vacia = la del video. */
+  portadaUrl: z.string().url().startsWith("https://").nullish(),
   /** Languages whose mp3 the browser already uploaded to Supabase Storage. */
   audioLocales: z.array(z.string()).default([]),
   slug: z.string().min(2),
@@ -145,7 +147,7 @@ export async function POST(request: Request) {
     equipment: data.equipment,
     // Unsigned canonical URLs, stored as a record of which Bunny asset this row
     // points at. Never rendered: playback and posters are signed per request.
-    thumbnail_url: bunnyThumbnailUrl(data.bunnyVideoId),
+    thumbnail_url: data.portadaUrl || bunnyThumbnailUrl(data.bunnyVideoId),
     stream_provider: "bunny",
     stream_playback_id: bunnyHlsUrl(data.bunnyVideoId),
     bunny_library_id: BUNNY_STREAM_LIBRARY_ID,
