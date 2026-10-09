@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
-import { Mail, Lock } from "lucide-react";
+import { AlertCircle, Lock, Mail } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
@@ -107,110 +107,61 @@ export default async function ChatPage({ searchParams }: {
     };
 
     return (
-      <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body), sans-serif" }}>
-        {/* Members sidebar */}
-        <div className="chat-col-sidebar" style={{
-          width: 240, flexShrink: 0, borderRight: "1px solid var(--pink-soft)",
-          background: "linear-gradient(180deg, #fff 0%, #fffbfd 100%)",
-          display: "flex", flexDirection: "column",
-        }}>
-          <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid var(--pink-soft)" }}>
-            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", color: "var(--pink)" }}>
-              MENSAJES DIRECTOS
-            </p>
+      <div className="dm">
+        <style>{CSS_DM}</style>
+        <aside className="chat-col-sidebar dm-lateral" aria-label="Alumnas">
+          <div className="dm-lateral-cab">
+            <p className="dm-eyebrow">Mensajes directos</p>
+            <p className="dm-lateral-titulo">Alumnas</p>
             {/* "cargadas" y no "alumnas" a secas: la lista esta paginada, asi
-                que este numero es lo que se ve, no el total del estudio. Decir
-                "12 alumnas" con 300 en la base seria mentir. */}
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-              {members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}
-            </p>
+                que este numero es lo que se ve, no el total del estudio. */}
+            <p className="dm-cuenta">{members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}</p>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+          <nav className="dm-lista">
             {members.map((m) => {
               const active = m.id === activeUserId;
               const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
               return (
-                <Link
-                  key={m.id}
-                  href={`/dashboard/chat?user=${m.id}`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "10px 12px", borderRadius: 12, marginBottom: 2,
-                    background: active ? "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))" : "transparent",
-                    border: active ? "1px solid var(--pink-line)" : "1px solid transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: active ? "linear-gradient(135deg, var(--rose), var(--pink-mid))" : "var(--pink-wash)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 700, color: active ? "#fff" : "var(--pink)",
-                  }}>{name[0]?.toUpperCase()}</div>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {name}
-                    </p>
-                    <p style={{ fontSize: 9.5, color: "var(--muted)" }}>
-                      {TIER_BADGE[m.membership_tier] ?? "Sin plan"}
-                    </p>
-                  </div>
+                <Link key={m.id} href={`/dashboard/chat?user=${m.id}` as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+                  <span className="dm-ini">{name[0]?.toUpperCase()}</span>
+                  <span className="dm-persona-txt">
+                    <span className="dm-persona-nombre">{name}</span>
+                    <span className="dm-persona-plan">{TIER_BADGE[m.membership_tier] ?? "Sin plan"}</span>
+                  </span>
                 </Link>
               );
             })}
-
             {hayMasMiembros && (
-              <Link
-                href={`/dashboard/chat?pmiembros=${paginaMiembros + 1}${activeUserId ? `&user=${activeUserId}` : ""}`}
-                style={{
-                  display: "block", textAlign: "center", margin: "8px 4px 4px",
-                  padding: "10px 12px", borderRadius: 12, textDecoration: "none",
-                  border: "1.5px solid var(--pink-line)", color: "var(--pink-deep)",
-                  fontSize: 11.5, fontWeight: 700,
-                }}
-              >Ver más alumnas</Link>
+              <Link href={`/dashboard/chat?pmiembros=${paginaMiembros + 1}${activeUserId ? `&user=${activeUserId}` : ""}` as never} className="dm-mas">
+                Ver más alumnas
+              </Link>
             )}
-          </div>
-        </div>
+          </nav>
+        </aside>
 
-        {/* Chat area */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div className="dm-chat">
           {activeRoom && activeMember ? (
             <>
-              <div style={{
-                padding: "16px 24px", borderBottom: "1px solid var(--pink-soft)",
-                background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
-                display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  background: "linear-gradient(135deg, var(--pink-wash), var(--pink-soft))",
-                  border: "1.5px solid var(--pink-line)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, fontWeight: 700, color: "var(--pink)",
-                }}>
-                  {(activeMember.full_name ?? activeMember.email)[0]?.toUpperCase()}
+              <header className="dm-cab">
+                <span className="dm-cab-ini">{(activeMember.full_name ?? activeMember.email)[0]?.toUpperCase()}</span>
+                <div style={{ minWidth: 0 }}>
+                  <p className="dm-cab-nombre">{activeMember.full_name ?? activeMember.email.split("@")[0]}</p>
+                  <p className="dm-cab-sub">{activeMember.email} · {TIER_BADGE[activeMember.membership_tier] ?? "Sin plan"}</p>
                 </div>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
-                    {activeMember.full_name ?? activeMember.email.split("@")[0]}
-                  </p>
-                  <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{activeMember.email}</p>
-                </div>
-              </div>
+              </header>
               <ChatRoom
                 roomId={activeRoom.id}
                 userId={user.id}
                 isAdmin={true}
                 initialMessages={initialMessages}
-                placeholder={`Escribirle a ${activeMember.full_name?.split(" ")[0] ?? "alumna"}...`}
+                placeholder={`Escribirle a ${activeMember.full_name?.split(" ")[0] ?? "alumna"}…`}
               />
             </>
           ) : (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-              <Mail size={34} strokeWidth={1.5} style={{ color: "var(--pink)" }} />
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Seleccioná una alumna para chatear</p>
-              <p style={{ fontSize: 12, color: "var(--muted)" }}>Los mensajes son privados entre vos y cada alumna</p>
+            <div className="dm-vacio">
+              <span className="dm-vacio-ico"><Mail size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+              <p className="dm-vacio-titulo">Elegí una alumna</p>
+              <p>Los mensajes son privados entre vos y cada alumna.</p>
             </div>
           )}
         </div>
@@ -295,98 +246,87 @@ export default async function ChatPage({ searchParams }: {
     : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "var(--font-body), sans-serif" }}>
-      {/* Header */}
-      <div style={{
-        padding: "16px 32px", borderBottom: "1px solid var(--pink-soft)",
-        background: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)",
-        display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
-      }}>
-        <div style={{
-          width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-          background: "linear-gradient(135deg, var(--rose), var(--pink-mid))",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 16, fontWeight: 800, color: "#fff",
-          boxShadow: "0 4px 12px rgba(230, 79, 85,0.3)",
-        }}>B</div>
-        <div>
-          {/* h1 y no p: es el encabezado de la pantalla. Era la unica del area
-              de miembro sin ninguno, asi que un lector de pantalla entraba al
-              chat sin saber donde estaba. Los estilos son los mismos. */}
-          <h1 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Brunela</h1>
-          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
-            Instructora · Responde en menos de 24hs
-          </p>
-        </div>
-        {/* Antes habia un "EN LINEA" verde fijo. No hay sistema de presencia:
-            decia que Brunela estaba conectada aunque no lo estuviera. */}
-      </div>
+    <div className="dm dm--alumna">
+      <style>{CSS_DM}</style>
+      <div className="dm-chat">
+        <header className="dm-cab">
+          <span className="dm-cab-ini dm-cab-ini--brunela">B</span>
+          <div style={{ minWidth: 0 }}>
+            {/* h1: es el encabezado de la pantalla. Un lector de pantalla
+                entraba al chat sin saber donde estaba. */}
+            <h1 className="dm-cab-nombre">Brunela</h1>
+            {/* Antes habia un "EN LINEA" verde fijo. No hay sistema de
+                presencia: decia que Brunela estaba conectada aunque no. */}
+            <p className="dm-cab-sub">Tu instructora · responde en menos de 24 h</p>
+          </div>
+        </header>
 
-      {dmRoom ? (
-        <ChatRoom
-          roomId={dmRoom.id}
-          userId={user.id}
-          isAdmin={false}
-          initialMessages={initialMessages}
-          placeholder="Escribile a Brunela..."
-          // Sin esto los mensajes de Brunela se ven como "Usuario": la RLS no
-          // deja a la alumna leer el perfil de la admin.
-          interlocutor={interlocutorDeLaAlumna}
-        />
-      ) : !canStartDm ? (
-        // Plan gate: this tier cannot start a direct chat with Brunela.
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <div style={{
-            maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
-            border: "1px solid var(--pink-soft)", borderRadius: 24, padding: "40px 32px",
-            backdropFilter: "blur(8px)",
-          }}>
-            <Lock size={32} strokeWidth={1.5} style={{ color: "var(--pink)", marginBottom: 14 }} />
-            <p style={{ fontSize: 17, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>
-              El chat directo con Brunela es exclusivo de tu plan superior
-            </p>
-            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 22 }}>
-              Tu plan actual no incluye mensajes privados con Brunela. Actualizá tu plan
-              para tener acompañamiento personalizado uno a uno.
-            </p>
-            <Link
-              href="/dashboard/plan"
-              style={{
-                display: "inline-block", padding: "12px 26px", borderRadius: 99,
-                background: "var(--pink)", color: "#fff", fontSize: 12, fontWeight: 700,
-                textDecoration: "none", boxShadow: "0 4px 14px rgba(230, 79, 85,0.35)",
-              }}
-            >
-              Ver planes
-            </Link>
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 18 }}>
-              Mientras tanto, podés participar en los{" "}
-              <Link href="/dashboard/community" style={{ color: "var(--pink)", fontWeight: 600, textDecoration: "none" }}>
-                canales de comunidad
-              </Link>.
-            </p>
+        {dmRoom ? (
+          <ChatRoom
+            roomId={dmRoom.id}
+            userId={user.id}
+            isAdmin={false}
+            initialMessages={initialMessages}
+            placeholder="Escribile a Brunela…"
+            // Sin esto los mensajes de Brunela se ven como "Usuario": la RLS no
+            // deja a la alumna leer el perfil de la admin.
+            interlocutor={interlocutorDeLaAlumna}
+          />
+        ) : !canStartDm ? (
+          // Este plan no puede iniciar un chat directo con Brunela.
+          <div className="dm-vacio">
+            <span className="dm-vacio-ico"><Lock size={26} strokeWidth={1.7} aria-hidden="true" /></span>
+            {/* Que planes pueden escribir lo decide Brunela en Configuracion: el texto
+                no nombra ninguno para no quedar desactualizado. */}
+            <p className="dm-vacio-titulo">El chat directo no está en tu plan</p>
+            <p>Con un plan superior le escribís a Brunela uno a uno, con acompañamiento personalizado. Mientras tanto, podés escribir en la comunidad.</p>
+            <div className="dm-vacio-acciones">
+              <Link href="/dashboard/plan" className="ad-btn ad-btn--lleno">Ver planes</Link>
+              <Link href={"/dashboard/community" as never} className="ad-btn">Ir a la comunidad</Link>
+            </div>
           </div>
-        </div>
-      ) : (
-        // Last resort. This used to say "Cargando chat..." and never resolve,
-        // which is how a hard failure spent months looking like a slow page.
-        // If we land here the conversation genuinely could not be opened.
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <div style={{
-            maxWidth: 420, textAlign: "center", background: "rgba(255,255,255,0.7)",
-            border: "1px solid var(--pink-soft)", borderRadius: 24, padding: "40px 32px",
-            backdropFilter: "blur(8px)",
-          }}>
-            <p style={{ fontSize: 15, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>
-              No pudimos abrir tu conversación
-            </p>
-            <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
-              Volvé a cargar la página. Si sigue pasando, avisanos: es un problema nuestro,
-              no de tu plan ni de tu cuenta.
-            </p>
+        ) : (
+          // Ultimo recurso. Antes decia "Cargando chat..." para siempre, que es
+          // como un fallo real paso meses pareciendo una pagina lenta.
+          <div className="dm-vacio">
+            <span className="dm-vacio-ico"><AlertCircle size={26} strokeWidth={1.7} aria-hidden="true" /></span>
+            <p className="dm-vacio-titulo">No pudimos abrir tu conversación</p>
+            <p>Volvé a cargar la página. Si sigue pasando, es un problema nuestro, no de tu plan ni de tu cuenta.</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
+
+const CSS_DM = `
+.dm { display: flex; height: 100vh; overflow: hidden; background: #fff; }
+.dm-lateral { width: 270px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid #f0eeec; background: #fcfbfa; }
+.dm-lateral-cab { padding: 22px 18px 16px; border-bottom: 1px solid #f0eeec; }
+.dm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pink-deep); }
+.dm-lateral-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
+.dm-cuenta { font-size: 12px; color: #a8a29e; margin-top: 2px; }
+.dm-lista { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.dm-persona { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px; text-decoration: none; transition: background .2s; }
+.dm-persona:hover { background: #f5f5f4; }
+.dm-persona.es-activa { background: var(--pink-wash); }
+.dm-ini { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #f0eeec; font-weight: 800; color: var(--pink-deep); }
+.dm-persona.es-activa .dm-ini { background: var(--pink); border-color: var(--pink); color: #fff; }
+.dm-persona-txt { min-width: 0; display: flex; flex-direction: column; }
+.dm-persona-nombre { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-persona.es-activa .dm-persona-nombre { font-weight: 800; color: var(--pink-deep); }
+.dm-persona-plan { font-size: 11.5px; color: #a8a29e; }
+.dm-mas { margin: 8px 4px 4px; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 700; color: var(--pink-deep); border: 1.5px solid var(--pink-line); }
+.dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dm-cab { display: flex; align-items: center; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #f0eeec; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); flex-shrink: 0; }
+.dm-cab-ini { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; }
+.dm-cab-ini--brunela { background: var(--pink); color: #fff; box-shadow: 0 8px 18px -10px rgba(230,79,85,0.8); }
+.dm-cab-nombre { margin: 0; font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-cab-sub { font-size: 12.5px; color: #78716c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-vacio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px; text-align: center; color: #78716c; font-size: 14px; line-height: 1.6; }
+.dm-vacio > p:not(.dm-vacio-titulo) { max-width: 44ch; }
+.dm-vacio-ico { width: 64px; height: 64px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; background: var(--pink-wash); color: var(--pink-deep); margin-bottom: 8px; }
+.dm-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.03em; color: var(--ink); }
+.dm-vacio-acciones { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+`;
+
