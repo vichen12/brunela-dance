@@ -1,7 +1,9 @@
 import { LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { ResetPasswordForm } from "@/components/reset-password-form";
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave } from "@/src/features/auth/permiso-cambio-clave";
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -22,6 +24,13 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // 🔴 Y con sesion tampoco alcanza: tiene que ser la sesion que ACABA de
+  // validar el enlace del correo (src/features/auth/permiso-cambio-clave.ts).
+  // Si no, una admin logueada que abre la invitacion de una alumna le cambiaba
+  // la contraseña a su PROPIA cuenta.
+  const permiso = (await cookies()).get(COOKIE_CAMBIO_CLAVE)?.value;
+  const habilitado = Boolean(user) && puedeCambiarClave(permiso, user?.id);
+
   return (
     <main className="acc-sola sistema">
       <span className="acc-mancha acc-mancha-1" aria-hidden />
@@ -39,7 +48,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
             Elegí una contraseña segura: mínimo 8 caracteres, con letras y números.
           </p>
 
-          {user ? (
+          {user && habilitado ? (
             <>
               {/* De QUE cuenta es la contraseña, a la vista. Si alguien tenia
                   otra sesion abierta, lo ve antes de escribir (ver el
@@ -48,6 +57,21 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
                 Cuenta: <strong style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>{user.email}</strong>
               </p>
               <ResetPasswordForm error={error} />
+            </>
+          ) : user ? (
+            <>
+              <p className="acc-sola-lead" role="alert">
+                Para elegir una contraseña nueva tenés que abrir el enlace que te
+                llegó por correo. Acá no se puede cambiar la contraseña de la
+                cuenta que ya está abierta en este navegador
+                (<strong style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>{user.email}</strong>).
+              </p>
+              <p className="acc-sola-lead">
+                Si estás probando una invitación, abrila en una ventana de incógnito.
+              </p>
+              <Link href="/sign-in/forgot-password" className="auth-submit" style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", marginTop: 18 }}>
+                Pedir un enlace por correo
+              </Link>
             </>
           ) : (
             <>

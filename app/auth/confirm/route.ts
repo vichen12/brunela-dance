@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { COOKIE_CAMBIO_CLAVE, DURACION_CAMBIO_CLAVE } from "@/src/features/auth/permiso-cambio-clave";
 
 /**
  * Destino de los botones de los correos de Supabase (emails/supabase/*.html):
@@ -77,10 +78,25 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  const { error } = await supabase.auth.verifyOtp({ type: tipo as EmailOtpType, token_hash: tokenHash });
-  if (error) {
-    console.error("[auth/confirm] verifyOtp:", error.message);
+  const { data, error } = await supabase.auth.verifyOtp({ type: tipo as EmailOtpType, token_hash: tokenHash });
+  if (error || !data.user) {
+    console.error("[auth/confirm] verifyOtp:", error?.message ?? "sin usuario");
     return falla("El enlace ya se usó o venció. Pedí uno nuevo.");
+  }
+
+  // Permiso para elegir contraseña, atado a ESTA cuenta (ver
+  // src/features/auth/permiso-cambio-clave.ts). Cualquier otro tipo de enlace
+  // borra uno que hubiera quedado.
+  if (tipo === "recovery" || tipo === "invite") {
+    respuesta.cookies.set(COOKIE_CAMBIO_CLAVE, data.user.id, {
+      httpOnly: true,
+      secure: origin.startsWith("https://"),
+      sameSite: "lax",
+      path: "/",
+      maxAge: DURACION_CAMBIO_CLAVE,
+    });
+  } else {
+    respuesta.cookies.delete(COOKIE_CAMBIO_CLAVE);
   }
 
   return respuesta;

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
+import { cookies } from "next/headers";
+import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave } from "@/src/features/auth/permiso-cambio-clave";
 
 const signInSchema = z.object({
   email: z.string().email(),
@@ -124,11 +126,24 @@ export async function updatePasswordAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // 🔴 La action es un endpoint POST publico: la misma regla que la pantalla,
+  // aca tambien. Solo cambia la contraseña la sesion que acaba de abrir el
+  // enlace del correo de ESA cuenta (src/features/auth/permiso-cambio-clave.ts).
+  const almacen = await cookies();
+  const { data: { user: quien } } = await supabase.auth.getUser();
+  if (!puedeCambiarClave(almacen.get(COOKIE_CAMBIO_CLAVE)?.value, quien?.id)) {
+    redirect("/sign-in/reset-password");
+  }
+
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
 
   if (error) {
     redirect(`/sign-in/reset-password?error=${encodeURIComponent(error.message)}`);
   }
+
+  // El permiso sirve una vez.
+  almacen.delete(COOKIE_CAMBIO_CLAVE);
 
   redirect(
     "/sign-in?success=Contrase%C3%B1a%20actualizada.%20Ya%20pod%C3%A9s%20ingresar."
