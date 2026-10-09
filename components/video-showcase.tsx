@@ -36,6 +36,11 @@ import { T } from "@/components/language-provider";
  *      sensibilidad vestibular no es un detalle estetico. En ese caso se queda
  *      la foto fija y un boton para reproducir a voluntad.
  *
+ * REDISEÑO SUAVE (2026-10-08): la dueña pidio conservar esta seccion tal cual,
+ * con el video grande y el fondo oscuro (es un video). Cambia solo la piel, en
+ * app/estilos/landing.css: titular en Nunito sin italica, ceja y botones en
+ * pildora.
+ *
  * ⚠️ LA FOTO NO SE VA NUNCA.
  *    Queda de fondo del marco, debajo del iframe. Cubre los tres huecos en que
  *    el video no aparece -- mientras carga, si YouTube esta bloqueado por una

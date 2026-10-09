@@ -47,9 +47,15 @@ import { usePublicI18n } from "@/components/language-provider";
  *
  *   Mover estos numeros sin volver a medir rompe la legibilidad en silencio.
  *
- * ⚠️ EL COLOR DEL SCRIM ES #FEFAF7 PORQUE ES EL `background` DEL BODY.
+ * ⚠️ EL COLOR DEL SCRIM ES BLANCO PORQUE ES EL FONDO DE LA PAGINA.
  *    Asi el fundido inferior entrega el hero a la seccion siguiente sin corte.
- *    Si alguien cambia el fondo del body, hay que cambiarlo tambien aca.
+ *    Hasta el rediseño suave (2026-10-08) era #FEFAF7 (crema), el fondo del body; el
+ *    <main class="sistema"> de la portada pinta blanco. Blanco es mas claro que
+ *    ese crema, asi que los contrastes medidos arriba solo mejoran.
+ *
+ * REDISEÑO SUAVE (2026-10-08): la dueña pidio conservar esta composicion. Solo
+ * cambio la piel: ceja en pildora, botones en pildora sin mayusculas espaciadas
+ * y Nunito.
  */
 
 type ArcGalleryHeroProps = {
@@ -109,7 +115,10 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
       </div>
 
       <div className="brand-hero-copy">
-        <p className="brand-hero-kicker">{t("hero.kicker")}</p>
+        <p className="brand-hero-kicker">
+          <span className="brand-hero-kicker-punto" aria-hidden />
+          <span className="brand-hero-kicker-t">{t("hero.kicker")}</span>
+        </p>
 
         {/*
           El wordmark es el UNICO h1 de la landing (verificado: no habia
@@ -158,7 +167,7 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           max-height: 960px;
           overflow: hidden;
           padding: 104px clamp(1.25rem, 6.5vw, 6rem) 4.5rem;
-          background: #FEFAF7;
+          background: #FFFFFF;
         }
 
         .brand-hero-scene {
@@ -186,17 +195,17 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           background:
             linear-gradient(
               180deg,
-              rgba(254, 250, 247, 0) 79%,
-              rgba(254, 250, 247, 0.62) 92%,
-              #FEFAF7 100%
+              rgba(255, 255, 255, 0) 79%,
+              rgba(255, 255, 255, 0.62) 92%,
+              #FFFFFF 100%
             ),
             linear-gradient(
               96deg,
-              rgba(254, 250, 247, 0.90) 0%,
-              rgba(254, 250, 247, 0.86) 30%,
-              rgba(254, 250, 247, 0.64) 46%,
-              rgba(254, 250, 247, 0.24) 62%,
-              rgba(254, 250, 247, 0) 74%
+              rgba(255, 255, 255, 0.90) 0%,
+              rgba(255, 255, 255, 0.86) 30%,
+              rgba(255, 255, 255, 0.64) 46%,
+              rgba(255, 255, 255, 0.24) 62%,
+              rgba(255, 255, 255, 0) 74%
             );
         }
 
@@ -218,16 +227,26 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         .brand-hero-copy > *:nth-child(3) { animation-delay: 290ms; }
         .brand-hero-copy > *:nth-child(4) { animation-delay: 400ms; }
 
+        /* Ceja en pildora, como el resto del sistema. --pink-deep y no
+           --pink: es texto chico, y chico exige 4.5:1. El diccionario la
+           guarda en MAYUSCULAS: se pasa a oracion por CSS. */
         .brand-hero-kicker {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           margin: 0;
-          /* --pink-deep y no --pink: es texto chico, y chico exige 4.5:1.
-             Sobre el scrim, --pink-deep pasa; --pink no llegaria. */
+          padding: 7px 14px 7px 11px;
+          border-radius: 99px;
+          border: 1px solid var(--linea, #F3E3DC);
+          background: rgba(255, 242, 238, 0.92);
           color: var(--pink-deep);
-          font-size: 0.76rem;
-          font-weight: 900;
-          letter-spacing: 0.34em;
-          text-transform: uppercase;
+          font-size: 13px;
+          font-weight: 800;
+          line-height: 1.2;
         }
+        .brand-hero-kicker-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
+        .brand-hero-kicker-t { display: inline-block; text-transform: lowercase; }
+        .brand-hero-kicker-t::first-letter { text-transform: uppercase; }
 
         .brand-hero-logo {
           display: grid;
@@ -285,12 +304,12 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           min-height: var(--btn-min-h);
           border-radius: var(--btn-radius);
           padding: var(--btn-pad-y) var(--btn-pad-x);
-          font-size: var(--btn-size);
-          font-weight: var(--btn-weight);
-          letter-spacing: var(--btn-track);
+          /* Pildora en oracion, sin el tracking de mayusculas de antes. */
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: 0;
           line-height: 1.2;
           text-align: center;
-          text-transform: uppercase;
           text-decoration: none;
           transition: background var(--btn-dur) ease,
                       border-color var(--btn-dur) ease,
@@ -302,14 +321,14 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         .hero-action:hover { transform: translateY(var(--btn-lift)); }
 
         .hero-action:focus-visible {
-          outline: 2px solid var(--pink-deep);
-          outline-offset: 3px;
+          outline: 0;
+          box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25);
         }
 
         .hero-action.primary {
           background: var(--pink);
           color: #fff;
-          box-shadow: 0 14px 30px rgba(230, 79, 85, 0.3);
+          box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.85);
         }
 
         .hero-action.primary:hover {
@@ -318,9 +337,9 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
         }
 
         .hero-action.secondary {
-          border: 1.5px solid var(--pink-line);
-          background: rgba(255, 255, 255, 0.88);
-          color: var(--pink-deep);
+          border: 1px solid var(--linea-fuerte, #E9CFC5);
+          background: rgba(255, 255, 255, 0.92);
+          color: var(--ink);
         }
 
         .hero-action.secondary:hover {
@@ -423,10 +442,10 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           .brand-hero-scrim {
             background: linear-gradient(
               180deg,
-              rgba(254, 250, 247, 0.04) 0,
-              rgba(254, 250, 247, 0.12) calc(100% - 440px),
-              rgba(254, 250, 247, 0.94) calc(100% - 380px),
-              #FEFAF7 calc(100% - 340px)
+              rgba(255, 255, 255, 0.04) 0,
+              rgba(255, 255, 255, 0.12) calc(100% - 440px),
+              rgba(255, 255, 255, 0.94) calc(100% - 380px),
+              #FFFFFF calc(100% - 340px)
             );
           }
 
@@ -481,17 +500,18 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           .brand-hero-scrim {
             background: linear-gradient(
               180deg,
-              rgba(254, 250, 247, 0.05) 0,
-              rgba(254, 250, 247, 0.12) calc(100% - 380px),
-              rgba(254, 250, 247, 0.94) calc(100% - 320px),
-              #FEFAF7 calc(100% - 285px)
+              rgba(255, 255, 255, 0.05) 0,
+              rgba(255, 255, 255, 0.12) calc(100% - 380px),
+              rgba(255, 255, 255, 0.94) calc(100% - 320px),
+              #FFFFFF calc(100% - 285px)
             );
           }
         }
 
         @media (max-width: 480px) {
           .brand-hero { padding-top: 96px; }
-          .brand-hero-kicker { font-size: 0.68rem; letter-spacing: 0.26em; }
+          .brand-hero-kicker { font-size: 12.5px; }
+          .hero-action { font-size: 14.5px; }
           .brand-hero-logo {
             grid-template-columns: 42px minmax(0, 1fr);
             width: min(330px, 94%);

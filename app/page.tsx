@@ -20,6 +20,7 @@ import { VideoShowcase } from "@/components/video-showcase";
 import { UltimoEstudio } from "@/components/ultimo-estudio";
 import { T } from "@/components/language-provider";
 import { LandingFaq } from "@/components/landing-faq";
+import { LandingMovimiento } from "@/components/landing-movimiento";
 import {
   preguntasFrecuentes,
   textosDePortada,
@@ -31,128 +32,12 @@ import {
 } from "@/src/lib/portada";
 import type { PublicMessageKey } from "@/src/i18n/public";
 
-function GrainTexture() {
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: "none",
-        opacity: 0.028,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: "repeat",
-        backgroundSize: "200px 200px",
-      }}
-    />
-  );
-}
-
-function DotGrid() {
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: "none",
-        backgroundImage: "radial-gradient(circle, rgba(217,52,56,0.045) 1px, transparent 1px)",
-        backgroundSize: "26px 26px",
-      }}
-    />
-  );
-}
-
-function MovementTexture() {
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: "none",
-        opacity: 0.16,
-        backgroundImage: `
-          url("/brand/isologo-icon.png"),
-          url("/brand/isologo-icon.png"),
-          radial-gradient(circle at 14% 18%, rgba(230,79,85,0.18) 0 1px, transparent 2px),
-          radial-gradient(circle at 82% 24%, rgba(217,52,56,0.12) 0 34px, transparent 36px),
-          radial-gradient(circle at 24% 78%, rgba(230,79,85,0.1) 0 46px, transparent 48px)
-        `,
-        backgroundPosition: "7% 22%, 92% 68%, 0 0, 0 0, 0 0",
-        backgroundRepeat: "no-repeat, no-repeat, repeat, no-repeat, no-repeat",
-        backgroundSize: "110px auto, 150px auto, 34px 34px, auto, auto",
-        filter: "saturate(0.9)",
-      }}
-    />
-  );
-}
-
-function BrandGlow() {
-  return (
-    <>
-      {/* top bloom — wide, warm, rich */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          top: "-8vh",
-          left: 0,
-          right: 0,
-          height: "72vh",
-          zIndex: 0,
-          pointerEvents: "none",
-          background: "radial-gradient(ellipse 95% 85% at 50% 0%, rgba(255,210,212,1) 0%, rgba(255,238,238,0.75) 44%, transparent 72%)",
-        }}
-      />
-      {/* left accent */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          top: "10vh",
-          left: 0,
-          width: "40vw",
-          height: "60vh",
-          zIndex: 0,
-          pointerEvents: "none",
-          background: "radial-gradient(ellipse 80% 60% at 0% 50%, rgba(255,218,218,0.32) 0%, transparent 65%)",
-        }}
-      />
-      {/* right accent */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          top: "20vh",
-          right: 0,
-          width: "35vw",
-          height: "55vh",
-          zIndex: 0,
-          pointerEvents: "none",
-          background: "radial-gradient(ellipse 70% 55% at 100% 50%, rgba(235,116,120,0.18) 0%, transparent 65%)",
-        }}
-      />
-      {/* bottom glow */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "55vh",
-          zIndex: 0,
-          pointerEvents: "none",
-          background: "radial-gradient(ellipse 80% 65% at 50% 110%, rgba(230,79,85,0.22) 0%, transparent 65%)",
-        }}
-      />
-    </>
-  );
-}
+/*
+ * Las cuatro capas fijas de antes (grano, grilla de puntos, isotipos y
+ * resplandores coral) se sacaron en el rediseño suave del 2026-10-08: el fondo
+ * de la pagina pasa a ser blanco (pedido explicito) y cada seccion trae su
+ * propio degradé tibio.
+ */
 
 // `heroImages` se borro el 2026-08-06: el hero dejo de ser un arco de
 // miniaturas y pasó a una foto a sangre. Esas mismas fotos de disciplinas las
@@ -238,7 +123,7 @@ const methodCards = [
 function IconoMetodo({ nombre }: { nombre: (typeof methodCards)[number]["icono"] }) {
   // aria-hidden en todos: el significado ya lo dice el titulo de la tarjeta que
   // va al lado. Anunciarlos seria repetir lo mismo dos veces.
-  const props = { size: 30, strokeWidth: 1.5, "aria-hidden": true } as const;
+  const props = { size: 22, strokeWidth: 1.9, "aria-hidden": true } as const;
   switch (nombre) {
     case "tecnica":
       return <PersonStanding {...props} />;
@@ -271,7 +156,7 @@ const aboutCards = [
 ] as const;
 
 function IconoAbout({ nombre }: { nombre: (typeof aboutCards)[number]["icono"] }) {
-  const props = { size: 22, strokeWidth: 1.6, "aria-hidden": true } as const;
+  const props = { size: 19, strokeWidth: 2, "aria-hidden": true } as const;
   switch (nombre) {
     case "mirada":
       return <PersonStanding {...props} />;
@@ -484,257 +369,269 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
-      <GrainTexture />
-      <DotGrid />
-      <MovementTexture />
-      <BrandGlow />
+      <LandingMovimiento />
 
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <ArcGalleryHero />
-      </div>
+      {/* La raiz `.sistema` trae los tokens del rediseño (crema, rubor, Nunito,
+          radios, sombras tibias). Envuelve solo las secciones de esta pagina:
+          la barra y el pie son de otro archivo y se ocupan de lo suyo. */}
+      <main className="sistema lp">
+        {/* La portada conserva la composicion original del hero, el trailer,
+            Metodo y Sobre mi (pedido de la dueña, 2026-10-08): ahi solo cambio
+            la piel, en app/estilos/landing.css. */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <ArcGalleryHero />
+        </div>
 
-      <InfinitePhotoCarousel />
+        <InfinitePhotoCarousel />
 
-      <VideoShowcase src={trailerSrc} poster={trailerPoster} />
+        <VideoShowcase src={trailerSrc} poster={trailerPoster} />
 
-      {/* El id lo usa el navbar (enlace + resaltado de seccion activa). Sin el,
-          esta seccion era contenido real al que no llegaba ningun enlace. */}
-      <section id="metodo" className="landing-section method-section">
-        {/*
-          Foto a sangre por el borde izquierdo. Es decorativa (alt vacio): lo que
-          cuenta la seccion lo dicen el titular y las cuatro tarjetas, y
-          describirla obligaria a un lector de pantalla a oir algo que no aporta.
-
-          El recorte esta resuelto en `.method-foto-img`.
-        */}
-        <div className="method-foto" aria-hidden>
+        {/* El id lo usa el navbar (enlace + resaltado de seccion activa). Sin el,
+            esta seccion era contenido real al que no llegaba ningun enlace. */}
+        <section id="metodo" className="landing-section method-section">
           {/*
-            🔴 EL `sizes` NO ES EL ANCHO DE LA CAJA. ES EL ANCHO DEL ORIGEN.
+            Foto a sangre por el borde izquierdo. Es decorativa (alt vacio): lo que
+            cuenta la seccion lo dicen el titular y las cuatro tarjetas, y
+            describirla obligaria a un lector de pantalla a oir algo que no aporta.
 
-               Con `object-fit: cover`, el navegador descarta lo que sobra del
-               eje que no encaja, asi que el archivo que necesita puede ser mucho
-               mas grande que la caja.
-
-               ⚠️ ESTE NUMERO CAMBIO AL CAMBIAR LA FOTO, Y TENIA QUE CAMBIAR.
-
-                  Antes aca habia una foto APAISADA (3:2) metida en una columna
-                  alta: para llenarla de arriba abajo el navegador la escalaba
-                  por el alto y tiraba ~65% del ancho, asi que hacia falta pedir
-                  33vw / 0.35 ≈ 94vw. Ese 94vw esta calculado para AQUELLA foto.
-
-                  La de ahora es VERTICAL (2:3, 1200x1800), casi la forma de la
-                  caja: apenas se descarta nada, y el ancho que hace falta vuelve
-                  a ser del orden del de la caja. Dejar el 94vw serviria un
-                  archivo casi tres veces mas grande que el necesario en cada
-                  visita, sin que se vea mejor.
-
-                  40vw y no 33vw exactos: deja margen para el poco recorte que
-                  igual ocurre y para pantallas donde la columna crece.
-
-            ⚠️ Debajo de 1080px la foto esta oculta por CSS, pero el navegador la
-               descarga igual: el `1px` de ahi hace que se baje la variante mas
-               chica en vez de la grande.
+            El recorte esta resuelto en `.method-foto-img`.
           */}
-          <Image
-            src="/fotos-landing/metodo.avif"
-            alt=""
-            width={1200}
-            height={1800}
-            sizes="(max-width: 1080px) 1px, 40vw"
-            quality={82}
-            className="method-foto-img"
-          />
-        </div>
+          <div className="method-foto" aria-hidden>
+            {/*
+              🔴 EL `sizes` NO ES EL ANCHO DE LA CAJA. ES EL ANCHO DEL ORIGEN.
 
-        <div className="method-shell">
-          <div className="method-copy">
-            <p className="section-kicker">
-              <T id="method.kicker" />
-            </p>
-            <h2 className="method-title">
-              <T id="method.title" />{" "}
-              <em className="method-title-accent">
-                <T id="method.titleAccent" />
-              </em>
-            </h2>
-            <p className="method-lead">
-              <T id="method.lead" />
-            </p>
+                 Con `object-fit: cover`, el navegador descarta lo que sobra del
+                 eje que no encaja, asi que el archivo que necesita puede ser mucho
+                 mas grande que la caja.
+
+                 ⚠️ ESTE NUMERO CAMBIO AL CAMBIAR LA FOTO, Y TENIA QUE CAMBIAR.
+
+                    Antes aca habia una foto APAISADA (3:2) metida en una columna
+                    alta: para llenarla de arriba abajo el navegador la escalaba
+                    por el alto y tiraba ~65% del ancho, asi que hacia falta pedir
+                    33vw / 0.35 ≈ 94vw. Ese 94vw esta calculado para AQUELLA foto.
+
+                    La de ahora es VERTICAL (2:3, 1200x1800), casi la forma de la
+                    caja: apenas se descarta nada, y el ancho que hace falta vuelve
+                    a ser del orden del de la caja. Dejar el 94vw serviria un
+                    archivo casi tres veces mas grande que el necesario en cada
+                    visita, sin que se vea mejor.
+
+                    40vw y no 33vw exactos: deja margen para el poco recorte que
+                    igual ocurre y para pantallas donde la columna crece.
+
+              ⚠️ Debajo de 1080px la foto esta oculta por CSS, pero el navegador la
+                 descarga igual: el `1px` de ahi hace que se baje la variante mas
+                 chica en vez de la grande.
+            */}
+            <Image
+              src="/fotos-landing/metodo.avif"
+              alt=""
+              width={1200}
+              height={1800}
+              sizes="(max-width: 1080px) 1px, 40vw"
+              quality={82}
+              className="method-foto-img"
+            />
           </div>
 
-          <div className="method-grid">
-            {methodCards.map((item) => (
-              <div className="method-card" key={item.title}>
-                <span className="method-card-num">{item.label}</span>
-                <span className="method-card-divisoria" aria-hidden />
-                <span className="method-card-icon">
-                  <IconoMetodo nombre={item.icono} />
-                </span>
-                <div className="method-card-body">
-                  <span className="method-card-title">
-                    <T id={item.title as PublicMessageKey} />
-                  </span>
-                  <p>
-                    <T id={item.text as PublicMessageKey} />
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="method-callout">
-            <span className="method-callout-mark" aria-hidden>
-              <Sparkles size={26} strokeWidth={1.6} />
-            </span>
-            <span className="method-callout-text">
-              <span>
-                <T id="method.calloutIntro" />
-              </span>
-              <strong>
-                <T id="method.calloutEmphasis" />
-              </strong>
-            </span>
-          </p>
-        </div>
-      </section>
-
-      {/* La seccion `#clases` con <InteractiveSelector /> se borro el 2026-08-06:
-          hacia exactamente lo mismo que "Ultimo del estudio online", que va mas
-          abajo. Sus nueve fichas (titulos, duraciones, descripciones y vinetas)
-          se trasladaron TAL CUAL, y con ellas el id="clases", del que dependen
-          el enlace del navbar y el resaltado de seccion activa. */}
-
-      <section id="sobre" className="about-section">
-        {/* Riel vertical del borde izquierdo. Es decorativo y repite el kicker
-            de la marca; se oculta por debajo de 1200px, donde no hay margen
-            lateral donde ponerlo. */}
-        <span className="about-riel" aria-hidden>
-          <span className="about-riel-linea" />
-          <span className="about-riel-texto">
-            <T id="method.kicker" />
-          </span>
-        </span>
-
-        <div className="about-shell">
-          <div className="about-media">
-            <div className="about-photo">
-              <Image
-                src="/fotos-landing/sobre-mi.jpg"
-                alt="Brunela"
-                fill
-                sizes="(max-width: 900px) 88vw, 470px"
-                /* La foto ya viene recortada 3:4 anclada arriba, asi que `top`
-                   cae en la cara sin necesidad de ajustar un porcentaje: los
-                   ojos quedan a ~1/4 de la altura. */
-                style={{ objectFit: "cover", objectPosition: "top center" }}
-              />
+          <div className="method-shell">
+            <div className="method-copy">
+              <p className="section-kicker">
+                <T id="method.kicker" />
+              </p>
+              <h2 className="method-title">
+                <T id="method.title" />{" "}
+                <em className="method-title-accent">
+                  <T id="method.titleAccent" />
+                </em>
+              </h2>
+              <p className="method-lead">
+                <T id="method.lead" />
+              </p>
             </div>
-          </div>
 
-          <div className="about-copy">
-            <p className="section-kicker">
-              <T id="about.kicker" />
-            </p>
-            <h2 className="about-title">
-              <T id="about.title" />{" "}
-              <em className="about-title-accent">
-                <T id="about.titleAccent" />
-              </em>{" "}
-              <T id="about.titleEnd" />
-            </h2>
-            <span className="about-regla" aria-hidden />
-
-            <div className="about-bio-grid">
-              {aboutCards.map((card) => (
-                <article className="about-bio-card" key={card.title}>
-                  <span className="about-bio-icon">
-                    <IconoAbout nombre={card.icono} />
+            <div className="method-grid">
+              {methodCards.map((item) => (
+                <div className="method-card" key={item.title}>
+                  <span className="method-card-num">{item.label}</span>
+                  <span className="method-card-divisoria" aria-hidden />
+                  <span className="method-card-icon">
+                    <IconoMetodo nombre={item.icono} />
                   </span>
-                  <div className="about-bio-body">
-                    <span className="about-bio-title">
-                      <T id={card.title as PublicMessageKey} />
+                  <div className="method-card-body">
+                    <span className="method-card-title">
+                      <T id={item.title as PublicMessageKey} />
                     </span>
                     <p>
-                      <T id={card.text as PublicMessageKey} />
+                      <T id={item.text as PublicMessageKey} />
                     </p>
                   </div>
-                </article>
+                </div>
               ))}
             </div>
 
-            <div className="about-tags">
-              {certificados.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-
-            <div className="about-bottom-row">
-              <div className="about-stat-line">
-                <strong>+15</strong>
-                <span>
-                  <T id="about.statYears" />
-                </span>
-              </div>
-              <div className="about-stat-line">
-                <strong>4</strong>
-                <span>
-                  <T id="about.statAreas" />
-                </span>
-              </div>
-              <Link className="brand-button" href="/#planes">
-                <T id="about.button" />
-                <span className="brand-button-arrow" aria-hidden>
-                  <ArrowUpRight size={15} strokeWidth={2.2} />
-                </span>
-              </Link>
-            </div>
-
-            <a
-              className="about-portfolio-card"
-              href="https://brune-dance.vercel.app"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <div className="about-portfolio-card-text">
-                <p className="about-portfolio-card-label"><T id="about.portfolio.label" /></p>
-                <p className="about-portfolio-card-desc"><T id="about.portfolio.desc" /></p>
-              </div>
-              <span className="about-portfolio-card-arrow">
-                <svg width="16" height="16" viewBox="0 0 13 13" fill="none" aria-hidden>
-                  <path d="M2 11L11 2M11 2H5M11 2V8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+            <p className="method-callout">
+              <span className="method-callout-mark" aria-hidden>
+                <Sparkles size={26} strokeWidth={1.6} />
               </span>
-            </a>
+              <span className="method-callout-text">
+                <span>
+                  <T id="method.calloutIntro" />
+                </span>
+                <strong>
+                  <T id="method.calloutEmphasis" />
+                </strong>
+              </span>
+            </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <UltimoEstudio />
+        {/* La seccion `#clases` con <InteractiveSelector /> se borro el 2026-08-06:
+            hacia exactamente lo mismo que "Ultimo del estudio online", que va mas
+            abajo. Sus nueve fichas (titulos, duraciones, descripciones y vinetas)
+            se trasladaron TAL CUAL, y con ellas el id="clases", del que dependen
+            el enlace del navbar y el resaltado de seccion activa. */}
 
-      <section id="planes" className="landing-section plans-section">
-        <div className="plans-head">
-          <p className="section-kicker">
-            <T id="plans.kicker" />
-          </p>
-          <h2 className="section-title">
-            <T id="plans.title" />
-          </h2>
-          <p className="section-lead compact">
-            <T id="plans.lead" />
-          </p>
-        </div>
+        <section id="sobre" className="about-section">
+          {/* Riel vertical del borde izquierdo. Es decorativo y repite el kicker
+              de la marca; se oculta por debajo de 1200px, donde no hay margen
+              lateral donde ponerlo. */}
+          <span className="about-riel" aria-hidden>
+            <span className="about-riel-linea" />
+            <span className="about-riel-texto">
+              <T id="method.kicker" />
+            </span>
+          </span>
 
-        <PricingPlans plans={plansConPrecio} />
+          <div className="about-shell">
+            <div className="about-media">
+              <div className="about-photo">
+                <Image
+                  src="/fotos-landing/sobre-mi.jpg"
+                  alt="Brunela"
+                  fill
+                  sizes="(max-width: 900px) 88vw, 470px"
+                  /* La foto ya viene recortada 3:4 anclada arriba, asi que `top`
+                     cae en la cara sin necesidad de ajustar un porcentaje: los
+                     ojos quedan a ~1/4 de la altura. */
+                  style={{ objectFit: "cover", objectPosition: "top center" }}
+                />
+              </div>
+            </div>
 
-        {/* Los packs sólo aparecen si Brunela marcó alguno para la portada. Sin
-            packs no queda un hueco ni un título huérfano. */}
-        {packs.length > 0 && <PacksPublicos packs={packs} />}
-      </section>
+            <div className="about-copy">
+              <p className="section-kicker">
+                <T id="about.kicker" />
+              </p>
+              <h2 className="about-title">
+                <T id="about.title" />{" "}
+                <em className="about-title-accent">
+                  <T id="about.titleAccent" />
+                </em>{" "}
+                <T id="about.titleEnd" />
+              </h2>
+              <span className="about-regla" aria-hidden />
 
-      {/* Entre el precio y el pie a proposito: las objeciones aparecen justo
-          despues de ver cuanto sale. Si no hay preguntas publicadas, este
-          componente devuelve null y no queda ni un titulo huerfano. */}
-      <LandingFaq preguntas={faq} />
+              <div className="about-bio-grid">
+                {aboutCards.map((card) => (
+                  <article className="about-bio-card" key={card.title}>
+                    <span className="about-bio-icon">
+                      <IconoAbout nombre={card.icono} />
+                    </span>
+                    <div className="about-bio-body">
+                      <span className="about-bio-title">
+                        <T id={card.title as PublicMessageKey} />
+                      </span>
+                      <p>
+                        <T id={card.text as PublicMessageKey} />
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="about-tags">
+                {certificados.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+
+              <div className="about-bottom-row">
+                <div className="about-stat-line">
+                  <strong>+15</strong>
+                  <span>
+                    <T id="about.statYears" />
+                  </span>
+                </div>
+                <div className="about-stat-line">
+                  <strong>4</strong>
+                  <span>
+                    <T id="about.statAreas" />
+                  </span>
+                </div>
+                <Link className="brand-button" href="/#planes">
+                  <T id="about.button" />
+                  <span className="brand-button-arrow" aria-hidden>
+                    <ArrowUpRight size={15} strokeWidth={2.2} />
+                  </span>
+                </Link>
+              </div>
+
+              <a
+                className="about-portfolio-card"
+                href="https://brune-dance.vercel.app"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <div className="about-portfolio-card-text">
+                  <p className="about-portfolio-card-label"><T id="about.portfolio.label" /></p>
+                  <p className="about-portfolio-card-desc"><T id="about.portfolio.desc" /></p>
+                </div>
+                <span className="about-portfolio-card-arrow">
+                  <svg width="16" height="16" viewBox="0 0 13 13" fill="none" aria-hidden>
+                    <path d="M2 11L11 2M11 2H5M11 2V8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <UltimoEstudio />
+
+        <section id="planes" className="lp-seccion lp-planes">
+          <header className="lp-cabeza" data-lp-revelar>
+            <p className="lp-ceja">
+              <span className="lp-ceja-punto" aria-hidden />
+              <span className="lp-ceja-t">
+                <T id="plans.kicker" />
+              </span>
+            </p>
+            <h2 className="lp-titulo">
+              <T id="plans.title" />
+              <span className="lp-punto" aria-hidden>
+                .
+              </span>
+            </h2>
+            <p className="lp-bajada">
+              <T id="plans.lead" />
+            </p>
+          </header>
+
+          <PricingPlans plans={plansConPrecio} />
+
+          {/* Los packs sólo aparecen si Brunela marcó alguno para la portada. Sin
+              packs no queda un hueco ni un título huérfano. */}
+          {packs.length > 0 && <PacksPublicos packs={packs} />}
+        </section>
+
+        {/* Entre el precio y el pie a proposito: las objeciones aparecen justo
+            despues de ver cuanto sale. Si no hay preguntas publicadas, este
+            componente devuelve null y no queda ni un titulo huerfano. */}
+        <LandingFaq preguntas={faq} />
+
+      </main>
 
       <div style={{ position: "relative", zIndex: 1 }}>
         <BrunelaFooter />

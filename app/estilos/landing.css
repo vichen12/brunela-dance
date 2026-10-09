@@ -1,1 +1,1024 @@
-/* Estilos de la landing publica (rediseno suave y calido, 2026-10-08). */
+/* ════════════════════════════════════════════════════════════════════════
+   LANDING PUBLICA · REDISEÑO SUAVE Y CALIDO (2026-10-08)
+   ────────────────────────────────────────────────────────────────────────
+   Todo cuelga de `.lp`, que va junto a `.sistema` en el <main> de app/page.tsx
+   (los tokens --rubor, --linea, --sombra, --curva y Nunito vienen de ahi).
+
+   Prefijo `lp-` en todas las clases: la landing vieja dejo mucho CSS en
+   globals.css (.hero-*, .method-*, .about-*, .classic-plan-*, .ultimo-*...) y
+   con nombres nuevos nada de eso alcanza a esta pagina.
+
+   Reglas del rediseño: nada negro, sin serif ni italica, sin mayusculas
+   espaciadas, fondo blanco, radios grandes, sombras tibias.
+   ════════════════════════════════════════════════════════════════════════ */
+
+.lp {
+  --lp-ancho: 1240px;
+  --lp-gutter: clamp(16px, 4vw, 48px);
+  --lp-sombra-foto: 0 2px 6px rgba(150, 80, 70, 0.06), 0 30px 60px -30px rgba(176, 70, 70, 0.5);
+  --lp-sombra-coral: 0 14px 26px -14px rgba(230, 79, 85, 0.85);
+  position: relative;
+  z-index: 1;
+  overflow-x: clip;
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+}
+
+.lp h1, .lp h2, .lp h3, .lp h4, .lp p { margin: 0; }
+
+.lp-seccion {
+  position: relative;
+  width: min(var(--lp-ancho), calc(100% - 2 * var(--lp-gutter)));
+  margin: 0 auto;
+  padding: clamp(64px, 9vw, 128px) 0 0;
+  scroll-margin-top: 70px;
+}
+
+/* ── Piezas comunes ──────────────────────────────────────────────────── */
+
+/* Ceja: pildora rubor con punto coral. El diccionario guarda varias en
+   MAYUSCULAS ("ESTUDIO ONLINE"); aca se pasan a oracion sin tocar los cuatro
+   idiomas: minusculas + primera letra mayuscula. Necesita inline-block para
+   que ::first-letter aplique. */
+.lp-ceja {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 11px;
+  border-radius: 99px;
+  background: var(--rubor);
+  border: 1px solid var(--linea);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.lp-ceja-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); flex-shrink: 0; }
+.lp-ceja-t { display: inline-block; text-transform: lowercase; }
+.lp-ceja-t::first-letter { text-transform: uppercase; }
+
+.lp-titulo {
+  margin-top: 18px !important;
+  font-size: clamp(2rem, 1.2rem + 2.6vw, 3.4rem);
+  font-weight: 900;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.lp-acento { color: var(--pink); }
+.lp-punto { color: var(--pink); }
+
+.lp-bajada {
+  margin-top: 16px !important;
+  max-width: 36rem;
+  color: var(--muted);
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.12rem);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.lp-burbuja {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+}
+.lp-burbuja-coral { background: var(--pink); color: #fff; box-shadow: var(--lp-sombra-coral); }
+
+.lp-burbuja-melocoton { background: var(--melocoton); color: var(--melocoton-deep); }
+
+.lp-check {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--pink-wash);
+  color: var(--pink-mid);
+}
+
+/* Botones: pildoras. */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 24px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva), background 0.2s, border-color 0.2s, color 0.2s;
+}
+.lp-btn:hover { transform: translateY(-2px); }
+.lp-btn-coral {
+  background: var(--pink);
+  color: #fff;
+  box-shadow: var(--lp-sombra-coral);
+  padding-right: 8px;
+}
+.lp-btn-coral:hover { background: var(--pink-mid); box-shadow: 0 18px 30px -14px rgba(230, 79, 85, 0.95); }
+.lp-btn-blanco {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--linea-fuerte);
+}
+.lp-btn-blanco:hover { background: var(--rubor); border-color: var(--pink-line); }
+.lp-btn-flecha {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.24);
+  transition: transform 0.35s var(--curva);
+}
+.lp-btn:hover .lp-btn-flecha { transform: translateX(3px); }
+
+.lp a:focus-visible, .lp button:focus-visible, .lp summary:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25);
+}
+.lp .lp-btn:focus-visible { border-radius: 99px; }
+
+/* Manchas difusas animadas (el mismo recurso que los heroes del sistema). */
+.lp-mancha {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: lp-flota 14s ease-in-out infinite alternate;
+}
+.lp-mancha-a { width: 460px; height: 460px; right: -120px; top: -180px; background: radial-gradient(circle, rgba(255, 205, 185, 0.75), transparent 68%); }
+.lp-mancha-b { width: 320px; height: 320px; left: 34%; bottom: -200px; background: radial-gradient(circle, rgba(242, 198, 198, 0.6), transparent 70%); animation-duration: 17s; animation-direction: alternate-reverse; }
+.lp-mancha-c { width: 380px; height: 380px; left: -160px; top: 30%; background: radial-gradient(circle, rgba(255, 226, 211, 0.7), transparent 70%); animation-duration: 19s; }
+@keyframes lp-flota { from { transform: translate(0, 0) scale(1); } to { transform: translate(-28px, 22px) scale(1.1); } }
+
+/* Fotos: marco redondeado, velo tibio, zoom suave al pasar el mouse y fundido
+   al aparecer. */
+/*
+  ⚠️ LOS ARCOS NO PUEDEN SER "999px 999px 36px 36px".
+     Cuando la suma de radios de un lado supera su largo, el navegador escala
+     TODOS los radios por el mismo factor: el 36px de abajo quedaba en ~6px y
+     el arco tenia esquinas inferiores en punta. Por eso van como
+     "50% 50% R R / A A R R": arriba medio ancho en horizontal y A px en
+     vertical (aprox. medio ancho del marco), y abajo el radio chico intacto.
+*/
+
+.lp-foto {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(135deg, var(--melocoton), var(--pink-wash));
+  box-shadow: var(--lp-sombra-foto);
+}
+.lp-foto img {
+  transition: transform 1.1s var(--curva), filter 0.6s;
+  animation: lp-fundido 1.1s var(--curva) both;
+}
+.lp-foto:hover img { transform: scale(1.06); }
+.lp-foto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* Tinte calido muy leve: unifica la luz fria del estudio con la paleta. */
+  background: linear-gradient(180deg, rgba(255, 226, 211, 0.08) 0%, rgba(230, 79, 85, 0.1) 100%);
+  mix-blend-mode: multiply;
+}
+@keyframes lp-sube { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lp-fundido { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+
+/* Entradas al hacer scroll (ver components/landing-movimiento.tsx). Solo se
+   esconde con html.lp-js: sin JavaScript todo queda visible. */
+.lp-js .lp [data-lp-revelar] {
+  opacity: 0;
+  transform: translateY(26px) scale(0.985);
+  transition: opacity 0.9s var(--curva), transform 0.9s var(--curva);
+}
+.lp-js .lp [data-lp-revelar][data-lp-visto] { opacity: 1; transform: none; }
+
+/* ══ PLANES ════════════════════════════════════════════════════════════
+   Estructura ORIGINAL de components/pricing-plans.tsx (pedido de la dueña:
+   tres tarjetas blancas iguales, insignias que asoman arriba, precio grande
+   entre dos lineas finas). Su CSS de maqueta sigue en el <style> del
+   componente; aca va la piel nueva, con `.lp` delante para ganarle.
+
+   Ancho completo: la banda de fondo va de borde a borde de la pagina (radio
+   solo arriba) y las tarjetas van ADENTRO con padding lateral.
+   ═════════════════════════════════════════════════════════════════════ */
+/* Una pantalla entera (100svh, con 100vh de respaldo) y el contenido
+   centrado. El padding de arriba deja libre la barra fija (~90px), asi que
+   al llegar por /#planes el titulo no queda debajo de ella. */
+.lp .lp-planes {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  margin-top: clamp(48px, 6vw, 96px);
+  padding: 92px clamp(16px, 4vw, 64px) clamp(28px, 3vw, 44px);
+  scroll-margin-top: 0;
+}
+.lp-planes::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: 48px 48px 0 0;
+  background:
+    radial-gradient(760px 420px at 90% 4%, rgba(255, 208, 186, 0.75), transparent 70%),
+    radial-gradient(640px 380px at 4% 34%, rgba(250, 205, 205, 0.6), transparent 70%),
+    radial-gradient(520px 300px at 50% 100%, rgba(255, 220, 204, 0.55), transparent 72%),
+    linear-gradient(180deg, #FFE9E1 0%, #FFF3EC 100%);
+}
+.lp-cabeza { display: grid; justify-items: center; text-align: center; }
+.lp-planes .lp-titulo { margin-top: 12px !important; font-size: clamp(2rem, 1.3rem + 2vw, 2.9rem); }
+.lp-planes .lp-cabeza .lp-bajada { margin-top: 10px !important; max-width: 40rem; }
+.lp-cabeza .lp-bajada { max-width: 30rem; }
+
+.lp .classic-pricing { width: 100%; margin-top: clamp(20px, 2.4vh, 32px); }
+
+/* ── Mensual / anual ── */
+.lp .pricing-toggle-row { margin-bottom: clamp(18px, 2.6vh, 36px); }
+.lp .pricing-toggle {
+  width: auto;
+  gap: 14px;
+  padding: 8px 22px;
+  border: 1px solid var(--linea);
+  background: #fff;
+  box-shadow: var(--sombra);
+}
+.lp .pricing-toggle .pricing-toggle-option {
+  min-height: 38px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+.lp .pricing-toggle .pricing-toggle-option.is-active { color: var(--ink); font-weight: 900; }
+.lp .pricing-toggle .pricing-toggle-switch { border-color: var(--pink-line); background: var(--rubor); box-shadow: none; }
+.lp .pricing-toggle .pricing-toggle-switch::after { box-shadow: 0 6px 14px -6px rgba(230, 79, 85, 0.9); transition: left 0.35s var(--curva); }
+.lp .pricing-save-note svg { color: var(--pink); opacity: 1; }
+.lp .pricing-save-note span { color: var(--pink-deep); font-size: 15px; font-weight: 800; }
+
+/* ── La grilla ──
+   SUBGRID: cada tarjeta comparte las filas con las otras dos, asi la
+   descripcion, el precio, la lista y el boton arrancan a la misma altura
+   aunque una descripcion sea mas larga. Filas: insignia | icono+nombre |
+   descripcion | precio | nota anual | lista | boton. La nota solo existe en
+   anual; sin ella su fila queda en 0 y nada se mueve. */
+.lp .classic-plan-grid {
+  grid-template-rows: repeat(7, auto);
+  column-gap: clamp(16px, 2vw, 28px);
+  row-gap: 0;
+}
+.lp .classic-plan-stack {
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+}
+.lp .classic-plan-badge-slot { min-height: 22px; }
+.lp .classic-plan-badge {
+  max-width: calc(100% - 32px);
+  padding: 9px 18px;
+  border: 1px solid var(--pink-line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--pink-deep);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 10px 22px -12px rgba(176, 70, 70, 0.45);
+}
+/* La insignia de la destacada (Solista) va llena en coral. */
+.lp .classic-plan-stack:nth-child(2) .classic-plan-badge {
+  border-color: transparent;
+  background: var(--pink);
+  color: #fff;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.95);
+}
+
+.lp .classic-plan-card {
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  border: 1px solid var(--linea);
+  border-radius: 32px;
+  background: #fff;
+  padding: clamp(30px, 3.4vh, 42px) clamp(22px, 2vw, 34px) clamp(22px, 2.6vh, 32px);
+  color: var(--ink);
+  box-shadow: var(--sombra);
+  transition: transform 0.45s var(--curva), box-shadow 0.45s var(--curva), border-color 0.3s;
+}
+.lp .classic-plan-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--linea-fuerte);
+  box-shadow: var(--sombra-alta);
+}
+.lp .classic-plan-card.is-featured {
+  background: #fff;
+  border-color: var(--pink-line);
+  box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 34px 64px -34px rgba(230, 79, 85, 0.6);
+}
+.lp .classic-plan-card.is-featured:hover { box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 40px 72px -32px rgba(230, 79, 85, 0.7); }
+.lp .classic-plan-card > * { margin: 0 0 clamp(12px, 1.7vh, 20px); }
+.lp .classic-plan-card > .classic-plan-action { grid-row: 6; margin: 0; }
+
+.lp .classic-plan-top { gap: 16px; align-items: center; }
+.lp .classic-plan-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  transition: transform 0.5s var(--curva);
+}
+.lp .classic-plan-card:hover .classic-plan-icon { transform: rotate(-8deg) scale(1.06); }
+.lp .classic-plan-card.is-featured .classic-plan-icon { background: var(--pink-wash); }
+.lp .classic-plan-tagline {
+  margin: 0 0 4px;
+  color: var(--pink-deep);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .classic-plan-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(1.6rem, 1.2rem + 0.9vw, 2.05rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+.lp .classic-plan-regla { width: 40px; height: 4px; margin-top: 12px; border-radius: 99px; background: var(--pink); }
+
+.lp .classic-plan-oneline {
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.lp .classic-plan-price {
+  align-items: baseline;
+  gap: 10px;
+  padding: clamp(12px, 1.6vh, 20px) 0;
+  border-top: 1px solid var(--linea-fuerte);
+  border-bottom: 1px solid var(--linea-fuerte);
+  color: var(--ink);
+}
+.lp .classic-plan-price strong {
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(3rem, 6.4vh, 4.6rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.lp .classic-plan-card.is-featured .classic-plan-price strong { color: var(--pink); }
+.lp .classic-plan-price span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .classic-plan-note {
+  justify-self: start;
+  padding: 7px 14px;
+  border-radius: 14px;
+  background: #FFF4E8;
+  color: var(--melocoton-deep);
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.lp .classic-plan-list { gap: clamp(7px, 1.1vh, 12px); align-content: start; }
+.lp .classic-plan-list li { gap: 11px; color: var(--ink); font-size: 14.5px; line-height: 1.45; }
+.lp .classic-plan-list svg { margin-top: 2px; color: var(--pink); }
+
+.lp .classic-plan-action {
+  min-height: clamp(48px, 6vh, 56px);
+  padding: 0 22px;
+  border: 1px solid var(--pink-line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--pink-deep);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+  transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva), background 0.2s, border-color 0.2s;
+}
+.lp .classic-plan-action:hover {
+  transform: translateY(-2px);
+  border-color: var(--pink);
+  background: var(--rubor);
+  box-shadow: none;
+}
+.lp .classic-plan-card.is-featured .classic-plan-action {
+  border-color: transparent;
+  background: var(--pink);
+  color: #fff;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.95);
+}
+.lp .classic-plan-card.is-featured .classic-plan-action:hover { background: var(--pink-mid); }
+.lp .classic-plan-action:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25); }
+
+.lp .classic-pricing-garantia {
+  gap: 10px;
+  margin-top: clamp(16px, 2.2vh, 28px);
+  color: var(--muted);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.lp .classic-pricing-garantia svg { color: var(--pink-deep); }
+
+@media (max-width: 980px) {
+  .lp .lp-planes { min-height: 0; }
+  .lp .classic-plan-grid { max-width: 560px; }
+  .lp .classic-plan-stack { margin-bottom: 18px; }
+}
+@media (max-width: 560px) {
+  .lp .classic-plan-card { border-radius: 26px; padding: 34px 20px 22px; }
+  .lp .classic-plan-card > * { margin-bottom: 16px; }
+  .lp .classic-plan-price strong { font-size: 3.4rem; }
+  .lp .classic-plan-action { min-height: 52px; font-size: 15px; }
+  .lp .classic-plan-badge { font-size: 12.5px; padding: 7px 14px; }
+  .lp .pricing-toggle { padding: 6px 16px; }
+  .lp .pricing-save-note span { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp .classic-plan-card:hover, .lp .classic-plan-action:hover { transform: none; }
+  .lp .classic-plan-card:hover .classic-plan-icon { transform: none; }
+}
+
+/* ══ PACKS ═════════════════════════════════════════════════════════════ */
+.lp-packs { width: min(1000px, 100%); margin: clamp(56px, 7vw, 88px) auto 0; }
+.lp-packs-cabeza { display: grid; justify-items: center; text-align: center; margin-bottom: 30px; }
+.lp-packs-titulo { margin-top: 14px !important; font-family: var(--font-suave), sans-serif; font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.lp-packs-cabeza .lp-bajada { margin-top: 10px !important; max-width: 32rem; font-size: 15.5px; }
+.lp-packs-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+.lp-pack {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 28px;
+  background: #fff;
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra);
+  transition: transform 0.4s var(--curva), box-shadow 0.4s var(--curva), opacity 0.9s var(--curva) !important;
+}
+.lp-pack:hover { transform: translateY(-4px) !important; box-shadow: var(--sombra-alta); }
+.lp-pack.is-featured { border-color: var(--pink-line); background: linear-gradient(180deg, #FFF6F3, #fff 40%); }
+.lp-pack-portada { height: 150px; border-radius: 20px; background-size: cover; background-position: center; box-shadow: none; transition: background-size 0.8s var(--curva); }
+.lp-pack-cuerpo { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 12px 12px; }
+.lp-pack-recomendado { padding: 4px 11px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 12.5px; font-weight: 800; }
+.lp-pack-nombre { font-size: 19px; font-weight: 900; letter-spacing: -0.015em; color: var(--ink); }
+.lp-pack-desc { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.lp-pack-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.lp-pack-chip { padding: 4px 11px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 12.5px; font-weight: 800; }
+.lp-pack-chip.es-melocoton { background: var(--melocoton); color: var(--melocoton-deep); }
+.lp-pack-precio { margin-top: auto !important; padding-top: 6px; font-size: 30px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.lp-pack-precio span { margin-left: 8px; color: var(--muted); font-size: 13.5px; font-weight: 700; letter-spacing: 0; }
+.lp-pack-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: stretch;
+  min-height: 48px;
+  border-radius: 99px;
+  background: var(--pink);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: var(--lp-sombra-coral);
+  transition: transform 0.35s var(--curva), background 0.2s;
+}
+.lp-pack-accion:hover { transform: translateY(-2px); background: var(--pink-mid); }
+.lp .lp-pack-accion:focus-visible { border-radius: 99px; }
+
+/* ══ PIEL NUEVA SOBRE LA COMPOSICION ORIGINAL ═══════════════════════════
+   El trailer, Metodo y Sobre mi conservan su estructura de antes (pedido de
+   la dueña): el JSX y la maqueta siguen en las reglas de globals.css. Aca solo
+   se cambia la piel: Nunito 900 sin serif ni italica, cejas y botones en
+   pildora, burbujas pastel, radios grandes y sombras tibias.
+   Todo va con `.lp` delante para ganarle a globals.css, incluidas sus media
+   queries de las mismas clases.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* Ceja (section-kicker): pildora rubor con punto coral. El punto va como
+   fondo y no como ::before para que ::first-letter siga cayendo en la primera
+   letra: el diccionario guarda varias en MAYUSCULAS y se pasan a oracion. */
+.lp .section-kicker {
+  display: inline-block;
+  justify-self: start;
+  width: auto;
+  margin: 0;
+  padding: 7px 14px 7px 25px;
+  border-radius: 99px;
+  border: 1px solid var(--linea);
+  background: radial-gradient(circle at 13px 50%, var(--pink) 3.5px, transparent 4.2px), var(--rubor);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: lowercase;
+}
+.lp .section-kicker::first-letter { text-transform: uppercase; }
+
+/* ── Trailer: video grande protagonista, fondo oscuro aceptado ─────────── */
+.lp .video-showcase-content .section-kicker {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: radial-gradient(circle at 13px 50%, #FFB3A7 3.5px, transparent 4.2px), rgba(255, 255, 255, 0.14);
+  color: #FFF4F1;
+  backdrop-filter: blur(8px);
+}
+.lp .video-showcase-content h2 {
+  margin-top: 18px;
+  font-family: var(--font-suave), sans-serif;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.04;
+}
+.lp .video-sound-button,
+.lp .video-yt-link {
+  min-height: 52px;
+  padding: 0 22px;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .video-sound-button {
+  border-color: transparent;
+  background: var(--pink);
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.95);
+}
+.lp .video-sound-button:hover { background: var(--pink-mid); }
+.lp .video-sound-button:focus-visible,
+.lp .video-yt-link:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4); }
+
+/* ── Metodo ──────────────────────────────────────────────────────────── */
+.lp .method-shell {
+  border-color: var(--linea);
+  border-radius: 36px;
+  background: linear-gradient(150deg, rgba(255, 250, 247, 0.9) 0%, rgba(255, 255, 255, 0.78) 100%);
+  box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 40px 80px -40px rgba(176, 70, 70, 0.4);
+}
+.lp .method-shell::before { background: linear-gradient(180deg, transparent, var(--linea-fuerte), transparent); }
+.lp .method-title {
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(2.1rem, 1.3rem + 2.4vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.06;
+}
+.lp .method-title-accent { color: var(--pink); font-style: normal; font-weight: 900; }
+.lp .method-lead { color: var(--muted); }
+.lp .method-card {
+  border-color: var(--linea);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: var(--sombra);
+  transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva), border-color 0.25s;
+}
+.lp .method-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--linea-fuerte);
+  box-shadow: var(--sombra-alta);
+}
+/* Numeros en burbujas pastel, uno por tono. */
+.lp .method-card-num {
+  border-radius: 18px;
+  font-family: var(--font-suave), sans-serif;
+  font-weight: 900;
+}
+.lp .method-card:nth-child(1) .method-card-num { background: var(--rubor); color: var(--pink-deep); }
+.lp .method-card:nth-child(2) .method-card-num { background: #FFF4E8; color: var(--melocoton-deep); }
+.lp .method-card:nth-child(3) .method-card-num { background: var(--pink-wash); color: var(--pink-mid); }
+.lp .method-card:nth-child(4) .method-card-num { background: #FFF8F2; color: var(--melocoton-deep); border: 1px solid var(--linea); }
+.lp .method-card-divisoria { background: linear-gradient(180deg, transparent, var(--linea-fuerte), transparent); }
+/* Icono en burbuja. */
+.lp .method-card-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 14px;
+  background: var(--pink-wash);
+  color: var(--pink-deep);
+}
+.lp .method-card-title {
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(1.02rem, 1.3vw, 1.15rem);
+  font-weight: 900;
+}
+.lp .method-card p { color: var(--muted); }
+.lp .method-callout {
+  border-color: var(--linea);
+  border-radius: 24px;
+  background: linear-gradient(120deg, var(--rubor) 0%, #FFF7F3 60%, #FFEFE8 100%);
+  box-shadow: none;
+}
+.lp .method-callout-mark {
+  border-radius: 16px;
+  background: var(--pink);
+  color: #fff;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.85);
+}
+.lp .method-callout-text {
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.lp .method-callout strong { color: var(--pink-deep); font-weight: 900; }
+.lp .method-foto { border-radius: 0 40px 40px 0; }
+
+/* ── Sobre mi ────────────────────────────────────────────────────────── */
+.lp .about-section {
+  /* Las siluetas del isologo se quedan; el fondo pasa de rosado a crema
+     tibio, mas cerca del blanco del resto de la pagina. */
+  background:
+    url("/brand/isologo-icon.png") 96% 12% / 155px auto no-repeat,
+    url("/brand/isologo-icon.png") 5% 78% / 105px auto no-repeat,
+    radial-gradient(ellipse 60% 55% at 5% 10%, rgba(255, 226, 211, 0.55), transparent 55%),
+    linear-gradient(180deg, #fff 0%, #FFF7F3 18%, #FFF4EF 82%, #fff 100%);
+}
+.lp .about-shell {
+  border-color: var(--linea);
+  border-radius: 40px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 250, 247, 0.9) 100%);
+  box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 40px 80px -40px rgba(176, 70, 70, 0.4);
+}
+.lp .about-media::before {
+  border-radius: 36px;
+  background: linear-gradient(150deg, var(--melocoton) 0%, var(--pink-soft) 100%);
+  border-color: var(--pink-line);
+}
+.lp .about-photo { border-radius: 30px; border: 6px solid #fff; }
+.lp .about-photo img { transition: transform 1.1s var(--curva); }
+.lp .about-photo:hover img { transform: scale(1.05); }
+.lp .about-title {
+  color: var(--ink);
+  font-family: var(--font-suave), sans-serif;
+  font-size: clamp(1.9rem, 1.2rem + 2vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+.lp .about-title-accent { color: var(--pink); font-style: normal; font-weight: 900; }
+.lp .about-regla { width: 56px; height: 5px; border-radius: 99px; background: var(--pink-soft); }
+.lp .about-riel-linea { background: linear-gradient(180deg, transparent, var(--pink-line)); }
+.lp .about-riel-texto {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+.lp .about-riel-texto::first-letter { text-transform: uppercase; }
+.lp .about-bio-card {
+  border-color: var(--linea);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--sombra);
+  transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva);
+}
+.lp .about-bio-card:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
+.lp .about-bio-icon { border-radius: 14px; background: var(--rubor); }
+.lp .about-bio-card:nth-child(2) .about-bio-icon { background: #FFF4E8; color: var(--melocoton-deep); }
+.lp .about-bio-card:nth-child(3) .about-bio-icon { background: var(--pink-wash); color: var(--pink-mid); }
+.lp .about-bio-card:nth-child(4) .about-bio-icon { background: #FFF8F2; color: var(--melocoton-deep); border: 1px solid var(--linea); }
+.lp .about-bio-title {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .about-bio-card p { color: var(--muted); font-size: 13.5px; }
+.lp .about-bio-body { align-content: start; }
+/* Chips de certificados: oracion, pastel, sin tracking. */
+.lp .about-tags { gap: 8px; }
+.lp .about-tags span {
+  padding: 6px 13px;
+  border: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .about-tags span:nth-child(4n + 1) { background: var(--rubor); color: var(--pink-deep); }
+.lp .about-tags span:nth-child(4n + 2) { background: var(--melocoton); color: var(--melocoton-deep); }
+.lp .about-tags span:nth-child(4n + 3) { background: var(--pink-wash); color: var(--pink-mid); }
+.lp .about-tags span:nth-child(4n + 4) { background: #FFF8F2; color: var(--melocoton-deep); border: 1px solid var(--linea); }
+.lp .about-bottom-row { border-top: 1px dashed var(--linea-fuerte); }
+.lp .about-stat-line strong {
+  font-family: var(--font-suave), sans-serif;
+  letter-spacing: -0.03em;
+}
+.lp .about-stat-line span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .brand-button {
+  min-height: 52px;
+  padding: 0 8px 0 22px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.85);
+  transition: transform 0.35s var(--curva), background 0.2s;
+}
+.lp .brand-button-arrow { width: 36px; height: 36px; }
+.lp .about-portfolio-card {
+  border: 1px solid var(--linea);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--sombra);
+  transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva);
+}
+.lp .about-portfolio-card:hover { background: #fff; transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+.lp .about-portfolio-card-label {
+  display: inline-block;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+.lp .about-portfolio-card-label::first-letter { text-transform: uppercase; }
+.lp .about-portfolio-card-desc { color: var(--muted); font-size: 13.5px; }
+.lp .about-portfolio-card-arrow { width: 38px; height: 38px; background: var(--rubor); color: var(--pink-deep); }
+.lp .about-portfolio-card:hover .about-portfolio-card-arrow { background: var(--pink); color: #fff; transform: rotate(45deg); }
+
+@media (max-width: 560px) {
+  /* Icono al lado del titulo y alto natural: con la regla vieja (una columna
+     y filas iguales) el icono quedaba solo arriba con un hueco debajo. */
+  .lp .about-bio-grid { grid-auto-rows: auto; }
+  .lp .about-bio-card { grid-template-columns: auto minmax(0, 1fr); min-height: 0; height: auto; gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp .method-card:hover, .lp .about-bio-card:hover, .lp .about-portfolio-card:hover { transform: none; }
+  .lp .about-photo:hover img { transform: none; }
+}
+
+
+/* ── Galeria (tira de fotos): composicion original, piel nueva ─────────── */
+/* Fondo crema palido en vez del degradé rosa chicle de globals.css (pedido de
+   la dueña: "no pega el rosa ese"). Sin halos ni filetes rosas. */
+.lp .photo-marquee-section {
+  background: #FFFAF6;
+  border: 0;
+  box-shadow: none;
+}
+.lp .photo-marquee-section::before { background: linear-gradient(180deg, #fff 0%, rgba(255, 250, 246, 0) 100%); }
+.lp .photo-marquee-section::after { background: linear-gradient(0deg, #fff 0%, rgba(255, 250, 246, 0) 100%); }
+.lp .photo-marquee-card {
+  border-radius: clamp(22px, 2.4vw, 34px);
+  border: 5px solid #fff;
+  background: var(--crema);
+  box-shadow: var(--sombra);
+}
+.lp .photo-marquee-card img { transition: transform 1.1s var(--curva); }
+.lp .photo-marquee-card:hover img { transform: scale(1.07); }
+/* Velo tibio leve: unifica la luz fria del estudio con la paleta. */
+.lp .photo-marquee-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 226, 211, 0.06), rgba(230, 79, 85, 0.1));
+  mix-blend-mode: multiply;
+}
+
+/* ── Clases ("Lo ultimo del estudio online"): composicion original ──────
+   El JSX y la maqueta estan en components/ultimo-estudio.tsx; aca va la
+   piel: sin superficies negras, etiquetas en oracion, pildoras. */
+.lp .ultimo-panel {
+  border-color: var(--linea);
+  border-radius: clamp(28px, 3vw, 44px);
+  background:
+    radial-gradient(120% 90% at 82% 8%, rgba(255, 226, 211, 0.7) 0%, transparent 62%),
+    linear-gradient(150deg, #FFF7F4 0%, #FFEFEA 100%);
+  box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 40px 80px -40px rgba(176, 70, 70, 0.4);
+}
+/* La ceja: el punto pasa a ser fondo para que ::first-letter funcione (el
+   diccionario la guarda en MAYUSCULAS y se pasa a oracion). */
+.lp .ultimo-kicker {
+  display: inline-block;
+  padding: 7px 14px 7px 25px;
+  border: 1px solid var(--linea);
+  background: radial-gradient(circle at 13px 50%, var(--pink) 3.5px, transparent 4.2px), #fff;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+.lp .ultimo-kicker::first-letter { text-transform: uppercase; }
+.lp .ultimo-kicker-punto { display: none; }
+.lp .ultimo-title { color: var(--ink); font-weight: 900; letter-spacing: -0.025em; }
+.lp .ultimo-lead { color: var(--muted); }
+.lp .ultimo-tabs { border-color: var(--linea); background: #fff; box-shadow: var(--sombra); padding: 5px; }
+.lp .ultimo-tab {
+  min-height: 42px;
+  color: var(--muted);
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.lp .ultimo-tab:hover { background: var(--rubor); color: var(--pink-deep); }
+.lp .ultimo-tab.is-activa { background: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.95); }
+.lp .ultimo-tab:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25); }
+
+.lp .ultimo-card {
+  border: 5px solid #fff;
+  border-radius: clamp(22px, 2vw, 30px);
+  background: linear-gradient(135deg, var(--melocoton), var(--pink-wash));
+  box-shadow: 0 2px 6px rgba(150, 80, 70, 0.06), 0 30px 54px -30px rgba(176, 70, 70, 0.55);
+  transition: transform 0.45s var(--curva), box-shadow 0.45s var(--curva);
+}
+.lp .ultimo-card:hover { transform: translateY(-6px); box-shadow: 0 2px 6px rgba(150, 80, 70, 0.06), 0 40px 64px -30px rgba(176, 70, 70, 0.6); }
+.lp .ultimo-card-img { transition: transform 1.1s var(--curva); }
+.lp .ultimo-card:hover .ultimo-card-img { transform: scale(1.06); }
+/* 🔴 El velo no es estetico: debajo va texto blanco sobre una FOTO. Pasa de
+   casi negro a ciruela calido (--ink); al 0.9 el blanco sigue muy por encima
+   de 4.5:1. */
+.lp .ultimo-card-velo {
+  background: linear-gradient(
+    180deg,
+    rgba(59, 42, 44, 0) 0%,
+    rgba(59, 42, 44, 0.12) 36%,
+    rgba(59, 42, 44, 0.7) 66%,
+    rgba(59, 42, 44, 0.9) 100%
+  );
+}
+.lp .ultimo-nueva {
+  background: var(--pink);
+  padding: 5px 12px;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 10px 20px -10px rgba(230, 79, 85, 0.9);
+}
+.lp .ultimo-marcador { border: 0; background: rgba(255, 255, 255, 0.9); color: var(--pink-deep); }
+.lp .ultimo-cat {
+  border: 0;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--pink-deep);
+  padding: 4px 11px;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .ultimo-card-title { font-weight: 900; }
+.lp .ultimo-card-regla { width: 34px; height: 4px; border-radius: 99px; background: var(--pink-soft); }
+.lp .ultimo-card-link { font-size: 14px; letter-spacing: 0; }
+.lp .ultimo-card:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.35); }
+
+/* El dialogo vive dentro de la seccion (.lp), asi que la piel le llega. */
+.lp .ultimo-dialogo {
+  border-color: var(--linea);
+  border-radius: 32px;
+  font-family: var(--font-suave), sans-serif;
+  box-shadow: 0 40px 100px -30px rgba(120, 50, 50, 0.45);
+}
+/* Velo ciruela tibio translucido, nunca negro. */
+.lp .ultimo-dialogo::backdrop { background: rgba(92, 56, 56, 0.34); backdrop-filter: blur(6px); }
+.lp .ultimo-detalle { padding: 12px; gap: 8px; }
+.lp .ultimo-detalle-foto { min-height: 100%; overflow: hidden; border-radius: 24px; }
+.lp .ultimo-detalle-foto::after { display: none; }
+.lp .ultimo-detalle-cat {
+  background: var(--rubor);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lp .ultimo-detalle-titulo { color: var(--ink); font-weight: 900; letter-spacing: -0.02em; }
+.lp .ultimo-detalle-meta {
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: #FFF4E8;
+  color: var(--melocoton-deep);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.lp .ultimo-detalle-desc { border-bottom: 1px dashed var(--linea-fuerte); color: var(--muted); }
+.lp .ultimo-detalle-lista li { color: var(--ink); }
+.lp .ultimo-detalle-cta {
+  min-height: 50px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, 0.95);
+}
+.lp .ultimo-detalle-cerrar {
+  top: 22px;
+  right: 22px;
+  width: 40px;
+  height: 40px;
+  border-color: var(--linea);
+  transition: background 0.2s, transform 0.35s var(--curva);
+}
+.lp .ultimo-detalle-cerrar:hover { transform: rotate(90deg); }
+.lp .ultimo-detalle-cta:focus-visible,
+.lp .ultimo-detalle-cerrar:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25); }
+
+/* ── FAQ: composicion original (columna centrada), piel nueva ─────────── */
+.lp .faq-title { margin-bottom: 10px; color: var(--ink); font-family: var(--font-suave), sans-serif; font-weight: 900; letter-spacing: -0.025em; }
+.lp .faq-lead { color: var(--muted); }
+.lp .faq-lista { gap: 12px; }
+.lp .faq-item {
+  border-color: var(--linea);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--sombra);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.lp .faq-item[open] {
+  border-color: var(--pink-line);
+  background: linear-gradient(150deg, #FFF8F5, var(--rubor));
+  box-shadow: var(--sombra-alta);
+}
+.lp .faq-pregunta { font-family: var(--font-suave), sans-serif; font-size: 16px; font-weight: 800; }
+.lp .faq-pregunta:focus-visible { outline: 0; box-shadow: inset 0 0 0 3px rgba(230, 79, 85, 0.3); border-radius: 22px; }
+/* El signo dentro de una burbuja rubor; al abrir se llena de coral. */
+.lp .faq-signo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--rubor);
+  transition: background 0.25s;
+}
+.lp .faq-signo::before, .lp .faq-signo::after { inset: 50% 10px auto 10px; }
+.lp .faq-item[open] .faq-signo { background: var(--pink); }
+.lp .faq-item[open] .faq-signo::before { background: #fff; }
+.lp .faq-respuesta { color: var(--muted); font-size: 15px; }
+
+/* ══ RESPONSIVO ════════════════════════════════════════════════════════ */
+@media (max-width: 420px) {
+  .lp-btn { font-size: 14.5px; padding: 0 18px; }
+  .lp-btn-coral { padding-right: 7px; }
+}
+
+/* Sin movimiento: se apagan animaciones y transiciones, nada queda oculto. */
+@media (prefers-reduced-motion: reduce) {
+  .lp *, .lp *::before, .lp *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lp-js .lp [data-lp-revelar] { opacity: 1; transform: none; }
+  .lp .photo-marquee-card:hover img,
+  .lp .ultimo-card:hover .ultimo-card-img,
+  .lp-foto:hover img { transform: none; }
+  .lp .ultimo-card:hover { transform: none; }
+}
