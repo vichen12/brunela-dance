@@ -40,7 +40,15 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
           </p>
 
           {user ? (
-            <ResetPasswordForm error={error} />
+            <>
+              {/* De QUE cuenta es la contraseña, a la vista. Si alguien tenia
+                  otra sesion abierta, lo ve antes de escribir (ver el
+                  comentario de app/auth/confirm/route.ts). */}
+              <p className="acc-sola-lead" style={{ marginTop: 10 }}>
+                Cuenta: <strong style={{ color: "var(--ink)", overflowWrap: "anywhere" }}>{user.email}</strong>
+              </p>
+              <ResetPasswordForm error={error} />
+            </>
           ) : (
             <>
               <p className="acc-sola-lead" role="alert">
