@@ -353,7 +353,7 @@ const CSS = `
 /* Portada: redondeada y metida adentro de la tarjeta, como una foto en un marco. */
 .sp-portada { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 22px; background: linear-gradient(135deg, #FFE9DE 0%, #FFDADA 60%, #F7EBFA 130%); }
 .sp-grilla > li:nth-child(3n+2) .sp-portada { background: linear-gradient(135deg, #FFE4E4 0%, #FFE9DE 60%, #FFF4E8 130%); }
-.sp-grilla > li:nth-child(3n+3) .sp-portada { background: linear-gradient(135deg, #F2F7EF 0%, #FFE9DE 70%, #FFDADA 130%); }
+.sp-grilla > li:nth-child(3n+3) .sp-portada { background: linear-gradient(135deg, #FFF4E8 0%, #FFE9DE 70%, #FFDADA 130%); }
 .sp-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--curva), filter .4s; }
 .sp-card:hover .sp-portada img { transform: scale(1.05); }
 

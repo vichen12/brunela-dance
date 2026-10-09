@@ -328,8 +328,10 @@ export function PanelControlAdmin({
                     <span className="pc-barra-vacia" />
                   ) : (
                     datos.porPlan.filter((p) => p.cantidad > 0).map((p, i) => (
-                      <motion.span
+                      <motion.a
                         key={p.tier}
+                        href={`/admin/users?plan=${p.tier}`}
+                        title={`${TIER[p.tier].label}: ${p.cantidad}`}
                         className="pc-barra-tramo"
                         style={{ background: TIER[p.tier].color }}
                         initial={{ flexGrow: 0 }}
@@ -372,19 +374,22 @@ export function PanelControlAdmin({
                       const t = TIER[u.tier] ?? TIER.none;
                       const visible = nombreVisible(u);
                       return (
-                        <li key={u.id}>
-                          <Link href={`/admin/users?plan=${u.tier}` as never} className="pc-altas-fila">
-                            <span className="pc-inicial">
-                              {visible ? visible.trim()[0]?.toUpperCase() : <User size={15} strokeWidth={2} aria-hidden="true" />}
-                            </span>
-                            <span className="pc-altas-txt">
+                        // La fila lleva a SU perfil (enlace estirado sobre toda la fila);
+                        // la pastilla del plan, a la lista de ese plan. Dos enlaces
+                        // hermanos: un <a> dentro de otro no es HTML valido.
+                        <li key={u.id} className="pc-altas-fila">
+                          <span className="pc-inicial">
+                            {visible ? visible.trim()[0]?.toUpperCase() : <User size={15} strokeWidth={2} aria-hidden="true" />}
+                          </span>
+                          <span className="pc-altas-txt">
+                            <Link href={`/admin/users/${u.id}` as never} className="pc-altas-perfil">
                               {visible
                                 ? <span className="pc-altas-nombre">{visible}</span>
                                 : <span className="pc-altas-nombre pc-altas-nombre--sin">Sin nombre cargado</span>}
-                              <span className={"pc-tier " + t.chip}>{t.label}</span>
-                            </span>
-                            <span className="pc-altas-cuando">{u.cuando}</span>
-                          </Link>
+                            </Link>
+                            <Link href={`/admin/users?plan=${u.tier}` as never} className={"pc-tier pc-tier--link " + t.chip} title={`Ver todas las de ${t.label}`}>{t.label}</Link>
+                          </span>
+                          <span className="pc-altas-cuando">{u.cuando}</span>
                         </li>
                       );
                     })}
@@ -472,15 +477,15 @@ const CSS = `
   transition: transform .35s var(--curva), box-shadow .35s, border-color .25s;
 }
 .pc-cifras > div:nth-child(1) .pc-cifra { background: linear-gradient(160deg, #FFF1EC, #fff 72%); }
-.pc-cifras > div:nth-child(2) .pc-cifra { background: linear-gradient(160deg, #F2F7EF, #fff 72%); }
+.pc-cifras > div:nth-child(2) .pc-cifra { background: linear-gradient(160deg, #FFF4E8, #fff 72%); }
 .pc-cifras > div:nth-child(3) .pc-cifra { background: linear-gradient(160deg, #FFF4E8, #fff 72%); }
-.pc-cifras > div:nth-child(4) .pc-cifra { background: linear-gradient(160deg, #F7F0FA, #fff 72%); }
+.pc-cifras > div:nth-child(4) .pc-cifra { background: linear-gradient(160deg, #FFF0EA, #fff 72%); }
 .pc-cifra:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); border-color: var(--linea-fuerte); }
 .pc-cifra-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .pc-cifra-ico { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: 0 8px 18px -12px rgba(176,90,80,.55); }
-.pc-cifras > div:nth-child(2) .pc-cifra-ico { color: var(--salvia-deep); }
+.pc-cifras > div:nth-child(2) .pc-cifra-ico { color: var(--melocoton-deep); }
 .pc-cifras > div:nth-child(3) .pc-cifra-ico { color: var(--melocoton-deep); }
-.pc-cifras > div:nth-child(4) .pc-cifra-ico { color: #7A5490; }
+.pc-cifras > div:nth-child(4) .pc-cifra-ico { color: #B4533A; }
 .pc-cifra-flecha { color: #C9AFA7; transition: transform .3s var(--curva), color .2s; }
 .pc-cifra:hover .pc-cifra-flecha { color: var(--pink-deep); transform: translate(2px, -2px); }
 .pc-cifra-num { font-weight: 900; font-size: clamp(34px, 3.2vw, 44px); line-height: 1; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: lining-nums tabular-nums; }
@@ -585,7 +590,7 @@ const CSS = `
 .pc-estudio-total { display: flex; align-items: flex-end; gap: 12px; }
 .pc-estudio-num { font-weight: 900; font-size: 56px; line-height: 0.9; color: var(--ink); letter-spacing: -0.03em; }
 .pc-estudio-total-txt { display: flex; flex-direction: column; gap: 2px; padding-bottom: 3px; font-size: 15px; font-weight: 800; color: var(--ink); }
-.pc-estudio-altas { font-size: 12.5px; font-weight: 700; color: var(--salvia-deep); background: var(--salvia); padding: 2px 9px; border-radius: 99px; align-self: flex-start; }
+.pc-estudio-altas { font-size: 12.5px; font-weight: 700; color: var(--pink-deep); background: var(--rubor); padding: 2px 9px; border-radius: 99px; align-self: flex-start; }
 
 .pc-barra { display: flex; gap: 4px; height: 14px; margin: 20px 0 16px; padding: 3px; border-radius: 99px; background: var(--rubor); }
 .pc-barra-tramo { display: block; flex-basis: 0; min-width: 10px; border-radius: 99px; }
@@ -610,6 +615,13 @@ const CSS = `
   text-decoration: none; border-radius: 16px; transition: background .2s;
 }
 .pc-altas-fila:hover { background: var(--rubor); }
+.pc-altas-fila { position: relative; }
+.pc-altas-perfil { text-decoration: none; max-width: 100%; display: block; }
+.pc-altas-perfil::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+.pc-tier--link { position: relative; z-index: 1; text-decoration: none; transition: transform .2s, box-shadow .2s; }
+.pc-tier--link:hover { transform: translateY(-1px); box-shadow: 0 4px 10px -4px rgba(176,58,62,.5); }
+.pc-barra-tramo { cursor: pointer; transition: filter .2s; }
+.pc-barra-tramo:hover { filter: brightness(.92); }
 .pc-inicial {
   width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
@@ -637,8 +649,8 @@ const CSS = `
 .pc-atajo:hover { background: var(--crema); border-color: var(--pink-line); box-shadow: var(--sombra-alta); transform: translateY(-2px); }
 .pc-atajo-ico { width: 44px; height: 44px; border-radius: 16px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--rubor); color: var(--pink-deep); }
 .pc-atajos li:nth-child(2) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
-.pc-atajos li:nth-child(3) .pc-atajo-ico { background: #F7F0FA; color: #7A5490; }
-.pc-atajos li:nth-child(4) .pc-atajo-ico { background: #F2F7EF; color: var(--salvia-deep); }
+.pc-atajos li:nth-child(3) .pc-atajo-ico { background: #FFF0EA; color: #B4533A; }
+.pc-atajos li:nth-child(4) .pc-atajo-ico { background: #FFF4E8; color: var(--melocoton-deep); }
 .pc-atajo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pc-atajo-label { font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .pc-atajo-sub { font-size: 12.5px; color: var(--muted); }

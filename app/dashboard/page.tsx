@@ -507,14 +507,14 @@ const CSS_INICIO = `
 }
 .ini-cifra--rubor { background: var(--rubor); border-color: #FBE3DC; }
 .ini-cifra--melocoton { background: #FFF4E8; border-color: #F8E3CD; }
-.ini-cifra--salvia { background: #F2F7EF; border-color: #DFEBD9; }
+.ini-cifra--salvia { background: #FFF4E8; border-color: #F7E2D2; }
 .ini-cifra-ico {
   width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; background: #fff;
   display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px -8px rgba(150,80,70,.4);
 }
 .ini-cifra--rubor .ini-cifra-ico { color: var(--pink); }
 .ini-cifra--melocoton .ini-cifra-ico { color: var(--melocoton-deep); }
-.ini-cifra--salvia .ini-cifra-ico { color: var(--salvia-deep); }
+.ini-cifra--salvia .ini-cifra-ico { color: var(--melocoton-deep); }
 .ini-cifra-num { font-family: var(--font-display), sans-serif; font-size: 30px; font-weight: 900; color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
 .ini-cifra-label { font-size: 13px; color: var(--muted); margin-top: 5px; font-weight: 700; }
 
@@ -607,8 +607,8 @@ const CSS_INICIO = `
 }
 .ini-acceso-ico--rubor { background: var(--rubor); color: var(--pink-deep); }
 .ini-acceso-ico--melocoton { background: #FFF0E2; color: var(--melocoton-deep); }
-.ini-acceso-ico--salvia { background: #EEF5EA; color: var(--salvia-deep); }
-.ini-acceso-ico--lila { background: #F5EDF8; color: #7A4F8C; }
+.ini-acceso-ico--salvia { background: #FFF4E8; color: var(--melocoton-deep); }
+.ini-acceso-ico--lila { background: #FFF0EA; color: #B4533A; }
 .ini-acceso-label { display: block; font-size: 14px; font-weight: 800; color: var(--ink); }
 .ini-acceso-sub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

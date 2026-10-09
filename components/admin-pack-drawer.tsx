@@ -75,7 +75,7 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 /** El aviso de Stripe debajo de un identificador. */
 function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
   const c =
-    tono === "ok" ? { fg: "#3F7A45", bg: "#F2F7EF", bd: "#CFE3C9" }
+    tono === "ok" ? { fg: "#3F7A45", bg: "#FFF4E8", bd: "#CFE3C9" }
     : tono === "aviso" ? { fg: "#8A4A2E", bg: "#FFF4E8", bd: "#FFE2D3" }
     : { fg: "#8A6F68", bg: "#FFFAF6", bd: "#F3E3DC" };
   return (

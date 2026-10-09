@@ -131,20 +131,20 @@ const CAT_GRADIENTS: Record<string, string> = {
   ballet:                        "linear-gradient(140deg, #FFF1EC 0%, #FFD9CF 100%)",
   tecnica:                       "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
   dehors:                        "linear-gradient(140deg, #FDECEC 0%, #F8CFCF 100%)",
-  movilidad:                     "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
-  stretching:                    "linear-gradient(140deg, #F7F0FA 0%, #E6D6F0 100%)",
+  movilidad:                     "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
+  stretching:                    "linear-gradient(140deg, #FFF0EA 0%, #FFD9CC 100%)",
   "pies-y-tobillos":             "linear-gradient(140deg, #FFF4E8 0%, #FBD3BE 100%)",
-  equilibrio:                    "linear-gradient(140deg, #F2F7EF 0%, #DCEBD5 100%)",
+  equilibrio:                    "linear-gradient(140deg, #FFF4E8 0%, #FFE0CB 100%)",
   "abdominales-para-bailarines": "linear-gradient(140deg, #FFF1EC 0%, #FAD0C8 100%)",
-  "linea-y-control":             "linear-gradient(140deg, #F7F0FA 0%, #EBD9EE 100%)",
+  "linea-y-control":             "linear-gradient(140deg, #FFF0EA 0%, #FFDCD0 100%)",
   giros:                         "linear-gradient(140deg, #FDECEC 0%, #FFDCCB 100%)",
   "preparacion-fisica":          "linear-gradient(140deg, #FFF4E8 0%, #F6D5C2 100%)",
 
-  pilates:    "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
+  pilates:    "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
   pbt:        "linear-gradient(140deg, #FFF1EC 0%, #FFD9CF 100%)",
-  pct:        "linear-gradient(140deg, #F7F0FA 0%, #E6D6F0 100%)",
-  reformer:   "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
-  mat:        "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
+  pct:        "linear-gradient(140deg, #FFF0EA 0%, #FFD9CC 100%)",
+  reformer:   "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
+  mat:        "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
 };
 
 function catGradient(slugs: string[]): string {

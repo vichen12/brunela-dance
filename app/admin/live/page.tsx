@@ -327,7 +327,7 @@ const CSS = `
 .lv-chip { padding: 4px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; }
 .lv-chip--ok { background: var(--salvia); color: var(--salvia-deep); }
 .lv-chip--borrador { background: #FFF4E8; color: var(--melocoton-deep); }
-.lv-chip--hecha { background: #F7F0FA; color: #7A4F8C; }
+.lv-chip--hecha { background: #FFF0EA; color: #B4533A; }
 .lv-chip--cancelada { background: var(--rubor); color: var(--pink-deep); }
 .lv-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .lv-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
@@ -342,7 +342,7 @@ const CSS = `
 .lv-accion { height: 34px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), filter .2s; }
 .lv-accion:hover { transform: translateY(-1px); filter: brightness(.97); }
 .lv-accion--publicar { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
-.lv-accion--completar { background: #F7F0FA; color: #7A4F8C; border-color: #E9DAF0; }
+.lv-accion--completar { background: #FFF0EA; color: #B4533A; border-color: #F6D9CF; }
 .lv-accion--cancelar { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
 .lv-pie { display: flex; align-items: center; gap: 8px; padding: 12px 0 14px; border-top: 1px dashed var(--linea-fuerte); margin: 0 20px; }
 

@@ -78,9 +78,9 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
       boxShadow: '0 8px 16px -10px rgba(230,79,85,.85)',
     }}>B</div>
   );
-  // Pasteles calidos: rubor, salvia, melocoton, lila y crema.
-  const colors = ['#FFF2EE', '#E7F1E4', '#FFE9DE', '#F7EBFA', '#FFF4E8'];
-  const texts = ['#B03A3E', '#3F7A45', '#C25E3A', '#8A4E9C', '#A35A2E'];
+  // Pasteles calidos: rubor, melocoton y crema (sin verde ni lila: no pegaban).
+  const colors = ['#FFF2EE', '#FFEDE0', '#FFE9DE', '#FDECEC', '#FFF4E8'];
+  const texts = ['#B03A3E', '#3F7A45', '#C25E3A', '#B4533A', '#A35A2E'];
   const idx = name.charCodeAt(0) % colors.length;
   return (
     <div style={{

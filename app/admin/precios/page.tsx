@@ -323,7 +323,7 @@ const CSS = `
 .pr-caja-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
 .pr-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
 .pr-burbuja--melo { background: #FFF4E8; color: var(--melocoton-deep); }
-.pr-burbuja--chica { width: 32px; height: 32px; border-radius: 11px; background: #F7F0FA; color: #7A4F8C; }
+.pr-burbuja--chica { width: 32px; height: 32px; border-radius: 11px; background: #FFF0EA; color: #B4533A; }
 .pr-h2 { font-size: 19px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
 .pr-sub { margin-top: 3px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
 .pr-sub strong { color: var(--ink); }

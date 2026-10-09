@@ -262,7 +262,7 @@ const CSS = `
   background: radial-gradient(140px 100px at 85% 10%, rgba(255,205,185,.9), transparent 70%), linear-gradient(140deg, #FFF1EC 0%, #FDE3E0 100%);
 }
 .cat-card:nth-child(4n+2) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,226,211,.95), transparent 70%), linear-gradient(140deg, #FFF4E8 0%, #FFE6D6 100%); }
-.cat-card:nth-child(4n+3) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(220,235,214,.95), transparent 70%), linear-gradient(140deg, #F6FAF3 0%, #E7F1E4 100%); }
+.cat-card:nth-child(4n+3) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,222,204,.95), transparent 70%), linear-gradient(140deg, #FFF8F2 0%, #FFE6D6 100%); }
 .cat-card:nth-child(4n+4) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(234,220,240,.95), transparent 70%), linear-gradient(140deg, #FBF6FC 0%, #F1E6F5 100%); }
 .cat-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cat-inicial {

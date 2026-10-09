@@ -391,9 +391,9 @@ const CSS = `
 .fa-dato { padding: 18px 20px; border-radius: var(--radio); border: 1px solid var(--linea); box-shadow: var(--sombra); transition: transform .35s var(--curva), box-shadow .35s var(--curva); }
 .fa-dato:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
 .fa-dato:nth-child(5n+1) { background: linear-gradient(160deg, #FFE9E2, #FFF8F5 78%); }
-.fa-dato:nth-child(5n+2) { background: linear-gradient(160deg, #E9F2E5, #F8FBF6 78%); }
+.fa-dato:nth-child(5n+2) { background: linear-gradient(160deg, #FFEFE3, #FFFAF6 78%); }
 .fa-dato:nth-child(5n+3) { background: linear-gradient(160deg, #FFEEDB, #FFFAF4 78%); }
-.fa-dato:nth-child(5n+4) { background: linear-gradient(160deg, #F1E7F6, #FBF8FD 78%); }
+.fa-dato:nth-child(5n+4) { background: linear-gradient(160deg, #FFEDE6, #FBF8FD 78%); }
 .fa-dato:nth-child(5n+5) { background: linear-gradient(160deg, #FFE1E1, #FFF7F7 78%); }
 .fa-dato .fa-burbuja { background: #fff; box-shadow: var(--sombra); }
 .fa-dato-num { margin-top: 14px; font-weight: 900; font-size: 36px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }

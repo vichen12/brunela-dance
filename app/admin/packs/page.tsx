@@ -314,7 +314,7 @@ const CSS = `
 .pk-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF; }
 .pk-estado.es-pub { color: var(--salvia-deep); background: var(--salvia); }
 .pk-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.pk-tag { font-size: 12.5px; font-weight: 800; color: #6B4A7A; padding: 5px 12px; border-radius: 99px; background: #F7F0FA; }
+.pk-tag { font-size: 12.5px; font-weight: 800; color: #A0472F; padding: 5px 12px; border-radius: 99px; background: #FFF0EA; }
 .pk-titulo { font-weight: 900; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
 .pk-datos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .pk-datos li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 9px; border-radius: 99px; font-size: 13px; font-weight: 700; color: #6E5550; background: var(--crema); border: 1px solid var(--linea); }
@@ -322,7 +322,7 @@ const CSS = `
 .pk-stripe { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 10px; padding: 9px 13px; border-radius: 16px; font-size: 13px; font-weight: 700; line-height: 1.45; }
 .pk-stripe svg { flex-shrink: 0; }
 .pk-stripe a { margin-left: auto; font-weight: 800; color: inherit; background: #fff; padding: 3px 11px; border-radius: 99px; text-decoration: none; }
-.pk-stripe.es-ok { background: #F2F7EF; color: var(--salvia-deep); }
+.pk-stripe.es-ok { background: #FFF4E8; color: var(--salvia-deep); }
 .pk-stripe.es-falta { background: #FFF4E8; color: #8A4A2E; }
 .pk-stripe.es-mal { background: var(--pink-wash); color: var(--pink-deep); }
 .pk-pie { margin-top: auto; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }

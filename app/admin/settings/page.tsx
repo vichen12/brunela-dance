@@ -222,7 +222,7 @@ const CSS = `
 .cf-ico { width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; display: grid; place-items: center; }
 .cf-ico--coral { background: var(--rubor); color: var(--pink-deep); }
 .cf-ico--melo { background: #FFEEDB; color: var(--melocoton-deep); }
-.cf-ico--lila { background: #F1E7F6; color: #7A4F8C; }
+.cf-ico--lila { background: #FFEDE6; color: #B4533A; }
 .cf-cab h2 { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 20px; letter-spacing: -0.02em; color: var(--ink); }
 .cf-cab p { margin-top: 3px; max-width: 68ch; font-size: 14px; line-height: 1.6; color: var(--muted); }
 .cf-filas { display: flex; flex-direction: column; gap: 10px; }
@@ -245,7 +245,7 @@ const CSS = `
 .cf-precios-ico { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--pink); color: #fff; box-shadow: 0 10px 20px -10px rgba(230,79,85,.8); }
 .cf-tecnicos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .cf-tecnicos li { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 20px; background: #fff; border: 1px solid var(--linea); }
-.cf-tecnicos li > svg { box-sizing: content-box; padding: 7px; border-radius: 11px; background: #F1E7F6; color: #7A4F8C; flex-shrink: 0; }
+.cf-tecnicos li > svg { box-sizing: content-box; padding: 7px; border-radius: 11px; background: #FFEDE6; color: #B4533A; flex-shrink: 0; }
 @media (max-width: 560px) {
   .cf-fila { padding: 14px; gap: 14px; }
   .cf-pie .pf-guardar { width: 100%; justify-content: center; }

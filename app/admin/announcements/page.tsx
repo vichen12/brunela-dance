@@ -272,7 +272,7 @@ const CSS = `
 .an-fila-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .an-titulo { font-size: 15.5px; font-weight: 800; color: var(--ink); }
 .an-chip { padding: 3px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; }
-.an-plan--todas { background: #F7F0FA; color: #7A4F8C; }
+.an-plan--todas { background: #FFF0EA; color: #B4533A; }
 .an-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .an-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .an-plan--principal { background: var(--pink); color: #fff; }

@@ -6,7 +6,7 @@ import { Sk, SkTarjeta } from "@/components/skeleton";
  * hoy". La animacion vive en globals.css (.sk); el tono calido lo pone Sk.
  */
 const HERO = "linear-gradient(120deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%)";
-const PASTELES = ["#FFF2EE", "#FFF4E8", "#F2F7EF"];
+const PASTELES = ["#FFF2EE", "#FFF4E8", "#FFF4E8"];
 
 export default function DashboardLoading() {
   return (

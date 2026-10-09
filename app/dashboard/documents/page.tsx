@@ -245,8 +245,8 @@ const CSS = `
 .sd-ico--grande { width: 58px; height: 58px; border-radius: 20px; transition: transform .45s var(--curva); }
 .sd-card:hover .sd-ico--grande { transform: rotate(-6deg) scale(1.05); }
 .sd-card[data-tipo="image"] .sd-ico { background: #FFF4E8; color: var(--melocoton-deep); }
-.sd-card[data-tipo="audio"] .sd-ico { background: #F7F0FA; color: #8A4E9C; }
-.sd-card[data-tipo="video"] .sd-ico { background: #F2F7EF; color: var(--salvia-deep); }
+.sd-card[data-tipo="audio"] .sd-ico { background: #FFF0EA; color: #B4533A; }
+.sd-card[data-tipo="video"] .sd-ico { background: #FFF4E8; color: var(--salvia-deep); }
 .sd-card[data-tipo="doc"] .sd-ico, .sd-card[data-tipo="other"] .sd-ico { background: var(--crema); color: var(--muted); }
 
 .sd-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -271,7 +271,7 @@ const CSS = `
 .sd-ejemplo-fila + .sd-ejemplo-fila { margin-top: 4px; }
 .sd-ejemplo-fila:nth-child(1) { background: #FFF6F2; }
 .sd-ejemplo-fila:nth-child(2) .sd-ico { background: #FFF4E8; color: var(--melocoton-deep); }
-.sd-ejemplo-fila:nth-child(3) .sd-ico { background: #F7F0FA; color: #8A4E9C; }
+.sd-ejemplo-fila:nth-child(3) .sd-ico { background: #FFF0EA; color: #B4533A; }
 .sd-ejemplo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sd-ejemplo-txt strong { font-size: 14px; font-weight: 800; color: var(--ink); }
 .sd-ejemplo-txt small { font-size: 12px; font-weight: 600; color: var(--muted); }

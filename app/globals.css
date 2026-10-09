@@ -4179,8 +4179,8 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .sistema .ad-cifra + .ad-cifra { border-left: 1px solid var(--linea); }
 .sistema .ad-cifra:nth-child(4n+1) { background: linear-gradient(160deg, #FFF1EC, #fff 70%); }
 .sistema .ad-cifra:nth-child(4n+2) { background: linear-gradient(160deg, #FFF4E8, #fff 70%); }
-.sistema .ad-cifra:nth-child(4n+3) { background: linear-gradient(160deg, #F2F7EF, #fff 70%); }
-.sistema .ad-cifra:nth-child(4n+4) { background: linear-gradient(160deg, #F7F0FA, #fff 70%); }
+.sistema .ad-cifra:nth-child(4n+3) { background: linear-gradient(160deg, #FFF4E8, #fff 70%); }
+.sistema .ad-cifra:nth-child(4n+4) { background: linear-gradient(160deg, #FFF0EA, #fff 70%); }
 .sistema .ad-cifra-label { font-size: 12.5px; font-weight: 800; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .sistema .ad-cifra-num { font-weight: 900; font-size: 38px; letter-spacing: -0.03em; }
 

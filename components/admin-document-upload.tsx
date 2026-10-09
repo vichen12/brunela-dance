@@ -191,7 +191,7 @@ const CSS_DUP = `
 .sistema .dup:hover { border-color: var(--pink); background: #FFF2EE; box-shadow: var(--sombra); }
 .sistema .dup:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230,79,85,.18); }
 .sistema .dup.es-arrastre { background: var(--rubor); transform: scale(1.01); }
-.sistema .dup.es-listo { border-style: solid; border-color: #CFE3C9; background: linear-gradient(150deg, #F2F7EF, #fff 75%); }
+.sistema .dup.es-listo { border-style: solid; border-color: #CFE3C9; background: linear-gradient(150deg, #FFF4E8, #fff 75%); }
 .sistema .dup.es-error { border-color: var(--pink-line); background: var(--pink-wash); }
 .sistema .dup-ico { width: 50px; height: 50px; border-radius: 16px; background: #fff; color: var(--pink); box-shadow: var(--sombra); }
 .sistema .dup-ico--listo { background: var(--salvia); color: var(--salvia-deep); box-shadow: none; }

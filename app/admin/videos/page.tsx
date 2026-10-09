@@ -125,9 +125,9 @@ type MuxJob = {
 
 const MUX_STYLE: Record<MuxJob["status"], { bg: string; border: string; color: string; label: string }> = {
   pending:    { bg: "#FFF4E8", border: "#FFE2D3", color: "#8A4A2E", label: "Idiomas en cola" },
-  processing: { bg: "#F7F0FA", border: "#EADCF0", color: "#6B4A7A", label: "Muxeando ahora" },
+  processing: { bg: "#FFF0EA", border: "#F6D9CF", color: "#A0472F", label: "Muxeando ahora" },
   failed:     { bg: "#FDECEC", border: "#F2C6C6", color: "#B03A3E", label: "Muxeo fallido" },
-  done:       { bg: "#F2F7EF", border: "#CFE3C9", color: "#3F7A45", label: "Muxeo listo" },
+  done:       { bg: "#FFF4E8", border: "#CFE3C9", color: "#3F7A45", label: "Muxeo listo" },
 };
 
 /** The worker polls every 30s, so this much waiting means nobody is polling. */
@@ -594,7 +594,7 @@ const CSS_CLASES = `
 .acl-chip--borr { color: var(--melocoton-deep); background: #FFEBDF; }
 .acl-chip--arch { color: var(--muted); background: #F6EEEA; }
 @keyframes acl-latido { 0%, 100% { box-shadow: 0 0 0 2px rgba(63,122,69,0.18); } 50% { box-shadow: 0 0 0 5px rgba(63,122,69,0.04); } }
-.acl-tipo, .acl-uso { font-size: 12.5px; font-weight: 800; color: #6B4A7A; padding: 5px 12px; border-radius: 99px; background: #F7F0FA; }
+.acl-tipo, .acl-uso { font-size: 12.5px; font-weight: 800; color: #A0472F; padding: 5px 12px; border-radius: 99px; background: #FFF0EA; }
 .acl-uso { color: var(--muted); background: var(--rubor); }
 .acl-uso--cero { color: var(--pink-deep); background: var(--pink-wash); }
 .acl-titulo-clase {

@@ -340,7 +340,7 @@ const CSS = `
 .doc-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF; }
 .doc-estado.es-pub { color: var(--salvia-deep); background: var(--salvia); }
 .doc-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.doc-tipo { font-size: 12.5px; font-weight: 800; color: #6B4A7A; background: #F7F0FA; padding: 5px 12px; border-radius: 99px; }
+.doc-tipo { font-size: 12.5px; font-weight: 800; color: #A0472F; background: #FFF0EA; padding: 5px 12px; border-radius: 99px; }
 .doc-titulo { font-weight: 900; font-size: 20px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); overflow-wrap: anywhere; }
 .doc-desc { margin-top: 4px; font-size: 14px; line-height: 1.55; color: var(--muted); }
 .doc-datos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }

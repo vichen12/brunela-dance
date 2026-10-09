@@ -370,8 +370,8 @@ const CSS = `
 .aa-burbuja { width: 40px; height: 40px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; }
 .aa-burbuja--coral { background: var(--rubor); color: var(--pink-deep); }
 .aa-burbuja--melo { background: #FFEEDB; color: var(--melocoton-deep); }
-.aa-burbuja--salvia { background: var(--salvia); color: var(--salvia-deep); }
-.aa-burbuja--lila { background: #F1E7F6; color: #7A4F8C; }
+.aa-burbuja--salvia { background: #FFF4E8; color: var(--melocoton-deep); }
+.aa-burbuja--lila { background: #FFEDE6; color: #B4533A; }
 .aa-burbuja--blanca { background: #fff; color: var(--melocoton-deep); box-shadow: var(--sombra); }
 
 .aa-arranca { display: flex; align-items: flex-start; gap: 14px; padding: 18px 22px; border-radius: 24px; background: linear-gradient(120deg, #FFEEDB, #FFF7F0 70%); border: 1px solid #F6D9C6; }
@@ -386,14 +386,14 @@ const CSS = `
 .aa-tarjeta--coral::after { background: radial-gradient(circle, rgba(242,198,198,.8), transparent 70%); }
 .aa-tarjeta--melo { background: linear-gradient(160deg, #FFEEDB, #FFFAF4 78%); }
 .aa-tarjeta--melo::after { background: radial-gradient(circle, rgba(255,205,170,.75), transparent 70%); }
-.aa-tarjeta--salvia { background: linear-gradient(160deg, #E9F2E5, #F8FBF6 78%); }
-.aa-tarjeta--salvia::after { background: radial-gradient(circle, rgba(196,224,188,.75), transparent 70%); }
-.aa-tarjeta--lila { background: linear-gradient(160deg, #F1E7F6, #FBF8FD 78%); }
-.aa-tarjeta--lila::after { background: radial-gradient(circle, rgba(222,200,234,.75), transparent 70%); }
+.aa-tarjeta--salvia { background: linear-gradient(160deg, #FFEFE3, #FFFAF6 78%); }
+.aa-tarjeta--salvia::after { background: radial-gradient(circle, rgba(255,214,190,.75), transparent 70%); }
+.aa-tarjeta--lila { background: linear-gradient(160deg, #FFEDE6, #FFFAF6 78%); }
+.aa-tarjeta--lila::after { background: radial-gradient(circle, rgba(255,200,190,.7), transparent 70%); }
 .aa-tarjeta-ico { position: relative; z-index: 1; width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; background: #fff; box-shadow: var(--sombra); margin-bottom: 10px; color: var(--pink-deep); }
 .aa-tarjeta--melo .aa-tarjeta-ico { color: var(--melocoton-deep); }
-.aa-tarjeta--salvia .aa-tarjeta-ico { color: var(--salvia-deep); }
-.aa-tarjeta--lila .aa-tarjeta-ico { color: #7A4F8C; }
+.aa-tarjeta--salvia .aa-tarjeta-ico { color: var(--melocoton-deep); }
+.aa-tarjeta--lila .aa-tarjeta-ico { color: #B4533A; }
 .aa-tarjeta-num { position: relative; font-size: 40px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
 .aa-tarjeta.es-alerta .aa-tarjeta-num { color: var(--pink-deep); }
 .aa-tarjeta-etq { margin-top: 6px; font-size: 14px; font-weight: 800; color: var(--ink); }
@@ -413,8 +413,8 @@ const CSS = `
 .aa-txt--sep { margin-top: 10px; }
 .aa-stripe { margin-top: 18px; display: inline-flex; align-items: center; text-decoration: none; }
 
-.aa-sindatos { display: flex; align-items: flex-start; gap: 14px; padding: 18px; border-radius: 22px; background: #FBF8FD; border: 1.5px dashed #E3D2EC; }
-.aa-sindatos-titulo { font-size: 14.5px; font-weight: 900; color: #7A4F8C; margin-bottom: 4px; }
+.aa-sindatos { display: flex; align-items: flex-start; gap: 14px; padding: 18px; border-radius: 22px; background: #FFFAF6; border: 1.5px dashed #F3D9CF; }
+.aa-sindatos-titulo { font-size: 14.5px; font-weight: 900; color: #B4533A; margin-bottom: 4px; }
 .aa-vacio { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); }
 
 .aa-filas { display: grid; gap: 8px; }
@@ -442,8 +442,8 @@ const CSS = `
 .aa-barra-relleno { height: 100%; border-radius: 99px; min-width: 4px; transform-origin: left; animation: aa-crece .9s var(--curva) both; }
 .aa-barra--coral .aa-barra-relleno { background: linear-gradient(90deg, #F2A2A0, var(--pink)); }
 .aa-barra--melo .aa-barra-relleno { background: linear-gradient(90deg, #FFCFAE, #F09A6C); }
-.aa-barra--salvia .aa-barra-relleno { background: linear-gradient(90deg, #C9E0C1, #7FB07F); }
-.aa-barra--lila .aa-barra-relleno { background: linear-gradient(90deg, #E5D2EE, #B48BC6); }
+.aa-barra--salvia .aa-barra-relleno { background: linear-gradient(90deg, #FFD3BD, #E89A72); }
+.aa-barra--lila .aa-barra-relleno { background: linear-gradient(90deg, #FFD0C7, #E77A70); }
 .aa-barra-num { font-size: 14px; font-weight: 900; color: var(--ink); text-align: right; }
 @keyframes aa-crece { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 

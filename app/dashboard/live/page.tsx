@@ -507,7 +507,7 @@ a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); t
 }
 .sv-card:hover .sv-fecha { transform: rotate(-3deg) scale(1.03); }
 .sv-lista > .sv-card:nth-child(3n+2) .sv-fecha { background: linear-gradient(160deg, #FFE4E4 0%, #FFF3F2 100%); color: var(--pink-deep); }
-.sv-lista > .sv-card:nth-child(3n+3) .sv-fecha { background: linear-gradient(160deg, #F7EBFA 0%, #FBF5FC 100%); color: #8A4E9C; }
+.sv-lista > .sv-card:nth-child(3n+3) .sv-fecha { background: linear-gradient(160deg, #F7EBFA 0%, #FBF5FC 100%); color: #B4533A; }
 .sv-card.es-reservada .sv-fecha { background: linear-gradient(160deg, #E2F0DE 0%, #F2F8F0 100%); color: var(--salvia-deep); }
 .sv-fecha-semana { font-size: 13px; font-weight: 800; text-transform: capitalize; }
 .sv-fecha-dia { font-weight: 900; font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }

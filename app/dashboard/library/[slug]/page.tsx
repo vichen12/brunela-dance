@@ -54,9 +54,9 @@ type ProgramContext = { title_i18n: Record<string, string>; slug: string };
 
 const CAT_GRADIENTS: Record<string, string> = {
   ballet:     "linear-gradient(140deg, #FFF1EC 0%, #FFD9CF 100%)",
-  reformer:   "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
-  mat:        "linear-gradient(140deg, #F2F7EF 0%, #D6E8D0 100%)",
-  stretching: "linear-gradient(140deg, #F7F0FA 0%, #E6D6F0 100%)",
+  reformer:   "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
+  mat:        "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
+  stretching: "linear-gradient(140deg, #FFF0EA 0%, #FFD9CC 100%)",
   pbt:        "linear-gradient(140deg, #FFF4E8 0%, #FFDCC4 100%)",
   pct:        "linear-gradient(140deg, #FDECEC 0%, #F8CFCF 100%)",
 };
@@ -361,8 +361,8 @@ const CSS_FICHA = `
   font-size: 13.5px; font-weight: 800;
 }
 .fc-dato--dur { background: #FFF4E8; color: var(--melocoton-deep); }
-.fc-dato--nivel { background: #F2F7EF; color: var(--salvia-deep); }
-.fc-dato--mat { background: #F7F0FA; color: #7A4F8C; }
+.fc-dato--nivel { background: #FFF4E8; color: var(--salvia-deep); }
+.fc-dato--mat { background: #FFF0EA; color: #B4533A; }
 
 .fc-card {
   background: #fff; border: 1px solid var(--linea); border-radius: var(--radio); padding: 22px 24px;

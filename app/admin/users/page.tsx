@@ -275,8 +275,8 @@ const CSS = `
 .au-cifra:nth-child(5n+1) { background: linear-gradient(160deg, #FFE9E2, #FFF8F5 78%); }
 .au-cifra:nth-child(5n+2) { background: linear-gradient(160deg, #FFE1E1, #FFF7F7 78%); }
 .au-cifra:nth-child(5n+3) { background: linear-gradient(160deg, #FFEEDB, #FFFAF4 78%); }
-.au-cifra:nth-child(5n+4) { background: linear-gradient(160deg, #E9F2E5, #F8FBF6 78%); }
-.au-cifra:nth-child(5n+5) { background: linear-gradient(160deg, #F1E7F6, #FBF8FD 78%); }
+.au-cifra:nth-child(5n+4) { background: linear-gradient(160deg, #FFEFE3, #FFFAF6 78%); }
+.au-cifra:nth-child(5n+5) { background: linear-gradient(160deg, #FFEDE6, #FBF8FD 78%); }
 .au-cifra::after { content: ""; position: absolute; width: 90px; height: 90px; right: -30px; top: -30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,185,.5), transparent 70%); pointer-events: none; transition: transform .5s var(--curva); }
 .au-cifra:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); border-color: var(--linea-fuerte); }
 .au-cifra:hover::after { transform: scale(1.3); }
@@ -292,7 +292,7 @@ const CSS = `
 .au-ini { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--melocoton), var(--pink-soft)); color: var(--pink-deep); font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 19px; }
 .au-info { flex: 1 1 260px; min-width: 0; }
 .au-nombre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 16px; font-weight: 800; color: var(--ink); }
-.au-admin { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 800; background: #F7F0FA; color: #7A4F8C; }
+.au-admin { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 800; background: #FFF0EA; color: #B4533A; }
 .au-correo { margin-top: 2px; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .au-objetivos { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .au-objetivos span { padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: var(--melocoton-deep); background: #FFF4E8; }
