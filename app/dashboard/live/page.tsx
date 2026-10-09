@@ -16,7 +16,6 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { ArrowRight, CalendarCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Users, Video, X } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { getCurrentProfile } from "@/src/features/auth/profile";
 import { AdminBuscador } from "@/components/admin-buscador";
 import Link from "next/link";
 
@@ -74,8 +73,6 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const hoyKey = claveDia(new Date().toISOString(), ZONA_ESTUDIO);
   const mes = /^\d{4}-(0[1-9]|1[0-2])$/.test(txt("mes")) ? txt("mes") : hoyKey.slice(0, 7);
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(txt("dia")) && txt("dia").startsWith(mes) ? txt("dia") : "";
-  const perfil = await getCurrentProfile(user.id);
-  const esAdmin = Boolean(perfil?.is_admin);
 
   const [
     { data: sessionsData },
@@ -222,19 +219,21 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
             <li><Users size={14} strokeWidth={2} aria-hidden="true" /> {session.capacity} lugares</li>
             {/* La regla real: el enlace se revela al reservar, no a una hora
                 fija. No hay ventana de minutos en ningun lado. */}
-            <li><Video size={14} strokeWidth={2} aria-hidden="true" /> {accessLink ? "Enlace disponible" : "El enlace aparece al reservar"}</li>
+            <li><Video size={14} strokeWidth={2} aria-hidden="true" /> {accessLink && isReserved ? "Enlace disponible" : "El enlace aparece al reservar"}</li>
           </ul>
 
           {!pasada && (
             <div className="sv-acciones">
-              {accessLink && (
+              {/* Esta es la vista de ALUMNA y se comporta igual para todas, admin
+                  incluida: el enlace aparece al reservar. La profesora entra a
+                  dar la clase desde /admin/live, no desde aca. (RLS le deja ver
+                  a la admin todos los enlaces; por eso se condiciona a la reserva.) */}
+              {accessLink && isReserved && (
                 <a className="sv-entrar" href={accessLink.join_url} rel="noreferrer" target="_blank">
-                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> {esAdmin && !isReserved ? "Entrar como profesora" : "Entrar a la clase"}
+                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> Entrar a la clase
                 </a>
               )}
-              {/* La admin no reserva: entra a dar la clase. Antes veia los dos
-                  botones juntos y parecia que tenia que anotarse. */}
-              {esAdmin && !isReserved ? null : isReserved ? (
+              {isReserved ? (
                 <form action={cancelLiveSessionBookingAction}>
                   <input name="sessionId" type="hidden" value={session.id} />
                   <input name="redirectTo" type="hidden" value={redirectTo} />
@@ -253,7 +252,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               )}
             </div>
           )}
-          {!pasada && accessLink?.passcode && (
+          {!pasada && isReserved && accessLink?.passcode && (
             <p className="sv-pass">Código de acceso: <strong>{accessLink.passcode}</strong></p>
           )}
         </div>
@@ -296,7 +295,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               <span><i className="es-corps" /> Corps de Ballet</span>
               <span><i className="es-solista" /> Solista</span>
               <span><i className="es-principal" /> Principal</span>
-              {!esAdmin && <span><i className="es-mia" /> Tu reserva</span>}
+              <span><i className="es-mia" /> Tu reserva</span>
             </div>
             <div className="cal-grilla" role="grid">
               {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => <span key={d} className="cal-sem" role="columnheader">{d}</span>)}
@@ -372,7 +371,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               filtros={[
                 { name: "cuando", valor: fCuando, etiqueta: "Cuándo", opciones: [{ key: "", label: "Todas las fechas" }, { key: "semana", label: "Próximos 7 días" }, { key: "mes", label: "Este mes" }] },
                 { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: [{ key: "", label: "Todos los planes" }, { key: "corps_de_ballet", label: "Corps de Ballet" }, { key: "solista", label: "Solista" }, { key: "principal", label: "Principal" }] },
-                ...(esAdmin ? [] : [{ name: "mias", valor: fMias, etiqueta: "Reservas", opciones: [{ key: "", label: "Todas" }, { key: "reservadas", label: "Mis reservas" }, { key: "libres", label: "Sin reservar" }] }]),
+                { name: "mias", valor: fMias, etiqueta: "Reservas", opciones: [{ key: "", label: "Todas" }, { key: "reservadas", label: "Mis reservas" }, { key: "libres", label: "Sin reservar" }] },
               ]}
             />
             {filtradas.length === 0 ? (

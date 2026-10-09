@@ -4,6 +4,8 @@ import { BookOpen, Radio, Sparkles, TrendingUp } from "lucide-react";
 import { SignInForm } from "@/components/sign-in-form";
 import { LanguageSwitcher, T, TLines } from "@/components/language-provider";
 import type { PublicMessageKey } from "@/src/i18n/public";
+import { CuentaRegresiva, FechaDeApertura } from "@/components/cuenta-regresiva";
+import { fechaDeApertura } from "@/src/lib/acceso-anticipado";
 
 /*
  * El icono de cada rasgo se elige por indice y se dibuja ACA, en el servidor.
@@ -26,6 +28,10 @@ type SignInPageProps = {
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
+  // Mientras el estudio no abra, el ingreso muestra cuanto falta (lo pidio la
+  // duena: "falta el contador"). Pasada la fecha, desaparece solo.
+  const apertura = fechaDeApertura();
+  const faltaAbrir = apertura.getTime() > Date.now();
   const params = (await searchParams) ?? {};
   const error = typeof params.error === "string" ? params.error : null;
   const success = typeof params.success === "string" ? params.success : null;
@@ -76,11 +82,32 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               </div>
             ))}
           </div>
+
+          {faltaAbrir && (
+            <div className="auth-cuenta">
+              <p className="auth-cuenta-titulo">
+                <T id="puerta.title" />{" "}
+                <span><FechaDeApertura objetivoISO={apertura.toISOString()} /></span>
+              </p>
+              <CuentaRegresiva objetivoISO={apertura.toISOString()} />
+            </div>
+          )}
         </div>
       </section>
 
       <section className="auth-right" aria-label="Formulario de ingreso">
         <div className="auth-card">
+          {/* En pantallas chicas el panel de la izquierda no se ve: el contador
+              va arriba del formulario. */}
+          {faltaAbrir && (
+            <div className="auth-cuenta auth-cuenta--movil">
+              <p className="auth-cuenta-titulo">
+                <T id="puerta.title" />{" "}
+                <span><FechaDeApertura objetivoISO={apertura.toISOString()} /></span>
+              </p>
+              <CuentaRegresiva objetivoISO={apertura.toISOString()} />
+            </div>
+          )}
           <p className="auth-kicker">
             <Sparkles size={13} strokeWidth={2.4} aria-hidden />
             <T id="auth.kicker" />

@@ -4291,3 +4291,15 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 /* El avatar del menu de admin lleva a Configuracion. */
 a.sb-avatar { text-decoration: none; transition: transform .3s var(--curva), box-shadow .3s; }
 a.sb-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-line); }
+
+/* Barra de busqueda: el campo y las pildoras de filtro con la MISMA altura,
+   el mismo borde y la misma sombra. Antes el campo media 50px con borde fino
+   y sombra, y los filtros 40px con borde mas grueso: se veia desparejo. */
+.sistema .abus { align-items: center; }
+.sistema .abus-buscar { height: 46px; padding: 0 5px 0 16px; border: 1.5px solid var(--linea-fuerte); box-shadow: 0 6px 16px -12px rgba(176, 90, 80, .35); }
+.sistema .abus-buscar-btn { width: 36px; height: 36px; flex-shrink: 0; }
+.sistema .abus .dsp--pildora .dsp-boton { height: 46px; min-height: 46px; padding: 0 14px 0 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; box-shadow: 0 6px 16px -12px rgba(176, 90, 80, .35); align-items: center; }
+.sistema .abus .dsp--pildora .dsp-boton:hover:not(:disabled) { border-color: var(--pink-line); }
+.sistema .abus .dsp--pildora.es-activo .dsp-boton { border-color: var(--pink); background: var(--rubor); }
+.sistema .abus .dsp-prefijo { line-height: 1; }
+.sistema .abus .dsp-texto { line-height: 1; }

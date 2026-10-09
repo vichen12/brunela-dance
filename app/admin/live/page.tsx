@@ -268,6 +268,13 @@ export default async function AdminLivePage({
 
                     {/* Quick status change */}
                     <div className="lv-rapido">
+                      {/* La profesora entra a dar la clase desde ACA. En la vista
+                          de alumna se comporta como alumna (el enlace, al reservar). */}
+                      {session.status === "scheduled" && session.access_link && (
+                        <a href={session.access_link.join_url} target="_blank" rel="noreferrer" className="lv-accion lv-accion--dar">
+                          <Video size={14} strokeWidth={2.4} aria-hidden="true" /> Dar la clase
+                        </a>
+                      )}
                       {session.status === "draft" && (
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
@@ -342,6 +349,7 @@ const CSS = `
 .lv-accion { height: 34px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), filter .2s; }
 .lv-accion:hover { transform: translateY(-1px); filter: brightness(.97); }
 .lv-accion--publicar { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
+.lv-accion--dar { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: var(--pink); color: #fff; border-color: var(--pink); box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .lv-accion--completar { background: #FFF0EA; color: #B4533A; border-color: #F6D9CF; }
 .lv-accion--cancelar { background: #fff; color: var(--pink-deep); border-color: var(--pink-line); }
 .lv-pie { display: flex; align-items: center; gap: 8px; padding: 12px 0 14px; border-top: 1px dashed var(--linea-fuerte); margin: 0 20px; }
