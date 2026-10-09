@@ -151,10 +151,10 @@ export function BrunelaFooter() {
             <span className="footer-wm-bailarina" aria-hidden>
               <Image src="/brand/isologo-icon.png" alt="" width={120} height={120} />
             </span>
-            <span className="footer-wm-txt" aria-hidden>
-              <span className="footer-wm-nombre">BRUNELA</span>
-              <span className="footer-wm-sub">DANCE TRAINER</span>
-            </span>
+            {/* El MISMO wordmark que el hero: es el logo enviado de la marca,
+                retipografiarlo en CSS lo cambiaba (pedido de la duena). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="footer-wm-nombre footer-wm-img" src="/brand/brunela-dance-trainer-wordmark.png" alt="" draggable={false} />
           </div>
 
           {/* Disciplinas y lugar en una sola linea: son dos datos cortos y en
