@@ -13,7 +13,7 @@ import {
 import { requireUser } from "@/src/features/auth/guards";
 import { HoraSesion } from "@/components/hora-sesion";
 import { BotonEnviar } from "@/components/boton-enviar";
-import { ArrowRight, CalendarCheck, Check, Clock, Users, Video, X } from "lucide-react";
+import { ArrowRight, CalendarCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Users, Video, X } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -68,6 +68,12 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const fMias = ["reservadas", "libres"].includes(txt("mias")) ? txt("mias") : "";
   const pagina = Math.max(0, Math.min(100, Number(params.pagina) || 0));
   const POR_PAGINA = 6;
+  // Calendario: mes que se mira (YYYY-MM) y dia elegido (YYYY-MM-DD). Por
+  // defecto, el mes de hoy en la zona del estudio.
+  const ZONA_ESTUDIO = "Europe/Madrid";
+  const hoyKey = claveDia(new Date().toISOString(), ZONA_ESTUDIO);
+  const mes = /^\d{4}-(0[1-9]|1[0-2])$/.test(txt("mes")) ? txt("mes") : hoyKey.slice(0, 7);
+  const dia = /^\d{4}-\d{2}-\d{2}$/.test(txt("dia")) && txt("dia").startsWith(mes) ? txt("dia") : "";
   const perfil = await getCurrentProfile(user.id);
   const esAdmin = Boolean(perfil?.is_admin);
 
@@ -138,9 +144,48 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     if (fCuando) u.set("cuando", fCuando);
     if (fMias) u.set("mias", fMias);
     if (p > 0) u.set("pagina", String(p));
+    if (mes !== hoyKey.slice(0, 7)) u.set("mes", mes);
     const t = u.toString();
     return "/dashboard/live" + (t ? "?" + t : "");
   };
+
+  // ── Calendario ──
+  // Todas las sesiones del mes, pasadas y canceladas incluidas: es la vista
+  // de "que hay y que hubo". El dia sale en la zona de cada sesion, que es la
+  // del estudio: una clase de las 23:30 en Madrid cae ese dia, no el siguiente.
+  const porDia = new Map<string, LiveSessionRecord[]>();
+  for (const sesion of sessions) {
+    const k = claveDia(sesion.starts_at, sesion.session_timezone || ZONA_ESTUDIO);
+    if (!k.startsWith(mes)) continue;
+    porDia.set(k, [...(porDia.get(k) ?? []), sesion]);
+  }
+  const [anio, numMes] = mes.split("-").map(Number);
+  const primerDia = (new Date(Date.UTC(anio, numMes - 1, 1)).getUTCDay() + 6) % 7; // lunes = 0
+  const diasDelMes = new Date(Date.UTC(anio, numMes, 0)).getUTCDate();
+  const celdas: (string | null)[] = [
+    ...Array.from({ length: primerDia }, () => null),
+    ...Array.from({ length: diasDelMes }, (_, i) => `${mes}-${String(i + 1).padStart(2, "0")}`),
+  ];
+  while (celdas.length % 7) celdas.push(null);
+  const mesVecino = (d: number) => {
+    const x = new Date(Date.UTC(anio, numMes - 1 + d, 1));
+    return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}`;
+  };
+  const urlCal = (m: string, d?: string) => {
+    const u = new URLSearchParams();
+    if (m !== hoyKey.slice(0, 7)) u.set("mes", m);
+    if (d) u.set("dia", d);
+    const t = u.toString();
+    return "/dashboard/live" + (t ? "?" + t : "") + (d ? "#lista" : "");
+  };
+  // "octubre de 2026" -> "Octubre de 2026". Con text-transform: capitalize
+  // salia "Octubre De 2026".
+  const nombreMesCrudo = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(anio, numMes - 1, 1)));
+  const nombreMes = nombreMesCrudo.charAt(0).toUpperCase() + nombreMesCrudo.slice(1);
+  const delDia = dia ? (porDia.get(dia) ?? []) : [];
+  const tituloDiaCrudo = dia ? new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(dia + "T12:00:00Z")) : "";
+  const tituloDia = tituloDiaCrudo.charAt(0).toUpperCase() + tituloDiaCrudo.slice(1);
+  const CLASE_TIER: Record<string, string> = { corps_de_ballet: "es-corps", solista: "es-solista", principal: "es-principal" };
 
   const tarjeta = (session: LiveSessionRecord, esLaProxima: boolean, pasada: boolean) => {
     const booking = bookings.get(session.id);
@@ -148,7 +193,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
     const f = partesFecha(session.starts_at, session.session_timezone);
     return (
-      <li key={session.id} className={"sv-card" + (isReserved ? " es-reservada" : "") + (pasada ? " es-pasada" : "")}>
+      <li key={session.id} id={"sesion-" + session.id} className={"sv-card" + (isReserved ? " es-reservada" : "") + (pasada ? " es-pasada" : "")}>
         <div className="sv-fecha" aria-hidden="true">
           <span className="sv-fecha-semana">{f.semana}</span>
           <span className="sv-fecha-dia">{f.dia}</span>
@@ -236,7 +281,65 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
           ]} />
         )}
 
-        {proximas.length === 0 ? (
+        {sessions.length > 0 && (
+          <section className="cal" aria-label="Calendario de clases en vivo">
+            <header className="cal-cab">
+              <span className="cal-ico" aria-hidden="true"><CalendarDays size={18} strokeWidth={2} /></span>
+              <h2 className="cal-titulo">{nombreMes}</h2>
+              <div className="cal-nav">
+                <Link href={urlCal(mesVecino(-1)) as never} className="cal-flecha" aria-label="Mes anterior"><ChevronLeft size={18} strokeWidth={2.2} /></Link>
+                {mes !== hoyKey.slice(0, 7) && <Link href={urlCal(hoyKey.slice(0, 7)) as never} className="cal-hoy-btn">Hoy</Link>}
+                <Link href={urlCal(mesVecino(1)) as never} className="cal-flecha" aria-label="Mes siguiente"><ChevronRight size={18} strokeWidth={2.2} /></Link>
+              </div>
+            </header>
+            <div className="cal-leyenda" aria-hidden="true">
+              <span><i className="es-corps" /> Corps de Ballet</span>
+              <span><i className="es-solista" /> Solista</span>
+              <span><i className="es-principal" /> Principal</span>
+              {!esAdmin && <span><i className="es-mia" /> Tu reserva</span>}
+            </div>
+            <div className="cal-grilla" role="grid">
+              {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => <span key={d} className="cal-sem" role="columnheader">{d}</span>)}
+              {celdas.map((k, i) => {
+                if (!k) return <span key={"v" + i} className="cal-celda es-vacia" aria-hidden="true" />;
+                const delK = porDia.get(k) ?? [];
+                const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length ? " tiene" : "");
+                const num = <span className="cal-num">{Number(k.slice(8))}</span>;
+                if (!delK.length) return <span key={k} className={clases} role="gridcell">{num}</span>;
+                return (
+                  <Link key={k} href={(k === dia ? urlCal(mes) : urlCal(mes, k)) as never} className={clases} role="gridcell" aria-label={`${Number(k.slice(8))}: ${delK.length} ${delK.length === 1 ? "clase" : "clases"}`}>
+                    {num}
+                    <span className="cal-eventos">
+                      {delK.slice(0, 3).map((sesion) => (
+                        <span key={sesion.id} className={"cal-ev " + (CLASE_TIER[sesion.membership_tier_required] ?? "") + (reservada(sesion.id) ? " es-mia" : "") + (sesion.status === "canceled" ? " es-cancelada" : "")}>
+                          <b>{new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at))}</b> {resolveI18nText(sesion.title_i18n)}
+                        </span>
+                      ))}
+                      {delK.length > 3 && <span className="cal-mas">+{delK.length - 3} más</span>}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            <p className="cal-pie">Horarios de Madrid. Tocá un día para ver sus clases.</p>
+          </section>
+        )}
+
+        {dia && (
+          <section id="lista" className="cal-dia" aria-label={`Clases del ${tituloDia}`}>
+            <div className="cal-dia-cab">
+              <h2 className="cal-dia-titulo">{tituloDia}</h2>
+              <Link href={urlCal(mes) as never} className="ad-btn"><X size={15} strokeWidth={2.2} aria-hidden="true" /> Ver toda la agenda</Link>
+            </div>
+            {delDia.length === 0 ? (
+              <p className="cal-dia-vacio">Ese día no hay clases.</p>
+            ) : (
+              <ul className="sv-lista">{delDia.map((sesion) => tarjeta(sesion, sesion.id === idProxima, !proximas.includes(sesion)))}</ul>
+            )}
+          </section>
+        )}
+
+        {dia ? null : proximas.length === 0 ? (
           <AdminGuia
             rotuloEjemplo="Así se ve una clase en vivo"
             ejemplo={
@@ -302,6 +405,15 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   );
 }
 
+/** "2026-10-10" en la zona dada. en-CA da el formato ISO de fecha. */
+function claveDia(iso: string, zona: string) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: zona }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 /** Dia, mes y dia de semana en la zona DEL ESTUDIO: igual en servidor y cliente. */
 function partesFecha(iso: string, zona: string) {
   try {
@@ -314,6 +426,59 @@ function partesFecha(iso: string, zona: string) {
 }
 
 const CSS = `
+/* ── Calendario ── */
+.cal { border: 1px solid var(--linea); border-radius: 30px; background: linear-gradient(160deg, #FFF7F3, #fff 45%); box-shadow: var(--sombra); padding: 22px 22px 16px; }
+.cal-cab { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.cal-ico { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); flex-shrink: 0; }
+.cal-titulo { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.cal-nav { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.cal-flecha { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 1.5px solid var(--linea-fuerte); color: var(--ink); transition: background .2s, border-color .2s, transform .3s var(--curva); }
+.cal-flecha:hover { background: var(--rubor); border-color: var(--pink-line); transform: scale(1.06); }
+.cal-hoy-btn { height: 40px; padding: 0 16px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 800; color: var(--pink-deep); background: var(--rubor); text-decoration: none; }
+.cal-leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 2px 14px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.cal-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-leyenda i { width: 10px; height: 10px; border-radius: 4px; display: inline-block; }
+.cal-grilla { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-sem { text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); padding: 4px 0 6px; }
+.cal-celda { position: relative; min-height: 104px; border-radius: 18px; padding: 8px 8px 8px; background: #fff; border: 1px solid #F6EAE4; display: flex; flex-direction: column; gap: 4px; min-width: 0; text-decoration: none; color: inherit; transition: border-color .2s, box-shadow .3s, transform .3s var(--curva); }
+.cal-celda.es-vacia { background: transparent; border-color: transparent; }
+.cal-celda.es-pasado { background: #FFFCFA; }
+.cal-celda.es-pasado .cal-num { color: #CDB3AB; }
+a.cal-celda:hover { border-color: var(--pink-line); box-shadow: var(--sombra); transform: translateY(-2px); }
+.cal-celda.es-hoy { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(230,79,85,.12); }
+.cal-celda.es-elegido { background: var(--rubor); border-color: var(--pink); }
+.cal-num { font-size: 13px; font-weight: 900; color: var(--ink); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; }
+.cal-celda.es-hoy .cal-num { background: var(--pink); color: #fff; }
+.cal-eventos { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-ev { display: block; padding: 3px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid transparent; }
+.cal-ev b { font-weight: 900; }
+.es-corps { background: #FFF1EC; color: #A2483B; border-color: #F2B9A5 !important; }
+.es-solista { background: #FFF4E8; color: #A85A1E; border-color: #F3C795 !important; }
+.es-principal { background: #FDECEC; color: var(--pink-deep); border-color: var(--pink) !important; }
+.cal-leyenda i.es-corps { background: #F2B9A5; }
+.cal-leyenda i.es-solista { background: #F3C795; }
+.cal-leyenda i.es-principal { background: var(--pink); }
+.cal-leyenda i.es-mia { background: #4C8F55; }
+.cal-ev.es-mia { box-shadow: inset 0 0 0 1.5px #7DB585; }
+.cal-ev.es-cancelada { text-decoration: line-through; opacity: .55; }
+.cal-celda.es-pasado .cal-ev { opacity: .6; }
+.cal-mas { font-size: 11px; font-weight: 800; color: var(--pink-deep); padding-left: 4px; }
+.cal-pie { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.cal-dia { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 20px; }
+.cal-dia-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cal-dia-titulo { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.cal-dia-vacio { padding: 24px; border-radius: 22px; background: var(--crema); color: var(--muted); text-align: center; }
+@media (max-width: 760px) {
+  .cal { padding: 16px 12px 12px; border-radius: 24px; }
+  .cal-grilla { gap: 4px; }
+  .cal-celda { min-height: 58px; padding: 5px 3px; border-radius: 12px; align-items: center; }
+  .cal-ev { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; font-size: 0; }
+  .cal-ev.es-corps { background: #F2B9A5; } .cal-ev.es-solista { background: #F3C795; } .cal-ev.es-principal { background: var(--pink); }
+  .cal-ev.es-mia { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #4C8F55; }
+  .cal-eventos { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
+  .cal-mas { font-size: 9px; padding: 0; }
+  .cal-sem { font-size: 10.5px; }
+}
 .sv-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .sv-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); }
 .sv { padding-bottom: 80px; }
