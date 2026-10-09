@@ -7,6 +7,8 @@ import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminDrawer, BloqueAvanzado } from "@/components/admin-drawer";
+import { ProveedorIcono } from "@/components/proveedor-icono";
+import { detectarProveedor, NOMBRE_PROVEEDOR } from "@/src/features/studio/enlace-clase";
 import {
   createLiveSessionAction,
   deleteLiveSessionAction,
@@ -38,7 +40,8 @@ export type LiveSession = {
   booking_opens_at: string | null;
   booking_closes_at: string | null;
   bookings_count: number;
-  access_link: { join_url: string; passcode: string | null } | null;
+  /** provider: "zoom" | "meet" | "otro" (se deduce de la URL al guardar). */
+  access_link: { join_url: string; passcode: string | null; provider?: string | null } | null;
   /** Alumnas invitadas a mano, que entran aunque su plan no les alcance. */
   invitations: { user_id: string; full_name: string | null; email: string; note: string | null }[];
 };
@@ -63,6 +66,7 @@ const CSS = `
 .lvf .adr-avanzado-flecha { color: var(--muted); transition: transform .3s; }
 .lvf .adr-avanzado[open] .adr-avanzado-flecha { transform: rotate(180deg); }
 .lvf .adr-avanzado-cuerpo { padding: 2px 16px 16px; display: grid; gap: 12px; }
+.lvf-prov { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; padding: 4px 11px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 12px; font-weight: 800; }
 .lvf-pie { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 6px; }
 .lvf-pie .pf-borrar { margin-left: 0; }
 .lvi { margin-top: 24px; padding: 20px; border-radius: 24px; background: linear-gradient(150deg, #FFF4E8, #FFFAF6 70%); border: 1px solid var(--linea); }
@@ -95,6 +99,38 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
       <span className="pf-etq">{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Campo del enlace con el proveedor detectado al lado, mientras se escribe.
+ * Es solo una ayuda visual: quien decide es detectarProveedor() en la action.
+ */
+export function CampoEnlace({
+  inicial,
+  name = "zoomJoinUrl",
+  label = "Enlace (Zoom o Meet)",
+  required = false,
+}: {
+  inicial: string;
+  name?: string;
+  label?: string;
+  required?: boolean;
+}) {
+  const [valor, setValor] = useState(inicial);
+  const p = valor.trim() ? detectarProveedor(valor) : null;
+  return (
+    <F label={label}>
+      <style>{CSS}</style>
+      <input
+        name={name} type="url" defaultValue={inicial} required={required} inputMode="url" autoComplete="off"
+        onChange={(e) => setValor(e.target.value)}
+        placeholder="https://zoom.us/j/… o https://meet.google.com/…"
+      />
+      {p && (
+        <span className="lvf-prov"><ProveedorIcono proveedor={p} size={15} /> {NOMBRE_PROVEEDOR[p] === "Enlace" ? "Otro enlace" : NOMBRE_PROVEEDOR[p]}</span>
+      )}
+    </F>
   );
 }
 
@@ -213,10 +249,11 @@ export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSe
         </F>
         </BloqueAvanzado>
 
-        <BloqueAvanzado titulo="Enlace de Zoom" cantidad={2}>
-          <F label="URL de ingreso">
-            <input name="zoomJoinUrl" type="url" defaultValue={session?.access_link?.join_url ?? ""} placeholder="https://zoom.us/j/..." />
-          </F>
+        {/* Los `name` siguen siendo zoomJoinUrl/zoomPasscode: los lee la
+            action. Lo que cambio es que el enlace puede ser de Zoom o de Meet,
+            y el proveedor se deduce de la URL al guardar. */}
+        <BloqueAvanzado titulo="Enlace (Zoom o Meet)" cantidad={2}>
+          <CampoEnlace inicial={session?.access_link?.join_url ?? ""} />
           <F label="Código de acceso">
             <input name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
           </F>

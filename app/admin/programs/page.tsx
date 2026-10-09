@@ -2,6 +2,7 @@ import { CalendarDays, Check, Eye, Plus, Rocket, Star } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio, AdminGuia } from "@/components/admin-ui";
 import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import {
   deleteProgramAction,
   deleteProgramDayAction,
@@ -12,6 +13,9 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+/** Planes por pagina del listado. */
+const POR_PAGINA = 10;
 
 const ESTADOS_PROG = [
   { key: "", label: "Cualquier estado" },
@@ -137,6 +141,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   // El estudio todavia no tiene NINGUN plan (no es lo mismo que un filtro sin
   // resultados): ahi se muestra la guia en vez de cifras en cero.
   const estudioVacio = (totalProgramas ?? 0) === 0;
+  // Se pagina sobre lo ya filtrado en SQL y en memoria: `publicados` y las
+  // cifras miran la lista entera, no solo la pagina.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const pagina = Math.min(paginaPedida, Math.max(1, Math.ceil(programs.length / POR_PAGINA)) - 1);
+  const enPagina = programs.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
   const totalEmpezaron = [...usoPorPrograma.values()].reduce((a, u) => a + u.empezaron, 0);
 
   return (
@@ -228,7 +237,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         </AdminVacio>
       ) : (
         <ul className="apl-grilla">
-          {programs.map((program) => {
+          {enPagina.map((program) => {
             const days = programDays.filter((d) => d.program_id === program.id);
             const st = STATUS_STYLE[program.status] ?? STATUS_STYLE.draft;
             const tier = TIER_STYLE[program.membership_tier_required] ?? TIER_STYLE.solista;
@@ -292,6 +301,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
           })}
         </ul>
       )}
+      <Paginacion pagina={pagina} total={programs.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/programs", { q, estado: fEstadoProg })} />
         </>
       )}
     </main>
@@ -330,7 +340,7 @@ const CSS_PLANES = `
 .apl-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .apl-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; }
 .apl-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.apl-estado--pub { color: var(--salvia-deep); background: var(--salvia); }
+.apl-estado--pub { color: var(--pink-deep); background: var(--rubor); }
 .apl-estado--borr { color: var(--melocoton-deep); background: #FFEBDF; }
 .apl-estado--arch { color: var(--muted); background: #F6EEEA; }
 .apl-plan { font-size: 12.5px; font-weight: 800; padding: 4px 12px; border-radius: 99px; }
@@ -345,7 +355,7 @@ const CSS_PLANES = `
 .apl-dias-mas { font-size: 12px; font-weight: 800; color: var(--muted); align-self: center; margin-left: 2px; }
 .apl-dias-txt {
   display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; margin-top: 10px; padding: 5px 12px; border-radius: 99px;
-  font-size: 12.5px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia);
+  font-size: 12.5px; font-weight: 800; color: var(--pink-deep); background: var(--rubor);
 }
 .apl-dias-txt.es-faltan { color: var(--melocoton-deep); background: #FFF4E8; }
 .apl-dias-txt strong { color: inherit; }

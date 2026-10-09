@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarHeart, FileText, House, ListOrdered, Menu, MessageCircleHeart, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { CalendarHeart, FileText, House, ListOrdered, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
 
 /**
  * Los MISMOS ocho destinos que el sidebar de escritorio. Antes habia cinco y
@@ -25,6 +25,7 @@ const NAV = [
   { href: '/dashboard/community', label: 'Comunidad',  exact: false, Icon: Users },
   { href: '/dashboard/documents', label: 'Documentos', exact: false, Icon: FileText },
   { href: '/dashboard/plan',      label: 'Mi plan',    exact: false, Icon: Sparkles },
+  { href: '/dashboard/packs', label: 'Packs', exact: false, Icon: Package },
 ];
 
 /** Los que quedan a un toque en la barra. El resto, en la hoja. */

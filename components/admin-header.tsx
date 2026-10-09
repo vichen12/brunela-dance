@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Eye, Menu } from "lucide-react";
+import { Notificaciones } from "@/components/notificaciones";
+import type { Notificacion } from "@/src/features/studio/notificaciones";
 
 const ROUTES: Record<string, string> = {
   "/admin":               "Resumen",
@@ -22,7 +24,16 @@ const ROUTES: Record<string, string> = {
   "/admin/analiticas":    "Analíticas",
 };
 
-export function AdminHeader({ inicial, foto }: { inicial: string; foto?: string | null }) {
+export function AdminHeader({
+  inicial,
+  foto,
+  recordatorios = [],
+}: {
+  inicial: string;
+  foto?: string | null;
+  /** Llegan armados desde el layout (src/features/admin/recordatorios.ts): solo datos. */
+  recordatorios?: Notificacion[];
+}) {
   const pathname = usePathname();
   // Una ficha (/admin/users/abc) toma el nombre de su seccion: antes caia
   // en "Backstage", que no es el nombre de nada.
@@ -53,6 +64,13 @@ export function AdminHeader({ inicial, foto }: { inicial: string; foto?: string 
         <span className="ah-titulo">{title}</span>
       </div>
       <div className="ah-der">
+        <Notificaciones
+          items={recordatorios}
+          variante="cabecera"
+          titulo="Recordatorios"
+          clave="brunela-admin-recordatorios-vistos"
+          vacio="Estás al día: ninguna clase en vivo sin enlace ni sin completar."
+        />
         <Link href="/dashboard" className="ah-vista">
           <Eye size={15} strokeWidth={2} aria-hidden="true" />
           <span>Ver como alumna</span>

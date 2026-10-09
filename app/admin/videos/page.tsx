@@ -3,6 +3,7 @@ import { Archive, BarChart3, Check, Clapperboard, Clock, Eye, EyeOff, Languages,
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { Paginacion } from "@/components/paginacion";
 import { EditarClase } from "@/components/admin-video-drawer";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
 import {
@@ -584,13 +585,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
         </ul>
       )}
 
-      {totalPaginas > 1 && (
-        <nav className="acl-paginas" aria-label="Páginas">
-          {pagina > 0 ? <Link href={conPagina(pagina - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
-          <span className="acl-paginas-txt">Página {pagina + 1} de {totalPaginas}</span>
-          {pagina < totalPaginas - 1 ? <Link href={conPagina(pagina + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
-        </nav>
-      )}
+      <Paginacion pagina={pagina} total={coinciden} porPagina={POR_PAGINA} href={conPagina} />
     </main>
   );
 }
@@ -704,9 +699,6 @@ const CSS_CLASES = `
   font-size: 12.5px; font-weight: 800; color: var(--pink-deep); background: var(--pink-wash);
 }
 
-.acl-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 22px; }
-.acl-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); white-space: nowrap; }
-
 @media (max-width: 1180px) {
   .acl-card-cuerpo { grid-template-columns: 190px minmax(0, 1fr); }
   .acl-acciones { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--linea); }
@@ -718,8 +710,6 @@ const CSS_CLASES = `
   .acl-info { padding: 0 4px; }
   .acl-acciones { flex-wrap: wrap; gap: 10px; }
   .acl-listo-txt { white-space: normal; }
-  .acl-paginas { gap: 8px; }
-  .acl-paginas .ad-btn { padding-left: 14px; padding-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .acl-chip--pub .acl-punto, .acl-card { animation: none; }

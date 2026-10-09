@@ -470,7 +470,7 @@ export function PlanClient({
               verla logueada la devolvia al dashboard perdiendo el pack por el
               camino. La funcionalidad existia solo para quien no tenia cuenta. */}
           {packs.length > 0 && (
-            <div className="mp-packs">
+            <div className="mp-packs" id="packs" style={{ scrollMarginTop: 24 }}>
               <h2 className="mp-packs-titulo">Packs de clases</h2>
               <p className="mp-packs-sub">
                 Un solo pago, sin renovación. Las clases quedan tuyas para siempre.

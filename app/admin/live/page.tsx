@@ -10,6 +10,10 @@ import {
   updateStatusAction,
 } from "@/src/features/admin/live-actions";
 import { HoraSesion } from "@/components/hora-sesion";
+import { ProveedorIcono } from "@/components/proveedor-icono";
+import { RecordatoriosAdmin } from "@/components/recordatorios-admin";
+import { cargarRecordatoriosAdmin } from "@/src/features/admin/recordatorios";
+import { proveedorDe, textoListo } from "@/src/features/studio/enlace-clase";
 import { EditarSesion, LiveForm, type LiveSession } from "@/components/admin-live-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { AdminAviso, AdminCabecera, AdminCifras, AdminNueva } from "@/components/admin-ui";
@@ -144,7 +148,7 @@ export default async function AdminLivePage({
       .in("status", ["reserved", "waitlisted", "attended"]),
     supabase
       .from("live_session_access_links")
-      .select("live_session_id, join_url, passcode"),
+      .select("live_session_id, join_url, passcode, provider"),
     // Va en el mismo paralelo por el mismo motivo que las otras: un viaje mas a
     // Frankfurt en serie son ~30 ms que se notan. El join trae el nombre para no
     // tener que resolver los UUID despues, que seria un N+1.
@@ -169,8 +173,8 @@ export default async function AdminLivePage({
     Object.entries(inscriptasPorSesion).map(([k, v]) => [k, v.filter((i) => i.estado !== "waitlisted").length])
   ) as Record<string, number>;
 
-  const accessLinksBySession = (accessLinksData ?? []).reduce<Record<string, { join_url: string; passcode: string | null }>>((acc, a) => {
-    acc[a.live_session_id] = { join_url: a.join_url, passcode: a.passcode };
+  const accessLinksBySession = (accessLinksData ?? []).reduce<Record<string, { join_url: string; passcode: string | null; provider: string | null }>>((acc, a) => {
+    acc[a.live_session_id] = { join_url: a.join_url, passcode: a.passcode, provider: a.provider };
     return acc;
   }, {});
 
@@ -222,6 +226,8 @@ export default async function AdminLivePage({
     return "/admin/live" + (t ? "?" + t : "") + "#sesiones";
   };
 
+  const recordatorios = await cargarRecordatoriosAdmin();
+
   return (
     <main className="lv">
       <style>{CSS}</style>
@@ -235,6 +241,10 @@ export default async function AdminLivePage({
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
+      {/* Lo que Brunela tiene que hacer YA: enlaces sin cargar, la clase de hoy
+          y las que terminaron sin completar. Sin pendientes no ocupa lugar. */}
+      <RecordatoriosAdmin datos={recordatorios} volverA="/admin/live" />
+
       {/* Stats row */}
       <AdminCifras items={[
         { value: total,     label: "Sesiones totales", sub: "en el sistema" },
@@ -243,7 +253,7 @@ export default async function AdminLivePage({
       ]} />
 
       {/* Create new session */}
-      <AdminNueva titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom">
+      <AdminNueva titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom o Meet">
         <LiveForm />
       </AdminNueva>
 
@@ -279,7 +289,7 @@ export default async function AdminLivePage({
                 ? "Probá con otra palabra o sacá algún filtro."
                 : total > 0
                 ? "Las que ya pasaron están en «Cuándo: Pasadas». Para programar otra, usá «Nueva sesión en vivo», arriba."
-                : "Creá la primera desde «Nueva sesión en vivo», arriba: fecha, cupo y el enlace de Zoom."}
+                : "Creá la primera desde «Nueva sesión en vivo», arriba: fecha, cupo y el enlace de Zoom o Meet."}
             </p>
           </div>
         ) : (
@@ -331,9 +341,14 @@ export default async function AdminLivePage({
                               : `${session.invitations.length} invitadas`}
                           </span>
                         )}
-                        {session.access_link && (
-                          <span className="lv-dato lv-dato--ok"><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Zoom OK</span>
-                        )}
+                        {session.access_link ? (
+                          <span className="lv-dato lv-dato--ok">
+                            <ProveedorIcono proveedor={proveedorDe(session.access_link.provider, session.access_link.join_url)} size={13} />
+                            {textoListo(proveedorDe(session.access_link.provider, session.access_link.join_url))}
+                          </span>
+                        ) : session.status === "scheduled" && new Date(session.ends_at).getTime() > Date.now() ? (
+                          <Link href={`/admin/live/${session.id}#enlace` as never} className="lv-dato lv-dato--falta">Sin enlace · cargarlo</Link>
+                        ) : null}
                       </div>
                     </div>
 
@@ -477,6 +492,8 @@ a.lv-titulo:hover { color: var(--pink-deep); text-decoration: underline; text-de
 .lv-hora { color: var(--ink); font-weight: 700; }
 .lv-hora.es-pasada { color: var(--muted); font-weight: 500; }
 .lv-dato--inv { color: var(--pink-deep); font-weight: 700; }
+.lv-dato--falta { position: relative; z-index: 1; padding: 2px 10px; border-radius: 99px; background: var(--melocoton); color: var(--melocoton-deep); font-weight: 800; font-size: 12px; text-decoration: none; }
+.lv-dato--falta:hover { text-decoration: underline; }
 .lv-dato--ok { padding: 2px 10px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-weight: 800; font-size: 12px; }
 .lv-rapido { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 .lv-accion { height: 34px; padding: 0 14px; border-radius: 99px; border: 1.5px solid transparent; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; transition: transform .25s var(--curva), filter .2s; }

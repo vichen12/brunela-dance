@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { detectarProveedor, validarEnlace } from "@/src/features/studio/enlace-clase";
 
 /**
  * Acciones de las sesiones en vivo.
@@ -69,12 +70,19 @@ export async function createLiveSessionAction(fd: FormData) {
 
   if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
 
-  const joinUrl = (fd.get("zoomJoinUrl") as string).trim();
+  // El enlace puede ser de Zoom, de Meet o de otro lado: el proveedor sale de
+  // la URL (src/features/studio/enlace-clase.ts). Antes se guardaba "zoom" fijo.
+  const joinUrl = String(fd.get("zoomJoinUrl") ?? "").trim();
   if (joinUrl && session) {
+    const enlace = validarEnlace(joinUrl);
+    if ("fallo" in enlace) {
+      revalidatePath("/admin/live", "layout");
+      redirect(`/admin/live?error=${encodeURIComponent("Sesión creada, pero el enlace no se guardó: " + enlace.fallo)}` as never);
+    }
     await supabase.from("live_session_access_links").insert({
       live_session_id: session.id,
-      provider: "zoom",
-      join_url: joinUrl,
+      provider: detectarProveedor(enlace.url),
+      join_url: enlace.url,
       passcode: (fd.get("zoomPasscode") as string) || null,
     });
   }
@@ -112,13 +120,18 @@ export async function updateLiveSessionAction(fd: FormData) {
 
   if (error) conMensaje(volverA(fd), "error", error.message);
 
-  const joinUrl = (fd.get("zoomJoinUrl") as string).trim();
+  const joinUrl = String(fd.get("zoomJoinUrl") ?? "").trim();
   if (joinUrl) {
+    const enlace = validarEnlace(joinUrl);
+    if ("fallo" in enlace) {
+      revalidatePath("/admin/live", "layout");
+      conMensaje(volverA(fd), "error", "Se guardó la sesión, pero no el enlace: " + enlace.fallo);
+    }
     await supabase.from("live_session_access_links").upsert(
       {
         live_session_id: id,
-        provider: "zoom",
-        join_url: joinUrl,
+        provider: detectarProveedor(enlace.url),
+        join_url: enlace.url,
         passcode: (fd.get("zoomPasscode") as string) || null,
       },
       { onConflict: "live_session_id" }

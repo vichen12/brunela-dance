@@ -2,13 +2,15 @@ import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
 import { requireAdmin } from "@/src/features/auth/guards";
 import {
-  Check, ChevronDown, Download, Eye, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Upload, Users, Video,
+  Check, ChevronDown, Download, Eye, Search, FileText, FileType, Image, Link2, Music, Paperclip, Pencil, Plus, Tag, Trash2, Upload, Users, Video,
   type LucideIcon,
 } from "lucide-react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { upsertDocumentAction, deleteDocumentAction } from "@/src/features/admin/document-actions";
 import { AdminDocumentUpload } from "@/components/admin-document-upload";
-import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminGuia } from "@/components/admin-ui";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminGuia, AdminVacio } from "@/components/admin-ui";
+import { AdminBuscador } from "@/components/admin-buscador";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import { CATEGORIAS, CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +52,9 @@ const PLANES = [
 const PLAN_CORTO: Record<string, string> = {
   none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
 };
+
+/** Documentos por pagina del listado. */
+const POR_PAGINA = 10;
 
 function peso(kb: number | null) {
   if (!kb) return null;
@@ -175,6 +180,32 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
   const publicados = docs.filter((d) => d.is_published).length;
   const pesoTotal = docs.reduce((a, d) => a + (d.file_size_kb ?? 0), 0);
 
+  // Buscador y filtros. La tabla es chica y las cifras de arriba necesitan el
+  // total igual, asi que se filtra en memoria sobre lo ya traido y se pagina
+  // DESPUES de filtrar (paginar antes dejaria paginas a medio llenar).
+  const uno = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
+  const q = uno(params.q).trim();
+  const fPlan = uno(params.plan);
+  const fCategoria = uno(params.categoria);
+  const qMin = q.toLocaleLowerCase("es");
+  const filtrados = docs.filter((d) =>
+    (!qMin || d.title.toLocaleLowerCase("es").includes(qMin) || (d.description ?? "").toLocaleLowerCase("es").includes(qMin)) &&
+    (!fPlan || d.membership_tier_required === fPlan) &&
+    (!fCategoria || (fCategoria === "-" ? !d.category_slug : d.category_slug === fCategoria))
+  );
+  const hayFiltro = Boolean(q || fPlan || fCategoria);
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const pagina = Math.min(paginaPedida, totalPaginas - 1);
+  const enPagina = filtrados.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+  const slugsUsados = [...new Set(docs.map((d) => d.category_slug).filter((c): c is string => Boolean(c)))];
+  const opcionesCategoriaFiltro = [
+    { key: "", label: "Cualquier categoría" },
+    ...CATEGORIAS.map((c) => ({ key: c.slug, label: c.label })),
+    ...slugsUsados.filter((c) => !CATEGORIAS.some((x) => x.slug === c)).map((c) => ({ key: c, label: c })),
+    { key: "-", label: "Sin categoría" },
+  ];
+
   return (
     <main className="doc">
       <style>{CSS}</style>
@@ -255,8 +286,27 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
         </form>
       </AdminNueva>
 
+      <AdminBuscador
+        action="/admin/documents"
+        q={q}
+        placeholder="Buscar por título"
+        total={docs.length}
+        mostrando={filtrados.length}
+        filtros={[
+          { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: [{ key: "", label: "Cualquier plan" }, ...PLANES.map((p) => ({ key: p.value, label: p.label }))] },
+          { name: "categoria", valor: fCategoria, etiqueta: "Categoría", opciones: opcionesCategoriaFiltro },
+        ]}
+      />
+
+      {enPagina.length === 0 ? (
+        <AdminVacio titulo={hayFiltro ? "Ningún documento coincide." : "Todavía no hay documentos."}>
+          <span className="doc-vacio-ico" aria-hidden="true"><Search size={22} strokeWidth={2} /></span>
+          <p>Probá con otra palabra o sacá algún filtro.</p>
+          <AdminBoton href="/admin/documents">Ver todos</AdminBoton>
+        </AdminVacio>
+      ) : (
         <ul className="doc-lista">
-          {docs.map((doc) => {
+          {enPagina.map((doc) => {
             const Icono = FILE_ICONS[doc.file_type] ?? Paperclip;
             return (
               <li key={doc.id} className={"doc-card" + (doc.is_published ? "" : " es-borrador")}>
@@ -304,6 +354,8 @@ export default async function AdminDocumentsPage({ searchParams }: { searchParam
             );
           })}
         </ul>
+      )}
+      <Paginacion pagina={pagina} total={filtrados.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/documents", { q, plan: fPlan, categoria: fCategoria })} />
         </>
       )}
     </main>
@@ -338,7 +390,8 @@ const CSS = `
 .doc-info { flex: 1; min-width: 0; }
 .doc-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .doc-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF; }
-.doc-estado.es-pub { color: var(--salvia-deep); background: var(--salvia); }
+.doc-estado.es-pub { color: var(--pink-deep); background: var(--rubor); }
+.doc-vacio-ico { width: 48px; height: 48px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; background: var(--rubor); color: var(--pink-deep); }
 .doc-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .doc-tipo { font-size: 12.5px; font-weight: 800; color: #A0472F; background: #FFF0EA; padding: 5px 12px; border-radius: 99px; }
 .doc-titulo { font-weight: 900; font-size: 20px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); overflow-wrap: anywhere; }

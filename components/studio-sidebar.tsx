@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import {
   CalendarHeart, FileText, Flower2, House, LayoutGrid, ListOrdered,
-  LogOut, MessageCircleHeart, Play, Settings2, Sparkles, Users,
+  LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
 } from 'lucide-react';
 import { signOutAction } from '@/src/features/auth/actions';
 
@@ -52,6 +52,8 @@ const NAV: { label: string; items: NavItem[] }[] = [
     label: 'Cuenta',
     items: [
       { href: '/dashboard/plan', label: 'Mi plan', Icon: Sparkles },
+      // Los packs se compran en Mi plan; sin este acceso nadie los encontraba.
+      { href: '/dashboard/packs', label: 'Packs de clases', Icon: Package },
     ],
   },
 ];
@@ -91,8 +93,9 @@ export function StudioSidebar({
           <img src="/brand/isologo-icon.png" alt="" />
         </span>
         <span>
-          <span className="sb-marca-nombre" style={{ display: 'block' }}>Brunela</span>
-          <span className="sb-marca-sub" style={{ display: 'block' }}>Dance Trainer</span>
+          {/* El logo de la marca, no el nombre retipografiado. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/brunela-dance-trainer-wordmark.png" alt="Brunela Dance Trainer" className="sb-marca-wm" />
         </span>
       </Link>
 

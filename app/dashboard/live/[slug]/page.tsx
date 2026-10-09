@@ -15,6 +15,9 @@ import { HoraSesion } from "@/components/hora-sesion";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { firmarDescarga } from "@/src/lib/documents/storage";
+import { ProveedorIcono } from "@/components/proveedor-icono";
+import { ClaseInminente } from "@/components/clase-inminente";
+import { proveedorDe, textoUnirse } from "@/src/features/studio/enlace-clase";
 
 export const dynamic = "force-dynamic";
 
@@ -124,15 +127,21 @@ export default async function DashboardLiveSesionPage({
   const pct = Math.min(100, Math.round((ocupadas / Math.max(1, sesion.capacity)) * 100));
 
   // Enlace: solo con reserva y antes de que termine.
-  let enlace: { join_url: string; passcode: string | null } | null = null;
+  // Con el cliente DE ELLA: RLS (can_current_user_view_live_session_link) es
+  // quien decide. Nunca service_role para esto.
+  let enlace: { join_url: string; passcode: string | null; provider: string | null } | null = null;
   if (!bloqueada && reservo && !pasada) {
     const { data } = await supabase
       .from("live_session_access_links")
-      .select("join_url, passcode")
+      .select("join_url, passcode, provider")
       .eq("live_session_id", sesion.id)
-      .maybeSingle<{ join_url: string; passcode: string | null }>();
+      .maybeSingle<{ join_url: string; passcode: string | null; provider: string | null }>();
     enlace = data ?? null;
   }
+  const proveedor = enlace ? proveedorDe(enlace.provider, enlace.join_url) : null;
+  // Falta 1 h o menos, o esta en curso: cartel con cuenta regresiva arriba.
+  const ahoraMs = Date.now();
+  const inminente = reservo && !pasada && new Date(sesion.starts_at).getTime() - ahoraMs <= 3600 * 1000;
 
   // Material: solo con lugar (reservado, o ya dada la clase con su lugar).
   type Doc = { id: string; title: string; description: string | null; file_url: string; file_type: string; file_size_kb: number | null; membership_tier_required: string };
@@ -169,6 +178,18 @@ export default async function DashboardLiveSesionPage({
 
         <AdminAviso mensaje={success} tono="ok" />
         <AdminAviso mensaje={error} tono="error" />
+
+        {inminente && (
+          <ClaseInminente
+            titulo={titulo}
+            inicio={sesion.starts_at}
+            fin={sesion.ends_at}
+            joinUrl={enlace?.join_url ?? null}
+            proveedor={proveedor}
+            passcode={enlace?.passcode ?? null}
+            perfil={null}
+          />
+        )}
 
         <div className={"sp-portada" + (bloqueada ? " es-bloqueada" : "")}>
           {sesion.cover_image_url ? (
@@ -269,18 +290,20 @@ export default async function DashboardLiveSesionPage({
                 <p className={"sp-estado" + (enEspera ? " es-espera" : "")}>
                   <CalendarCheck size={15} strokeWidth={2.4} aria-hidden="true" /> {enEspera ? "Estás en lista de espera" : "Reservaste tu lugar"}
                 </p>
-                {enlace ? (
+                {enlace && proveedor ? (
                   <>
-                    <a href={enlace.join_url} target="_blank" rel="noreferrer" className="sp-btn sp-btn--lleno">
-                      <Video size={17} strokeWidth={2.3} aria-hidden="true" /> Entrar a la clase
+                    <a href={enlace.join_url} target="_blank" rel="noreferrer" className="sp-btn sp-btn--lleno sp-btn--unirse">
+                      <ProveedorIcono proveedor={proveedor} size={18} /> {textoUnirse(proveedor)}
                     </a>
                     {enlace.passcode && (
                       <p className="sp-codigo"><KeyRound size={14} strokeWidth={2.4} aria-hidden="true" /> Código <b>{enlace.passcode}</b></p>
                     )}
                   </>
+                ) : enEspera ? (
+                  <p className="sp-lugar-txt">Si se libera un lugar, pasás a tenerlo y aparece acá el enlace.</p>
                 ) : (
-                  <p className="sp-lugar-txt">
-                    {enEspera ? "Si se libera un lugar, pasás a tenerlo y aparece acá el enlace." : "El enlace para entrar aparece acá en cuanto Brunela lo cargue."}
+                  <p className="sp-sin-enlace">
+                    <Video size={16} strokeWidth={2.3} aria-hidden="true" /> El enlace aparece acá antes de la clase
                   </p>
                 )}
                 <form action={cancelLiveSessionBookingAction}>
@@ -388,6 +411,9 @@ const CSS = `
 .sp-btn--lleno { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
 .sp-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
 .sp-btn--suave { height: 44px; font-size: 14px; color: var(--muted); }
+.sp-btn--unirse { height: 56px; font-size: 16px; }
+.sp-sin-enlace { display: flex; align-items: center; gap: 9px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1.5px dashed var(--pink-line); font-size: 14px; font-weight: 800; color: var(--pink-deep); line-height: 1.4; }
+.sp-sin-enlace svg { flex-shrink: 0; }
 .sp-codigo { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--linea); font-size: 13.5px; color: var(--muted); }
 .sp-codigo svg { color: var(--pink-deep); }
 .sp-codigo b { color: var(--ink); letter-spacing: .06em; font-size: 15px; }

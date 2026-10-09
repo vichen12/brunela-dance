@@ -2,10 +2,14 @@ import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 import Link from "next/link";
 import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
-import { Download, Eye, FileText, Image, MessageCircle, Music, FileType, Paperclip, PlayCircle, Upload, Video, type LucideIcon } from "lucide-react";
+import { ArrowRight, Download, Eye, FileText, Search, X, Image, MessageCircle, Music, FileType, Paperclip, PlayCircle, Upload, Video, type LucideIcon } from "lucide-react";
 import { AdminBoton, AdminCabecera, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { firmarDescarga } from "@/src/lib/documents/storage";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
+
+/** Documentos por pagina: cuatro filas de tres en escritorio. */
+const POR_PAGINA = 12;
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +52,7 @@ export default async function DocumentsPage({ searchParams }: {
   const tier = (perfil?.membership_tier ?? "none") as MembershipTier;
   const params = (await searchParams) ?? {};
   const activeCategory = typeof params.cat === "string" ? params.cat : "all";
+  const q = (typeof params.q === "string" ? params.q : "").trim();
 
   const { data: docs } = await supabase
     .from("documents")
@@ -95,9 +100,17 @@ export default async function DocumentsPage({ searchParams }: {
 
   const categories = Array.from(new Set(allDocs.map((d) => d.category_slug).filter(Boolean))) as string[];
 
-  const visible = activeCategory === "all"
+  const qMin = q.toLocaleLowerCase("es");
+  const visible = (activeCategory === "all"
     ? allDocs
-    : allDocs.filter((d) => d.category_slug === activeCategory);
+    : allDocs.filter((d) => d.category_slug === activeCategory))
+    .filter((d) => !qMin || d.title.toLocaleLowerCase("es").includes(qMin));
+
+  // Se pagina DESPUES de filtrar por categoria y por texto.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const pagina = Math.min(paginaPedida, Math.max(1, Math.ceil(visible.length / POR_PAGINA)) - 1);
+  const enPagina = visible.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+  const filtrosUrl = { q, cat: activeCategory === "all" ? undefined : activeCategory };
 
   // La clase a la que va atado cada documento, por su titulo. Con el cliente de
   // la alumna: si RLS no le deja ver la clase, el documento no la nombra.
@@ -156,12 +169,26 @@ export default async function DocumentsPage({ searchParams }: {
           />
         ) : (
           <>
+            <form method="get" action="/dashboard/documents" className="abus sd-busca" role="search">
+              {activeCategory !== "all" && <input type="hidden" name="cat" value={activeCategory} />}
+              <label className="abus-buscar">
+                <Search size={17} strokeWidth={1.8} className="abus-buscar-ico" aria-hidden="true" />
+                <input type="search" name="q" defaultValue={q} placeholder="Buscar un documento por título" aria-label="Buscar un documento por título" />
+                <button type="submit" className="abus-buscar-btn" aria-label="Buscar"><ArrowRight size={16} strokeWidth={2} /></button>
+              </label>
+              {q && (
+                <Link href={hrefConPagina("/dashboard/documents", { cat: filtrosUrl.cat })(0) as never} className="abus-quitar">
+                  <X size={13} strokeWidth={2.2} aria-hidden="true" /> Quitar búsqueda
+                </Link>
+              )}
+            </form>
+
             {categories.length > 0 && (
               <nav className="sd-filtros" aria-label="Categorías">
                 {[{ key: "all", label: "Todos" }, ...categories.map((c) => ({ key: c, label: CATEGORIA_LABEL[c] ?? c }))].map((f) => (
                   <Link
                     key={f.key}
-                    href={(f.key === "all" ? "/dashboard/documents" : `/dashboard/documents?cat=${f.key}`) as never}
+                    href={hrefConPagina("/dashboard/documents", { q, cat: f.key === "all" ? undefined : f.key })(0) as never}
                     className={"sd-filtro" + (activeCategory === f.key ? " es-activo" : "")}
                     aria-current={activeCategory === f.key ? "page" : undefined}
                   >{f.label}</Link>
@@ -172,7 +199,7 @@ export default async function DocumentsPage({ searchParams }: {
             <p className="sd-cuenta"><strong>{visible.length}</strong> {visible.length === 1 ? "documento" : "documentos"}</p>
 
             <ul className="sd-grilla">
-              {visible.map((doc) => {
+              {enPagina.map((doc) => {
                 const Icono = FILE_ICONS[doc.file_type] ?? Paperclip;
                 const clase = doc.video_slug ? claseDe.get(doc.video_slug) : null;
                 return (
@@ -203,6 +230,13 @@ export default async function DocumentsPage({ searchParams }: {
                 );
               })}
             </ul>
+            {visible.length === 0 && (
+              <div className="sd-nada">
+                <span className="sd-ico" aria-hidden="true"><Search size={20} strokeWidth={2} /></span>
+                <p><strong>Ningún documento coincide.</strong> Probá con otra palabra o elegí «Todos».</p>
+              </div>
+            )}
+            <Paginacion pagina={pagina} total={visible.length} porPagina={POR_PAGINA} href={hrefConPagina("/dashboard/documents", filtrosUrl)} />
           </>
         )}
       </section>
@@ -224,6 +258,9 @@ const CSS = `
 }
 .sd-filtro:hover { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); transform: translateY(-1px); }
 .sd-filtro.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.85); }
+.sd-busca { padding: 0; border: 0; margin: 0; }
+.sd-nada { display: flex; align-items: center; gap: 14px; padding: 22px 24px; border-radius: 24px; background: linear-gradient(120deg,#FFF1EC,#FFF7F3 55%,#FFEFE6); border: 1px solid var(--linea); font-size: 14.5px; color: var(--muted); }
+.sd-nada strong { color: var(--ink); font-weight: 900; }
 .sd-cuenta { font-size: 13.5px; font-weight: 600; color: var(--muted); }
 .sd-cuenta strong { color: var(--ink); font-weight: 900; }
 
@@ -246,7 +283,7 @@ const CSS = `
 .sd-card:hover .sd-ico--grande { transform: rotate(-6deg) scale(1.05); }
 .sd-card[data-tipo="image"] .sd-ico { background: #FFF4E8; color: var(--melocoton-deep); }
 .sd-card[data-tipo="audio"] .sd-ico { background: #FFF0EA; color: #B4533A; }
-.sd-card[data-tipo="video"] .sd-ico { background: #FFF4E8; color: var(--salvia-deep); }
+.sd-card[data-tipo="video"] .sd-ico { background: #FFF4E8; color: var(--pink-deep); }
 .sd-card[data-tipo="doc"] .sd-ico, .sd-card[data-tipo="other"] .sd-ico { background: var(--crema); color: var(--muted); }
 
 .sd-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }

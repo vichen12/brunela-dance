@@ -1,5 +1,6 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
+import { Paginacion } from "@/components/paginacion";
 import { ArrowRight, Check, ChevronDown, Pencil, Shield } from "lucide-react";
 import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
 import { AdminBuscador } from "@/components/admin-buscador";
@@ -111,7 +112,6 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   const crudas = (data ?? []) as ProfileRow[];
   const profiles = crudas;
   const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
-  const hayMasPaginas = pagina < totalPaginas - 1;
 
   const tierCounts = (todosLosTiers ?? []).reduce<Record<string, number>>((acc, p) => {
     acc[p.membership_tier] = (acc[p.membership_tier] ?? 0) + 1;
@@ -256,22 +256,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
       {/* Paginacion: en un listado de gestion se busca a UNA alumna, no se
           recorre el conjunto, asi que va de a paginas. */}
-      {(pagina > 0 || hayMasPaginas) && (
-        <nav className="au-paginas" aria-label="Páginas">
-          {pagina > 0 ? <Link href={conPlan(pagina - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
-          <span className="au-paginas-nums">
-            {Array.from({ length: totalPaginas }, (_, n) => n)
-              .filter((n) => totalPaginas <= 7 || n === 0 || n === totalPaginas - 1 || Math.abs(n - pagina) <= 1)
-              .map((n, k, arr) => (
-                <span key={n} style={{ display: "contents" }}>
-                  {k > 0 && n - arr[k - 1] > 1 && <span className="au-puntos">…</span>}
-                  <Link href={conPlan(n) as never} className={"au-num" + (n === pagina ? " es-activa" : "")} aria-current={n === pagina ? "page" : undefined}>{n + 1}</Link>
-                </span>
-              ))}
-          </span>
-          {hayMasPaginas ? <Link href={conPlan(pagina + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
-        </nav>
-      )}
+      <Paginacion pagina={pagina} total={totalFiltradas ?? 0} porPagina={POR_PAGINA} href={conPlan} />
     </main>
   );
 }
@@ -315,11 +300,6 @@ const CSS = `
 .au-nivel { padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; color: var(--melocoton-deep); background: #FFF4E8; text-transform: capitalize; }
 .au-onb { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--crema); }
 .au-onb.es-ok { color: var(--pink-deep); background: var(--rubor); }
-.au-paginas-nums { display: flex; align-items: center; gap: 6px; }
-.au-num { min-width: 40px; height: 40px; padding: 0 12px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 800; text-decoration: none; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); }
-.au-num:hover { background: var(--rubor); }
-.au-num.es-activa { background: var(--pink); border-color: var(--pink); color: #fff; }
-.au-puntos { color: var(--muted); font-weight: 800; }
 .au-ficha { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: border-color .2s, background .2s, gap .25s var(--curva), color .2s; }
 .au-ficha:hover { border-color: var(--pink); background: var(--pink); color: #fff; gap: 9px; }
 .au-editar { border-top: 1px dashed var(--linea-fuerte); margin: 0 20px; }
@@ -335,8 +315,6 @@ const CSS = `
 .au-campo .dsp-boton { border-color: var(--linea-fuerte); }
 .au-switch { padding-bottom: 8px; }
 .au-guardar { justify-self: start; }
-.au-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 20px; }
-.au-paginas-txt { padding: 6px 14px; border-radius: 99px; background: var(--rubor); font-size: 13px; font-weight: 800; color: var(--pink-deep); }
 @media (max-width: 1100px) { .au-cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
   .au-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

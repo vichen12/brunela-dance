@@ -12,7 +12,10 @@ import {
   subirMaterialDeSesionAction,
 } from "@/src/features/admin/live-material-actions";
 import { idsMaterial } from "@/src/features/studio/material-sesion";
-import { EditarSesion, Invitaciones, type LiveSession } from "@/components/admin-live-drawer";
+import { CampoEnlace, EditarSesion, Invitaciones, type LiveSession } from "@/components/admin-live-drawer";
+import { guardarEnlaceSesionAction, quitarEnlaceSesionAction } from "@/src/features/admin/live-enlace-actions";
+import { NOMBRE_PROVEEDOR, proveedorDe } from "@/src/features/studio/enlace-clase";
+import { ProveedorIcono } from "@/components/proveedor-icono";
 import { AdminDocumentUpload } from "@/components/admin-document-upload";
 import { AdminAviso } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -85,7 +88,7 @@ export default async function AdminLivePerfilPage({
       .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at, metadata")
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("live_session_access_links").select("join_url, passcode").eq("live_session_id", id).maybeSingle(),
+    supabase.from("live_session_access_links").select("join_url, passcode, provider").eq("live_session_id", id).maybeSingle(),
     supabase
       .from("live_session_bookings")
       .select("user_id, status, reserved_at, canceled_at, profiles(full_name, email, membership_tier, avatar_url)")
@@ -125,7 +128,8 @@ export default async function AdminLivePerfilPage({
   // faltaron. La lista de espera no.
   const ocupadas = reservas.filter((r) => ["reserved", "attended", "missed"].includes(r.estado)).length;
   const pct = Math.min(100, Math.round((ocupadas / Math.max(1, s.capacity)) * 100));
-  const link = (linkData as { join_url: string; passcode: string | null } | null) ?? null;
+  const link = (linkData as { join_url: string; passcode: string | null; provider: string | null } | null) ?? null;
+  const proveedor = link ? proveedorDe(link.provider, link.join_url) : null;
 
   const session: LiveSession = { ...s, bookings_count: ocupadas, access_link: link, invitations };
 
@@ -180,6 +184,68 @@ export default async function AdminLivePerfilPage({
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
+      {/* ── Enlace de la clase ──
+          Pedido de la duena: "que el link lo pueda poner cuando quiera". Va
+          arriba de todo y con su propio formulario: se carga o se cambia en
+          cualquier momento, tambien minutos antes o durante la clase, sin abrir
+          el cajon de edicion. Quien lo ve lo decide RLS: la admin y las que
+          reservaron. */}
+      <section id="enlace" className={"lp-enlace" + (link ? " tiene" : " falta")} aria-labelledby="lp-enl">
+        <span className="lp-enlace-mancha" aria-hidden="true" />
+        <div className="lp-enlace-cab">
+          <span className="lp-enlace-ico" aria-hidden="true">
+            {proveedor ? <ProveedorIcono proveedor={proveedor} size={22} /> : <Link2 size={21} strokeWidth={2.3} />}
+          </span>
+          <div className="lp-enlace-tit">
+            <h2 id="lp-enl" className="lp-h2">Enlace de la clase</h2>
+            {proveedor && link ? (
+              <p className="lp-enlace-prov">
+                <b>{NOMBRE_PROVEEDOR[proveedor]}</b>
+                <a href={link.join_url} target="_blank" rel="noreferrer" className="lp-enlace-url">{link.join_url}</a>
+              </p>
+            ) : (
+              <p className="lp-enlace-prov">Zoom, Google Meet o cualquier enlace https.</p>
+            )}
+          </div>
+          {link && (
+            <div className="lp-enlace-acc">
+              {link.passcode && <span className="lp-enlace-cod"><KeyRound size={14} strokeWidth={2.4} aria-hidden="true" /> {link.passcode}</span>}
+              <a href={link.join_url} target="_blank" rel="noreferrer" className="lp-btn lp-btn--dar">
+                <ExternalLink size={15} strokeWidth={2.4} aria-hidden="true" /> Abrir
+              </a>
+              {/* Formulario propio, hermano del de guardar: nunca uno dentro de otro. */}
+              <form action={quitarEnlaceSesionAction} className="lp-enlace-quitar">
+                <input type="hidden" name="sessionId" value={s.id} />
+                <BotonEnviar className="lp-btn lp-btn--quitar" pendingLabel="Quitando…" confirmar="¿Quitar el enlace? Las inscriptas dejan de verlo hasta que cargues otro.">
+                  <Trash2 size={15} strokeWidth={2.4} aria-hidden="true" /> Quitar enlace
+                </BotonEnviar>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {!link && (
+          <p className="lp-enlace-aviso">
+            <Clock size={16} strokeWidth={2.4} aria-hidden="true" />
+            Todavía no cargaste el enlace. Las inscriptas lo van a ver apenas lo guardes.
+          </p>
+        )}
+
+        <form action={guardarEnlaceSesionAction} className="lp-enlace-form">
+          <input type="hidden" name="sessionId" value={s.id} />
+          <div className="lp-enlace-url-campo">
+            <CampoEnlace name="joinUrl" inicial={link?.join_url ?? ""} label={link ? "Cambiar el enlace" : "Pegá el enlace"} required />
+          </div>
+          <label className="pf-campo lp-enlace-cod-campo">
+            <span className="pf-etq">Código (opcional)</span>
+            <input name="passcode" defaultValue={link?.passcode ?? ""} placeholder="123456" autoComplete="off" />
+          </label>
+          <BotonEnviar className="pf-guardar lp-enlace-guardar" pendingLabel="Guardando…">
+            <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar
+          </BotonEnviar>
+        </form>
+      </section>
+
       {/* ── Cabecera ── */}
       <section className="lp-hero">
         <div className="lp-mancha" aria-hidden="true" />
@@ -211,7 +277,7 @@ export default async function AdminLivePerfilPage({
           <div className="lp-acciones">
             {s.status === "scheduled" && link && (
               <a href={link.join_url} target="_blank" rel="noreferrer" className="lp-btn lp-btn--dar">
-                <Video size={16} strokeWidth={2.3} aria-hidden="true" /> Dar la clase
+                {proveedor ? <ProveedorIcono proveedor={proveedor} size={16} /> : null} Dar la clase
               </a>
             )}
             <EditarSesion session={session} redirectTo={aqui} conInvitaciones={false} />
@@ -396,8 +462,8 @@ export default async function AdminLivePerfilPage({
             {descripcion ? <p className="lp-desc">{descripcion}</p> : <p className="lp-nota">Sin descripción. Se agrega desde Editar.</p>}
             <dl className="lp-datos">
               <div>
-                <dt><Link2 size={14} strokeWidth={2.3} aria-hidden="true" /> Zoom</dt>
-                <dd>{link ? <a href={link.join_url} target="_blank" rel="noreferrer">{link.join_url}</a> : "Sin enlace todavía"}</dd>
+                <dt><Link2 size={14} strokeWidth={2.3} aria-hidden="true" /> Enlace</dt>
+                <dd>{link && proveedor ? <>{NOMBRE_PROVEEDOR[proveedor]} · <a href="#enlace">cambiarlo arriba</a></> : <a href="#enlace">Cargarlo arriba</a>}</dd>
               </div>
               <div>
                 <dt><KeyRound size={14} strokeWidth={2.3} aria-hidden="true" /> Código</dt>
@@ -539,6 +605,39 @@ const CSS = `
 .lp-datos dd a { color: var(--pink-deep); font-weight: 700; }
 .lp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .lp-codigo { letter-spacing: .06em; font-weight: 900; }
+
+.lp-enlace { position: relative; overflow: hidden; scroll-margin-top: 20px; display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; border-radius: 30px; background: linear-gradient(120deg, #FFF1EC, #FFF8F4 55%, #FFEFE6); border: 1.5px solid var(--pink-line); box-shadow: var(--sombra-alta); }
+.lp-enlace.falta { background: linear-gradient(120deg, #FFF4E8, #FFFAF6 60%, #FFEFE2); border-color: #F6D9C4; }
+.lp-enlace-mancha { position: absolute; right: -90px; top: -120px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255,190,160,.4), transparent 65%); pointer-events: none; }
+.lp-enlace > :not(.lp-enlace-mancha) { position: relative; }
+.lp-enlace-cab { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.lp-enlace-ico { width: 52px; height: 52px; border-radius: 18px; flex-shrink: 0; display: grid; place-items: center; background: var(--pink); color: #fff; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.lp-enlace.falta .lp-enlace-ico { background: #fff; color: var(--melocoton-deep); box-shadow: var(--sombra); }
+.lp-enlace-tit { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lp-enlace .lp-h2 { flex: none; font-size: 21px; }
+.lp-enlace-prov { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 13.5px; color: var(--muted); }
+.lp-enlace-prov b { flex-shrink: 0; color: var(--pink-deep); font-weight: 900; }
+.lp-enlace-url { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-weight: 600; text-decoration: none; }
+.lp-enlace-url:hover { color: var(--pink-deep); text-decoration: underline; }
+.lp-enlace-acc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lp-enlace-cod { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border-radius: 99px; background: #fff; border: 1px solid var(--linea); font-size: 14px; font-weight: 900; letter-spacing: .06em; color: var(--ink); }
+.lp-enlace-cod svg { color: var(--pink-deep); }
+.lp-enlace-aviso { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 18px; background: var(--melocoton); color: var(--melocoton-deep); font-size: 14px; font-weight: 800; line-height: 1.45; }
+.lp-enlace-aviso svg { flex-shrink: 0; }
+.lp-enlace-form { display: grid; grid-template-columns: minmax(0, 1fr) 200px auto; gap: 12px; align-items: start; }
+.lp-enlace-form .pf-campo input:not([type=hidden]) { width: 100%; height: 50px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14.5px; outline: none; transition: border-color .2s, box-shadow .2s; }
+.lp-enlace-form .pf-campo input:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.12); }
+.lp-enlace-guardar { height: 50px; margin-top: 23px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.lp-enlace-quitar { display: contents; }
+.lp-btn--quitar { color: var(--muted); }
+.lp-btn--quitar:hover { color: var(--pink-deep); }
+@media (max-width: 820px) {
+  .lp-enlace { padding: 18px; border-radius: 26px; }
+  .lp-enlace-form { grid-template-columns: minmax(0, 1fr); }
+  .lp-enlace-guardar { margin-top: 0; justify-content: center; }
+  .lp-enlace-acc { width: 100%; }
+  .lp-enlace-acc > * { flex: 1 1 auto; justify-content: center; }
+}
 
 @media (max-width: 1100px) {
   .lp-grilla { grid-template-columns: minmax(0, 1fr); }

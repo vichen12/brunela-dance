@@ -19,6 +19,10 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { AdminBuscador } from "@/components/admin-buscador";
 import Link from "next/link";
+import { ProveedorIcono } from "@/components/proveedor-icono";
+import { ClaseInminente } from "@/components/clase-inminente";
+import { proveedorDe, textoUnirse } from "@/src/features/studio/enlace-clase";
+import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notificaciones";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -49,6 +53,7 @@ type AccessLinkRecord = {
   live_session_id: string;
   join_url: string;
   passcode: string | null;
+  provider: string | null;
 };
 
 export default async function DashboardLivePage({ searchParams }: { searchParams?: SearchParams }) {
@@ -80,6 +85,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     { data: bookingsData },
     { data: linksData },
     { data: invitationsData },
+    cercanas,
   ] = await Promise.all([
     supabase
       .from("live_sessions")
@@ -91,13 +97,17 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
       .from("live_session_bookings")
       .select("live_session_id, status")
       .eq("user_id", user.id),
-    supabase.from("live_session_access_links").select("live_session_id, join_url, passcode"),
+    // Con el cliente DE ELLA: RLS devuelve solo los enlaces de lo que reservo.
+    supabase.from("live_session_access_links").select("live_session_id, join_url, passcode, provider"),
     // Sus invitaciones. Para una alumna la policy ya devuelve solo las propias;
     // el filtro por user_id es para la ADMIN, que las ve todas y leia
     // "Invitada por Brunela" en sesiones a las que invito a otra persona.
     // La seguridad sigue estando en la base: esto es presentacion.
-    supabase.from("live_session_invitations").select("live_session_id").eq("user_id", user.id)
+    supabase.from("live_session_invitations").select("live_session_id").eq("user_id", user.id),
+    // Para el cartel "Tu clase empieza en X min" (memoizado: el layout ya lo pidio).
+    getMisClasesCercanas(user.id),
   ]);
+  const inminente = cercanas.find((c) => esInminente(c)) ?? null;
 
   // ── Vitrina: TODAS las sesiones, tambien las de planes que no tiene ──
   // Pedido de la duena: que a todas les aparezcan todas las clases en vivo, y
@@ -214,6 +224,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     const booking = bookings.get(session.id);
     const accessLink = links.get(session.id);
     const isReserved = booking?.status === "reserved" || booking?.status === "waitlisted";
+    // Solo con lugar (reserved): en lista de espera RLS tampoco le da el enlace.
+    const conLugar = booking?.status === "reserved";
+    const prov = accessLink ? proveedorDe(accessLink.provider, accessLink.join_url) : null;
     const bloqueada = bloqueadas.has(session.id);
     const f = partesFecha(session.starts_at, session.session_timezone);
     return (
@@ -248,7 +261,10 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
             <li><Users size={14} strokeWidth={2} aria-hidden="true" /> {session.capacity} lugares</li>
             {/* La regla real: el enlace se revela al reservar, no a una hora
                 fija. No hay ventana de minutos en ningun lado. */}
-            <li><Video size={14} strokeWidth={2} aria-hidden="true" /> {accessLink && isReserved ? "Enlace disponible" : "El enlace aparece al reservar"}</li>
+            <li>
+              {prov && conLugar ? <ProveedorIcono proveedor={prov} size={14} /> : <Video size={14} strokeWidth={2} aria-hidden="true" />}{" "}
+              {accessLink && conLugar && prov ? (prov === "otro" ? "Enlace listo" : `Por ${prov === "meet" ? "Google Meet" : "Zoom"}`) : conLugar ? "El enlace aparece acá antes de la clase" : "El enlace aparece al reservar"}
+            </li>
           </ul>
 
           {!pasada && (
@@ -257,9 +273,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                   incluida: el enlace aparece al reservar. La profesora entra a
                   dar la clase desde /admin/live, no desde aca. (RLS le deja ver
                   a la admin todos los enlaces; por eso se condiciona a la reserva.) */}
-              {accessLink && isReserved && (
+              {accessLink && conLugar && prov && (
                 <a className="sv-entrar" href={accessLink.join_url} rel="noreferrer" target="_blank">
-                  <Video size={16} strokeWidth={2.2} aria-hidden="true" /> Entrar a la clase
+                  <ProveedorIcono proveedor={prov} size={16} /> {textoUnirse(prov)}
                 </a>
               )}
               {bloqueada ? (
@@ -286,7 +302,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               )}
             </div>
           )}
-          {!pasada && isReserved && accessLink?.passcode && (
+          {!pasada && conLugar && accessLink?.passcode && (
             <p className="sv-pass">Código de acceso: <strong>{accessLink.passcode}</strong></p>
           )}
         </div>
@@ -306,6 +322,18 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
 
         <AdminAviso mensaje={success} tono="ok" />
         <AdminAviso mensaje={error} tono="error" />
+
+        {inminente && (
+          <ClaseInminente
+            titulo={inminente.titulo}
+            inicio={inminente.inicio}
+            fin={inminente.fin}
+            joinUrl={inminente.joinUrl}
+            proveedor={inminente.proveedor}
+            passcode={inminente.passcode}
+            perfil={`/dashboard/live/${inminente.slug}`}
+          />
+        )}
 
         {proximas.length > 0 && (
           <AdminCifras items={[
@@ -328,6 +356,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                 const fm = partesFecha(sesion.starts_at, sesion.session_timezone);
                 const link = links.get(sesion.id);
                 const espera = bookings.get(sesion.id)?.status === "waitlisted";
+                const provM = link ? proveedorDe(link.provider, link.join_url) : null;
                 const hora = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || "Europe/Madrid" }).format(new Date(sesion.starts_at));
                 return (
                   <li key={sesion.id} className="mis-item">
@@ -342,10 +371,12 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                         <Clock size={12} strokeWidth={2.4} aria-hidden="true" /> {hora} (Madrid)
                         <span className={"mis-estado" + (espera ? " es-espera" : "")}>{espera ? "En lista de espera" : "Lugar reservado"}</span>
                       </p>
+                      {!espera && !link && <p className="mis-sin-enlace">El enlace aparece acá antes de la clase</p>}
+                      {!espera && link?.passcode && <p className="mis-sin-enlace">Código <b>{link.passcode}</b></p>}
                     </div>
-                    {link && !espera ? (
+                    {link && !espera && provM ? (
                       <a href={link.join_url} target="_blank" rel="noreferrer" className="mis-entrar">
-                        <Video size={15} strokeWidth={2.2} aria-hidden="true" /> Entrar
+                        <ProveedorIcono proveedor={provM} size={15} /> {textoUnirse(provM)}
                       </a>
                     ) : (
                       <Link href={`/dashboard/live/${sesion.slug}` as never} className="mis-ver">Ver</Link>
@@ -438,7 +469,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                 <div className="sv-cuerpo">
                   <span className="sv-estado es-ok"><Check size={12} strokeWidth={3} /> Reservaste tu lugar</span>
                   <p className="sv-titulo">Barra a tierra</p>
-                  <span className="sv-entrar"><Video size={16} strokeWidth={2.2} /> Entrar a la clase</span>
+                  <span className="sv-entrar"><Video size={16} strokeWidth={2.2} /> Unirse a la clase</span>
                 </div>
               </div>
             }
@@ -533,6 +564,8 @@ const CSS = `
 .mis-estado { padding: 2px 9px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 11.5px; font-weight: 800; }
 .mis-estado.es-espera { background: #FFF4E8; color: var(--melocoton-deep); }
 .mis-entrar, .mis-ver { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 99px; font-size: 13.5px; font-weight: 800; text-decoration: none; transition: transform .25s var(--curva); }
+.mis-sin-enlace { margin-top: 3px; font-size: 12.5px; font-weight: 700; color: var(--pink-deep); }
+.mis-sin-enlace b { letter-spacing: .05em; color: var(--ink); }
 .mis-entrar { background: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
 .mis-ver { background: #fff; color: var(--ink); border: 1.5px solid var(--linea-fuerte); }
 .mis-entrar:hover, .mis-ver:hover { transform: translateY(-1px); }

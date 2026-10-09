@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-precio";
 import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,9 @@ export const dynamic = "force-dynamic";
  *
  * El precio esta en /admin/precios, con la comprobacion contra Stripe.
  */
+
+/** Packs por pagina del listado. */
+const POR_PAGINA = 10;
 
 /** Un interruptor que es un formulario de una linea. */
 function Toggle({ id, campo, valor, activo, inactivo, icono }: {
@@ -117,6 +121,10 @@ export default async function AdminPacksPage({
   const publicados = packs.filter((p) => p.is_published).length;
   const enPortada = packs.filter((p) => p.show_on_landing).length;
   const vendidos = packs.reduce((a, p) => a + p.compras, 0);
+  // Las cifras de arriba cuentan TODOS los packs; la grilla, solo la pagina.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const pagina = Math.min(paginaPedida, Math.max(1, Math.ceil(packs.length / POR_PAGINA)) - 1);
+  const enPagina = packs.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
   const euros = (c: number) => (c / 100).toLocaleString("es-ES", { minimumFractionDigits: c % 100 === 0 ? 0 : 2 });
 
   const formNuevo = (
@@ -208,7 +216,7 @@ export default async function AdminPacksPage({
           </AdminNueva>
 
           <ul className="pk-grilla">
-            {packs.map((p) => {
+            {enPagina.map((p) => {
               // ⚠️ Se mira el price del MODO ACTIVO, no "alguno de los dos".
               //    Con solo el de prueba, en produccion la alumna ve el pack y
               //    al comprarlo recibe un error.
@@ -257,6 +265,7 @@ export default async function AdminPacksPage({
               );
             })}
           </ul>
+          <Paginacion pagina={pagina} total={packs.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/packs", {})} />
         </>
       )}
     </main>
@@ -312,7 +321,7 @@ const CSS = `
 .pk-cuerpo { display: flex; flex-direction: column; flex: 1; padding: 16px 20px 20px; }
 .pk-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .pk-estado { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 800; color: var(--melocoton-deep); background: #FFEBDF; }
-.pk-estado.es-pub { color: var(--salvia-deep); background: var(--salvia); }
+.pk-estado.es-pub { color: var(--pink-deep); background: var(--rubor); }
 .pk-punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pk-tag { font-size: 12.5px; font-weight: 800; color: #A0472F; padding: 5px 12px; border-radius: 99px; background: #FFF0EA; }
 .pk-titulo { font-weight: 900; font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); }
@@ -322,7 +331,7 @@ const CSS = `
 .pk-stripe { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 10px; padding: 9px 13px; border-radius: 16px; font-size: 13px; font-weight: 700; line-height: 1.45; }
 .pk-stripe svg { flex-shrink: 0; }
 .pk-stripe a { margin-left: auto; font-weight: 800; color: inherit; background: #fff; padding: 3px 11px; border-radius: 99px; text-decoration: none; }
-.pk-stripe.es-ok { background: #FFF4E8; color: var(--salvia-deep); }
+.pk-stripe.es-ok { background: #FFF4E8; color: var(--pink-deep); }
 .pk-stripe.es-falta { background: #FFF4E8; color: #8A4A2E; }
 .pk-stripe.es-mal { background: var(--pink-wash); color: var(--pink-deep); }
 .pk-pie { margin-top: auto; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -334,8 +343,8 @@ const CSS = `
 }
 .pk .ad-editar svg { color: var(--pink-deep); }
 .pk .ad-editar:hover, .pk-toggle:hover { background: var(--rubor); border-color: var(--pink-line); color: var(--ink); transform: translateY(-2px); }
-.pk-toggle.es-on { border-color: #CFE3C9; background: var(--salvia); color: var(--salvia-deep); }
-.pk-toggle.es-on:hover { background: #DCEBD6; color: var(--salvia-deep); border-color: #BFD9B8; }
+.pk-toggle.es-on { border-color: var(--pink-line); background: var(--rubor); color: var(--pink-deep); }
+.pk-toggle.es-on:hover { background: var(--pink-wash); color: var(--pink-deep); border-color: var(--pink); }
 
 @media (max-width: 820px) {
   .pk-nuevo { grid-template-columns: minmax(0, 1fr); }

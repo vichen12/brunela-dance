@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Paginacion } from "@/components/paginacion";
 import { ArrowRight, CalendarDays, Check, ListChecks, Lock, Sparkles, Star } from "lucide-react";
 import { AdminBoton, AdminCabecera, AdminCifras, AdminGuia } from "@/components/admin-ui";
 import { AdminBuscador } from "@/components/admin-buscador";
@@ -371,13 +372,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
               );
             })}
           </ul>
-          {totalPaginas > 1 && (
-            <nav className="sp-paginas" aria-label="Páginas">
-              {paginaReal > 0 ? <Link href={conPagina(paginaReal - 1) as never} className="ad-btn">← Anteriores</Link> : <span />}
-              <span className="sp-paginas-txt">Página {paginaReal + 1} de {totalPaginas}</span>
-              {paginaReal < totalPaginas - 1 ? <Link href={conPagina(paginaReal + 1) as never} className="ad-btn">Siguientes →</Link> : <span />}
-            </nav>
-          )}
+          <Paginacion pagina={paginaReal} total={filtrados.length} porPagina={POR_PAGINA} href={conPagina} />
           </>
         )}
       </section>
@@ -386,8 +381,6 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
 }
 
 const CSS = `
-.sp-paginas { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 8px; }
-.sp-paginas-txt { font-size: 13px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 99px; background: var(--rubor); }
 .sp { padding-bottom: 80px; }
 .sp-shell { max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 40px) clamp(16px, 3.4vw, 48px) 0; display: flex; flex-direction: column; gap: 18px; }
 .sp .ad-mast { padding-bottom: 4px; }

@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/src/features/auth/guards";
 import { PanelControlAdmin } from "@/components/panel-control-admin";
 import { cargarPanelEstudio, fechaDelPanel } from "@/src/features/admin/panel-estudio";
+import { cargarRecordatoriosAdmin } from "@/src/features/admin/recordatorios";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminOverviewPage() {
   const { profile } = await requireAdmin();
   const nombre = profile?.full_name?.trim().split(/\s+/)[0] || null;
-  const datos = await cargarPanelEstudio();
+  const [datos, recordatorios] = await Promise.all([cargarPanelEstudio(), cargarRecordatoriosAdmin()]);
 
   return (
     <PanelControlAdmin
-      datos={{ ...datos, nombre, fecha: fechaDelPanel() }}
+      datos={{ ...datos, recordatorios, nombre, fecha: fechaDelPanel() }}
       secundario={{ href: "/admin/analiticas", label: "Analíticas" }}
     />
   );

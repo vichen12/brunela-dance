@@ -7,8 +7,12 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { AdminAviso, AdminCabecera, AdminCifras } from "@/components/admin-ui";
 import { Bell, Heart, Megaphone, Send } from "lucide-react";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
 
 export const dynamic = "force-dynamic";
+
+/** Anuncios por pagina del historial. */
+const POR_PAGINA = 10;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -104,6 +108,12 @@ export default async function AdminAnnouncementsPage({
   const announcements = (data ?? []) as Announcement[];
   const active = announcements.filter((a) => a.is_active).length;
 
+  // Las cifras cuentan el historial entero; la lista muestra una pagina.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const pagina = Math.min(paginaPedida, Math.max(1, Math.ceil(announcements.length / POR_PAGINA)) - 1);
+  const enPagina = announcements.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+  const hrefPagina = hrefConPagina("/admin/announcements", {});
+
   return (
     <main className="an">
       <style>{CSS}</style>
@@ -174,7 +184,7 @@ export default async function AdminAnnouncementsPage({
       </section>
 
       {/* Announcement list */}
-      <section>
+      <section id="historial">
         <h2 className="an-h2 an-h2--lista">Historial <span>{announcements.length}</span></h2>
         {announcements.length === 0 ? (
           <div className="an-vacio">
@@ -188,7 +198,7 @@ export default async function AdminAnnouncementsPage({
           </div>
         ) : (
           <ul className="an-lista">
-            {announcements.map((a) => {
+            {enPagina.map((a) => {
               const tierClase = TIER_STYLE[a.tier_target] ?? TIER_STYLE.all;
               const pubDate = new Date(a.published_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
               const isExpired = a.expires_at ? new Date(a.expires_at) < new Date() : false;
@@ -236,6 +246,7 @@ export default async function AdminAnnouncementsPage({
             })}
           </ul>
         )}
+        <Paginacion pagina={pagina} total={announcements.length} porPagina={POR_PAGINA} href={(n) => hrefPagina(n) + "#historial"} />
       </section>
     </main>
   );
@@ -276,7 +287,7 @@ const CSS = `
 .an-plan--corps { background: #fff; color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .an-plan--solista { background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line); }
 .an-plan--principal { background: var(--pink); color: #fff; }
-.an-chip--ok { background: var(--salvia); color: var(--salvia-deep); }
+.an-chip--ok { background: var(--rubor); color: var(--pink-deep); }
 .an-chip--off { background: #FFF4E8; color: var(--melocoton-deep); }
 .an-contenido { font-size: 14px; line-height: 1.6; color: var(--ink); margin-bottom: 8px; overflow-wrap: anywhere; }
 .an-fecha { font-size: 12.5px; color: var(--muted); }

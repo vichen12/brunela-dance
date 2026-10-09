@@ -8,6 +8,8 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario, ultimaVista } from "@/src/features/studio/progress";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
+import { ClaseInminente } from "@/components/clase-inminente";
+import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notificaciones";
 
 export const dynamic = "force-dynamic";
 
@@ -138,6 +140,7 @@ export default async function DashboardPage() {
     { data: announcementsData },
     { data: paraHoy },
     { data: invitacionesData },
+    cercanas,
   ] = await Promise.all([
     // El progreso viene del helper memoizado: antes esta pantalla lo pedia dos
     // veces y el layout una tercera. Ahora es una sola consulta por request.
@@ -164,7 +167,11 @@ export default async function DashboardPage() {
     //    user_id: hacerlo sugeriria que la seguridad esta aca, y esta en la base.
     supabase.from("live_session_invitations")
       .select("live_session_id, live_sessions(id, slug, title_i18n, starts_at, status, session_timezone)"),
+    // Sus clases reservadas cercanas, para el cartel "Tu clase empieza en X
+    // min". Memoizado: la campanita del layout ya lo pidio en este render.
+    getMisClasesCercanas(user.id),
   ]);
+  const inminente = cercanas.find((c) => esInminente(c)) ?? null;
 
 
   // "Continua viendo" sale de la misma lista, sin otra consulta.
@@ -228,6 +235,20 @@ export default async function DashboardPage() {
 
         {/* Invitaciones y anuncios viven en la campanita de arriba (layout):
             apilados aca empujaban el saludo hasta la mitad de la pantalla. */}
+
+        {/* Clase reservada que empieza en menos de 1 h o esta en curso: va
+            primero, con el boton para unirse. */}
+        {inminente && (
+          <ClaseInminente
+            titulo={inminente.titulo}
+            inicio={inminente.inicio}
+            fin={inminente.fin}
+            joinUrl={inminente.joinUrl}
+            proveedor={inminente.proveedor}
+            passcode={inminente.passcode}
+            perfil={`/dashboard/live/${inminente.slug}`}
+          />
+        )}
 
         {/* Saludo */}
         <header className="ini-hola">

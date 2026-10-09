@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { Mail, Search } from "lucide-react";
 import { AdminCabecera } from "@/components/admin-ui";
+import { Paginacion } from "@/components/paginacion";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 
@@ -30,8 +31,8 @@ type DmRoom = {
 
 const BASE = "/admin/mensajes";
 
-/** Alumnas por tanda en la barra lateral de mensajes privados. */
-const POR_PAGINA_MIEMBROS = 40;
+/** Alumnas por pagina en la barra lateral de mensajes privados. */
+const POR_PAGINA_MIEMBROS = 15;
 
 export default async function AdminMensajesPage({ searchParams }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -40,30 +41,29 @@ export default async function AdminMensajesPage({ searchParams }: {
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
   const selectedUserId = typeof params.user === "string" ? params.user : null;
-  // Barra lateral de alumnas: acumulativa, como la biblioteca. Se recorre
-  // buscando a alguien, asi que perder las anteriores al pedir mas seria peor.
+  // Barra lateral de alumnas: paginas numeradas, como el resto del sistema
+  // (antes era "Ver más" acumulativo). Para encontrar a alguien esta el
+  // buscador; las paginas son para recorrer.
   const paginaMiembros = Math.max(0, Math.min(200, Number(params.pmiembros) || 0));
   const buscar = (typeof params.buscar === "string" ? params.buscar : "").trim().slice(0, 80);
   const fPlan = ["none", "corps_de_ballet", "solista", "principal"].includes(String(params.plan)) ? String(params.plan) : "";
 
   let consultaMiembros = supabase
     .from("profiles")
-    .select("id, full_name, email, membership_tier, is_admin")
+    .select("id, full_name, email, membership_tier, is_admin", { count: "exact" })
     .eq("is_admin", false);
   if (buscar) {
     const t = buscar.replace(/[,()%]/g, " ");
     consultaMiembros = consultaMiembros.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
   }
   if (fPlan) consultaMiembros = consultaMiembros.eq("membership_tier", fPlan as "none");
-  const { data: allProfiles } = await consultaMiembros
+  const { data: allProfiles, count: totalMiembros } = await consultaMiembros
     .order("created_at", { ascending: false })
     // Fase D: la barra lateral traia TODAS las alumnas del estudio en cada
-    // carga. Se pide una de mas para saber si hay siguiente sin contar.
-    .range(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
+    // carga. Ahora trae solo la pagina, y `count` dice cuantas hay en total.
+    .range(paginaMiembros * POR_PAGINA_MIEMBROS, paginaMiembros * POR_PAGINA_MIEMBROS + POR_PAGINA_MIEMBROS - 1);
 
-  const crudas = (allProfiles ?? []) as Profile[];
-  const hayMasMiembros = crudas.length > POR_PAGINA_MIEMBROS * (paginaMiembros + 1);
-  const members = crudas.slice(0, POR_PAGINA_MIEMBROS * (paginaMiembros + 1));
+  const members = (allProfiles ?? []) as Profile[];
   // La conversacion abierta sigue abierta aunque la busqueda no la incluya:
   // si no, escribir en el buscador cerraba el chat que estaba leyendo.
   if (selectedUserId && !members.some((m) => m.id === selectedUserId)) {
@@ -154,9 +154,8 @@ export default async function AdminMensajesPage({ searchParams }: {
         <div className="dm-lateral-cab">
           <p className="dm-eyebrow">Mensajes directos</p>
           <p className="dm-lateral-titulo">Alumnas</p>
-          {/* "cargadas" y no "alumnas" a secas: la lista esta paginada, asi
-              que este numero es lo que se ve, no el total del estudio. */}
-          <p className="dm-cuenta">{members.length} {hayMasMiembros ? "cargadas" : members.length === 1 ? "alumna" : "alumnas"}{filtrando ? " encontradas" : ""}</p>
+          {/* El total, no la pagina: `count` cuenta todas las que coinciden. */}
+          <p className="dm-cuenta">{totalMiembros ?? members.length} {(totalMiembros ?? members.length) === 1 ? "alumna" : "alumnas"}{filtrando ? " encontradas" : ""}</p>
           <form method="get" action={BASE} className="dm-buscar" role="search">
             {activeUserId && <input type="hidden" name="user" value={activeUserId} />}
             {fPlan && <input type="hidden" name="plan" value={fPlan} />}
@@ -187,7 +186,7 @@ export default async function AdminMensajesPage({ searchParams }: {
             const active = m.id === activeUserId;
             const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
             return (
-              <Link key={m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+              <Link key={m.id} href={conFiltros({ user: m.id, pmiembros: paginaMiembros > 0 ? String(paginaMiembros) : "" }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
                 <span className="dm-ini">{name[0]?.toUpperCase()}</span>
                 <span className="dm-persona-txt">
                   <span className="dm-persona-nombre">{name}</span>
@@ -196,12 +195,19 @@ export default async function AdminMensajesPage({ searchParams }: {
               </Link>
             );
           })}
-          {hayMasMiembros && (
-            <Link href={conFiltros({ pmiembros: String(paginaMiembros + 1), user: activeUserId ?? "" }) as never} className="dm-mas">
-              Ver más alumnas
-            </Link>
-          )}
         </nav>
+        {(totalMiembros ?? 0) > POR_PAGINA_MIEMBROS && (
+          <div className="dm-paginas">
+            <Paginacion
+              compacta
+              etiqueta="Páginas de alumnas"
+              pagina={paginaMiembros}
+              total={totalMiembros ?? 0}
+              porPagina={POR_PAGINA_MIEMBROS}
+              href={(n) => conFiltros({ pmiembros: n > 0 ? String(n) : "", user: activeUserId ?? "" })}
+            />
+          </div>
+        )}
       </aside>
 
       <div className="dm-chat">
@@ -268,6 +274,7 @@ const CSS_DM = `
 .dm-persona.es-activa .dm-persona-nombre { font-weight: 900; }
 .dm-persona-plan { align-self: flex-start; padding: 1px 8px; border-radius: 99px; background: var(--rubor); font-size: 11.5px; font-weight: 800; color: var(--pink-deep); }
 .dm-mas { margin: 8px 4px 4px; height: 42px; display: grid; place-items: center; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 800; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: background .2s, border-color .2s; }
+.dm-paginas { padding: 10px 12px 12px; border-top: 1px solid var(--linea); display: flex; justify-content: center; }
 .dm-mas:hover { background: var(--rubor); border-color: var(--pink-line); }
 .dm-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; background: radial-gradient(700px 300px at 100% 0%, rgba(255,226,211,.35), transparent 60%), #fff; }
 .dm-cab { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--linea); background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); flex-shrink: 0; }
@@ -283,7 +290,7 @@ const CSS_DM = `
 .dm-vacio-titulo { font-weight: 900; font-size: 23px; letter-spacing: -0.02em; color: var(--ink); }
 @media (max-width: 900px) {
   .dm { flex-direction: column; height: auto; min-height: 0; }
-  .dm-lateral { width: auto; border-right: 0; border-bottom: 1px solid var(--linea); max-height: 340px; }
+  .dm-lateral { width: auto; border-right: 0; border-bottom: 1px solid var(--linea); max-height: 520px; }
   .dm-chat { height: 72vh; min-height: 460px; }
 }
 @media (max-width: 640px) { .dm-cab { padding: 12px 16px; } .dm-perfil { padding: 8px 12px; } }

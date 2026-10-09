@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Saludo } from "@/components/saludo";
 import { HoraSesion } from "@/components/hora-sesion";
+import { RecordatoriosAdmin } from "@/components/recordatorios-admin";
+import type { RecordatoriosAdminDatos } from "@/src/features/admin/recordatorios";
 
 /*
  * Panel del estudio: la portada del dashboard para una cuenta admin.
@@ -59,6 +61,8 @@ export type DatosPanel = {
   ultimas: { id: string; nombre: string | null; correo?: string | null; tier: TierClave; cuando: string }[];
   clases: { id: string; titulo: string; estado: string; portada: string | null; minutos: number | null }[];
   enVivo: { id: string; titulo: string; iso: string; zona: string; reservas: number }[];
+  /** Enlaces sin cargar, la clase de hoy y las que faltan completar. */
+  recordatorios?: RecordatoriosAdminDatos;
 };
 
 /** color: relleno de la barra y marcas. tinta: texto, con contraste sobre claro. chip: clase de la pastilla. */
@@ -151,7 +155,7 @@ export function PanelControlAdmin({
 
   const atajos = [
     { href: "/admin/videos?nueva=1#nueva", label: "Subir una clase",    sub: "Video, categoría y planes", Icono: Upload },
-    { href: "/admin/live",                 label: "Programar en vivo",  sub: "Sesión por Zoom", Icono: Video },
+    { href: "/admin/live",                 label: "Programar en vivo",  sub: "Sesión por Zoom o Meet", Icono: Video },
     { href: "/admin/announcements",        label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora`, Icono: Megaphone },
     { href: "/admin/programs",             label: "Armar un plan",      sub: "Planes de trabajo por día", Icono: ListChecks },
   ];
@@ -183,6 +187,13 @@ export function PanelControlAdmin({
             </Link>
           </div>
         </motion.header>
+
+        {/* ── Recordatorios: lo que hay que hacer ya con las clases en vivo ── */}
+        {datos.recordatorios && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1, ease: SUAVE }} className="pc-recordatorios">
+            <RecordatoriosAdmin datos={datos.recordatorios} volverA="/admin/live" />
+          </motion.div>
+        )}
 
         {/* ── Cifras ── */}
         <motion.div className="pc-cifras" variants={grupo} initial="oculto" animate="visible">
@@ -432,6 +443,7 @@ export function PanelControlAdmin({
 
 const CSS = `
 .pc { display: flex; flex-direction: column; gap: 22px; }
+.pc-recordatorios .rca { margin-bottom: 0; }
 .pc a:focus { outline: none; }
 .pc a:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230,79,85,.22); }
 

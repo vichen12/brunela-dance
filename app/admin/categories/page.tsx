@@ -3,6 +3,7 @@ import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva, AdminVacio } from "@
 import { Desplegable } from "@/components/desplegable";
 import { AutoDireccion } from "@/components/auto-direccion";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -22,6 +23,9 @@ type CategoryRecord = {
   sort_order: number;
   is_active: boolean;
 };
+
+/** Categorias por pagina: cuatro filas de tres. */
+const POR_PAGINA = 12;
 
 const PLANES = [
   { value: "none", label: "Todas las alumnas" },
@@ -97,6 +101,13 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
     .sort((x, y) => Number(y.is_active) - Number(x.is_active) || x.sort_order - y.sort_order);
   const activas = categories.filter((c) => c.is_active).length;
 
+  // Se pagina en memoria DESPUES de ordenar: el orden (activas primero) se
+  // arma aca y no en la consulta, asi que paginar en SQL lo romperia.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const totalPaginas = Math.max(1, Math.ceil(categories.length / POR_PAGINA));
+  const pagina = Math.min(paginaPedida, totalPaginas - 1);
+  const enPagina = categories.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+
   return (
     <main className="cat">
       <style>{CSS}</style>
@@ -154,7 +165,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
             <span className="cat-cuenta-chip">{categories.length - activas} {categories.length - activas === 1 ? "inactiva" : "inactivas"}</span>
           </p>
           <ul className="cat-grilla">
-            {categories.map((cat) => (
+            {enPagina.map((cat) => (
               <li key={cat.id} className={"cat-card" + (cat.is_active ? "" : " es-inactiva")}>
                 <div className="cat-portada">
                   {cat.cover_image_url ? <img src={cat.cover_image_url} alt="" /> : <span className="cat-inicial" aria-hidden="true">{(cat.name_i18n.es ?? cat.slug)[0]?.toUpperCase()}</span>}
@@ -202,6 +213,7 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
               </li>
             ))}
           </ul>
+          <Paginacion pagina={pagina} total={categories.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/categories", { q })} />
         </>
       )}
     </main>
@@ -247,7 +259,7 @@ const CSS = `
 
 .cat-cuenta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .cat-cuenta-chip { font-size: 12.5px; font-weight: 800; color: var(--muted); background: #F6EEEA; padding: 5px 12px; border-radius: 99px; }
-.cat-cuenta-chip.es-on { color: var(--salvia-deep); background: var(--salvia); }
+.cat-cuenta-chip.es-on { color: var(--pink-deep); background: var(--rubor); }
 .cat-grilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 18px; align-items: start; }
 .cat-card {
   border: 1px solid var(--linea); border-radius: 28px; background: #fff; overflow: hidden; box-shadow: var(--sombra);
@@ -263,7 +275,7 @@ const CSS = `
 }
 .cat-card:nth-child(4n+2) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,226,211,.95), transparent 70%), linear-gradient(140deg, #FFF4E8 0%, #FFE6D6 100%); }
 .cat-card:nth-child(4n+3) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,222,204,.95), transparent 70%), linear-gradient(140deg, #FFF8F2 0%, #FFE6D6 100%); }
-.cat-card:nth-child(4n+4) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(234,220,240,.95), transparent 70%), linear-gradient(140deg, #FBF6FC 0%, #F1E6F5 100%); }
+.cat-card:nth-child(4n+4) .cat-portada { background: radial-gradient(140px 100px at 85% 10%, rgba(255,205,195,.9), transparent 70%), linear-gradient(140deg, #FFF6F3 0%, #FDE3E0 100%); }
 .cat-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cat-inicial {
   width: 58px; height: 58px; border-radius: 20px; display: grid; place-items: center;

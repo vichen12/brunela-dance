@@ -4192,7 +4192,7 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .sistema .ad-vacio { border-radius: 28px; border-color: var(--linea-fuerte); background: var(--crema); }
 .sistema .ad-vacio-titulo { font-weight: 900; letter-spacing: -0.02em; }
 .sistema .ad-aviso { border-radius: 18px; padding: 14px 18px; }
-.sistema .ad-aviso--ok { background: var(--salvia); color: var(--salvia-deep); border-color: #CFE3C9; }
+.sistema .ad-aviso--ok { background: var(--rubor); color: var(--pink-deep); border-color: var(--pink-line); }
 
 .sistema .ad-editar:hover { background: var(--pink); color: #fff; border-color: var(--pink); }
 
@@ -4338,3 +4338,7 @@ a.nt-item:hover { background: var(--crema); }
 .nt-vacio { padding: 30px 24px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.5; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .nt-vacio-ico { width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
 @media (max-width: 767px) { .nt { margin-top: 12px; } }
+
+/* Wordmark de la marca en los menus laterales. */
+.sb-marca-wm { display: block; height: 40px; width: auto; max-width: 170px; object-fit: contain; object-position: left center; }
+.sb-marca > span:not(.sb-marca-ico) { display: flex; flex-direction: column; gap: 3px; }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Paginacion } from "@/components/paginacion";
 import { Play, Lock, Search, ArrowRight, X, Clock, BarChart3, Sparkles, CheckCircle2, Library } from "lucide-react";
 import { Movimiento, Revelar, Aparecer, Grilla, Item, Pildoras, SelectAuto } from "@/components/biblioteca-motion";
 import { requireUser } from "@/src/features/auth/guards";
@@ -749,26 +750,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
           </Grilla>
         )}
 
-        {totalPaginas > 1 && (
-          <nav className="bib-paginas" aria-label="Páginas">
-            {paginaReal > 0
-              ? <Link href={enlace({ pagina: paginaReal - 1 > 0 ? String(paginaReal - 1) : null }) as never} className="bib-pag-flecha">← Anteriores</Link>
-              : <span className="bib-pag-flecha es-off">← Anteriores</span>}
-            <span className="bib-pag-nums">
-              {Array.from({ length: totalPaginas }, (_, n) => n)
-                .filter((n) => totalPaginas <= 7 || n === 0 || n === totalPaginas - 1 || Math.abs(n - paginaReal) <= 1)
-                .map((n, k, arr) => (
-                  <span key={n} style={{ display: "contents" }}>
-                    {k > 0 && n - arr[k - 1] > 1 && <span className="bib-pag-puntos">…</span>}
-                    <Link href={enlace({ pagina: n > 0 ? String(n) : null }) as never} className={"bib-pag-num" + (n === paginaReal ? " es-activa" : "")} aria-current={n === paginaReal ? "page" : undefined}>{n + 1}</Link>
-                  </span>
-                ))}
-            </span>
-            {paginaReal < totalPaginas - 1
-              ? <Link href={enlace({ pagina: String(paginaReal + 1) }) as never} className="bib-pag-flecha">Siguientes →</Link>
-              : <span className="bib-pag-flecha es-off">Siguientes →</span>}
-          </nav>
-        )}
+        <Paginacion pagina={paginaReal} total={visible.length} porPagina={POR_PAGINA} href={(n) => enlace({ pagina: n > 0 ? String(n) : null })} />
       </section>
       </Movimiento>
     </main>
@@ -792,7 +774,7 @@ const CSS_BIBLIOTECA = `
 .bib-aviso {
   display: flex; align-items: center; gap: 12px;
   border-radius: var(--radio-chico); padding: 12px 16px; margin-bottom: 18px; font-size: 14px; font-weight: 600; line-height: 1.55;
-  background: var(--salvia); color: var(--salvia-deep); border: 1px solid #D3E6CD;
+  background: var(--rubor); color: var(--pink-deep); border: 1px solid var(--pink-line);
 }
 .bib-aviso-ico {
   width: 34px; height: 34px; border-radius: 12px; flex-shrink: 0; background: #fff;
@@ -992,8 +974,8 @@ const CSS_BIBLIOTECA = `
 .bib-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .bib-meta svg { color: #C9A79E; }
 .bib-meta-pct {
-  margin-left: auto; padding: 3px 10px; border-radius: 99px; background: var(--salvia);
-  color: var(--salvia-deep); font-size: 12px; font-weight: 800;
+  margin-left: auto; padding: 3px 10px; border-radius: 99px; background: var(--rubor);
+  color: var(--pink-deep); font-size: 12px; font-weight: 800;
 }
 .bib-prog { display: block; margin-top: 12px; height: 7px; border-radius: 99px; background: var(--rubor); overflow: hidden; }
 .bib-prog span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #F48A7A, var(--pink)); }
@@ -1013,16 +995,6 @@ const CSS_BIBLIOTECA = `
 .bib-vacio-titulo { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 22px; letter-spacing: -0.015em; color: var(--ink); }
 .bib-vacio-sub { max-width: 44ch; font-size: 14.5px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; }
 .bib-mas { display: flex; justify-content: center; padding-top: 40px; }
-.bib-paginas { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding-top: 40px; }
-.bib-pag-nums { display: flex; align-items: center; gap: 6px; }
-.bib-pag-num { min-width: 42px; height: 42px; padding: 0 12px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 800; text-decoration: none; color: var(--ink); background: #fff; border: 1.5px solid var(--linea-fuerte); transition: background .2s, border-color .2s, transform .25s var(--curva); }
-.bib-pag-num:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-1px); }
-.bib-pag-num.es-activa { background: var(--pink); border-color: var(--pink); color: #fff; box-shadow: 0 10px 20px -12px rgba(230,79,85,.9); }
-.bib-pag-puntos { color: var(--muted); font-weight: 800; padding: 0 2px; }
-.bib-pag-flecha { height: 42px; padding: 0 18px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 800; text-decoration: none; color: var(--ink); background: var(--rubor); transition: background .2s; }
-.bib-pag-flecha:hover { background: var(--pink-wash); }
-.bib-pag-flecha.es-off { opacity: .4; pointer-events: none; }
-@media (max-width: 560px) { .bib-pag-flecha { padding: 0 14px; font-size: 12.5px; } .bib-pag-num { min-width: 38px; height: 38px; } }
 
 @media (max-width: 760px) {
   .bib-mast { border-radius: 26px; }

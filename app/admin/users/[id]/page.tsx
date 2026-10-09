@@ -9,6 +9,10 @@ import { Desplegable } from "@/components/desplegable";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { getFichaAlumna } from "@/src/features/admin/analitica/alumna";
+import { Paginacion } from "@/components/paginacion";
+
+/** Clases por pagina en «Sus últimas clases» (la ficha trae hasta 20). */
+const CLASES_POR_PAGINA = 10;
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +40,11 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
   const error = typeof sp.error === "string" ? sp.error : null;
 
   if (!UUID.test(id)) notFound();
+  const paginaClasesPedida = Math.max(0, Math.min(100, Math.floor(Number(sp.pclases)) || 0));
 
   const f = await getFichaAlumna(id);
   if (!f) notFound();
+  const paginaClases = Math.min(paginaClasesPedida, Math.max(1, Math.ceil(f.clases.length / CLASES_POR_PAGINA)) - 1);
 
   // Lo que hace falta para ACTUAR desde la ficha: la conversacion, su agenda
   // en vivo y lo que compro. service_role: esta pantalla ya paso requireAdmin.
@@ -283,7 +289,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
       {compras.length > 0 && (
         <section className="fa-tarjeta">
           <div className="fa-tarjeta-cab">
-            <span className="fa-burbuja fa-burbuja--salvia"><Package size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+            <span className="fa-burbuja fa-burbuja--rubor"><Package size={18} strokeWidth={2.2} aria-hidden="true" /></span>
             <h2 className="fa-h2">Packs que compró</h2>
           </div>
           <ul className="fa-agenda">
@@ -298,9 +304,9 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
       )}
 
       {/* Clases */}
-      <section className="fa-tarjeta">
+      <section className="fa-tarjeta" id="clases">
         <div className="fa-tarjeta-cab">
-          <span className="fa-burbuja fa-burbuja--salvia"><BookOpen size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+          <span className="fa-burbuja fa-burbuja--rubor"><BookOpen size={18} strokeWidth={2.2} aria-hidden="true" /></span>
           <h2 className="fa-h2">Sus últimas clases</h2>
         </div>
         {f.clases.length === 0 ? (
@@ -313,7 +319,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
           </div>
         ) : (
           <ul className="fa-clases">
-            {f.clases.map((c) => (
+            {f.clases.slice(paginaClases * CLASES_POR_PAGINA, paginaClases * CLASES_POR_PAGINA + CLASES_POR_PAGINA).map((c) => (
               <li key={c.videoId} className="fa-clase">
                 <div className="fa-clase-txt">
                   <p className="fa-clase-titulo">{c.titulo}</p>
@@ -331,6 +337,12 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
             ))}
           </ul>
         )}
+        <Paginacion
+          pagina={paginaClases}
+          total={f.clases.length}
+          porPagina={CLASES_POR_PAGINA}
+          href={(n) => `/admin/users/${id}${n > 0 ? `?pclases=${n}` : ""}#clases`}
+        />
       </section>
     </main>
   );
@@ -354,7 +366,7 @@ const CSS = `
 .fa-agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .fa-agenda li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: var(--crema); border: 1px solid #F6EAE4; }
 .fa-agenda-tag { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 800; background: #FFF4E8; color: var(--melocoton-deep); }
-.fa-agenda-tag.es-ok { background: var(--salvia); color: var(--salvia-deep); }
+.fa-agenda-tag.es-ok { background: var(--rubor); color: var(--pink-deep); }
 .fa-agenda-txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted); }
 .fa-agenda-txt strong { color: var(--ink); font-weight: 800; }
 .fa-quitar { width: 30px; height: 30px; border-radius: 50%; border: 0; display: grid; place-items: center; background: #fff; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
@@ -401,7 +413,7 @@ const CSS = `
 
 .fa-burbuja { width: 40px; height: 40px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
 .fa-burbuja--melo { background: #FFF4E8; color: var(--melocoton-deep); }
-.fa-burbuja--salvia { background: var(--salvia); color: var(--salvia-deep); }
+.fa-burbuja--rubor { background: var(--rubor); color: var(--pink-deep); }
 
 .fa-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .fa-tarjeta { padding: 22px 24px; border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
@@ -427,7 +439,7 @@ const CSS = `
 .fa-barra { width: 90px; height: 8px; border-radius: 99px; background: var(--linea); overflow: hidden; }
 .fa-barra > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #FFB49A, var(--pink)); }
 .fa-estado { padding: 5px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 800; white-space: nowrap; background: var(--rubor); color: var(--pink-deep); }
-.fa-estado.es-ok { background: var(--salvia); color: var(--salvia-deep); }
+.fa-estado.es-ok { background: var(--rubor); color: var(--pink-deep); }
 
 @media (max-width: 1100px) { .fa-datos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) {

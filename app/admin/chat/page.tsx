@@ -6,6 +6,10 @@ import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { Users, Gem, MessageSquare, Plus, Ban, Check, ChevronDown, MessageCircle, VolumeX } from "lucide-react";
 import { AdminAviso, AdminCabecera } from "@/components/admin-ui";
+import { Paginacion, hrefConPagina } from "@/components/paginacion";
+
+/** Filas por pagina en cada pestana (salas, baneos, muteos). */
+const POR_PAGINA = 10;
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarAjustes } from "@/src/lib/settings";
@@ -298,6 +302,19 @@ export default async function AdminChatPage({ searchParams }: {
     messages = (data ?? []) as unknown as Message[];
   }
 
+  // Paginas por pestana. Las tres listas llegan enteras (son chicas y las
+  // pestanas muestran el total), asi que se cortan aca. Un solo `pagina`:
+  // cambiar de pestana vuelve a la primera.
+  const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  const cortar = <T,>(lista: T[]) => {
+    const p = Math.min(paginaPedida, Math.max(1, Math.ceil(lista.length / POR_PAGINA)) - 1);
+    return { pagina: p, filas: lista.slice(p * POR_PAGINA, p * POR_PAGINA + POR_PAGINA) };
+  };
+  const pagSalas = cortar(publicRooms);
+  const pagBans = cortar(bans);
+  const pagMutes = cortar(mutes);
+  const hrefPagina = hrefConPagina("/admin/chat", { tab, room: activeRoomId ?? undefined });
+
   const TABS = [
     { key: "rooms", label: `Salas (${publicRooms.length})` },
     { key: "dm", label: "Chat directo" },
@@ -352,12 +369,12 @@ export default async function AdminChatPage({ searchParams }: {
             <div className="ch-caja">
               <p className="ch-caja-titulo">Salas <span>{publicRooms.length}</span></p>
               <div className="ch-lista">
-                {publicRooms.map((room) => {
+                {pagSalas.filas.map((room) => {
                   const active = room.id === activeRoomId;
                   const Icon = room.type === "community" ? Users : Gem;
                   return (
                     <div key={room.id} className={"ch-sala" + (active ? " es-activa" : "")}>
-                      <Link href={`/admin/chat?tab=rooms&room=${room.id}` as never} className="ch-sala-link">
+                      <Link href={`/admin/chat?tab=rooms&room=${room.id}${pagSalas.pagina > 0 ? `&pagina=${pagSalas.pagina}` : ""}` as never} className="ch-sala-link">
                         <span className="ch-sala-ico"><Icon size={16} strokeWidth={2.1} aria-hidden="true" /></span>
                         <div className="ch-sala-txt">
                           <p className="ch-sala-nombre">{room.name}</p>
@@ -387,6 +404,7 @@ export default async function AdminChatPage({ searchParams }: {
                   </div>
                 )}
               </div>
+              <Paginacion compacta pagina={pagSalas.pagina} total={publicRooms.length} porPagina={POR_PAGINA} href={hrefPagina} />
             </div>
 
             <details className="ch-crear">
@@ -566,12 +584,12 @@ export default async function AdminChatPage({ searchParams }: {
           <h2 className="ch-panel-titulo ch-panel-titulo--cuenta">Usuarios baneados <span>{bans.length}</span></h2>
           {bans.length === 0 ? (
             <div className="ch-vacio">
-              <span className="ch-burbuja ch-burbuja--salvia"><Ban size={20} strokeWidth={2.2} aria-hidden="true" /></span>
+              <span className="ch-burbuja ch-burbuja--rubor"><Ban size={20} strokeWidth={2.2} aria-hidden="true" /></span>
               <p>No hay usuarios baneados. Los baneos se aplican desde el chat del miembro.</p>
             </div>
           ) : (
             <ul className="ch-mod-lista">
-              {bans.map((ban) => {
+              {pagBans.filas.map((ban) => {
                 const name = ban.profiles?.full_name ?? ban.profiles?.email ?? ban.user_id;
                 return (
                   <li key={ban.id} className="ch-mod ch-mod--ban">
@@ -599,6 +617,7 @@ export default async function AdminChatPage({ searchParams }: {
               })}
             </ul>
           )}
+          <Paginacion pagina={pagBans.pagina} total={bans.length} porPagina={POR_PAGINA} href={hrefPagina} />
         </div>
       )}
 
@@ -608,12 +627,12 @@ export default async function AdminChatPage({ searchParams }: {
           <h2 className="ch-panel-titulo ch-panel-titulo--cuenta">Usuarios muteados <span>{mutes.length}</span></h2>
           {mutes.length === 0 ? (
             <div className="ch-vacio">
-              <span className="ch-burbuja ch-burbuja--salvia"><VolumeX size={20} strokeWidth={2.2} aria-hidden="true" /></span>
+              <span className="ch-burbuja ch-burbuja--rubor"><VolumeX size={20} strokeWidth={2.2} aria-hidden="true" /></span>
               <p>No hay usuarios muteados. Los muteos se aplican desde el chat del miembro.</p>
             </div>
           ) : (
             <ul className="ch-mod-lista">
-              {mutes.map((mute) => {
+              {pagMutes.filas.map((mute) => {
                 const name = mute.profiles?.full_name ?? mute.profiles?.email ?? mute.user_id;
                 return (
                   <li key={mute.id} className="ch-mod ch-mod--mute">
@@ -641,6 +660,7 @@ export default async function AdminChatPage({ searchParams }: {
               })}
             </ul>
           )}
+          <Paginacion pagina={pagMutes.pagina} total={mutes.length} porPagina={POR_PAGINA} href={hrefPagina} />
         </div>
       )}
     </main>
@@ -707,7 +727,7 @@ const CSS = `
 .ch-elegir-txt { font-size: 14px; color: var(--muted); }
 
 .ch-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
-.ch-burbuja--salvia { background: var(--salvia); color: var(--salvia-deep); }
+.ch-burbuja--rubor { background: var(--rubor); color: var(--pink-deep); }
 .ch-panel { padding: clamp(20px, 3vw, 30px); border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
 .ch-panel--angosto { max-width: 620px; }
 .ch-panel-cab { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }

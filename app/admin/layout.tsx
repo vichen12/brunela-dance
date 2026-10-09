@@ -3,6 +3,7 @@ import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminHeader } from "@/components/admin-header";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
+import { cargarRecordatoriosAdmin, recordatoriosComoNotificaciones } from "@/src/features/admin/recordatorios";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const nombre =
     profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "admin";
   // La foto de perfil, para el avatar de la cabecera y del menu.
-  const { data: fotoData } = await (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle();
+  const [{ data: fotoData }, recordatorios] = await Promise.all([
+    (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
+    // Campanita de la cabecera: enlaces sin cargar, la clase de hoy y las que
+    // faltan completar. Memoizado: /admin y /admin/live lo piden en el mismo render.
+    cargarRecordatoriosAdmin(),
+  ]);
   const foto = fotoData?.avatar_url ?? null;
 
   // overflow-x: clip y no hidden: hidden rompe position: sticky de adentro.
@@ -29,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <AdminSidebar nombre={nombre} foto={foto} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} foto={foto} />
+        <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} foto={foto} recordatorios={recordatoriosComoNotificaciones(recordatorios)} />
         <div className="zona-app adm-contenido" style={{ flex: 1, padding: "32px 36px", overflowX: "hidden" }}>
           {children}
         </div>
