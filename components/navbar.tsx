@@ -1,10 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
-import { BrandLockup } from "@/components/brand-lockup";
+import { ChevronRight, Gem, Globe, Heart, Menu, PlayCircle, Sparkles, X } from "lucide-react";
 import {
   LanguageSwitcher,
   usePublicI18n,
@@ -34,7 +34,15 @@ const links = [
  * no es que sean feos: es que el siguiente que necesite estar encima escribe
  * 10000, y a partir de ahi nadie sabe cual es el orden real.
  */
-const Z = { velo: 60, cajon: 70, header: 80, flotante: 90 } as const;
+const Z = { velo: 60, cajon: 70, header: 80 } as const;
+
+/** Icono de cada seccion en la hoja movil, en el mismo orden que `links`. */
+function IconoSeccion({ indice }: { indice: number }) {
+  if (indice === 0) return <Sparkles size={19} strokeWidth={2.1} />;
+  if (indice === 1) return <PlayCircle size={19} strokeWidth={2.1} />;
+  if (indice === 2) return <Heart size={19} strokeWidth={2.1} />;
+  return <Gem size={19} strokeWidth={2.1} />;
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -141,563 +149,139 @@ export function Navbar() {
 
   return (
     <>
+      {/*
+        Rediseño "suave y calido" (2026-10-08): la barra deja de ser una franja
+        de borde a borde y pasa a ser una pildora blanca translucida que flota,
+        igual que la navegacion movil del sistema. El contenedor fijo es
+        transparente; la pildora es .nv-barra. Estilos en app/estilos/acceso.css
+        (bloque "Barra de la landing").
+      */}
       <header
-        className="site-header"
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: Z.header,
-          height: 66,
-          display: "flex",
-          alignItems: "center",
-          /* El logo y los botones se acercan al centro en pantallas anchas.
-             La barra sigue siendo de borde a borde -- el fondo y el borde de
-             abajo la necesitan asi -- pero su CONTENIDO se mete en una columna
-             de 1200px. El `max()` deja el relleno normal en pantallas chicas,
-             donde ese calculo daria negativo. */
-          padding: "0 max(clamp(0.75rem, 4vw, 2.5rem), calc((100% - 1200px) / 2))",
-          background: menuOpen
-            ? "rgba(255,255,255,0.98)"
-            : scrolled
-              ? "rgba(255,255,255,0.94)"
-              : "rgba(255,255,255,0.78)",
-          backdropFilter: "blur(22px)",
-          borderBottom: scrolled
-            ? "1px solid #FFDADA"
-            : "1px solid rgba(255,218,218,0.7)",
-          boxShadow: scrolled ? "0 2px 24px rgba(217,52,56,0.08)" : "none",
-          transition: "background 350ms, box-shadow 350ms, border-color 350ms",
-        }}
+        className={`site-header nv${scrolled ? " nv--bajo" : ""}${menuOpen ? " nv--abierto" : ""}`}
+        style={{ zIndex: Z.header }}
       >
-        <BrandLockup href="/" compact markOnly showWordmark className="navbar-brand" />
+        <div className="nv-barra">
+          <Link href="/" className="nv-marca" aria-label="Brunela Dance Trainer" suppressHydrationWarning>
+            <span className="nv-marca-ico" aria-hidden>
+              <Image src="/brand/isologo-icon.png" alt="" width={30} height={30} priority />
+            </span>
+            <span className="nv-marca-txt" aria-hidden>
+              <strong>Brunela</strong>
+              <small>Dance Trainer</small>
+            </span>
+          </Link>
 
-        <nav
-          className="landing-nav-links"
-          style={{
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.15rem",
-          }}
-        >
-          {links.map((link) => {
-            const esActiva = activa === link.id;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`brand-nav-link${esActiva ? " brand-nav-activa" : ""}`}
-                // Se anuncia la seccion actual a los lectores de pantalla. Sin
-                // esto el resaltado es puramente visual y no existe para quien
-                // no lo ve.
-                aria-current={esActiva ? "true" : undefined}
-              >
-                {t(link.label as PublicMessageKey)}
-              </Link>
-            );
-          })}
+          <nav className="nv-links">
+            {links.map((link) => {
+              const esActiva = activa === link.id;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`nv-link${esActiva ? " es-activa" : ""}`}
+                  // Se anuncia la seccion actual a los lectores de pantalla. Sin
+                  // esto el resaltado es puramente visual y no existe para quien
+                  // no lo ve.
+                  aria-current={esActiva ? "true" : undefined}
+                >
+                  {t(link.label as PublicMessageKey)}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="nv-acciones">
+            <LanguageSwitcher compact />
+            <Link href="/sign-in" className="nv-btn nv-btn--sec">
+              {t("nav.signIn")}
+            </Link>
+            <Link href="/#planes" className="nv-btn nv-btn--coral">
+              {t("nav.viewPlans")}
+            </Link>
+          </div>
+
+          {/*
+            En movil quedan dos cosas: "Ingresar" (lo que se usa todos los
+            dias) y el boton del menu. El selector de idioma pasa a la hoja:
+            cuatro botones en la barra se comian el ancho que necesita
+            "Ingresar", y cambiar de idioma se hace una sola vez.
+
+            El boton del menu vive DENTRO de la barra y la barra esta por
+            encima de la hoja (Z.header > Z.cajon), asi que sigue pulsable con
+            la hoja abierta sin necesitar un boton flotante aparte.
+          */}
+          <div className="nv-movil">
+            <Link href="/sign-in" className="nv-btn nv-btn--coral nv-btn--chico">
+              {t("nav.signIn")}
+            </Link>
+            <button
+              type="button"
+              className="nv-menu-btn"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+              aria-expanded={menuOpen}
+              aria-controls="menu-movil"
+            >
+              {menuOpen ? <X size={19} strokeWidth={2.4} /> : <Menu size={19} strokeWidth={2.4} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/*
+        🔴 LA HOJA CERRADA TIENE QUE SALIR DEL ALCANCE DEL TABULADOR.
+
+        Un elemento desplazado o transparente SIGUE existiendo: el lector de
+        pantalla lee sus enlaces como si el menu estuviera abierto, y al tabular
+        el foco se va a enlaces que no se ven -- la persona pulsa Tab y el foco
+        desaparece de la pantalla.
+
+        `visibility: hidden` lo saca del arbol de accesibilidad Y del orden de
+        tabulacion, y ademas sigue siendo animable, asi que la transicion no se
+        pierde. El CSS la retrasa al cerrar para que no se corte.
+      */}
+      <div
+        id="menu-movil"
+        className={`nv-hoja${menuOpen ? " es-abierta" : ""}`}
+        aria-hidden={!menuOpen}
+        style={{ zIndex: Z.cajon }}
+      >
+        <nav className="nv-hoja-links">
+          {links.map((link, indice) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={close}
+              className="nv-hoja-link"
+              aria-current={activa === link.id ? "true" : undefined}
+            >
+              <span className="nv-hoja-ico" aria-hidden>
+                <IconoSeccion indice={indice} />
+              </span>
+              <span className="nv-hoja-txt">{t(link.label as PublicMessageKey)}</span>
+              <ChevronRight className="nv-hoja-flecha" size={18} strokeWidth={2.4} aria-hidden />
+            </Link>
+          ))}
         </nav>
 
-        <div
-          className="landing-nav-links"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            marginLeft: "auto",
-          }}
-        >
-          <LanguageSwitcher compact />
-          <Link href="/sign-in" className="nav-button nav-button-ghost">
+        <div className="nv-hoja-acciones">
+          <Link href="/sign-in" onClick={close} className="nv-btn nv-btn--sec nv-btn--grande">
             {t("nav.signIn")}
           </Link>
-          <Link href="/#planes" className="nav-button nav-button-solid">
+          <Link href="/#planes" onClick={close} className="nv-btn nv-btn--coral nv-btn--grande">
             {t("nav.viewPlans")}
           </Link>
         </div>
 
-        <div
-          className="mobile-language-selector"
-          style={{
-            display: "none",
-            alignItems: "center",
-          }}
-        >
-          <LanguageSwitcher compact />
-        </div>
-
-        <div
-          className="landing-mobile-nav"
-          style={{
-            display: "none",
-            alignItems: "center",
-            gap: "0.4rem",
-            marginLeft: "auto",
-            minWidth: 0,
-          }}
-        >
-          <Link
-            href="/sign-in"
-            className="nav-button nav-button-solid mobile-signin-button"
-          >
-            {t("nav.signIn")}
-          </Link>
-          <button
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
-            aria-expanded={menuOpen}
-            aria-controls="menu-movil"
-            style={{
-              width: 36,
-              height: 36,
-              border: "1px solid #EB7478",
-              borderRadius: 8,
-              background: "#FFDADA",
-              color: "#D93438",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              cursor: "pointer",
-            }}
-          >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-        </div>
-      </header>
-
-      <button
-        className="mobile-floating-menu"
-        onClick={() => setMenuOpen((open) => !open)}
-        aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
-        aria-expanded={menuOpen}
-        aria-controls="menu-movil"
-      >
-        {menuOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
-
-      {/*
-        🔴 EL CAJON CERRADO TIENE QUE SALIR DEL ALCANCE DEL TABULADOR.
-
-        Antes solo se corria con `translateY(-110%)`. Un elemento desplazado
-        SIGUE existiendo: el lector de pantalla lee sus cuatro enlaces como si
-        el menu estuviera abierto, y al tabular el foco se va a enlaces que no
-        se ven -- la persona pulsa Tab y el foco desaparece de la pantalla.
-
-        `visibility: hidden` lo saca del arbol de accesibilidad Y del orden de
-        tabulacion, y ademas sigue siendo animable, asi que la transicion no se
-        pierde. El `transition` la retrasa al cerrar para que no se corte.
-      */}
-      <div
-        id="menu-movil"
-        aria-hidden={!menuOpen}
-        style={{
-          position: "fixed",
-          top: 66,
-          left: 0,
-          right: 0,
-          zIndex: Z.cajon,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "1.05rem 1.5rem 2rem",
-          background: "rgba(255,255,255,0.98)",
-          backdropFilter: "blur(24px)",
-          borderBottom: "1px solid #FFDADA",
-          boxShadow: "0 12px 40px rgba(217,52,56,0.1)",
-          transform: menuOpen ? "translateY(0)" : "translateY(-110%)",
-          visibility: menuOpen ? "visible" : "hidden",
-          transition: menuOpen
-            ? "transform 300ms cubic-bezier(0.22,1,0.36,1), visibility 0s"
-            : "transform 300ms cubic-bezier(0.22,1,0.36,1), visibility 0s 300ms",
-        }}
-      >
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={close}
-            className="nav-link-movil"
-            aria-current={activa === link.id ? "true" : undefined}
-          >
-            {t(link.label as PublicMessageKey)}
-          </Link>
-        ))}
-        <Link
-          href="/sign-in"
-          onClick={close}
-          className="nav-button nav-button-ghost mobile-drawer-signin"
-          style={{ width: "min(100%, 340px)", marginTop: "1.25rem" }}
-        >
-          {t("nav.signIn")}
-        </Link>
-        <Link
-          href="/#planes"
-          onClick={close}
-          className="nav-button nav-button-solid"
-          style={{ width: "min(100%, 340px)", marginTop: "1.25rem" }}
-        >
-          {t("nav.viewPlans")}
-        </Link>
-
         {/* El selector de idioma vive aca en movil: en la barra se comia el
-            ancho que necesita "Ingresar". Ver la nota del CSS. */}
+            ancho que necesita "Ingresar". */}
         <div className="menu-idiomas">
+          <Globe size={16} strokeWidth={2.2} aria-hidden />
           <LanguageSwitcher />
         </div>
       </div>
 
-      {menuOpen && (
-        <div
-          onClick={close}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: Z.velo,
-            background: "rgba(217,52,56,0.12)",
-          }}
-        />
-      )}
-
-      <style>{`
-        .site-header {
-          max-width: 100vw;
-          overflow: hidden;
-          box-sizing: border-box;
-        }
-        /*
-          Variante compacta del sistema de botones de globals.css. La barra mide
-          66px, asi que el alto de 46px no entra: se reescriben SOLO las tres
-          variables de tamano y todo lo demas (curva, tracking, foco, hover) lo
-          hereda del sistema. Antes esto repetia la geometria entera y por eso
-          el navbar no se parecia al resto de la pagina.
-        */
-        .nav-button {
-          --btn-min-h: 38px;
-          --btn-pad-y: 0.48rem;
-          --btn-pad-x: 1.15rem;
-          --btn-size: 0.68rem;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: var(--btn-min-h);
-          border-radius: var(--btn-radius);
-          padding: var(--btn-pad-y) var(--btn-pad-x);
-          font-size: var(--btn-size);
-          font-weight: var(--btn-weight);
-          letter-spacing: var(--btn-track);
-          line-height: 1.2;
-          text-transform: uppercase;
-          text-decoration: none;
-          white-space: nowrap;
-          transition: background var(--btn-dur) ease,
-                      border-color var(--btn-dur) ease,
-                      color var(--btn-dur) ease,
-                      box-shadow var(--btn-dur) ease,
-                      transform var(--btn-dur) var(--btn-ease);
-        }
-
-        .nav-button:hover { transform: translateY(var(--btn-lift)); }
-
-        .nav-button:focus-visible {
-          outline: 2px solid var(--pink-deep);
-          outline-offset: 3px;
-        }
-
-        .nav-button-solid:hover {
-          background: var(--pink-mid);
-          box-shadow: 0 12px 26px rgba(230, 79, 85, 0.32);
-        }
-
-        .nav-button-ghost:hover {
-          border-color: var(--pink);
-          background: var(--pink-wash);
-          /* La sombra tambien crece: sin eso el hover aplana el boton, porque
-             el color se intensifica pero la elevacion se queda quieta. */
-          box-shadow: 0 8px 18px rgba(176, 58, 62, 0.16);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .nav-button { transition: none; }
-          .nav-button:hover { transform: none; }
-        }
-        .nav-button-solid {
-          background: var(--pink);
-          color: #fff;
-          box-shadow: 0 4px 16px rgba(230,79,85,0.28);
-        }
-        /*
-          El secundario tiene que pesar como el primario, no flotar al lado.
-
-          Antes era un contorno #FFDADA -- el rosa mas palido de la paleta --
-          sobre fondo TRANSPARENTE, encima de una barra que ya es blanca
-          translucida. Resultado: un contorno sin superficie al lado de un boton
-          solido con sombra. El par quedaba desbalanceado y "Ingresar" se leia
-          como algo deshabilitado.
-
-          Ahora tiene: borde derivado del coral de marca (una transparencia de
-          --pink, no un color nuevo suelto), superficie blanca propia para que
-          se despegue de la barra, y una sombra minima que lo pone a la misma
-          altura que el solido.
-
-          El texto sigue en --pink-deep: 5.96:1 sobre blanco. --pink como texto
-          daria 3.78:1 y no llega -- es la regla que ya esta en CLAUDE.md.
-        */
-        .nav-button-ghost {
-          border: 1.5px solid rgba(230, 79, 85, 0.4);
-          color: var(--pink-deep);
-          background: rgba(255, 255, 255, 0.8);
-          box-shadow: 0 2px 6px rgba(176, 58, 62, 0.1);
-        }
-
-        /*
-          🔴 EL COLOR DE LOS ENLACES NO ES DECORATIVO.
-
-          Estaban en --pink-mid (#D93438). Se midio el peor caso del texto sobre
-          la cabecera translucida apoyada en la foto del hero:
-
-              --pink-mid   sin scroll 3.94:1 · con scroll 4.46:1   ❌
-              --pink-deep  sin scroll 5.04:1 · con scroll 5.70:1   ✅
-
-          Son 11.2px en negrita, o sea texto NORMAL para WCAG (grande empieza en
-          14pt ≈ 18.66px), asi que el minimo es 4.5:1 y --pink-mid no llegaba ni
-          con la cabecera casi opaca. Ver la nota de contraste en CLAUDE.md:
-          --pink para superficie glanceable, tono mas oscuro cuando hay que leer.
-        */
-        .brand-nav-link {
-          position: relative;
-          /* Mas juntos: 0.9rem de lado + 0.12em de tracking dejaba los cuatro
-             enlaces desparramados en el centro de una barra muy ancha. */
-          padding: 0.42rem 0.62rem;
-          border-radius: 999px;
-          color: var(--pink-deep);
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          text-decoration: none;
-          transition: color 200ms ease, background-color 200ms ease;
-        }
-
-        .brand-nav-link:hover {
-          background: var(--pink-wash);
-        }
-
-        /*
-          El foco visible no es opcional: sin el, quien navega con teclado no
-          tiene forma de saber en que enlace esta. Va con :focus-visible y no
-          con :focus para no dibujarlo tambien al hacer clic con el raton.
-        */
-        .brand-nav-link:focus-visible,
-        .nav-link-movil:focus-visible {
-          outline: 2px solid var(--pink-deep);
-          outline-offset: 2px;
-        }
-
-        /*
-          Seccion activa. El subrayado es un pseudo-elemento y no un
-          border-bottom para que se pueda animar el ancho sin mover el texto.
-        */
-        .brand-nav-activa {
-          color: var(--pink);
-        }
-
-        .brand-nav-activa::after {
-          content: "";
-          position: absolute;
-          left: 0.9rem;
-          right: 0.9rem;
-          bottom: 0.15rem;
-          height: 2px;
-          border-radius: 2px;
-          background: var(--pink);
-          animation: nav-subrayado 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        @keyframes nav-subrayado {
-          from { transform: scaleX(0); opacity: 0; }
-          to   { transform: scaleX(1); opacity: 1; }
-        }
-
-        .nav-link-movil {
-          display: block;
-          width: min(100%, 340px);
-          padding: 1rem 0.25rem;
-          border-bottom: 1px solid #FFDADA;
-          color: var(--pink-deep);
-          font-size: 0.82rem;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          text-decoration: none;
-          text-align: center;
-        }
-
-        .nav-link-movil[aria-current="true"] {
-          color: var(--pink);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .brand-nav-link,
-          .brand-nav-activa::after {
-            transition: none;
-            animation: none;
-          }
-        }
-        .mobile-floating-menu {
-          display: none;
-        }
-        .mobile-language-selector {
-          display: none;
-        }
-        @media (max-width: 639px) {
-          /*
-            🔴 EL SELECTOR DE IDIOMA SE VA DE LA BARRA EN MOVIL.
-
-               Son cuatro botones (ES EN FR IT) y en una pantalla de telefono se
-               comian el ancho: no quedaba sitio para "Ingresar", que a partir de
-               520px desaparecia del todo. Cambiar de idioma es algo que se hace
-               una vez; entrar a la cuenta, todos los dias.
-
-               No se pierde: pasa al cajon del menu, con mas sitio y mas facil de
-               acertar con el dedo.
-          */
-          .mobile-language-selector { display: none !important; }
-          .landing-nav-links { display: none !important; }
-          .landing-mobile-nav { display: flex !important; }
-          /*
-            🔴 HAY QUE RESERVARLE SITIO AL BOTON DE MENU, QUE NO ESTA EN EL FLUJO.
-
-               En movil el boton de menu NO es el que vive dentro de este grupo
-               -- ese esta en display: none unas lineas mas abajo. El visible es
-               .mobile-floating-menu: 36px, position: fixed, a 0.58rem del
-               borde derecho y con z-index por encima de la cabecera.
-
-               Al ser fixed no ocupa lugar, asi que el header no se lo reserva y
-               la pildora de "Ingresar" terminaba justo DEBAJO. No se aplastaba
-               ni se cortaba: se tapaba. Se veia "INGRE" y encima el cuadradito
-               del menu.
-
-               El margin-right son esos 36px mas aire. Si alguna vez cambia el
-               tamano o la posicion del boton flotante, este numero cambia con
-               el -- estan atados.
-
-               (Lo de position: static es aparte y se queda: como item normal
-               del flex, el header reparte de verdad entre la marca -- que tiene
-               max-width y overflow hidden, esta pensada para ceder -- y este
-               grupo, que no se encoge nunca.)
-          */
-          .landing-mobile-nav {
-            position: static;
-            margin-left: auto !important;
-            margin-right: calc(36px + 0.5rem);
-            transform: none;
-            flex: 0 0 auto;
-            min-width: 0;
-          }
-
-          /* Sin esto el texto del boton se parte y se corta: es lo que pasaba. */
-          .landing-mobile-nav .mobile-signin-button {
-            flex: 0 0 auto;
-            white-space: nowrap;
-          }
-          .site-header {
-            padding-inline: 0.58rem !important;
-          }
-          .navbar-brand {
-            max-width: 168px;
-            overflow: hidden;
-            transform: none;
-            transform-origin: left center;
-            gap: 0.42rem !important;
-          }
-          .navbar-brand > div:first-child {
-            width: 30px !important;
-            height: 30px !important;
-          }
-          .navbar-brand > div:nth-child(2) {
-            display: block !important;
-            width: 106px !important;
-            height: 31px !important;
-          }
-          .landing-mobile-nav {
-            flex-shrink: 0;
-            min-width: max-content !important;
-          }
-          .landing-mobile-nav > button {
-            display: none !important;
-          }
-          .mobile-floating-menu {
-            position: fixed;
-            top: 15px;
-            right: 0.58rem;
-            /* Era 10001 suelto. Va por encima de la cabecera a proposito
-               (tiene que seguir pulsable con el cajon abierto), pero dentro de
-               la escala con nombre. */
-            z-index: ${Z.flotante};
-            width: 36px;
-            height: 36px;
-            border: 1px solid #EB7478;
-            border-radius: 8px;
-            background: #FFDADA;
-            color: #D93438;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            cursor: pointer;
-          }
-          .nav-button {
-            min-height: 36px;
-            padding: 0.46rem 0.82rem;
-            font-size: 0.62rem;
-            letter-spacing: 0.07em;
-          }
-        }
-        /* "Ingresar" ya NO se esconde a los 520px: al sacar el selector de
-           idioma de la barra hay sitio de sobra, y era el unico acceso directo
-           a la cuenta desde la barra. */
-        /* Entraba a 400px y era tarde: a 447 el boton ya no tenia sitio y se
-           cortaba. Se adelanta a 520. */
-        @media (max-width: 520px) {
-          .landing-mobile-nav .mobile-signin-button {
-            --btn-pad-x: 0.7rem;
-            font-size: 0.58rem;
-          }
-        }
-
-        /* El selector de idioma, dentro del cajon. */
-        .menu-idiomas {
-          display: none;
-          width: min(100%, 340px);
-          justify-content: center;
-          margin-top: 1.35rem;
-          padding-top: 1.2rem;
-          border-top: 1px solid #FFDADA;
-        }
-
-        @media (max-width: 639px) {
-          .menu-idiomas { display: flex; }
-        }
-        @media (max-width: 390px) {
-          .navbar-brand {
-            max-width: 142px;
-            gap: 0.34rem !important;
-          }
-          .navbar-brand > div:first-child {
-            width: 27px !important;
-            height: 27px !important;
-          }
-          .navbar-brand > div:nth-child(2) {
-            width: 92px !important;
-            height: 27px !important;
-          }
-        }
-      `}</style>
+      {menuOpen && <div className="nv-velo" onClick={close} style={{ zIndex: Z.velo }} />}
     </>
   );
 }

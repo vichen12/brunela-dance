@@ -1,2 +1,1808 @@
 /* Estilos de la navegacion publica y las pantallas de acceso: puerta de
-   acceso anticipado, ingreso, registro y contrasena (rediseno suave y calido). */
+   acceso anticipado, ingreso, registro y contrasena (rediseno suave y calido).
+
+   ════════════════════════════════════════════════════════════════════════
+   QUE VIVE ACA
+     1. Tokens para las piezas que NO estan dentro de .sistema (la barra y el
+        pie de la landing, que se montan sueltos en app/page.tsx).
+     2. Barra de la landing (components/navbar.tsx) y su hoja movil.
+     3. Pie de la landing (components/ui/hover-footer.tsx).
+     4. Formularios de acceso (.auth-*): UNA sola vez. Antes el mismo bloque
+        estaba copiado en sign-in-form.tsx y registro-form.tsx (deuda anotada
+        en CLAUDE.md); si se desincronizaban, el login y el registro dejaban de
+        parecerse.
+     5. Ingreso (/sign-in), Registro (/registro), pantallas sueltas (olvide /
+        nueva contrasena), Baja y La puerta (/proximamente).
+
+   Las paginas de acceso llevan la clase .sistema en su raiz, asi heredan los
+   tokens (--crema, --linea, --sombra...) y Nunito como --font-display.
+
+   ⚠️ Nada de :global() aca: era sintaxis de styled-jsx que quedo en el
+      registro y en CSS puro no significa nada.
+   ════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. Tokens para la barra y el pie ─────────────────────────────────── */
+.nv,
+.nv-hoja,
+.nv-velo,
+.brand-footer {
+  --ac-ink: #3B2A2C;
+  --ac-muted: #8A6F68;
+  --ac-crema: #FFFAF6;
+  --ac-rubor: #FFF2EE;
+  --ac-melocoton: #FFE2D3;
+  --ac-linea: #F3E3DC;
+  --ac-linea-fuerte: #E9CFC5;
+  --ac-sombra: 0 1px 2px rgba(150, 80, 70, 0.05), 0 12px 32px -18px rgba(176, 90, 80, 0.32);
+  --ac-sombra-alta: 0 2px 4px rgba(150, 80, 70, 0.05), 0 26px 50px -26px rgba(176, 70, 70, 0.45);
+  --ac-curva: cubic-bezier(.22, 1, .36, 1);
+  font-family: var(--font-suave), "Nunito", sans-serif;
+}
+
+
+/* ── 2. Barra de la landing ───────────────────────────────────────────── */
+
+/* El contenedor fijo es transparente y no captura clics fuera de la pildora:
+   sin pointer-events none, la franja vacia a los costados tapaba el hero. */
+.nv {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.nv-barra {
+  pointer-events: auto;
+  width: min(1200px, 100%);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px 0 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(243, 227, 220, 0.9);
+  box-shadow: 0 1px 2px rgba(150, 80, 70, 0.05), 0 18px 40px -24px rgba(176, 90, 80, 0.45);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  transition: background .35s ease, box-shadow .35s ease, border-color .35s ease;
+}
+
+.nv--bajo .nv-barra,
+.nv--abierto .nv-barra {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--ac-linea-fuerte);
+  box-shadow: var(--ac-sombra-alta);
+}
+
+/* Marca: isologo en burbuja + "Brunela" en coral, como el menu lateral del
+   sistema (.sb-marca). */
+.nv-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  text-decoration: none;
+  border-radius: 99px;
+  padding-right: 6px;
+}
+.nv-marca-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(140deg, #FFF2EE, #FFE2D3);
+  box-shadow: inset 0 0 0 1px rgba(233, 207, 197, 0.6);
+  transition: transform .5s var(--ac-curva);
+}
+.nv-marca-ico img { width: 28px; height: 28px; object-fit: contain; }
+.nv-marca:hover .nv-marca-ico { transform: rotate(-8deg) scale(1.05); }
+.nv-marca-txt { display: grid; line-height: 1; }
+.nv-marca-txt strong {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--pink, #E64F55);
+}
+.nv-marca-txt small {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ac-muted);
+}
+
+/* Enlaces de seccion, en oracion. El activo se marca con una pildora rubor y
+   un punto coral: indicador suave, no subrayado editorial. */
+.nv-links {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.nv-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 99px;
+  color: var(--ac-ink);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .2s ease, color .2s ease;
+}
+.nv-link:hover { background: var(--ac-rubor); color: var(--pink-deep, #B03A3E); }
+.nv-link.es-activa {
+  background: var(--ac-rubor);
+  color: var(--pink-deep, #B03A3E);
+  font-weight: 800;
+  animation: nv-activa .35s var(--ac-curva) both;
+}
+.nv-link.es-activa::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pink, #E64F55);
+}
+@keyframes nv-activa {
+  from { background: rgba(255, 242, 238, 0); }
+  to   { background: var(--ac-rubor); }
+}
+
+.nv-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Botones de la barra (y de la hoja): pildoras en oracion. */
+.nv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 99px;
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform .3s var(--ac-curva), box-shadow .3s ease, background .2s ease, border-color .2s ease;
+}
+.nv-btn:hover { transform: translateY(-2px); }
+.nv-btn--sec {
+  background: #fff;
+  border: 1.5px solid var(--ac-linea-fuerte);
+  color: var(--ac-ink);
+}
+.nv-btn--sec:hover { background: var(--ac-rubor); border-color: var(--pink-line, #F2C6C6); }
+/* Blanco sobre --pink da 3.78:1: es la excepcion de marca documentada en
+   CLAUDE.md (superficie glanceable, etiqueta corta en negrita). */
+.nv-btn--coral {
+  background: var(--pink, #E64F55);
+  color: #fff;
+  border: 1.5px solid var(--pink, #E64F55);
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, .85);
+}
+.nv-btn--coral:hover {
+  background: var(--pink-mid, #D93438);
+  border-color: var(--pink-mid, #D93438);
+  box-shadow: 0 18px 30px -14px rgba(230, 79, 85, .9);
+}
+.nv-btn--chico { height: 40px; padding: 0 16px; font-size: 14px; }
+.nv-btn--grande { height: 54px; font-size: 16px; flex: 1 1 0; }
+
+/* Foco de teclado: halo suave, nunca contorno negro. */
+.nv-marca:focus-visible,
+.nv-link:focus-visible,
+.nv-btn:focus-visible,
+.nv-menu-btn:focus-visible,
+.nv-hoja-link:focus-visible,
+.footer-marca:focus-visible,
+.footer-nav a:focus-visible,
+.footer-mail:focus-visible,
+.footer-socials a:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25);
+}
+
+/* Selector de idioma como segmento pildora. language-provider.tsx trae su
+   propio CSS; estas reglas tienen mas especificidad y lo pisan solo aca. */
+body .nv .language-switcher,
+body .nv-hoja .language-switcher,
+body .auth-top-links .language-switcher {
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--ac-rubor, #FFF2EE);
+  box-shadow: inset 0 0 0 1px rgba(233, 207, 197, 0.55);
+  backdrop-filter: none;
+}
+body .nv .language-switcher button,
+body .nv-hoja .language-switcher button,
+body .auth-top-links .language-switcher button {
+  min-width: 36px;
+  min-height: 34px;
+  padding: 0 9px;
+  border-radius: 99px;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  /* 12.5px necesita 4.5:1. --muted (#8A6F68) sobre el rubor da 4.21:1 y no
+     llega, asi que el inactivo va un punto mas oscuro: #7A5F58, 5.32:1. El
+     activo va en --pink-deep sobre blanco (5.96:1). */
+  color: #7A5F58;
+}
+body .nv .language-switcher button:hover,
+body .nv-hoja .language-switcher button:hover,
+body .auth-top-links .language-switcher button:hover { color: var(--pink-deep, #B03A3E); transform: none; }
+body .nv .language-switcher button.is-active,
+body .nv-hoja .language-switcher button.is-active,
+body .auth-top-links .language-switcher button.is-active {
+  background: #fff;
+  color: var(--pink-deep, #B03A3E);
+  box-shadow: 0 1px 2px rgba(150, 80, 70, 0.08), 0 6px 14px -8px rgba(176, 90, 80, 0.5);
+}
+body .nv .language-switcher button:focus-visible,
+body .nv-hoja .language-switcher button:focus-visible,
+body .auth-top-links .language-switcher button:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(230, 79, 85, 0.3);
+}
+body .nv-hoja .language-switcher button { min-width: 52px; min-height: 42px; font-size: 14px; }
+
+/* Movil: en la barra solo "Ingresar" y el boton del menu. */
+.nv-movil { display: none; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.nv-menu-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  background: var(--ac-rubor);
+  color: var(--pink-deep, #B03A3E);
+  box-shadow: inset 0 0 0 1px rgba(233, 207, 197, 0.7);
+  transition: background .2s ease, transform .3s var(--ac-curva);
+}
+.nv-menu-btn:hover { background: var(--ac-melocoton); }
+.nv--abierto .nv-menu-btn { background: var(--pink, #E64F55); color: #fff; box-shadow: none; transform: rotate(90deg); }
+
+/* La hoja movil: tarjeta blanca redondeada que baja debajo de la pildora. */
+.nv-hoja {
+  position: fixed;
+  top: 86px;
+  left: 16px;
+  right: 16px;
+  max-height: calc(100svh - 102px);
+  overflow-y: auto;
+  padding: 10px 10px 16px;
+  border-radius: 28px;
+  background: #fff;
+  border: 1px solid var(--ac-linea);
+  box-shadow: 0 2px 4px rgba(150, 80, 70, 0.05), 0 30px 60px -24px rgba(176, 70, 70, 0.4);
+  transform: translateY(-14px) scale(.97);
+  transform-origin: top center;
+  opacity: 0;
+  visibility: hidden;
+  transition: transform .35s var(--ac-curva), opacity .25s ease, visibility 0s .35s;
+}
+.nv-hoja.es-abierta {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: transform .4s var(--ac-curva), opacity .25s ease, visibility 0s;
+}
+.nv-hoja-links { display: grid; gap: 4px; }
+.nv-hoja-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 20px;
+  color: var(--ac-ink);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background .2s ease;
+}
+.nv-hoja-link:hover,
+.nv-hoja-link[aria-current="true"] { background: var(--ac-rubor); }
+.nv-hoja-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--ac-rubor);
+  color: var(--pink-deep, #B03A3E);
+}
+.nv-hoja-link:nth-child(2) .nv-hoja-ico { background: #FFF4E8; color: #C25E3A; }
+.nv-hoja-link:nth-child(3) .nv-hoja-ico { background: #F7F0FA; color: #8A4E9A; }
+.nv-hoja-link:nth-child(4) .nv-hoja-ico { background: #F2F7EF; color: #3F7A45; }
+.nv-hoja-link[aria-current="true"] .nv-hoja-ico { background: var(--pink, #E64F55); color: #fff; }
+.nv-hoja-txt { flex: 1; }
+.nv-hoja-flecha { color: var(--ac-linea-fuerte); flex-shrink: 0; }
+.nv-hoja-link:hover .nv-hoja-flecha { color: var(--pink-deep, #B03A3E); }
+
+/* Entrada escalonada de las opciones al abrir. */
+.nv-hoja.es-abierta .nv-hoja-link { animation: nv-opcion .45s var(--ac-curva) both; }
+.nv-hoja.es-abierta .nv-hoja-link:nth-child(2) { animation-delay: 40ms; }
+.nv-hoja.es-abierta .nv-hoja-link:nth-child(3) { animation-delay: 80ms; }
+.nv-hoja.es-abierta .nv-hoja-link:nth-child(4) { animation-delay: 120ms; }
+@keyframes nv-opcion {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.nv-hoja-acciones { display: flex; gap: 8px; margin-top: 12px; padding: 0 2px; }
+
+.menu-idiomas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ac-linea);
+  color: var(--ac-muted);
+}
+
+/* El velo: rosado palido con desenfoque. Nada oscuro. */
+.nv-velo {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 226, 211, 0.38);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: nv-velo .3s ease both;
+}
+@keyframes nv-velo { from { opacity: 0; } to { opacity: 1; } }
+
+/* Por debajo de 1020px los cuatro enlaces, el selector y los dos botones ya
+   no entran en la pildora sin pisarse: pasa todo a la hoja. */
+@media (max-width: 1020px) {
+  .nv-links,
+  .nv-acciones { display: none; }
+  .nv-movil { display: flex; }
+}
+
+@media (max-width: 420px) {
+  .nv { left: 12px; right: 12px; top: 10px; }
+  .nv-barra { height: 60px; padding: 0 8px; gap: 8px; }
+  .nv-marca { gap: 8px; }
+  .nv-marca-ico { width: 40px; height: 40px; }
+  .nv-marca-ico img { width: 25px; height: 25px; }
+  .nv-marca-txt strong { font-size: 19px; }
+  .nv-hoja { top: 80px; left: 12px; right: 12px; max-height: calc(100svh - 94px); }
+}
+@media (max-width: 350px) {
+  .nv-marca-txt small { display: none; }
+  .nv-btn--chico { padding: 0 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-barra, .nv-link, .nv-btn, .nv-menu-btn, .nv-hoja, .nv-marca-ico { transition: none; }
+  .nv-btn:hover { transform: none; }
+  .nv-link.es-activa, .nv-hoja.es-abierta .nv-hoja-link, .nv-velo { animation: none; }
+}
+
+
+/* ── 3. Pie de la landing ─────────────────────────────────────────────── */
+.brand-footer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: clamp(48px, 7vw, 96px) 16px 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #FFF8F4 28%, #FFF2EC 100%);
+  color: var(--ac-muted);
+}
+.footer-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.footer-mancha-1 {
+  width: 520px; height: 520px; left: -160px; bottom: -220px;
+  background: radial-gradient(circle, rgba(255, 205, 185, .55), transparent 68%);
+}
+.footer-mancha-2 {
+  width: 440px; height: 440px; right: -120px; top: 0;
+  background: radial-gradient(circle, rgba(242, 198, 198, .45), transparent 70%);
+}
+
+.footer-tarjeta {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: clamp(36px, 5vw, 56px) clamp(20px, 4vw, 48px);
+  border-radius: 36px;
+  background: linear-gradient(140deg, rgba(255, 255, 255, .92) 0%, rgba(255, 247, 243, .92) 60%, rgba(255, 240, 233, .92) 100%);
+  border: 1px solid var(--ac-linea);
+  box-shadow: var(--ac-sombra);
+}
+
+.footer-main {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.footer-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  border-radius: 99px;
+  padding-right: 8px;
+}
+.footer-marca-ico {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  box-shadow: var(--ac-sombra);
+  transition: transform .5s var(--ac-curva);
+}
+.footer-marca:hover .footer-marca-ico { transform: rotate(-8deg) scale(1.05); }
+.footer-marca-ico img { width: 40px; height: 40px; object-fit: contain; }
+.footer-marca-txt { display: grid; text-align: left; line-height: 1; }
+.footer-marca-txt strong {
+  font-size: clamp(34px, 5vw, 46px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--pink, #E64F55);
+}
+.footer-marca-txt small {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ac-muted);
+}
+
+.footer-services {
+  margin: 18px 0 0;
+  /* --pink-muted da 5.36:1 sobre blanco y algo menos sobre el rubor: pasa. */
+  color: var(--pink-muted, #8C5F5F);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.footer-sep { margin: 0 .5rem; opacity: .55; }
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 26px;
+}
+.footer-nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid var(--ac-linea);
+  color: var(--ac-ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, transform .3s var(--ac-curva), color .2s ease;
+}
+.footer-nav a:hover {
+  background: var(--ac-rubor);
+  border-color: var(--pink-line, #F2C6C6);
+  color: var(--pink-deep, #B03A3E);
+  transform: translateY(-2px);
+}
+
+.footer-regla {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(560px, 90%);
+  margin: 30px auto 0;
+  color: var(--pink, #E64F55);
+}
+.footer-regla-linea {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ac-linea-fuerte), transparent);
+}
+
+.footer-mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 26px;
+  padding: 6px 18px 6px 6px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid var(--ac-linea);
+  box-shadow: var(--ac-sombra);
+  /* --pink-deep sobre blanco: 5.96:1. Es texto que se lee (y se copia). */
+  color: var(--pink-deep, #B03A3E);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform .3s var(--ac-curva), box-shadow .3s ease;
+}
+.footer-mail:hover { transform: translateY(-2px); box-shadow: var(--ac-sombra-alta); }
+.footer-mail-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ac-rubor);
+}
+
+.footer-socials {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+.footer-socials a {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--ac-rubor);
+  color: var(--pink-deep, #B03A3E);
+  font-size: 18px;
+  text-decoration: none;
+  transition: background .2s ease, color .2s ease, transform .3s var(--ac-curva);
+}
+.footer-socials a:nth-child(2) { background: #FFF4E8; color: #C25E3A; }
+.footer-socials a:nth-child(3) { background: #F7F0FA; color: #8A4E9A; }
+.footer-socials a:nth-child(4) { background: #F2F7EF; color: #3F7A45; }
+.footer-socials a:hover { background: var(--pink, #E64F55); color: #fff; transform: translateY(-3px) rotate(-4deg); }
+
+.footer-bottom {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 22px 16px 28px;
+  text-align: center;
+  color: var(--ac-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .brand-footer { padding-top: 40px; }
+  .footer-tarjeta { border-radius: 28px; padding: 30px 18px; }
+  .footer-marca { gap: 12px; }
+  .footer-marca-ico { width: 54px; height: 54px; border-radius: 18px; }
+  .footer-marca-ico img { width: 34px; height: 34px; }
+  .footer-services { font-size: 13.5px; max-width: 30ch; }
+  .footer-nav { gap: 6px; }
+  .footer-nav a { height: 40px; padding: 0 13px; font-size: 13.5px; }
+  .footer-mail { font-size: 14px; }
+  .footer-bottom { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-nav a, .footer-mail, .footer-socials a, .footer-marca-ico { transition: none; }
+  .footer-nav a:hover, .footer-mail:hover, .footer-socials a:hover { transform: none; }
+}
+
+
+/* ── 4. Formularios de acceso (ingreso, registro, contrasena) ─────────── */
+.auth-form-wrap { width: 100%; }
+
+.auth-form { display: grid; gap: 16px; width: 100%; }
+.auth-field { display: block; }
+
+/* Etiqueta en oracion, no en mayusculas espaciadas. */
+.auth-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink, #3B2A2C);
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.auth-input {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px;
+  border: 1.5px solid var(--linea-fuerte, #E9CFC5);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--ink, #3B2A2C);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 8px 20px -16px rgba(176, 90, 80, 0.4);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.auth-input:hover { border-color: var(--pink-line, #F2C6C6); }
+.auth-input:focus {
+  border-color: var(--pink, #E64F55);
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.14);
+}
+.auth-input::placeholder { color: #BFA49C; font-weight: 500; }
+
+.auth-password-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 8px;
+}
+.auth-password-head .auth-label { margin-bottom: 0; }
+
+.auth-forgot {
+  color: var(--pink-deep, #B03A3E);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 99px;
+}
+.auth-forgot:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.auth-password-field { position: relative; display: block; }
+.auth-password-field .auth-input { padding-right: 56px; }
+.auth-password-field .auth-input-con-boton { padding-right: 84px; }
+
+.auth-eye-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted, #8A6F68);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background .2s ease, color .2s ease;
+}
+.auth-eye-button:hover { background: var(--rubor, #FFF2EE); color: var(--pink-deep, #B03A3E); }
+
+/* "Ver / Ocultar" del registro: pildora rubor dentro del campo. */
+.auth-ver-clave {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--rubor, #FFF2EE);
+  color: var(--pink-deep, #B03A3E);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+.auth-ver-clave:hover { background: var(--melocoton, #FFE2D3); }
+
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 4px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--pink, #E64F55);
+  color: #fff;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-decoration: none;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, .85);
+  cursor: pointer;
+  transition: transform .3s var(--curva, cubic-bezier(.22,1,.36,1)), box-shadow .3s ease, background .2s ease;
+}
+.auth-submit:hover {
+  background: var(--pink-mid, #D93438);
+  box-shadow: 0 20px 32px -14px rgba(230, 79, 85, .9);
+  transform: translateY(-2px);
+}
+.auth-submit:disabled { opacity: .7; cursor: default; transform: none; }
+
+.auth-alert {
+  margin: 0;
+  border-radius: 18px;
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.auth-alert.success {
+  border: 1px solid #CFE3C9;
+  background: var(--salvia, #E7F1E4);
+  color: var(--salvia-deep, #3F7A45);
+}
+.auth-alert.error {
+  border: 1px solid var(--pink-line, #F2C6C6);
+  background: var(--rubor, #FFF2EE);
+  color: var(--pink-deep, #B03A3E);
+}
+
+/* El separador "o con email": oracion, sin mayusculas espaciadas. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0;
+}
+.auth-divider div { flex: 1; height: 1px; background: var(--linea, #F3E3DC); }
+.auth-divider span {
+  color: var(--muted, #8A6F68);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.auth-alt {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted, #8A6F68);
+}
+/* --pink-deep y no --pink: aca hay texto para leer. Ver CLAUDE.md. */
+.auth-alt-link {
+  color: var(--pink-deep, #B03A3E);
+  font-weight: 800;
+  text-decoration: none;
+}
+.auth-alt-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.auth-cancelar {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted, #8A6F68);
+  text-decoration: none;
+}
+.auth-cancelar:hover { color: var(--pink-deep, #B03A3E); }
+
+/* Boton de Google (components/oauth-buttons.tsx). */
+.auth-google-wrap { width: 100%; }
+.auth-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px 0 8px;
+  border-radius: 99px;
+  border: 1.5px solid var(--linea-fuerte, #E9CFC5);
+  background: #fff;
+  color: var(--ink, #3B2A2C);
+  font-family: var(--font-suave), sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -16px rgba(176, 90, 80, 0.4);
+  transition: background .2s ease, border-color .2s ease, transform .3s var(--curva, cubic-bezier(.22,1,.36,1)), box-shadow .3s ease;
+}
+.auth-google:hover:not(:disabled) {
+  background: var(--crema, #FFFAF6);
+  border-color: var(--pink-line, #F2C6C6);
+  transform: translateY(-2px);
+  box-shadow: var(--sombra);
+}
+.auth-google:disabled { opacity: .7; cursor: default; }
+.auth-google-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--crema, #FFFAF6);
+  box-shadow: inset 0 0 0 1px var(--linea, #F3E3DC);
+}
+.auth-google-error { margin-top: 10px; }
+
+/* Foco: halo suave en todo lo que se pulsa dentro del acceso. */
+.auth-google:focus-visible,
+.auth-submit:focus-visible,
+.auth-eye-button:focus-visible,
+.auth-ver-clave:focus-visible,
+.auth-forgot:focus-visible,
+.auth-alt-link:focus-visible,
+.auth-cancelar:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25);
+}
+
+@media (max-height: 700px) and (min-width: 901px) {
+  .auth-form { gap: 12px; }
+  .auth-input, .auth-google { min-height: 46px; }
+  .auth-submit { min-height: 48px; }
+  .auth-divider { margin: 14px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit, .auth-google, .auth-input { transition: none; }
+  .auth-submit:hover, .auth-google:hover:not(:disabled) { transform: none; }
+}
+
+
+/* ── 5a. Ingreso (/sign-in) ───────────────────────────────────────────── */
+
+/*
+  La pantalla no scrollea en escritorio: es una sola vista con el panel de
+  bienvenida a la izquierda y el formulario a la derecha. En movil el panel
+  se esconde y el formulario SI puede scrollear dentro de su columna (antes
+  tenia overflow hidden y en telefonos bajos se cortaba el pie).
+*/
+.auth-page {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(440px, 1.08fr);
+  gap: 0;
+}
+html:has(.auth-page),
+body:has(.auth-page) {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+.auth-top-links {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: min(92vw, 460px);
+}
+.auth-top-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1.5px solid var(--linea-fuerte);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, transform .3s var(--curva);
+}
+.auth-top-links a:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-2px); }
+.auth-top-links a:last-child {
+  background: var(--rubor);
+  border-color: transparent;
+  color: var(--pink-deep);
+}
+
+/* El panel de bienvenida: tarjeta grande con degradé y manchas, metida con
+   margen dentro de la columna (no de borde a borde). */
+.auth-left {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  margin: 16px 0 16px 16px;
+  border-radius: 36px;
+  background: linear-gradient(140deg, #FFF1EC 0%, #FFF7F3 55%, #FFEFE6 100%);
+  border: 1px solid var(--linea);
+  padding: clamp(2rem, 4.5vw, 4.5rem);
+}
+.auth-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.auth-mancha-1 {
+  width: 460px; height: 460px; right: -140px; top: -170px;
+  background: radial-gradient(circle, rgba(255, 205, 185, .8), transparent 68%);
+  animation: acc-flota 13s ease-in-out infinite alternate;
+}
+.auth-mancha-2 {
+  width: 380px; height: 380px; left: -120px; bottom: -150px;
+  background: radial-gradient(circle, rgba(242, 198, 198, .7), transparent 70%);
+  animation: acc-flota 16s ease-in-out infinite alternate-reverse;
+}
+@keyframes acc-flota {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-24px, 18px) scale(1.08); }
+}
+
+.auth-logo-figure {
+  position: absolute;
+  inset: 10% -14% -6% 34%;
+  z-index: -1;
+  opacity: 0.09;
+  pointer-events: none;
+}
+
+.auth-left-copy {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  width: min(480px, 100%);
+  text-align: left;
+}
+.auth-left-burbuja {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 26px;
+  background: #fff;
+  box-shadow: var(--sombra);
+}
+.auth-left-burbuja img { width: 40px; height: 40px; object-fit: contain; }
+
+.auth-left h1 {
+  margin: 0 0 18px;
+  color: var(--ink);
+  font-size: clamp(3rem, 5.2vw, 4.6rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+.auth-left p {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+
+.auth-feature-list {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 32px;
+}
+.auth-feature-list div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 12px 18px 12px 12px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(243, 227, 220, 0.9);
+  box-shadow: var(--sombra);
+  transition: transform .35s var(--curva), box-shadow .35s ease;
+}
+.auth-feature-list div:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
+.auth-feature-list span {
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: var(--rubor);
+  color: var(--pink-deep);
+}
+.auth-feature-list div:nth-child(2) span { background: #FFF4E8; color: #C25E3A; }
+.auth-feature-list div:nth-child(3) span { background: #F2F7EF; color: #3F7A45; }
+.auth-feature-list strong {
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.auth-feature-list small {
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.auth-right {
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: clamp(1.25rem, 3vw, 3rem);
+}
+.auth-card { width: min(410px, 100%); }
+
+.auth-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 16px;
+  padding: 7px 14px 7px 11px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+.auth-card h2 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: clamp(2.2rem, 3.6vw, 2.9rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+.auth-description {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--linea);
+}
+.auth-links span,
+.auth-links a {
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-links a { font-weight: 800; color: var(--pink-deep); }
+.auth-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-height: 760px) and (min-width: 901px) {
+  .auth-left h1 { font-size: clamp(2.6rem, 4.4vw, 3.6rem); }
+  .auth-left-burbuja { width: 52px; height: 52px; margin-bottom: 16px; }
+  .auth-feature-list { margin-top: 20px; gap: 8px; }
+  .auth-feature-list div { padding: 8px 14px 8px 8px; }
+  .auth-card h2 { font-size: clamp(2rem, 3vw, 2.5rem); }
+  .auth-description { margin-bottom: 16px; }
+}
+
+@media (max-width: 900px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-left { display: none; }
+  .auth-right {
+    position: relative;
+    isolation: isolate;
+    height: 100dvh;
+    align-items: start;
+    padding: 84px 16px 24px;
+    background:
+      radial-gradient(420px 260px at 100% 0%, rgba(255, 220, 202, .65), transparent 70%),
+      radial-gradient(380px 260px at 0% 6%, rgba(253, 228, 228, .7), transparent 70%),
+      #fff;
+  }
+  .auth-card { width: 100%; max-width: 420px; margin: 0 auto; }
+}
+
+@media (max-width: 520px) {
+  .auth-top-links { top: 12px; left: 12px; right: 12px; justify-content: space-between; gap: 6px; }
+  body .auth-top-links .language-switcher { margin-right: auto; }
+  body .auth-top-links .language-switcher button { min-width: 32px; padding: 0 6px; font-size: 12px; }
+  .auth-top-links a { height: 38px; padding: 0 12px; font-size: 13px; }
+  .auth-card h2 { font-size: 2.15rem; }
+  .auth-description { font-size: 15px; margin-bottom: 20px; }
+}
+
+
+/* ── 5b. Registro (/registro) ─────────────────────────────────────────── */
+.reg-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 28px 16px 44px;
+}
+.reg-mancha,
+.acc-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.reg-mancha-1,
+.acc-mancha-1 {
+  width: 620px; height: 620px; left: -200px; top: -240px;
+  background: radial-gradient(circle, rgba(255, 214, 196, .7), transparent 68%);
+  animation: acc-flota 14s ease-in-out infinite alternate;
+}
+.reg-mancha-2,
+.acc-mancha-2 {
+  width: 560px; height: 560px; right: -200px; bottom: -220px;
+  background: radial-gradient(circle, rgba(246, 205, 205, .65), transparent 70%);
+  animation: acc-flota 17s ease-in-out infinite alternate-reverse;
+}
+
+.reg-top {
+  width: min(540px, 100%);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.reg-top a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1.5px solid var(--linea-fuerte);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .2s ease, transform .3s var(--curva);
+}
+.reg-top a:hover { background: var(--rubor); transform: translateY(-2px); }
+.reg-top a:last-child { background: var(--rubor); border-color: transparent; color: var(--pink-deep); }
+
+.reg-card {
+  width: min(540px, 100%);
+  padding: 32px 34px 28px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra-alta);
+}
+.reg-cabeza { display: flex; align-items: center; gap: 12px; }
+.reg-burbuja {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(140deg, #FFF2EE, #FFE2D3);
+}
+.reg-burbuja img { width: 32px; height: 32px; object-fit: contain; }
+.reg-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 7px 14px 7px 11px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+.reg-title {
+  margin: 20px 0 0;
+  color: var(--ink);
+  font-size: clamp(30px, 6vw, 40px);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+/* El acento en coral y en la misma letra: nada de italica. A este tamano
+   (40px, 900) es texto grande y --pink alcanza el 3:1 que pide AA. */
+.reg-title span { color: var(--pink); }
+
+.reg-plan {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  margin: 20px 0 4px;
+  padding: 14px 18px;
+  border-radius: 22px;
+  background: linear-gradient(140deg, #FFF1EC, #FFF7F3);
+  border: 1px solid var(--linea);
+}
+.reg-plan-tag { grid-column: 1; font-size: 12.5px; font-weight: 800; color: var(--muted); }
+.reg-plan-name { grid-column: 1; font-size: 18px; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
+.reg-plan-price { grid-column: 2; grid-row: 1 / 3; font-size: 22px; font-weight: 900; color: var(--pink-deep); }
+.reg-plan-price small { font-size: 13px; font-weight: 700; color: var(--muted); }
+.reg-plan-change {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid var(--linea-fuerte);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--pink-deep);
+  text-decoration: none;
+}
+.reg-plan-change:hover { background: var(--rubor); }
+.reg-note {
+  margin: 16px 0 4px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--crema);
+  border: 1px solid var(--linea);
+  font-size: 14.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.reg-note a { color: var(--pink-deep); font-weight: 800; }
+
+.reg-card .auth-form { margin-top: 20px; }
+
+.reg-divider { display: flex; align-items: center; gap: 14px; margin: 20px 0 16px; }
+.reg-divider div { flex: 1; height: 1px; background: var(--linea); }
+.reg-divider span { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+.reg-legal {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .reg-page { justify-content: flex-start; padding-top: 16px; }
+  .reg-card { padding: 24px 18px 22px; border-radius: 28px; }
+  .reg-top a { height: 38px; padding: 0 14px; font-size: 13.5px; }
+}
+
+
+/* ── 5c. Pantallas sueltas (olvide / nueva contrasena) ─────────────────── */
+.acc-sola {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+.acc-sola-col { width: min(470px, 100%); display: grid; gap: 16px; }
+.acc-sola-volver {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1.5px solid var(--linea-fuerte);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .2s ease, transform .3s var(--curva);
+}
+.acc-sola-volver:hover { background: var(--rubor); transform: translateY(-2px); }
+.acc-sola-card {
+  padding: clamp(26px, 5vw, 40px);
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra-alta);
+}
+.acc-sola-ico {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  background: linear-gradient(140deg, #FFF2EE, #FFE2D3);
+  color: var(--pink-deep);
+}
+.acc-sola-kicker {
+  display: inline-flex;
+  margin: 0 0 10px;
+  padding: 6px 13px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+.acc-sola-titulo {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: clamp(28px, 6vw, 36px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.acc-sola-lead {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+.acc-sola-ok p { margin: 0; }
+.acc-sola-ok-btn { margin-top: 14px; }
+.acc-sola-pie {
+  margin: 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+
+/* ── 5d. Baja de avisos (/baja) ───────────────────────────────────────── */
+.baja-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+}
+.baja-card {
+  width: min(480px, 100%);
+  padding: 36px 32px 30px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra-alta);
+  text-align: center;
+}
+.baja-ico { margin: 0 auto 18px; }
+.baja-kicker {
+  display: inline-flex;
+  margin: 0;
+  padding: 6px 13px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+.baja-title {
+  margin: 16px 0 0;
+  color: var(--ink);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+.baja-title span { color: var(--pink); }
+.baja-sub { margin: 14px 0 0; font-size: 15.5px; color: var(--muted); line-height: 1.65; }
+.baja-nota { margin: 10px 0 0; font-size: 14px; color: var(--pink-muted); line-height: 1.6; }
+.baja-btn {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 24px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--pink);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, .85);
+  transition: background .2s ease, transform .3s var(--curva);
+}
+.baja-btn:hover { background: var(--pink-mid); transform: translateY(-2px); }
+.baja-btn-sec {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 0 20px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .2s ease;
+}
+.baja-btn-sec:hover { background: var(--melocoton); }
+@media (max-width: 520px) {
+  .baja-card { padding: 28px 20px 24px; border-radius: 28px; }
+  .baja-title { font-size: 28px; }
+}
+
+
+/* ── 5e. La puerta (/proximamente) ────────────────────────────────────── */
+
+/*
+  El reparto. Mismo esqueleto que /sign-in a proposito: esta pantalla aparece
+  EN LUGAR del login y conviene que se lea como una version suya.
+
+  svh y no dvh: dvh se recalcula cuando Safari colapsa su barra, y esta
+  pantalla scrollea en movil, asi que el grid entero se re-maquetaba a mitad
+  del scroll. Con svh la altura no se mueve y el contenido crece igual,
+  porque es min-height.
+*/
+.pa-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(440px, 1.05fr);
+}
+
+.pa-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pa-mancha-1 {
+  width: 640px; height: 640px; right: -180px; top: -260px;
+  background: radial-gradient(circle, rgba(255, 210, 190, .75), transparent 68%);
+  animation: acc-flota 14s ease-in-out infinite alternate;
+}
+.pa-mancha-2 {
+  width: 520px; height: 520px; right: 18%; bottom: -280px;
+  background: radial-gradient(circle, rgba(246, 200, 200, .6), transparent 70%);
+  animation: acc-flota 17s ease-in-out infinite alternate-reverse;
+}
+.pa-mancha-3 {
+  width: 360px; height: 360px; left: 38%; top: 30%;
+  background: radial-gradient(circle, rgba(255, 232, 214, .55), transparent 70%);
+}
+
+/* La foto, en un marco redondeado con margen (no de borde a borde). */
+.pa-foto {
+  position: relative;
+  overflow: hidden;
+  margin: 16px 0 16px 16px;
+  border-radius: 36px;
+  box-shadow: 0 30px 60px -30px rgba(176, 70, 70, 0.45);
+  background:
+    linear-gradient(180deg, rgba(255, 240, 236, 0) 55%, rgba(194, 94, 58, 0.18) 100%),
+    url("/fotos-landing/puerta.avif") center 28% / cover no-repeat,
+    var(--rubor);
+}
+
+.pa-foto-marca {
+  position: absolute;
+  z-index: 1;
+  top: 20px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px 6px 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--sombra);
+}
+.pa-foto-marca-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, #FFF2EE, #FFE2D3);
+}
+.pa-foto-marca img { width: 24px; height: auto; }
+.pa-foto-marca > span:last-child {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--pink);
+}
+
+.pa-foto-nota {
+  position: absolute;
+  z-index: 1;
+  left: 20px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  color: var(--pink-deep);
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: var(--sombra);
+}
+
+.pa-panel {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.5rem, 5vw, 5rem);
+}
+.pa-col { width: min(31rem, 100%); }
+
+/*
+  Entrada escalonada. El estado base de cada hijo es VISIBLE y la animacion
+  parte de oculto con fill backwards: si las animaciones no corren (pestaña
+  en segundo plano, captura headless) la pantalla se ve entera igual.
+*/
+.pa-col > * { animation: pa-entra 700ms var(--curva) backwards; }
+.pa-col > :nth-child(1) { animation-delay: 40ms; }
+.pa-col > :nth-child(2) { animation-delay: 100ms; }
+.pa-col > :nth-child(3) { animation-delay: 160ms; }
+.pa-col > :nth-child(4) { animation-delay: 220ms; }
+.pa-col > :nth-child(5) { animation-delay: 290ms; }
+.pa-col > :nth-child(6) { animation-delay: 350ms; }
+@keyframes pa-entra {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Eyebrow en pildora. */
+.pa-sobre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 7px 15px 7px 12px;
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: var(--sombra);
+  color: var(--pink-deep);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.pa-sobre-punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.16);
+}
+
+.pa-title {
+  margin: 0;
+  /* Tope en 3.6rem: por encima, "noviembre" desborda la columna en
+     portatiles de 1280. */
+  font-size: clamp(2.3rem, 4vw, 3.6rem);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+/* La fecha: coral, misma letra, sin italica. Es texto grande (>= 37px en
+   900), asi que --pink alcanza el 3:1 de AA para texto grande. */
+.pa-fecha {
+  display: block;
+  color: var(--pink);
+}
+
+.pa-lead {
+  margin: 16px 0 0;
+  max-width: 36ch;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* La cuenta regresiva (components/cuenta-regresiva.tsx) ya trae sus pastillas
+   pastel; aca solo se le da Nunito y un poco de sombra. */
+.pa-page .cr { margin-top: 26px; }
+.pa-page .cr-b { box-shadow: var(--sombra); border-radius: 22px; }
+.pa-page .cr-n { font-family: var(--font-suave), sans-serif; }
+.pa-page .cr-l { font-family: var(--font-suave), sans-serif; font-size: 13px; }
+
+/* El formulario, en una tarjeta blanca. */
+.pa-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+  padding: 18px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra);
+}
+.pa-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding-left: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+.pa-label-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--rubor);
+  color: var(--pink-deep);
+}
+.pa-row { display: flex; gap: 8px; }
+.pa-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 99px;
+  border: 1.5px solid var(--linea-fuerte);
+  background: #fff;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.pa-input::placeholder { color: #CDB2AA; letter-spacing: 0.14em; }
+.pa-input:hover { border-color: var(--pink-line); }
+.pa-input:focus-visible {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.14);
+}
+.pa-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 22px 0 24px;
+  border: 0;
+  border-radius: 99px;
+  /* Blanco sobre --pink: 3.78:1, excepcion de marca documentada en CLAUDE.md
+     ("Entrar" es una etiqueta que se mira de reojo, no texto de lectura). */
+  background: var(--pink);
+  color: #fff;
+  font-family: var(--font-suave), sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 14px 26px -14px rgba(230, 79, 85, .85);
+  transition: background .2s ease, transform .3s var(--curva), box-shadow .3s ease;
+}
+.pa-btn svg { transition: transform .3s var(--curva); }
+.pa-btn:hover {
+  background: var(--pink-mid);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 32px -14px rgba(230, 79, 85, .9);
+}
+.pa-btn:hover svg { transform: translateX(3px); }
+.pa-btn:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.3); }
+
+.pa-error {
+  margin: 2px 0 0;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--rubor);
+  border: 1px solid var(--pink-line);
+  font-size: 14px;
+  font-weight: 700;
+  /* --pink-deep y no --pink: es un mensaje que hay que LEER. 5.96:1. */
+  color: var(--pink-deep);
+}
+
+/* "Mirar el estudio por dentro": boton suave, no un enlace subrayado. */
+.pa-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  height: 46px;
+  padding: 0 20px 0 16px;
+  border-radius: 99px;
+  background: var(--rubor);
+  color: var(--pink-deep);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .2s ease, transform .3s var(--curva);
+}
+.pa-volver:hover { background: var(--melocoton); transform: translateY(-2px); }
+.pa-volver:focus-visible { outline: 0; box-shadow: 0 0 0 4px rgba(230, 79, 85, 0.25); }
+
+/* Angosto: la foto pasa a ser una banda redondeada arriba. No se esconde: es
+   la unica imagen de la pantalla y es lo que hace que esto parezca un
+   estudio de danza y no un formulario. */
+@media (max-width: 900px) {
+  .pa-page { grid-template-columns: 1fr; }
+  .pa-foto {
+    margin: 12px 12px 0;
+    border-radius: 28px;
+    min-height: clamp(220px, 36svh, 320px);
+    /*
+      🔴 EL 22% DEJABA LA CARA DEBAJO DEL VELO Y LAS MANOS AFUERA.
+         En la foto la cara vive entre el 37.5% y el 54% del alto, y las manos
+         en la barra entre el 67% y el 75%. Con 40% la cara cae casi al centro
+         de la banda y entran las manos.
+    */
+    background-position: center, center 40%, center;
+  }
+  .pa-panel { padding: 24px 16px 40px; justify-items: stretch; }
+  .pa-col { width: 100%; }
+  .pa-foto-marca { top: 14px; left: 14px; }
+  .pa-foto-nota { left: 14px; bottom: 14px; font-size: 13px; padding: 8px 13px; }
+  .pa-mancha-1 { width: 420px; height: 420px; top: 220px; right: -200px; }
+  .pa-mancha-3 { display: none; }
+}
+
+@media (max-width: 420px) {
+  .pa-form { padding: 14px; border-radius: 24px; }
+  .pa-btn { padding: 0 18px; }
+}
+
+/*
+  La fila entra comoda hasta ~340px. Por debajo se apila: cortar antes
+  apilaba de gusto justo en el ancho del iPhone Pro Max.
+*/
+@media (max-width: 359px) {
+  .pa-row { flex-direction: column; }
+  .pa-btn { width: 100%; justify-content: center; }
+}
+
+
+/* ── Movimiento reducido: todo lo de acceso ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .auth-mancha, .reg-mancha, .acc-mancha, .pa-mancha { animation: none; }
+  .pa-col > * { animation: none; }
+  .pa-btn, .pa-volver, .reg-top a, .auth-top-links a, .baja-btn,
+  .auth-feature-list div, .acc-sola-volver { transition: none; }
+  .pa-btn:hover, .pa-volver:hover, .reg-top a:hover, .auth-top-links a:hover,
+  .baja-btn:hover, .auth-feature-list div:hover, .acc-sola-volver:hover { transform: none; }
+}

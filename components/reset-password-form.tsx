@@ -20,33 +20,29 @@ export function ResetPasswordForm({ error }: Props) {
     });
   }
 
+  // Mismas clases que el ingreso y el registro (app/estilos/acceso.css).
   return (
-    <form onSubmit={handleSubmit} className="form-shell mt-8">
+    <form onSubmit={handleSubmit} className="auth-form">
       <div>
-        <label className="field-label" htmlFor="password">
-          Nueva contrasena
+        <label className="auth-label" htmlFor="password">
+          Nueva contraseña
         </label>
-        <div style={{ position: "relative" }}>
+        <div className="auth-password-field">
           <input
             id="password"
             name="password"
+            className="auth-input"
             placeholder="••••••••"
             required
             minLength={8}
             autoComplete="new-password"
             type={showPassword ? "text" : "password"}
-            style={{ paddingRight: "3rem" }}
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
-            style={{
-              position: "absolute", right: "1rem", top: "50%",
-              transform: "translateY(-50%)", background: "none",
-              border: "none", cursor: "pointer", color: "var(--muted)",
-              display: "flex", alignItems: "center", padding: "0.25rem"
-            }}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            className="auth-eye-button"
           >
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
@@ -54,52 +50,38 @@ export function ResetPasswordForm({ error }: Props) {
       </div>
 
       <div>
-        <label className="field-label" htmlFor="confirmPassword">
-          Confirmar contrasena
+        <label className="auth-label" htmlFor="confirmPassword">
+          Confirmar contraseña
         </label>
-        <div style={{ position: "relative" }}>
+        <div className="auth-password-field">
           <input
             id="confirmPassword"
             name="confirmPassword"
+            className="auth-input"
             placeholder="••••••••"
             required
             minLength={8}
             autoComplete="new-password"
             type={showConfirm ? "text" : "password"}
-            style={{ paddingRight: "3rem" }}
           />
           <button
             type="button"
             onClick={() => setShowConfirm((v) => !v)}
-            aria-label={showConfirm ? "Ocultar contrasena" : "Mostrar contrasena"}
-            style={{
-              position: "absolute", right: "1rem", top: "50%",
-              transform: "translateY(-50%)", background: "none",
-              border: "none", cursor: "pointer", color: "var(--muted)",
-              display: "flex", alignItems: "center", padding: "0.25rem"
-            }}
+            aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
+            className="auth-eye-button"
           >
             {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>
 
-      {error ? (
-        <div style={{ borderRadius: 12, border: "1px solid rgba(217,105,119,0.3)", background: "rgba(255,238,242,0.95)", padding: "0.85rem 1rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--pink-deep)" }}>
-          {error}
-        </div>
-      ) : null}
+      {error ? <div className="auth-alert error">{error}</div> : null}
 
-      <button
-        className="button-primary w-full"
-        type="submit"
-        disabled={pending}
-        style={{ opacity: pending ? 0.8 : 1 }}
-      >
-        {pending ? "Guardando..." : "Guardar contrasena"}
+      <button className="auth-submit" type="submit" disabled={pending}>
+        {pending ? "Guardando..." : "Guardar contraseña"}
       </button>
 
-      <Link href="/sign-in" style={{ display: "block", textAlign: "center", fontSize: "0.78rem", color: "#9d8a98", marginTop: "0.25rem", textDecoration: "none" }}>
+      <Link href="/sign-in" className="auth-cancelar">
         Cancelar y volver al ingreso
       </Link>
     </form>

@@ -55,59 +55,24 @@ export function OAuthButtons({ callbackUrl }: Props) {
     }
   }
 
+  // Aspecto en app/estilos/acceso.css (.auth-google). Antes eran estilos en
+  // linea con el hover hecho a mano en onMouseOver/onMouseOut.
   return (
-    <div style={{ width: "100%" }}>
+    <div className="auth-google-wrap">
       <button
         type="button"
         onClick={signInWithGoogle}
         disabled={loading}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "0.7rem",
-          width: "100%",
-          padding: "0.82rem 1.5rem",
-          borderRadius: "12px",
-          border: "1.5px solid #ede1ea",
-          background: "#fff",
-          color: "#1c1917",
-          fontSize: "0.85rem",
-          fontWeight: 600,
-          fontFamily: "var(--font-body)",
-          cursor: loading ? "default" : "pointer",
-          opacity: loading ? 0.7 : 1,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          transition: "all 180ms",
-        }}
-        onMouseOver={(e) => {
-          if (loading) return;
-          e.currentTarget.style.borderColor = "var(--pink-mid)";
-          e.currentTarget.style.boxShadow = "0 2px 14px rgba(230, 79, 85,0.12)";
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.borderColor = "#ede1ea";
-          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
-        }}
+        className="auth-google"
       >
-        <GoogleIcon />
+        <span className="auth-google-ico">
+          <GoogleIcon />
+        </span>
         {loading ? "Conectando…" : t("auth.google")}
       </button>
 
       {error && (
-        <div
-          style={{
-            marginTop: "0.7rem",
-            borderRadius: 12,
-            border: "1px solid rgba(217, 105, 119, 0.3)",
-            background: "rgba(255, 238, 242, 0.95)",
-            color: "var(--pink-deep)",
-            padding: "0.7rem 0.9rem",
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            lineHeight: 1.4,
-          }}
-        >
+        <div className="auth-alert error auth-google-error" role="alert">
           {error}
         </div>
       )}

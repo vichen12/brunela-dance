@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { RegistroForm } from "@/components/registro-form";
 import { OAuthButtons } from "@/components/oauth-buttons";
@@ -71,14 +73,28 @@ export default async function RegistroPage({ searchParams }: Props) {
   const destinoGoogle = `/registro/onboarding${partesGoogle.size > 0 ? `?${partesGoogle.toString()}` : ""}`;
 
   return (
-    <main className="reg-page">
+    <main className="reg-page sistema">
+      <span className="reg-mancha reg-mancha-1" aria-hidden />
+      <span className="reg-mancha reg-mancha-2" aria-hidden />
+
       <div className="reg-top">
-        <Link href="/">← Volver</Link>
+        <Link href="/" className="reg-top-volver">
+          <ArrowLeft size={15} strokeWidth={2.4} aria-hidden />
+          Volver
+        </Link>
         <Link href="/sign-in">Ya tengo cuenta</Link>
       </div>
 
       <section className="reg-card">
-        <p className="reg-kicker">Crear cuenta</p>
+        <div className="reg-cabeza">
+          <span className="reg-burbuja" aria-hidden>
+            <Image src="/brand/isologo-icon.png" alt="" width={34} height={34} />
+          </span>
+          <p className="reg-kicker">
+            <Sparkles size={13} strokeWidth={2.4} aria-hidden />
+            Crear cuenta
+          </p>
+        </div>
         <h1 className="reg-title">
           Empezá a entrenar<br />
           <span>con Brunela.</span>
@@ -112,82 +128,7 @@ export default async function RegistroPage({ searchParams }: Props) {
         </p>
       </section>
 
-      <style>{`
-        .reg-page {
-          min-height: 100vh; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: 28px 20px 40px; gap: 18px;
-          background:
-            radial-gradient(1100px 520px at 12% -8%, var(--pink-wash) 0%, transparent 60%),
-            radial-gradient(900px 480px at 105% 108%, var(--pink-soft) 0%, transparent 62%),
-            #fffdfd;
-        }
-        .reg-top {
-          width: min(560px, 100%); display: flex; justify-content: space-between;
-          font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
-        }
-        .reg-top a { color: var(--pink-deep); text-decoration: none; }
-        .reg-top a:hover { text-decoration: underline; }
-
-        .reg-card {
-          width: min(560px, 100%);
-          background: rgba(255,255,255,0.94);
-          border: 1.5px solid var(--pink-soft);
-          border-radius: 28px;
-          padding: 34px 32px 28px;
-          box-shadow: 0 26px 70px rgba(28,25,23,0.09);
-          backdrop-filter: blur(10px);
-        }
-        .reg-kicker {
-          font-size: 10px; font-weight: 900; letter-spacing: 0.2em;
-          text-transform: uppercase; color: var(--pink);
-        }
-        .reg-title {
-          font-family: var(--font-display), sans-serif;
-          font-size: 38px; line-height: 1.08; font-weight: 800;
-          color: var(--ink); margin: 12px 0 0; letter-spacing: -0.01em;
-        }
-        .reg-title span { color: var(--pink); font-style: italic; }
-
-        .reg-plan {
-          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-          margin: 20px 0 4px; padding: 13px 16px;
-          background: var(--pink-wash); border: 1.5px solid var(--pink-line);
-          border-radius: 16px;
-        }
-        .reg-plan-tag {
-          font-size: 9px; font-weight: 900; letter-spacing: 0.16em;
-          text-transform: uppercase; color: var(--pink-deep);
-        }
-        .reg-plan-name { font-size: 15px; font-weight: 800; color: var(--ink); }
-        .reg-plan-price { font-size: 14px; font-weight: 700; color: var(--pink-deep); margin-left: auto; }
-        .reg-plan-price small { font-size: 11px; font-weight: 600; }
-        .reg-plan-change {
-          font-size: 11px; font-weight: 700; color: var(--pink-muted);
-          text-decoration: underline; flex-basis: 100%;
-        }
-        .reg-note { margin: 18px 0 4px; font-size: 13px; color: var(--muted); line-height: 1.6; }
-        .reg-note a { color: var(--pink-deep); font-weight: 700; }
-
-        .reg-card :global(.auth-form) { margin-top: 18px; }
-
-        .reg-divider { display: flex; align-items: center; gap: 14px; margin: 20px 0 16px; }
-        .reg-divider div { flex: 1; height: 1px; background: var(--pink-line); }
-        .reg-divider span {
-          font-size: 10px; font-weight: 900; letter-spacing: 0.16em;
-          text-transform: uppercase; color: var(--pink-muted);
-        }
-
-        .reg-legal {
-          margin-top: 18px; font-size: 11.5px; line-height: 1.65;
-          color: var(--pink-muted); text-align: center;
-        }
-
-        @media (max-width: 520px) {
-          .reg-card { padding: 26px 20px 22px; border-radius: 22px; }
-          .reg-title { font-size: 30px; }
-        }
-      `}</style>
+      {/* Los estilos viven en app/estilos/acceso.css (bloque "Registro"). */}
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import { BellOff } from "lucide-react";
 import { darDeBajaAction } from "@/src/features/auth/baja";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,13 @@ export default async function BajaPage({ searchParams }: Props) {
   const fallo = estado === "error" || estado === "invalido";
 
   return (
-    <main className="baja-page">
+    <main className="baja-page sistema">
+      <span className="acc-mancha acc-mancha-1" aria-hidden />
+      <span className="acc-mancha acc-mancha-2" aria-hidden />
       <section className="baja-card">
+        <span className="acc-sola-ico baja-ico" aria-hidden>
+          <BellOff size={22} strokeWidth={2.1} />
+        </span>
         <p className="baja-kicker">Brunela Dance Trainer</p>
 
         {listo ? (
@@ -76,58 +82,7 @@ export default async function BajaPage({ searchParams }: Props) {
         )}
       </section>
 
-      <style>{`
-        .baja-page {
-          min-height: 100vh; display: flex; align-items: center; justify-content: center;
-          padding: 28px 20px;
-          background:
-            radial-gradient(1100px 520px at 12% -8%, var(--pink-wash) 0%, transparent 60%),
-            radial-gradient(900px 480px at 105% 108%, var(--pink-soft) 0%, transparent 62%),
-            #fffdfd;
-        }
-        .baja-card {
-          width: min(480px, 100%);
-          background: rgba(255,255,255,0.95);
-          border: 1.5px solid var(--pink-soft);
-          border-radius: 28px; padding: 36px 32px 30px;
-          box-shadow: 0 26px 70px rgba(28,25,23,0.09);
-          text-align: center;
-        }
-        .baja-kicker {
-          font-size: 10px; font-weight: 900; letter-spacing: 0.2em;
-          text-transform: uppercase; color: var(--pink);
-        }
-        .baja-title {
-          font-family: var(--font-display), sans-serif;
-          font-size: 34px; line-height: 1.12; font-weight: 800;
-          color: var(--ink); margin: 14px 0 0;
-        }
-        .baja-title span { color: var(--pink); font-style: italic; }
-        .baja-sub {
-          margin: 14px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.7;
-        }
-        .baja-nota {
-          margin: 10px 0 0; font-size: 12px; color: var(--pink-muted); line-height: 1.6;
-        }
-        .baja-btn {
-          width: 100%; min-height: 52px; margin-top: 24px;
-          border: 0; border-radius: 999px;
-          background: var(--pink); color: #fff; cursor: pointer;
-          font-family: var(--font-body), sans-serif; font-size: 0.72rem;
-          font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase;
-          box-shadow: 0 18px 34px rgba(230, 79, 85, 0.26);
-        }
-        .baja-btn-sec {
-          display: inline-flex; align-items: center; justify-content: center;
-          min-height: 44px; margin-top: 12px;
-          color: var(--pink-deep); font-size: 13px; font-weight: 700;
-          text-decoration: none;
-        }
-        @media (max-width: 520px) {
-          .baja-card { padding: 28px 20px 24px; border-radius: 22px; }
-          .baja-title { font-size: 28px; }
-        }
-      `}</style>
+      {/* Los estilos viven en app/estilos/acceso.css (bloque "Baja"). */}
     </main>
   );
 }

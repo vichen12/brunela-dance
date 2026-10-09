@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePublicI18n } from "@/components/language-provider";
+import type { PublicLocale } from "@/src/i18n/public";
 
 type Resto = { dias: number; horas: number; minutos: number; segundos: number };
 
@@ -35,6 +37,7 @@ function calcular(objetivo: number): Resto {
  *    salto de maquetado cuando entran.
  */
 export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
+  const { t } = usePublicI18n();
   const objetivo = new Date(objetivoISO).getTime();
   const [resto, setResto] = useState<Resto | null>(null);
 
@@ -45,10 +48,10 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
   }, [objetivo]);
 
   const bloques: { valor: number | null; etiqueta: string }[] = [
-    { valor: resto?.dias ?? null, etiqueta: "días" },
-    { valor: resto?.horas ?? null, etiqueta: "horas" },
-    { valor: resto?.minutos ?? null, etiqueta: "min" },
-    { valor: resto?.segundos ?? null, etiqueta: "seg" },
+    { valor: resto?.dias ?? null, etiqueta: t("puerta.days") },
+    { valor: resto?.horas ?? null, etiqueta: t("puerta.hours") },
+    { valor: resto?.minutos ?? null, etiqueta: t("puerta.min") },
+    { valor: resto?.segundos ?? null, etiqueta: t("puerta.sec") },
   ];
 
   const llego =
@@ -65,9 +68,9 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
         anunciar cada segundo, seria insoportable. La fecha de apertura, que es
         el dato que importa, ya se lee en el titular de al lado.
       */}
-      <div className="cr-fila" role="timer" aria-live="off">
+      <div className="cr-fila" role="timer" aria-live="off" aria-label={t("puerta.countdown")}>
         {bloques.map((b, i) => (
-          <div className="cr-b" key={b.etiqueta} data-primero={i === 0 ? "si" : undefined}>
+          <div className="cr-b" key={i} data-primero={i === 0 ? "si" : undefined}>
             <span className="cr-n">
               {b.valor === null ? "––" : String(b.valor).padStart(2, "0")}
             </span>
@@ -76,7 +79,7 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
         ))}
       </div>
 
-      {llego && <p className="cr-llego">Ya es el día. Estamos con los últimos detalles.</p>}
+      {llego && <p className="cr-llego">{t("puerta.arrived")}</p>}
 
       <style>{`
         .cr { margin-top: 1.9rem; }
@@ -144,4 +147,32 @@ export function CuentaRegresiva({ objetivoISO }: { objetivoISO: string }) {
       `}</style>
     </div>
   );
+}
+
+const FORMATO_FECHA: Record<PublicLocale, string> = {
+  es: "es-ES",
+  en: "en-GB",
+  fr: "fr-FR",
+  it: "it-IT",
+};
+
+/**
+ * La fecha de apertura, en el idioma que eligio la visitante ("15 de
+ * noviembre", "15 November", "15 novembre"...).
+ *
+ * Vive en un componente de cliente porque el idioma de la parte publica se
+ * decide en el navegador (localStorage). El primer render sale en castellano,
+ * igual que en el servidor, asi que no hay error de hidratacion.
+ *
+ * La zona horaria va fija en Madrid: la apertura es a medianoche de alli, y
+ * formatear en la zona de la visitante podria mostrar el dia anterior.
+ */
+export function FechaDeApertura({ objetivoISO }: { objetivoISO: string }) {
+  const { locale } = usePublicI18n();
+  const texto = new Intl.DateTimeFormat(FORMATO_FECHA[locale], {
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Madrid",
+  }).format(new Date(objetivoISO));
+  return <>{texto}</>;
 }
