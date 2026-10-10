@@ -231,7 +231,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
             <div>
               <p className="fc-profe-rol">Tu instructora</p>
               <p className="fc-profe-nombre">Brunela</p>
-              <p className="fc-profe-sub">Ballet · PBT · PCT · Pilates — Barcelona</p>
+              <p className="fc-profe-sub">Ballet · Acondicionamiento Integral del Bailarín</p>
             </div>
           </div>
         </div>
