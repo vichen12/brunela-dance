@@ -18,6 +18,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import { VideoPlayerPanel } from "@/components/video-player-panel";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -131,7 +132,7 @@ export default async function VideoDetailPage({ params, searchParams }: { params
   const signed = bunnyId && hasBunnyStreamEnv() ? bunnySignedUrls(bunnyId) : null;
 
   const playbackSrc = signed?.hls ?? null;
-  const posterSrc = signed?.thumbnail ?? video.thumbnail_url;
+  const posterSrc = portadaDeClase(video) ?? signed?.thumbnail ?? null;
   const resumeFrom = progress?.last_position_seconds ?? 0;
   const playerAudioTracks = (video.audio_tracks ?? []).map((t) => ({ locale: t.locale, label: t.label }));
 

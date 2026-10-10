@@ -19,6 +19,7 @@ import { proximaDe } from "@/src/features/studio/sesiones-privadas-reglas";
 import { cargarMiAgenda } from "@/src/features/studio/agenda";
 import { proximosDeLaAgenda } from "@/src/features/studio/agenda-reglas";
 import { claveDia, horaMadrid, nombreDiaCorto } from "@/src/features/admin/calendario";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 export const dynamic = "force-dynamic";
 
@@ -361,8 +362,8 @@ export default async function DashboardPage() {
           {resume && resumeTitle ? (
             <Link href={`/dashboard/library/${resume.videos!.slug}` as never} className="ini-seguir">
               <div className="ini-seguir-img">
-                {resume.videos!.thumbnail_url && (
-                  <img src={resume.videos!.thumbnail_url} alt="" />
+                {portadaDeClase(resume.videos!) && (
+                  <img src={portadaDeClase(resume.videos!)!} alt="" />
                 )}
                 <span className="ini-seguir-play" aria-hidden="true"><Play size={16} strokeWidth={2} fill="currentColor" /></span>
               </div>
@@ -463,7 +464,7 @@ export default async function DashboardPage() {
               {sugeridas.map((clase) => (
                 <Link key={clase.id} href={`/dashboard/library/${clase.slug}` as never} className="ini-hoy-card">
                   <div className="ini-hoy-img">
-                    {clase.thumbnail_url && <img src={clase.thumbnail_url} alt="" />}
+                    {portadaDeClase(clase) && <img src={portadaDeClase(clase)!} alt="" />}
                     <span className="ini-hoy-dur">
                       <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
                       {formatDuracion(clase.duration_seconds)}

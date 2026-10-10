@@ -2,6 +2,7 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 import type { DatosPanel, TierClave } from "@/components/panel-control-admin";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 /**
  * Los datos del panel del estudio. Los usan /dashboard (cuenta admin) y
@@ -71,7 +72,7 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
         id: v.id,
         titulo: resolveI18nText(v.title_i18n) || "Sin título",
         estado: v.status,
-        portada: v.thumbnail_url,
+        portada: portadaDeClase(v),
         minutos: v.duration_seconds ? Math.round(v.duration_seconds / 60) : null,
       })),
     enVivo: ((enVivo ?? []) as { id: string; title_i18n: Record<string, string>; starts_at: string; session_timezone: string; live_session_bookings: { count: number }[] | null }[])

@@ -23,6 +23,7 @@ import {
   planesDesde,
   rangoANivel,
 } from "@/src/features/studio/catalogo-clases";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 export const dynamic = "force-dynamic";
 
@@ -685,9 +686,9 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
               const title = resolveI18nText(video.title_i18n);
               // Las miniaturas viven detras de la misma pull zone con token que
               // el video, asi que tambien se firman por request.
-              const bunnyId = video.bunny_video_id ?? bunnyVideoIdFromUrl(video.stream_playback_id);
-              const thumbSrc =
-                bunnyId && hasBunnyStreamEnv() ? bunnySignedUrls(bunnyId).thumbnail : video.thumbnail_url;
+              // La foto que subio Brunela gana; si no hay, el cuadro de Bunny
+              // firmado (src/lib/video/portada.ts).
+              const thumbSrc = portadaDeClase(video);
               const categoria = CATEGORIA_LABEL[video.category_slugs[0]] ?? video.category_slugs[0] ?? "Clase";
               const fecha = fechaCorta(video.published_at);
 

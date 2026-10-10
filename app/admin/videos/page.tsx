@@ -26,6 +26,7 @@ import { bunnySignedUrls, bunnyVideoIdFromUrl } from "@/src/lib/video/bunny";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -59,9 +60,8 @@ type VideoRecord = {
  * thumbnail_url is a 403 once Token Authentication is on. Sign per request.
  */
 function adminThumb(video: VideoRecord): string | null {
-  const bunnyId = video.bunny_video_id ?? bunnyVideoIdFromUrl(video.stream_playback_id);
-  if (bunnyId && hasBunnyStreamEnv()) return bunnySignedUrls(bunnyId).thumbnail;
-  return video.thumbnail_url;
+  // La foto subida gana; si no hay, el cuadro de Bunny firmado. Ver portada.ts.
+  return portadaDeClase(video);
 }
 
 // ── Quick actions ──────────────────────────────────────────────────────────────

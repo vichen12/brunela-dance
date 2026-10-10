@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, puedeComprarPack, textoSoloPara } from "@/src/features/studio/packs-reglas";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 /**
  * Packs como los ve la alumna: la tienda (/dashboard/packs) y la pagina de
@@ -122,7 +123,7 @@ export async function getClasesDelPack(packId: string): Promise<ClaseDelPack[]> 
       descripcion: resolveI18nText(v.description_i18n) || "",
       minutos: Math.round((v.duration_seconds ?? 0) / 60),
       categoria: v.category_slugs?.[0] ?? null,
-      portada: v.thumbnail_url,
+      portada: portadaDeClase(v),
     }));
 }
 

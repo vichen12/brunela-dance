@@ -417,7 +417,13 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         setProgramId("");
         setProgramDay("");
         setSizeErrors({});
-        router.refresh();
+        // Cerrar el panel y volver a la lista: la URL sin ?nueva=1 lo cierra, y
+        // el aviso verde de arriba confirma. Antes era router.refresh(), que
+        // recargaba los datos pero dejaba el formulario abierto y quieto, y
+        // parecia que la clase no se habia creado.
+        const aviso = finalizeJson.warning ?? "Clase creada. Ya está en la lista; el video se está procesando y en unos minutos se puede ver.";
+        router.replace(`/admin/videos?success=${encodeURIComponent(aviso)}` as never);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
         await abandonRemote();
         setPhase("error");
