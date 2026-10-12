@@ -74,6 +74,14 @@ export interface PlantillaCorreo {
   firma?: boolean;
   /** Frase completa: "Recibiste este correo porque...". */
   motivo: string;
+  /**
+   * Foto grande en el cuerpo (la portada de una clase). Tiene que ser una URL
+   * PUBLICA y que no venza: el correo se abre dias despues, y una URL firmada
+   * de Bunny para entonces da 403 y queda un hueco roto.
+   */
+  imagen?: { url: string; alt: string; enlace?: string };
+  /** Enlace de baja visible en el pie (avisos opcionales, como "clase nueva"). */
+  baja?: { texto: string; url: string };
 }
 
 export function escapar(texto: string): string {
@@ -168,6 +176,16 @@ function nota(texto: string): string {
     <td class="bd-nota" style="background-color:${COLORES.nota};border:1px solid ${COLORES.bordeNota};border-radius:16px;padding:16px 20px;font-family:${FUENTE};font-size:14px;line-height:22px;color:${COLORES.secundario};">
       <span class="bd-tenue">${enriquecer(texto)}</span>
     </td>
+  </tr>
+</table>`;
+}
+
+function imagen(i: { url: string; alt: string; enlace?: string }): string {
+  const img = `<img src="${escapar(i.url)}" width="508" alt="${escapar(i.alt)}" style="display:block;width:100%;max-width:508px;height:auto;border:0;outline:none;border-radius:18px;">`;
+  return `
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:4px 0 24px 0;">
+  <tr>
+    <td align="center">${i.enlace ? `<a href="${escapar(i.enlace)}" target="_blank" style="text-decoration:none;">${img}</a>` : img}</td>
   </tr>
 </table>`;
 }
@@ -296,6 +314,7 @@ export function plantillaCorreo(p: PlantillaCorreo): string {
                 <td class="bd-cuerpo" style="padding:38px 46px 40px 46px;">
                   ${saludo}
                   ${parrafos}
+                  ${p.imagen ? imagen(p.imagen) : ""}
                   ${p.detalles && p.detalles.length > 0 ? detalles(p.detalles) : ""}
                   ${p.codigo ? codigo(p.codigo) : ""}
                   ${p.boton ? boton(p.boton.texto, p.boton.url) : ""}
@@ -316,6 +335,7 @@ export function plantillaCorreo(p: PlantillaCorreo): string {
               <a href="mailto:${CORREO_CONTACTO}" style="color:${COLORES.coralProfundo};font-weight:800;text-decoration:none;">${CORREO_CONTACTO}</a>
             </p>
             <p class="bd-tenue" style="margin:0;font-size:12px;line-height:18px;color:${COLORES.secundario};">${escapar(p.motivo)}</p>
+            ${p.baja ? `<p class="bd-tenue" style="margin:10px 0 0 0;font-size:12px;line-height:18px;color:${COLORES.secundario};"><a href="${escapar(p.baja.url)}" target="_blank" class="bd-enlace" style="color:${COLORES.coralProfundo};text-decoration:underline;">${escapar(p.baja.texto)}</a></p>` : ""}
           </td>
         </tr>
       </table>
@@ -347,5 +367,6 @@ export function textoPlano(p: PlantillaCorreo): string {
     `${SITIO} · ${CORREO_CONTACTO}`,
     p.motivo,
   );
+  if (p.baja) partes.push(`${p.baja.texto}: ${p.baja.url}`);
   return partes.join("\n");
 }

@@ -28,6 +28,7 @@ import {
 } from "@/src/features/studio/catalogo-clases";
 
 import type { PlanParaElegir } from "@/src/features/admin/planes-de-trabajo";
+import { avisoDeClaseNueva } from "@/src/features/correos/reglas";
 
 /** 16 MiB: big enough to keep throughput high, small enough to retry cheaply. */
 const CHUNK_SIZE = 16 * 1024 * 1024;
@@ -421,7 +422,8 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         // el aviso verde de arriba confirma. Antes era router.refresh(), que
         // recargaba los datos pero dejaba el formulario abierto y quieto, y
         // parecia que la clase no se habia creado.
-        const aviso = finalizeJson.warning ?? "Clase creada. Ya está en la lista; el video se está procesando y en unos minutos se puede ver.";
+        const avisoCorreos = avisoDeClaseNueva(typeof finalizeJson.correos === "number" ? finalizeJson.correos : 0);
+        const aviso = (finalizeJson.warning ?? "Clase creada. Ya está en la lista; el video se está procesando y en unos minutos se puede ver.") + avisoCorreos;
         // Recarga COMPLETA, no router.replace: el panel y los selectores
         // (materiales, planes) guardan su estado en el navegador, y una
         // navegacion suave los dejaba abiertos y marcados.

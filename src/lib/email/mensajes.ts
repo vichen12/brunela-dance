@@ -166,3 +166,45 @@ export function avisoAdminNuevaAlta(datos: {
     motivo: "Recibiste este aviso porque sos la administradora de Brunela Dance.",
   });
 }
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Brunela subio (o publico) una clase que esta alumna puede ver. Lo manda
+ * src/features/correos/disparadores.ts por lotes, una sola vez por clase y
+ * alumna (clave clase-nueva:<video>:<alumna>).
+ *
+ * Es el unico correo OPCIONAL que sale sin que la alumna haya hecho nada: por
+ * eso lleva el enlace de baja visible en el pie (y la cabecera List-Unsubscribe
+ * la agrega quien lo manda).
+ *
+ * "Ya está en tu biblioteca" y no "ya la podés ver": recien subida, Bunny puede
+ * seguir codificando el video unos minutos. La ficha de la clase ya muestra
+ * ese estado; el correo no promete lo que todavia no pasa.
+ */
+export function claseNueva(datos: {
+  nombre?: string | null;
+  titulo: string;
+  urlClase: string;
+  /** URL publica de la portada, o null (sin foto: el correo se arma igual). */
+  portada?: string | null;
+  /** "35 min". Opcional. */
+  duracion?: string | null;
+  urlBaja: string;
+}): CorreoArmado {
+  return armar(`Clase nueva: ${datos.titulo}`, {
+    preheader: "Ya está en tu biblioteca. Cuando quieras, le damos.",
+    etiqueta: "Clase nueva",
+    titulo: "Subí una clase nueva",
+    saludo: saludo(datos.nombre),
+    parrafos: [
+      `Ya está en tu biblioteca: **${datos.titulo}**. Hacela cuando puedas, a tu ritmo.`,
+    ],
+    imagen: datos.portada ? { url: datos.portada, alt: datos.titulo, enlace: datos.urlClase } : undefined,
+    detalles: datos.duracion ? [{ etiqueta: "Duración", valor: datos.duracion }] : undefined,
+    boton: { texto: "Ver la clase", url: datos.urlClase },
+    nota: "Si la abrís apenas te llega este correo y el video todavía se está preparando, dale unos minutos y volvé a entrar.",
+    motivo: "Recibiste este correo porque tenés una cuenta en Brunela Dance y esta clase está incluida en lo que podés ver.",
+    baja: { texto: "No quiero más avisos de clases nuevas", url: datos.urlBaja },
+  });
+}

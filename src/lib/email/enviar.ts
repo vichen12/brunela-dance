@@ -22,6 +22,8 @@ export interface CorreoAEnviar {
   responderA?: string;
   /** Evita duplicados si el que llama reintenta (Resend la respeta 24 h). */
   claveIdempotencia?: string;
+  /** Cabeceras extra del correo (List-Unsubscribe). */
+  encabezados?: Record<string, string>;
 }
 
 export type ResultadoEnvio = { ok: true; id: string } | { ok: false; error: string };
@@ -66,6 +68,7 @@ export async function enviarCorreo(correo: CorreoAEnviar): Promise<ResultadoEnvi
         html: correo.html,
         text: correo.texto,
         reply_to: correo.responderA ?? "info@bruneladance.com",
+        ...(correo.encabezados ? { headers: correo.encabezados } : null),
       }),
       signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
       cache: "no-store",
@@ -87,6 +90,77 @@ export async function enviarCorreo(correo: CorreoAEnviar): Promise<ResultadoEnvi
     const mensaje = error instanceof Error ? error.message : String(error);
     return fallo(mensaje, correo.asunto);
   }
+}
+
+export type ResultadoLote = { ok: true; ids: string[] } | { ok: false; error: string };
+
+const RESEND_LOTE_URL = "https://api.resend.com/emails/batch";
+/** Tope de Resend por llamada a /emails/batch. */
+export const MAXIMO_POR_LOTE = 100;
+
+/**
+ * Hasta 100 correos en UNA llamada (https://resend.com/docs/api-reference/emails/send-batch-emails).
+ * Resend cuenta el lote como un solo pedido para su limite de 2 por segundo.
+ *
+ * Modo estricto (el de Resend por defecto): si un correo del lote es invalido
+ * no sale NINGUNO, y los ids vuelven en el mismo orden que se mandaron. Eso es
+ * lo que permite asociar cada id a su reserva en correos_enviados.
+ *
+ * Sin Idempotency-Key a proposito: Resend la rechaza (409) si el mismo valor
+ * vuelve con otro contenido, y un lote reintentado nunca trae las mismas
+ * alumnas. Lo que impide el doble envio es la reserva en correos_enviados.
+ *
+ * Cada correo lleva UN destinatario: un lote no es un correo con 100
+ * direcciones a la vista.
+ */
+export async function enviarLote(correos: CorreoAEnviar[]): Promise<ResultadoLote> {
+  try {
+    if (typeof window !== "undefined") {
+      return falloLote("enviarLote se llamo desde el navegador; solo puede usarse en el servidor");
+    }
+    if (correos.length === 0) return { ok: true, ids: [] };
+    if (correos.length > MAXIMO_POR_LOTE) return falloLote(`un lote admite hasta ${MAXIMO_POR_LOTE} correos`);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const remitente = process.env.EMAIL_REMITENTE;
+    if (!apiKey || !remitente) return falloLote("faltan RESEND_API_KEY o EMAIL_REMITENTE");
+
+    const cuerpo = correos.map((c) => ({
+      from: remitente,
+      to: (Array.isArray(c.para) ? c.para : [c.para]).map((d) => d.trim()).filter(Boolean),
+      subject: c.asunto,
+      html: c.html,
+      text: c.texto,
+      reply_to: c.responderA ?? "info@bruneladance.com",
+      ...(c.encabezados ? { headers: c.encabezados } : null),
+    }));
+    if (cuerpo.some((c) => c.to.length !== 1)) return falloLote("cada correo del lote lleva exactamente un destinatario");
+
+    const respuesta = await fetch(RESEND_LOTE_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo),
+      signal: AbortSignal.timeout(20_000),
+      cache: "no-store",
+    });
+    const json = (await respuesta.json().catch(() => null)) as
+      | { data?: { id?: string }[]; message?: string; name?: string }
+      | null;
+    if (!respuesta.ok) {
+      return falloLote(`Resend respondio ${respuesta.status}: ${json?.message ?? json?.name ?? "sin detalle"}`);
+    }
+    // 2xx = Resend los acepto. Aunque la respuesta venga rara, se da por
+    // enviado: liberar las reservas aca haria que salieran dos veces.
+    const datos = json?.data ?? [];
+    return { ok: true, ids: correos.map((_, i) => datos[i]?.id ?? "") };
+  } catch (error) {
+    return falloLote(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function falloLote(error: string): ResultadoLote {
+  console.error(`[correo] no se envio el lote: ${error}`);
+  return { ok: false, error };
 }
 
 function fallo(error: string, asunto?: string): ResultadoEnvio {

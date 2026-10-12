@@ -8,9 +8,10 @@ import { conSuscripcionQueDaAcceso } from "@/src/features/studio/acceso-gratis";
 import { PLAN_LABEL, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { enviarCorreo } from "@/src/lib/email/enviar";
 import { clavesYaEnviadas, enviarUnaVez, type PedidoDeCorreo, type ResultadoUnaVez } from "./enviar-una-vez";
+import { clasesNuevasDelCron, RESUMEN_CLASE_NUEVA_VACIO, type ResumenClaseNueva } from "./clase-nueva";
 import {
-  claves, diasParaAvisoPorVencer, fechaYHoraDeClase, rangoDeHoyEnMadrid, tocaAvisoTerminado, tocaRecordatorio, urlDeClase,
-  DIAS_AVISO_POR_VENCER, DIAS_VENTANA_TERMINADO,
+  claves, diasParaAvisoPorVencer, esColumnaAusente, fechaYHoraDeClase, rangoDeHoyEnMadrid, tipoDesactivado, tocaAvisoTerminado,
+  tocaRecordatorio, urlDeClase, DIAS_AVISO_POR_VENCER, DIAS_VENTANA_TERMINADO, MIGRACION_CLASE_NUEVA,
 } from "./reglas";
 
 /**
@@ -22,19 +23,51 @@ import {
  *    onboarding con el id de la SESION. Nunca un id que venga de un formulario
  *    sin pasar por una de esas guardas.
  *
- * Solo correos TRANSACCIONALES, a la direccion de la propia alumna
- * (profiles.email). Nada de marketing: eso pide marketing_opt_in y es otro
- * camino.
+ * Todos van a la direccion de la propia alumna (profiles.email). Los
+ * OPCIONALES (recordatorio, invitacion, acceso gratis, clase nueva) respetan lo
+ * que ella apago en Mi perfil: profiles.correos_desactivados para los tres
+ * primeros y la baja de marketing para clase nueva (ver reglas.ts). Se lee en
+ * la MISMA consulta que trae a las destinatarias, nunca una vuelta por alumna.
  */
 
-type Perfil = { id: string; email: string | null; full_name: string | null; is_admin: boolean };
+type Perfil = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  is_admin: boolean;
+  /** undefined si la columna todavia no existe (falta 20261012_clase_nueva.sql). */
+  correos_desactivados?: string[] | null;
+};
+
+const COLS_PERFIL = "id, email, full_name, is_admin";
 
 function base() {
   return getAppUrl().replace(/\/$/, "");
 }
 
+let avisoSinColumnaDado = false;
+
+/**
+ * Corre la consulta pidiendo correos_desactivados; si la columna no existe
+ * (42703, falta la migracion) la repite sin ella. Sin la columna nadie apago
+ * nada: es exactamente el comportamiento de antes.
+ */
+async function conPreferencias<T>(
+  consulta: (columnaExtra: string) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>
+): Promise<{ data: T | null; error: { code?: string; message: string } | null }> {
+  const r = await consulta(", correos_desactivados");
+  if (!r.error || !esColumnaAusente(r.error)) return r;
+  if (!avisoSinColumnaDado) {
+    avisoSinColumnaDado = true;
+    console.warn(`[correo] falta la migracion ${MIGRACION_CLASE_NUEVA}: se ignoran las preferencias de correo (nadie apago nada).`);
+  }
+  return consulta("");
+}
+
 async function perfil(db: SupabaseClient, id: string): Promise<Perfil | null> {
-  const { data, error } = await db.from("profiles").select("id, email, full_name, is_admin").eq("id", id).maybeSingle<Perfil>();
+  const { data, error } = await conPreferencias<Perfil>((extra) =>
+    db.from("profiles").select(COLS_PERFIL + extra).eq("id", id).maybeSingle<Perfil>()
+  );
   if (error) throw new Error("No se pudo leer el perfil: " + error.message);
   return data;
 }
@@ -91,6 +124,7 @@ export async function enviarInvitacion(
     if (error) throw new Error("No se pudo leer la clase: " + error.message);
     if (!p || !s) return { estado: "omitido", motivo: "no se encontro la alumna o la clase" };
     if (!p.email) return { estado: "omitido", motivo: "sin correo" };
+    if (tipoDesactivado(p.correos_desactivados, "invitacion_vivo")) return { estado: "omitido", motivo: "apago las invitaciones" };
     if (s.status !== "scheduled") return { estado: "omitido", motivo: "la clase no esta publicada" };
     if (Date.parse(s.starts_at) <= Date.now()) return { estado: "omitido", motivo: "la clase ya empezo" };
 
@@ -143,6 +177,8 @@ export type ResumenCorreosCron = {
   yaEnviados: number;
   fallos: number;
   pendientes: number;
+  /** Avisos de clase nueva que completo el cron (los que no entraron en el after() de la publicacion). */
+  clasesNuevas?: ResumenClaseNueva;
 };
 
 type Candidato = PedidoDeCorreo & { grupo: "recordatorios" | "porVencer" | "terminados" };
@@ -156,6 +192,19 @@ type Candidato = PedidoDeCorreo & { grupo: "recordatorios" | "porVencer" | "term
  * corrieron antes y no dependen de esto.
  */
 export async function correosDelCron(db: SupabaseClient, ahora = Date.now()): Promise<ResumenCorreosCron> {
+  const empezo = Date.now();
+  const resumen = await correosIndividualesDelCron(db, ahora);
+  // Ultimo, con lo que quede del presupuesto: los avisos de clase nueva que no
+  // alcanzaron a salir en el after() de la publicacion. Nunca lanza.
+  const restante = PRESUPUESTO_CLASES_NUEVAS_CRON_MS - (Date.now() - empezo);
+  resumen.clasesNuevas = restante > 3_000 ? await clasesNuevasDelCron(db, ahora, restante) : { ...RESUMEN_CLASE_NUEVA_VACIO, omitido: "sin tiempo" };
+  return resumen;
+}
+
+/** Hasta aca puede llegar el cron contando todo (maxDuration de la ruta = 60 s). */
+const PRESUPUESTO_CLASES_NUEVAS_CRON_MS = 52_000;
+
+async function correosIndividualesDelCron(db: SupabaseClient, ahora: number): Promise<ResumenCorreosCron> {
   const resumen: ResumenCorreosCron = { recordatorios: 0, porVencer: 0, terminados: 0, yaEnviados: 0, fallos: 0, pendientes: 0 };
   const empezo = Date.now();
   try {
@@ -227,7 +276,7 @@ async function candidatosRecordatorio(db: SupabaseClient, appUrl: string, ahora:
   for (const r of reservas) {
     const s = porSesion.get(r.live_session_id as string);
     const p = perfiles.get(r.user_id as string);
-    if (!s || !p?.email) continue;
+    if (!s || !p?.email || tipoDesactivado(p.correos_desactivados, "recordatorio_vivo")) continue;
     const { fecha, hora } = fechaYHoraDeClase(s.starts_at);
     out.push({
       grupo: "recordatorios",
@@ -251,13 +300,16 @@ async function candidatosRecordatorio(db: SupabaseClient, appUrl: string, ahora:
 async function candidatosAccesoGratis(db: SupabaseClient, appUrl: string, ahora: number): Promise<Candidato[]> {
   const desde = new Date(ahora - DIAS_VENTANA_TERMINADO * 86400000).toISOString();
   const hasta = new Date(ahora + (DIAS_AVISO_POR_VENCER + 1) * 86400000).toISOString();
-  const { data, error } = await db
-    .from("profiles")
-    .select("id, email, full_name, is_admin, acceso_gratis_hasta")
-    .gt("acceso_gratis_hasta", desde)
-    .lt("acceso_gratis_hasta", hasta)
-    .eq("is_admin", false)
-    .limit(2000);
+  const { data, error } = await conPreferencias<(Perfil & { acceso_gratis_hasta: string })[]>((extra) =>
+    db
+      .from("profiles")
+      .select(COLS_PERFIL + ", acceso_gratis_hasta" + extra)
+      .gt("acceso_gratis_hasta", desde)
+      .lt("acceso_gratis_hasta", hasta)
+      .eq("is_admin", false)
+      .limit(2000)
+      .returns<(Perfil & { acceso_gratis_hasta: string })[]>()
+  );
   if (error) {
     // Sin 20261009_acceso_gratis.sql no hay acceso gratis que avisar.
     if (esFaltaDeMigracion(error)) return [];
@@ -279,6 +331,7 @@ async function candidatosAccesoGratis(db: SupabaseClient, appUrl: string, ahora:
     if (!f.email || pagan.has(f.id)) continue;
     const dias = diasParaAvisoPorVencer(f.acceso_gratis_hasta, ahora);
     if (dias !== null) {
+      if (tipoDesactivado(f.correos_desactivados, "gratis_por_vencer")) continue;
       out.push({
         grupo: "porVencer",
         clave: claves.gratisPorVencer(f.id, f.acceso_gratis_hasta),
@@ -289,7 +342,11 @@ async function candidatosAccesoGratis(db: SupabaseClient, appUrl: string, ahora:
         // la devuelve al estudio (destinoDeElegirPlan).
         correo: accesoGratisPorVencer({ nombre: f.full_name, diasRestantes: dias, urlPlan: `${appUrl}/dashboard/plan` }),
       });
-    } else if (tocaAvisoTerminado(f.acceso_gratis_hasta, ahora) && !conPack.has(f.id)) {
+    } else if (
+      tocaAvisoTerminado(f.acceso_gratis_hasta, ahora) &&
+      !conPack.has(f.id) &&
+      !tipoDesactivado(f.correos_desactivados, "gratis_terminado")
+    ) {
       out.push({
         grupo: "terminados",
         clave: claves.gratisTerminado(f.id, f.acceso_gratis_hasta),
@@ -306,7 +363,9 @@ async function candidatosAccesoGratis(db: SupabaseClient, appUrl: string, ahora:
 async function perfilesPorId(db: SupabaseClient, ids: string[]): Promise<Map<string, Perfil>> {
   const m = new Map<string, Perfil>();
   for (let i = 0; i < ids.length; i += 200) {
-    const { data, error } = await db.from("profiles").select("id, email, full_name, is_admin").in("id", ids.slice(i, i + 200));
+    const { data, error } = await conPreferencias<Perfil[]>((extra) =>
+      db.from("profiles").select(COLS_PERFIL + extra).in("id", ids.slice(i, i + 200)).returns<Perfil[]>()
+    );
     if (error) throw new Error("No se pudieron leer los perfiles: " + error.message);
     for (const p of (data ?? []) as Perfil[]) m.set(p.id, p);
   }

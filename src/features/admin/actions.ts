@@ -3,6 +3,9 @@ import { bunnyThumbnailUrl } from "@/src/lib/video/bunny";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { prepararAvisoDeClaseNueva } from "@/src/features/correos/clase-nueva";
+import { pasaAPublicada, publishedAtAlGuardar } from "@/src/features/correos/reglas";
 import { z } from "zod";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -227,10 +230,19 @@ export async function upsertVideoAction(formData: FormData) {
 
   // Portada: la foto que eligio Brunela; si la quito, vuelve el cuadro del
   // video en Bunny (si la clase tiene video), en vez de quedar sin imagen.
+  //
+  // De paso se lee el estado ANTERIOR: decide si este guardado la publica por
+  // primera vez (aviso por mail) y si published_at se conserva.
   let portada = parsed.data.thumbnailUrl?.trim() || null;
-  if (!portada && parsed.data.id) {
-    const { data: actual } = await supabase.from("videos").select("bunny_video_id").eq("id", parsed.data.id).maybeSingle();
-    if (actual?.bunny_video_id) portada = bunnyThumbnailUrl(actual.bunny_video_id);
+  let antes: { status: string | null; published_at: string | null } | null = null;
+  if (parsed.data.id) {
+    const { data: actual } = await supabase
+      .from("videos")
+      .select("bunny_video_id, status, published_at")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+    if (actual) antes = { status: actual.status ?? null, published_at: actual.published_at ?? null };
+    if (!portada && actual?.bunny_video_id) portada = bunnyThumbnailUrl(actual.bunny_video_id);
   }
 
   const payload = {
@@ -271,16 +283,25 @@ export async function upsertVideoAction(formData: FormData) {
     //   Omitirlas del update las deja intactas. En un insert quedan en null,
     //   que es lo correcto: las escribe la subida a Bunny, no este formulario.
     is_featured: parsed.data.isFeatured,
-    published_at: parsed.data.status === "published" ? new Date().toISOString() : null,
+    // Una clase que ya estaba publicada CONSERVA su fecha (antes se pisaba en
+    // cada guardado, y el cron de avisos la habria tomado por nueva).
+    published_at: publishedAtAlGuardar(antes, parsed.data.status),
     updated_by: user.id
   };
 
   const result = parsed.data.id
-    ? await supabase.from("videos").update(payload).eq("id", parsed.data.id)
-    : await supabase.from("videos").insert({ ...payload, created_by: user.id });
+    ? await supabase.from("videos").update(payload).eq("id", parsed.data.id).select("id").maybeSingle<{ id: string }>()
+    : await supabase.from("videos").insert({ ...payload, created_by: user.id }).select("id").maybeSingle<{ id: string }>();
 
   if (result.error) {
     redirectWithMessage("/admin/videos", "error", result.error.message);
+  }
+
+  // Pasa a publicada por primera vez -> aviso por mail, en after(). Volver a
+  // guardar una clase que ya estaba publicada no avisa a nadie.
+  if (result.data?.id && pasaAPublicada(antes?.status, parsed.data.status)) {
+    const aviso = await prepararAvisoDeClaseNueva(supabase, result.data.id);
+    if (aviso) after(aviso.mandar);
   }
 
   refreshAdminRoutes();

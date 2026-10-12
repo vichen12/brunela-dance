@@ -10,9 +10,17 @@
 import { diasRestantes } from "../studio/acceso-gratis-reglas";
 import { isoAMadrid, madridAIso, ZONA_ESTUDIO } from "../studio/sesiones-privadas-reglas";
 
-export type TipoCorreo = "bienvenida" | "gratis_por_vencer" | "gratis_terminado" | "recordatorio_vivo" | "invitacion_vivo";
+export type TipoCorreo =
+  | "bienvenida"
+  | "gratis_por_vencer"
+  | "gratis_terminado"
+  | "recordatorio_vivo"
+  | "invitacion_vivo"
+  | "clase_nueva";
 
 export const MIGRACION_CORREOS = "20261009_3_correos_enviados.sql";
+/** Agrega el tipo 'clase_nueva' a correos_enviados y profiles.correos_desactivados. */
+export const MIGRACION_CLASE_NUEVA = "20261012_clase_nueva.sql";
 
 /**
  * La tabla no existe todavia: la duena no corrio la migracion.
@@ -46,6 +54,8 @@ export const claves = {
   gratisTerminado: (alumnaId: string, hastaIso: string) => `gratis-terminado:${alumnaId}:${diaMadrid(hastaIso)}`,
   recordatorio: (reservaId: string) => `recordatorio:${reservaId}`,
   invitacion: (sesionId: string, alumnaId: string) => `invitacion:${sesionId}:${alumnaId}`,
+  /** Una por clase y alumna, para siempre: despublicar y volver a publicar no la repite. */
+  claseNueva: (videoId: string, alumnaId: string) => `clase-nueva:${videoId}:${alumnaId}`,
 };
 
 // ─── Acceso gratis ─────────────────────────────────────────────────────────
@@ -150,4 +160,148 @@ export function alumnaParaBienvenida(
     return userId;
   }
   return null;
+}
+
+// ─── Preferencias de correo de la alumna ──────────────────────────────────
+//
+// DOS FUENTES, A PROPOSITO (20261012_clase_nueva.sql):
+//
+//   · Clases nuevas -> las columnas de marketing (marketing_opt_in,
+//     marketing_opt_out_at). Es lo que escribe el enlace de baja (/baja) y es
+//     la prueba del consentimiento. Duplicarlo en la lista dejaria dos verdades
+//     que pueden contradecirse; por eso el CHECK de la columna NO admite
+//     'clase_nueva'.
+//   · El resto de los opcionales -> profiles.correos_desactivados (lo que ella
+//     APAGO; vacia = recibe todo).
+//
+// Bienvenida, confirmacion de cuenta, cambio de contraseña y recibos no son
+// opcionales: no estan en ninguna de las dos.
+
+/** Los tipos que una alumna puede apagar desde Mi perfil (fuera de clase_nueva). */
+export const TIPOS_DESACTIVABLES = ["recordatorio_vivo", "invitacion_vivo", "gratis_por_vencer", "gratis_terminado"] as const;
+export type TipoDesactivable = (typeof TIPOS_DESACTIVABLES)[number];
+
+export type InterruptorDeCorreo = {
+  campo: "clase_nueva" | "recordatorio_vivo" | "invitacion_vivo" | "acceso_gratis";
+  titulo: string;
+  descripcion: string;
+  /** Lo que se guarda en correos_desactivados si lo apaga. Vacio = va por las columnas de marketing. */
+  tipos: readonly TipoDesactivable[];
+};
+
+/** Los interruptores de Mi perfil. "Acceso gratis" apaga los dos avisos juntos. */
+export const INTERRUPTORES_DE_CORREO: readonly InterruptorDeCorreo[] = [
+  { campo: "clase_nueva", titulo: "Clases nuevas", descripcion: "Un correo cuando Brunela sube una clase que podés ver.", tipos: [] },
+  { campo: "recordatorio_vivo", titulo: "Recordatorio el día de tu clase en vivo", descripcion: "Esa mañana, si reservaste lugar en una clase en vivo.", tipos: ["recordatorio_vivo"] },
+  { campo: "invitacion_vivo", titulo: "Invitaciones de Brunela a clases en vivo", descripcion: "Cuando Brunela te invita a una clase que no está en tu plan.", tipos: ["invitacion_vivo"] },
+  { campo: "acceso_gratis", titulo: "Avisos de tu acceso gratis", descripcion: "Unos días antes de que termine, y cuando terminó.", tipos: ["gratis_por_vencer", "gratis_terminado"] },
+];
+
+/** Lo que se guarda en correos_desactivados a partir de los interruptores ENCENDIDOS. */
+export function desactivadosDesdeInterruptores(encendidos: ReadonlySet<string>): TipoDesactivable[] {
+  const out: TipoDesactivable[] = [];
+  for (const i of INTERRUPTORES_DE_CORREO) if (!encendidos.has(i.campo)) out.push(...i.tipos);
+  return out;
+}
+
+/** ¿Apago este tipo? Lista null/undefined (columna sin migrar) = no apago nada. */
+export function tipoDesactivado(lista: readonly string[] | null | undefined, tipo: TipoDesactivable) {
+  return !!lista && lista.includes(tipo);
+}
+
+/**
+ * Baja EXPLICITA de los avisos de clase nueva: toco "darme de baja" (o apago el
+ * interruptor) y no volvio a encenderlo. Quien nunca marco la casilla del alta
+ * NO esta dada de baja: pedido de la dueña (2026-10-12), le llega igual.
+ */
+export function dioDeBajaClasesNuevas(p: { marketing_opt_in?: boolean | null; marketing_opt_out_at?: string | null }) {
+  return !!p.marketing_opt_out_at && p.marketing_opt_in !== true;
+}
+
+/** El mismo criterio, como filtro `or` de PostgREST: sin fecha de baja, o volvio a aceptar. */
+export const FILTRO_SIN_BAJA_CLASES_NUEVAS = "marketing_opt_out_at.is.null,marketing_opt_in.is.true";
+
+// ─── Clase nueva ──────────────────────────────────────────────────────────
+
+export type PerfilParaClaseNueva = {
+  id: string;
+  email: string | null;
+  is_admin: boolean | null;
+  membership_tier: string | null;
+  marketing_opt_in?: boolean | null;
+  marketing_opt_out_at?: string | null;
+};
+
+/**
+ * ¿Le llega el aviso de esta clase? La misma regla que la policy
+ * videos_select_allowed_by_tier (la que decide si la VE):
+ *   su plan esta en planes_permitidos  O  compro un pack que la incluye.
+ * Y ademas: no es admin, tiene correo y no se dio de baja.
+ */
+export function recibeClaseNueva(p: PerfilParaClaseNueva, planesPermitidos: readonly string[], compradoras: ReadonlySet<string>) {
+  if (p.is_admin) return false;
+  if (!p.email?.trim()) return false;
+  if (dioDeBajaClasesNuevas(p)) return false;
+  const porPlan = !!p.membership_tier && p.membership_tier !== "none" && planesPermitidos.includes(p.membership_tier);
+  return porPlan || compradoras.has(p.id);
+}
+
+/** ¿Este guardado la hace visible? Solo el paso de no-publicada a publicada. */
+export function pasaAPublicada(antes: string | null | undefined, despues: string) {
+  return despues === "published" && antes !== "published";
+}
+
+/**
+ * published_at al guardar. Una clase que YA estaba publicada conserva su fecha:
+ * antes cada guardado la ponia en "ahora", y el cron (que completa los avisos
+ * de las publicadas en los ultimos dias) habria tomado por nueva una clase de
+ * hace meses.
+ */
+export function publishedAtAlGuardar(
+  antes: { status: string | null; published_at: string | null } | null,
+  nuevoStatus: string,
+  ahora = Date.now()
+): string | null {
+  if (nuevoStatus !== "published") return null;
+  if (antes?.status === "published" && antes.published_at) return antes.published_at;
+  return new Date(ahora).toISOString();
+}
+
+/** Hasta cuantos dias despues de publicada el cron completa los avisos que faltaron. */
+export const DIAS_VENTANA_CLASE_NUEVA = 3;
+
+/** Resend acepta hasta 100 correos por llamada a /emails/batch. */
+export const TAMANO_LOTE = 100;
+
+export function enLotes<T>(lista: readonly T[], tamano = TAMANO_LOTE): T[][] {
+  if (!Number.isInteger(tamano) || tamano < 1) throw new Error("tamano de lote invalido");
+  const out: T[][] = [];
+  for (let i = 0; i < lista.length; i += tamano) out.push(lista.slice(i, i + tamano));
+  return out;
+}
+
+/** 23514: un CHECK rechazo la fila. En correos_enviados = el tipo todavia no esta permitido (falta la migracion). */
+export function esTipoNoPermitido(error: { code?: string; message?: string } | null | undefined) {
+  return error?.code === "23514" || /correos_enviados_tipo_valido/.test(error?.message ?? "");
+}
+
+/** 42703: la columna no existe (correos_desactivados sin 20261012_clase_nueva.sql). */
+export function esColumnaAusente(error: { code?: string; message?: string } | null | undefined) {
+  return error?.code === "42703" || /column .* does not exist/i.test(error?.message ?? "");
+}
+
+/** La pagina de una clase grabada en el estudio. */
+export function urlDeClaseGrabada(appUrl: string, slug: string) {
+  return `${appUrl.replace(/\/$/, "")}/dashboard/library/${encodeURIComponent(slug)}`;
+}
+
+/** El enlace de baja. El token es de un solo proposito (20260803_marketing_consent.sql). */
+export function urlDeBaja(appUrl: string, token: string) {
+  return `${appUrl.replace(/\/$/, "")}/baja?token=${encodeURIComponent(token)}`;
+}
+
+/** El agregado al cartel de exito del panel (lo usa tambien el formulario de subida, en el navegador). */
+export function avisoDeClaseNueva(cuantas: number | null | undefined): string {
+  if (!cuantas || cuantas < 1) return "";
+  return cuantas === 1 ? " Se le va a avisar por mail a 1 alumna." : ` Se les va a avisar por mail a ${cuantas} alumnas.`;
 }

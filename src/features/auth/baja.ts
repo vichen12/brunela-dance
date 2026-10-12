@@ -17,7 +17,8 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
  *   Lo que la sostiene en pie es el alcance, no la autenticacion:
  *
  *     - la autorizacion es el token, que es un uuid v4 de un solo proposito
- *     - la unica escritura posible es marketing_opt_in = false
+ *     - la unica escritura posible es la baja: marketing_opt_in = false y la
+ *       fecha de baja (marketing_opt_out_at)
  *     - no lee ni devuelve NADA del perfil, asi que un token robado no filtra
  *       ni el correo ni el nombre de nadie
  *     - el peor caso de un token adivinado es que alguien deje de recibir
@@ -42,7 +43,13 @@ export async function darDeBajaAction(formData: FormData) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ marketing_opt_in: false })
+    // marketing_opt_out_at EXPLICITO, no solo por el trigger: el trigger
+    // (stamp_marketing_consent) sella la fecha solo cuando opt_in CAMBIA. A
+    // quien nunca marco la casilla (opt_in ya en false) y toca "darme de baja"
+    // no le quedaria registrada la baja, y desde 2026-10-12 los avisos de clase
+    // nueva le llegan a todas MENOS a las que tienen esa fecha
+    // (dioDeBajaClasesNuevas en src/features/correos/reglas.ts).
+    .update({ marketing_opt_in: false, marketing_opt_out_at: new Date().toISOString() })
     .eq("unsubscribe_token", parsed.data.token);
 
   if (error) {

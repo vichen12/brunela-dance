@@ -73,7 +73,20 @@ no es el que devuelve `ls`:
 37. 20261009_4_packs_por_plan.sql          <-- DESPUES de la 28 (agrega una
                                                columna a `packs`). No
                                                redefine nada
+38. 20261012_clase_nueva.sql               <-- DESPUES de la 21 y la 36 (cambia
+                                               el CHECK de tipo de
+                                               correos_enviados, agrega
+                                               profiles.correos_desactivados).
+                                               No redefine nada
 ```
+
+> **La 38 (clase nueva) tambien se puede correr sola, despues de la 36.** Sin
+> ella NO sale ningun aviso de clase nueva (la reserva en `correos_enviados`
+> falla con 23514 y se loguea `[correo] falta la migracion
+> 20261012_clase_nueva.sql`), y los interruptores de "Mis correos" de Mi perfil
+> guardan solo "Clases nuevas" (que vive en las columnas de marketing). Los
+> demas correos siguen saliendo como siempre. Trae una guarda que falla si la
+> 36 no corrio.
 
 > **La 37 (packs por plan) tambien se puede correr sola.** Agrega
 > `packs.planes_que_pueden_comprar` (NULL = lo compra cualquiera). Sin ella el

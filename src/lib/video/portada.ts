@@ -1,4 +1,9 @@
 import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
+import { esUrlDeBunny } from "./portada-publica";
+
+// La portada para CORREOS (sin firma, que no vence) vive en portada-publica.ts:
+// sin dependencias, para que la usen los correos y sus pruebas.
+export { portadaPublicaDeClase } from "./portada-publica";
 
 /**
  * LA portada de una clase, para cualquier pantalla. Una sola regla:
@@ -29,14 +34,4 @@ export function portadaDeClase(v: {
   if (bunnyId && hasBunnyStreamEnv()) return bunnySignedUrls(bunnyId).thumbnail;
 
   return null;
-}
-
-function esUrlDeBunny(url: string): boolean {
-  const host = process.env.BUNNY_STREAM_CDN_HOSTNAME?.trim().toLowerCase();
-  try {
-    const h = new URL(url).hostname.toLowerCase();
-    return h.endsWith(".b-cdn.net") || h.endsWith("mediadelivery.net") || (!!host && h === host);
-  } catch {
-    return false;
-  }
 }

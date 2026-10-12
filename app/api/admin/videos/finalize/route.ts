@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -13,6 +13,12 @@ import {
   TIPO_SLUGS,
   nivelARango
 } from "@/src/features/studio/catalogo-clases";
+import { prepararAvisoDeClaseNueva } from "@/src/features/correos/clase-nueva";
+
+// El aviso de clase nueva sale en after(), por lotes, con hasta 40 s de
+// presupuesto (src/features/correos/disparadores.ts). Lo que no entra lo
+// completa el cron diario.
+export const maxDuration = 60;
 
 const CONTENT_TYPES = TIPO_SLUGS;
 
@@ -181,6 +187,16 @@ export async function POST(request: Request) {
    * ese dia ya tenia una clase, esta la reemplaza. Es lo que dice el formulario
    * abajo del campo, asi que no sorprende a nadie.
    */
+  /**
+   * Aviso por mail a las alumnas que pueden verla, si se subio YA publicada
+   * (una clase nueva siempre es "primera vez publicada"). La lista se arma
+   * ahora (para decir cuantas en el cartel) y el envio corre en after(): la
+   * subida no espera a Resend. Nunca lanza.
+   */
+  const avisoCorreo = data.status === "published" ? await prepararAvisoDeClaseNueva(supabase, result.data.id) : null;
+  if (avisoCorreo) after(avisoCorreo.mandar);
+  const correos = avisoCorreo?.cuantas ?? 0;
+
   let avisoPlan: string | null = null;
 
   if (data.programId && data.programDayNumber) {
@@ -228,6 +244,7 @@ export async function POST(request: Request) {
         {
           ok: true,
           queued: false,
+          correos,
           warning: [
             `La clase se guardo, pero no se pudo encolar el muxeo: ${jobError.message}`,
             avisoPlan
@@ -245,5 +262,5 @@ export async function POST(request: Request) {
   revalidatePath("/admin/programs");
   revalidatePath("/dashboard/programs");
 
-  return NextResponse.json({ ok: true, queued, ...(avisoPlan ? { warning: avisoPlan } : null) });
+  return NextResponse.json({ ok: true, queued, correos, ...(avisoPlan ? { warning: avisoPlan } : null) });
 }

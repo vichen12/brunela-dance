@@ -24,7 +24,10 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { hasBunnyStreamEnv } from "@/src/lib/env";
 import { bunnySignedUrls, bunnyVideoIdFromUrl } from "@/src/lib/video/bunny";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import Link from "next/link";
+import { prepararAvisoDeClaseNueva } from "@/src/features/correos/clase-nueva";
+import { avisoDeClaseNueva, pasaAPublicada, publishedAtAlGuardar } from "@/src/features/correos/reglas";
 import { redirect } from "next/navigation";
 import { portadaDeClase } from "@/src/lib/video/portada";
 
@@ -70,11 +73,30 @@ async function quickStatusAction(fd: FormData) {
   "use server";
   await requireAdmin();
   const supabase = createSupabaseAdminClient();
-  const id = fd.get("id") as string;
-  const status = fd.get("status") as string;
-  await supabase.from("videos").update({ status }).eq("id", id);
+  const id = String(fd.get("id") ?? "");
+  const status = String(fd.get("status") ?? "");
+  if (!id || !["draft", "published", "archived"].includes(status)) redirect("/admin/videos" as never);
+
+  // El estado anterior decide dos cosas: si esto la publica por primera vez
+  // (aviso por mail) y si published_at se conserva. Antes este boton no tocaba
+  // published_at, y una clase publicada desde aca quedaba sin fecha.
+  const { data: antes } = await supabase.from("videos").select("status, published_at").eq("id", id).maybeSingle();
+  const { error } = await supabase
+    .from("videos")
+    .update({ status, published_at: publishedAtAlGuardar(antes ?? null, status) })
+    .eq("id", id);
   revalidatePath("/admin/videos");
-  redirect("/admin/videos" as never);
+  if (error) redirect(`/admin/videos?error=${encodeURIComponent(error.message)}` as never);
+
+  let extra = "";
+  if (antes && pasaAPublicada(antes.status, status)) {
+    const aviso = await prepararAvisoDeClaseNueva(supabase, id);
+    if (aviso) {
+      after(aviso.mandar);
+      extra = avisoDeClaseNueva(aviso.cuantas);
+    }
+  }
+  redirect((extra ? `/admin/videos?success=${encodeURIComponent("Clase publicada." + extra)}` : "/admin/videos") as never);
 }
 
 async function quickFeaturedAction(fd: FormData) {
@@ -237,6 +259,10 @@ function UploadForm({ bunnyReady, programas }: { bunnyReady: boolean; programas:
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
+
+// Los avisos de clase nueva salen en after() desde las acciones de esta
+// pantalla (publicar), por lotes y con hasta 40 s de presupuesto.
+export const maxDuration = 60;
 
 export default async function AdminVideosPage({ searchParams }: { searchParams?: SearchParams }) {
   await requireAdmin();
