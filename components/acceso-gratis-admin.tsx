@@ -1,4 +1,4 @@
-import { Gift, X } from "lucide-react";
+import { CalendarClock, Gift, X } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
 import { CantidadGratis } from "@/components/cantidad-gratis";
@@ -13,6 +13,28 @@ import { PLAN_LABEL, estaVencido, fechaCorta, fechaLarga, type PlanPago } from "
  */
 
 export type EstadoGratis = { hasta: string | null; plan: PlanPago | null };
+
+/**
+ * Cuando se renueva (o termina) el plan PAGO de una alumna, con año: con planes
+ * anuales "Renueva 12 oct" no dice si es este año o el que viene.
+ */
+export type EstadoRenovacion = { hasta: string; termina: boolean; prueba: boolean };
+
+export function ChipRenovacion({ estado }: { estado: EstadoRenovacion | null | undefined }) {
+  if (!estado?.hasta) return null;
+  const texto = estado.termina
+    ? `Termina el ${fechaCorta(estado.hasta)}`
+    : estado.prueba
+      ? `Primer cobro ${fechaCorta(estado.hasta)}`
+      : `Renueva ${fechaCorta(estado.hasta)}`;
+  return (
+    <span className={"agr-chip" + (estado.termina ? " es-vencido" : "")} title={`${texto} (${fechaLarga(estado.hasta)})`}>
+      <style>{CSS_CHIP}</style>
+      <CalendarClock size={12} strokeWidth={2.4} aria-hidden="true" />
+      {texto}
+    </span>
+  );
+}
 
 export function ChipGratis({ estado }: { estado: EstadoGratis | null | undefined }) {
   if (!estado?.hasta) return null;

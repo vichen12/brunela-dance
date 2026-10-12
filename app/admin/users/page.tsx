@@ -4,7 +4,7 @@ import { Paginacion } from "@/components/paginacion";
 import { ArrowRight, Check, ChevronDown, Gift, Pencil, Shield, UserPlus } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva } from "@/components/admin-ui";
 import { NuevaAlumnaGratis } from "@/components/nueva-alumna-gratis";
-import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
+import { AccesoGratisControles, ChipGratis, ChipRenovacion, type EstadoGratis, type EstadoRenovacion } from "@/components/acceso-gratis-admin";
 import { AVISO_FALTA_MIGRACION, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
@@ -129,6 +129,21 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
     ((gratisData ?? []) as { id: string; acceso_gratis_hasta: string | null; acceso_gratis_plan: EstadoGratis["plan"] }[])
       .map((g) => [g.id, { hasta: g.acceso_gratis_hasta, plan: g.acceso_gratis_plan }])
   );
+  // Renovacion (o fin) del plan PAGO de cada alumna de la pagina, con año.
+  // La mas reciente que da acceso; la admin lee todas por RLS.
+  const renovacionDe = new Map<string, EstadoRenovacion>();
+  if (idsPagina.length) {
+    const { data: subsData } = await supabase
+      .from("subscriptions")
+      .select("user_id, status, current_period_ends_at, cancel_at_period_end, created_at")
+      .in("user_id", idsPagina)
+      .in("status", ["active", "trialing", "past_due"])
+      .order("created_at", { ascending: false });
+    for (const s of (subsData ?? []) as { user_id: string; status: string; current_period_ends_at: string | null; cancel_at_period_end: boolean | null }[]) {
+      if (renovacionDe.has(s.user_id) || !s.current_period_ends_at) continue;
+      renovacionDe.set(s.user_id, { hasta: s.current_period_ends_at, termina: !!s.cancel_at_period_end, prueba: s.status === "trialing" });
+    }
+  }
   const nueva = params.nueva === "1";
   const profiles = crudas;
   const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
@@ -227,6 +242,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   <div className="au-datos">
                     <span className={"au-plan " + tier.clase}>{tier.label}</span>
                     <ChipGratis estado={gratisDe.get(profile.id)} />
+                    <ChipRenovacion estado={renovacionDe.get(profile.id)} />
                     <span className="au-nivel">{profile.technical_level ?? "—"}</span>
                     <span className={"au-onb" + (profile.onboarding_completed ? " es-ok" : "")}>
                       {profile.onboarding_completed ? <><Check size={12} strokeWidth={3} aria-hidden="true" /> Onboarding</> : "Onboarding pendiente"}

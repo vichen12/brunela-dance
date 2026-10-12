@@ -195,6 +195,12 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
               <p className="fa-txt">
                 <strong>{f.suscripcion.plan}</strong> — {f.suscripcion.etiquetaEstado}
               </p>
+              {!f.suscripcion.seDaDeBaja && f.suscripcion.finDePeriodo && ["active", "trialing", "past_due"].includes(f.suscripcion.estado) && (
+                <p className="fa-txt">
+                  {f.suscripcion.estado === "trialing" ? "Primer cobro el " : "Próxima renovación: "}
+                  <strong>{fecha(f.suscripcion.finDePeriodo)}</strong>.
+                </p>
+              )}
               {f.suscripcion.seDaDeBaja && (
                 <p className="fa-baja">
                   Pidió darse de baja. Mantiene el acceso hasta el {fecha(f.suscripcion.finDePeriodo)}.
