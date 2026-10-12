@@ -31,15 +31,19 @@ export function esFaltaDeMigracion(error: { code?: string } | null | undefined) 
 
 export const ZONA = "Europe/Madrid";
 
-/** "15 dic" */
+/**
+ * "15 dic 2026". CON año siempre: un acceso gratis de un año vence en el mismo
+ * dia y mes del año que viene, y sin el año "Gratis hasta 17 oct" no dice si
+ * vence la semana que viene o en 2027 (pedido del 2026-10-12).
+ */
 export function fechaCorta(iso: string) {
-  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", timeZone: ZONA })
+  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: ZONA })
     .format(new Date(iso)).replace(".", "");
 }
 
-/** "15 de diciembre" */
+/** "15 de diciembre de 2026". Con año siempre, por lo mismo que fechaCorta. */
 export function fechaLarga(iso: string) {
-  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: ZONA }).format(new Date(iso));
+  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: ZONA }).format(new Date(iso));
 }
 
 /** Dia calendario en Madrid como numero comparable (AAAAMMDD -> dias). */
