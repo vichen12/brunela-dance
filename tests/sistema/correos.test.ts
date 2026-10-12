@@ -287,7 +287,9 @@ describe("el webhook responde igual que antes", () => {
     const correo = codigo.indexOf("enviarBienvenida(");
     expect(auditoria).toBeGreaterThan(0);
     expect(correo).toBeGreaterThan(auditoria);
-    expect(codigo).toMatch(/after\(async \(\) => \{\s*await enviarBienvenida\(/);
+    // La bienvenida y el aviso a Brunela, los dos DENTRO del mismo after().
+    expect(codigo).toMatch(/after\(async \(\) => \{\s*const db = createServiceRoleClient\(\);\s*await enviarBienvenida\(db, bienvenida\);\s*await avisarAdminDeAlta\(db, bienvenida,/);
+    expect(codigo.match(/avisarAdminDeAlta\(/g)).toHaveLength(1);
     // Un solo llamado: no hay un segundo camino que mande sin after().
     expect(codigo.match(/enviarBienvenida\(/g)).toHaveLength(1);
   });
