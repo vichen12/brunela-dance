@@ -314,9 +314,17 @@ export async function prepararAvisoDeClaseNueva(
 }
 
 /**
- * Desde el cron: las clases publicadas en los ultimos 3 dias. Para cada una,
- * los avisos que no salieron (no entraron en el after(), Resend fallo, o la
- * alumna gano acceso despues). Nunca lanza.
+ * Desde el cron: las clases publicadas en los ultimos 3 dias CUYO AVISO YA
+ * EMPEZO (al menos una reserva clase-nueva:<video>:* en correos_enviados). Para
+ * cada una, los avisos que faltaron: no entraron en el after(), Resend fallo,
+ * o la alumna gano acceso despues. Nunca lanza.
+ *
+ * ⚠️ POR QUE "YA EMPEZO" Y NO SOLO published_at
+ *    Hasta este cambio cada guardado de una clase publicada le ponia
+ *    published_at = ahora. El primer cron despues de desplegar habria tomado
+ *    por nueva cualquier clase vieja editada en los ultimos 3 dias y le habria
+ *    escrito a todas. El cron COMPLETA avisos; no decide cuales empiezan: eso
+ *    lo hace solo la publicacion.
  */
 export async function clasesNuevasDelCron(db: SupabaseClient, ahora: number, presupuestoMs: number): Promise<ResumenClaseNueva> {
   const total: ResumenClaseNueva = { ...RESUMEN_CLASE_NUEVA_VACIO };
@@ -331,6 +339,20 @@ export async function clasesNuevasDelCron(db: SupabaseClient, ahora: number, pre
       .limit(50);
     if (error) throw new Error("No se pudieron leer las clases recientes: " + error.message);
     for (const v of data ?? []) {
+      const { data: empezado, error: eEmp } = await db
+        .from("correos_enviados")
+        .select("clave")
+        .like("clave", `clase-nueva:${v.id as string}:%`)
+        .limit(1);
+      if (eEmp) {
+        if (esFaltaDeTablaCorreos(eEmp)) {
+          avisarFaltaMigracion();
+          total.omitido = `falta la migracion ${MIGRACION_CORREOS}`;
+          break;
+        }
+        throw new Error("No se pudo leer correos_enviados: " + eEmp.message);
+      }
+      if (!empezado?.length) continue;
       const restante = presupuestoMs - (Date.now() - empezo);
       if (restante < 3_000) {
         total.omitido = "sin tiempo: sigue mañana";

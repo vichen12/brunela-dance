@@ -139,6 +139,9 @@ describe("cuando: solo la PRIMERA vez que pasa a publicada", () => {
     const cn = sinComentariosTs(leer("src/features/correos/clase-nueva.ts"));
     const del = cn.slice(cn.indexOf("export async function clasesNuevasDelCron"));
     expect(del.length).toBeGreaterThan(100);
+    // Solo completa avisos que la publicacion ya empezo: nunca arranca uno por su cuenta.
+    expect(del).toContain('.like("clave", `clase-nueva:${v.id as string}:%`)');
+    expect(del.indexOf("if (!empezado?.length) continue;")).toBeLessThan(del.indexOf("prepararClaseNueva("));
     expect(del).toContain('.eq("status", "published")');
     expect(del).toContain('.gte("published_at"');
   });
