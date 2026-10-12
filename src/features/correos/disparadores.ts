@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAppUrl } from "@/src/lib/env";
 import {
-  accesoGratisPorVencer, accesoGratisTerminado, bienvenidaAlumna, invitacionAClaseEnVivo, recordatorioClaseEnVivo,
+  accesoGratisPorVencer, accesoGratisTerminado, avisoAdminNuevaAlta, bienvenidaAlumna, invitacionAClaseEnVivo, recordatorioClaseEnVivo,
 } from "@/src/lib/email/mensajes";
 import { resolveI18nText, type I18nRecord } from "@/src/features/studio/helpers";
 import { conSuscripcionQueDaAcceso } from "@/src/features/studio/acceso-gratis";
-import { esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
+import { PLAN_LABEL, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
+import { enviarCorreo } from "@/src/lib/email/enviar";
 import { clavesYaEnviadas, enviarUnaVez, type PedidoDeCorreo, type ResultadoUnaVez } from "./enviar-una-vez";
 import {
   claves, diasParaAvisoPorVencer, fechaYHoraDeClase, rangoDeHoyEnMadrid, tocaAvisoTerminado, tocaRecordatorio, urlDeClase,
@@ -316,4 +317,94 @@ async function conPackComprado(db: SupabaseClient, ids: string[]): Promise<Set<s
   const { data, error } = await db.from("pack_purchases").select("user_id").in("user_id", ids);
   if (error) throw new Error("No se pudieron leer los packs: " + error.message);
   return new Set((data ?? []).map((r) => r.user_id as string));
+}
+
+// ─── 6. Aviso a Brunela: alumna nueva (plan, prueba o pack) ─────────────────
+
+/**
+ * A donde le llegan los avisos a Brunela. Pedido del 2026-10-12: su Gmail, que
+ * es el que mira. Se puede cambiar sin tocar codigo con AVISOS_ADMIN_CORREO.
+ */
+const AVISOS_ADMIN = (process.env.AVISOS_ADMIN_CORREO?.trim() || "brunela.dance@gmail.com");
+
+const INTERVALO: Record<string, string> = { month: "mensual", year: "anual" };
+
+type ObjetoStripe = {
+  id?: string;
+  status?: string | null;
+  metadata?: Record<string, string> | null;
+  amount_total?: number | null;
+  currency?: string | null;
+  trial_end?: number | null;
+  items?: { data?: { price?: { recurring?: { interval?: string } | null } | null }[] } | null;
+};
+
+/**
+ * Se llama en el MISMO punto que la bienvenida (alumnaParaBienvenida): una
+ * suscripcion nueva que ya da acceso, o un pack recien registrado. Por eso no
+ * se repite en renovaciones ni cambios de plan.
+ *
+ * Que no salga dos veces: la clave de idempotencia de Resend es el id del
+ * objeto de Stripe (la suscripcion o la sesion de pago), y Stripe solo
+ * reintenta un evento si el webhook fallo. Nunca lanza: el pago ya quedo
+ * guardado y un aviso que no sale no tiene que romper nada.
+ */
+export async function avisarAdminDeAlta(
+  db: SupabaseClient,
+  alumnaId: string,
+  evento: { type: string; data: { object: ObjetoStripe } }
+): Promise<void> {
+  try {
+    const p = await perfil(db, alumnaId);
+    if (!p || p.is_admin || !p.email) return;
+    const o = evento.data.object;
+    const detalles: { etiqueta: string; valor: string }[] = [];
+    let queHizo: string;
+
+    if (evento.type === "checkout.session.completed") {
+      const slug = o.metadata?.pack_slug ?? "";
+      const { data: pack } = await db.from("packs").select("name_i18n").eq("slug", slug).maybeSingle<{ name_i18n: I18nRecord | null }>();
+      const nombrePack = (pack?.name_i18n ? resolveI18nText(pack.name_i18n) : "") || slug || "un pack";
+      queHizo = `Compró el pack «${nombrePack}»`;
+      if (typeof o.amount_total === "number") {
+        detalles.push({ etiqueta: "Pagó", valor: `${(o.amount_total / 100).toFixed(2).replace(".", ",")} ${(o.currency ?? "eur").toUpperCase()}` });
+      }
+    } else {
+      const tier = o.metadata?.tier as keyof typeof PLAN_LABEL | undefined;
+      const plan = (tier && PLAN_LABEL[tier]) || "un plan";
+      const intervalo = INTERVALO[o.items?.data?.[0]?.price?.recurring?.interval ?? ""] ?? "";
+      const nombrePlan = `${plan}${intervalo ? " " + intervalo : ""}`;
+      if (o.status === "trialing") {
+        queHizo = `Empezó la prueba gratis de ${nombrePlan}`;
+        if (o.trial_end) {
+          detalles.push({
+            etiqueta: "Primer cobro",
+            valor: new Date(o.trial_end * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" }),
+          });
+        }
+      } else {
+        queHizo = `Empezó su plan ${nombrePlan}`;
+      }
+      detalles.push({ etiqueta: "Plan", valor: nombrePlan });
+    }
+
+    const correo = avisoAdminNuevaAlta({
+      nombre: p.full_name,
+      correo: p.email,
+      queHizo,
+      detalles,
+      urlFicha: `${base()}/admin/users/${p.id}`,
+    });
+    const r = await enviarCorreo({
+      para: AVISOS_ADMIN,
+      asunto: correo.asunto,
+      html: correo.html,
+      texto: correo.texto,
+      responderA: p.email,
+      claveIdempotencia: `aviso-admin:${o.id ?? alumnaId}`,
+    });
+    if (!r.ok) console.error("[correo] aviso a la admin:", r.error);
+  } catch (e) {
+    console.error("[correo] aviso a la admin:", e instanceof Error ? e.message : String(e));
+  }
 }

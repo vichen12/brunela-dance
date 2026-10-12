@@ -139,3 +139,30 @@ export function invitacionAClaseEnVivo(datos: DatosClaseEnVivo): CorreoArmado {
     motivo: "Recibiste este correo porque Brunela te invitó a una clase en vivo del estudio.",
   });
 }
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Aviso a BRUNELA (no a la alumna): alguien empezo un plan, una prueba gratis
+ * o compro un pack. Lo manda el webhook de Stripe una sola vez por suscripcion
+ * o compra (ver avisarAdminDeAlta en src/features/correos/disparadores.ts).
+ */
+export function avisoAdminNuevaAlta(datos: {
+  nombre?: string | null;
+  correo: string;
+  queHizo: string;
+  detalles: { etiqueta: string; valor: string }[];
+  urlFicha: string;
+}): CorreoArmado {
+  const quien = datos.nombre?.trim() || datos.correo;
+  return armar(`Nueva alumna: ${quien} 🎉`, {
+    preheader: `${quien} ${datos.queHizo.toLowerCase()}.`,
+    etiqueta: "Aviso del estudio",
+    titulo: "Tenés una alumna nueva",
+    parrafos: [`**${quien}** ${datos.queHizo.charAt(0).toLowerCase()}${datos.queHizo.slice(1)}.`],
+    detalles: [{ etiqueta: "Correo", valor: datos.correo }, ...datos.detalles],
+    boton: { texto: "Ver su ficha", url: datos.urlFicha },
+    firma: false,
+    motivo: "Recibiste este aviso porque sos la administradora de Brunela Dance.",
+  });
+}

@@ -422,8 +422,10 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         // recargaba los datos pero dejaba el formulario abierto y quieto, y
         // parecia que la clase no se habia creado.
         const aviso = finalizeJson.warning ?? "Clase creada. Ya está en la lista; el video se está procesando y en unos minutos se puede ver.";
-        router.replace(`/admin/videos?success=${encodeURIComponent(aviso)}` as never);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // Recarga COMPLETA, no router.replace: el panel y los selectores
+        // (materiales, planes) guardan su estado en el navegador, y una
+        // navegacion suave los dejaba abiertos y marcados.
+        window.location.assign(`/admin/videos?success=${encodeURIComponent(aviso)}`);
       } catch (err) {
         await abandonRemote();
         setPhase("error");

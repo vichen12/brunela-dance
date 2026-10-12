@@ -68,7 +68,7 @@ export function NuevaAlumnaGratis() {
         </div>
         <p className="nag-nota">Si no lo ve, que revise Spam o Promociones. Llega desde no-responder@bruneladance.com.</p>
         <div className="nag-pie">
-          <button type="button" className="nag-sec" onClick={() => { window.location.href = "/admin/users?nueva=1#nueva"; }}>
+          <button type="button" className="nag-sec" onClick={() => { window.location.assign(`/admin/users?nueva=1&otra=${Date.now()}#nueva`); }}>
             <UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar a otra
           </button>
         </div>

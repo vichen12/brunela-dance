@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { after, NextResponse } from "next/server";
 import { getStripeServerEnv } from "@/src/lib/env";
 import { getSubscriptionCatalog, resolveTierFromPriceId } from "@/src/lib/stripe/catalog";
-import { enviarBienvenida } from "@/src/features/correos/disparadores";
+import { avisarAdminDeAlta, enviarBienvenida } from "@/src/features/correos/disparadores";
 import { alumnaParaBienvenida, type EventoParaBienvenida } from "@/src/features/correos/reglas";
 
 function createServiceRoleClient() {
@@ -351,7 +351,10 @@ export async function POST(request: Request) {
     });
     if (bienvenida) {
       after(async () => {
-        await enviarBienvenida(createServiceRoleClient(), bienvenida);
+        const db = createServiceRoleClient();
+        await enviarBienvenida(db, bienvenida);
+        // Y el aviso a Brunela: mismo momento, mismo "una sola vez".
+        await avisarAdminDeAlta(db, bienvenida, event as unknown as Parameters<typeof avisarAdminDeAlta>[2]);
       });
     }
 
