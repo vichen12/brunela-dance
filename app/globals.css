@@ -4342,3 +4342,16 @@ a.nt-item:hover { background: var(--crema); }
 /* Wordmark de la marca en los menus laterales. */
 .sb-marca-wm { display: block; height: 40px; width: auto; max-width: 170px; object-fit: contain; object-position: left center; }
 .sb-marca > span:not(.sb-marca-ico) { display: flex; flex-direction: column; gap: 3px; }
+
+/* ── Titulos del sistema: Cormorant Garamond (pedido de Brunela, 2026-10-14) ──
+   Solo h1 y h2 dentro de .sistema (estudio de la alumna, panel de admin y las
+   pantallas sueltas de acceso). `.sistema h1` (0,1,1) le gana a la clase de
+   cada titulo (0,1,0), asi no hay que tocar los ~40 titulos uno por uno. La
+   landing no tiene .sistema y no cambia. Serif con x-height baja: se le da un
+   poco mas de cuerpo y se afloja el interletrado negativo pensado para Nunito. */
+.sistema :is(h1, h2) {
+  font-family: var(--font-titulo), "Cormorant Garamond", Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  font-size-adjust: 0.5;
+}
