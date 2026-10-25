@@ -221,3 +221,18 @@ export function leerCasilleros(crudo: unknown): CasilleroDia[] | null {
   }
   return salida;
 }
+
+/**
+ * Para la ALUMNA: los dias 1..duracion, y cada numero sin nada cargado se
+ * muestra como DESCANSO (pedido de Brunela, 2026-10-25: "son 14 dias, tenes que
+ * contar el descanso"). Arma los planes alternando clase y descanso y no carga
+ * los descansos uno por uno; el plan dura `duration_days`, no la cantidad de
+ * clases. Si hay un dia cargado mas alla de la duracion, tambien se muestra.
+ */
+export function completarConDescansos<D extends DiaBase>(dias: D[], duracion: number, descanso: (n: number) => D): D[] {
+  const tope = Math.min(Math.max(duracion || 0, 0, ...dias.map((d) => d.day_number)), MAX_DIAS_PLAN);
+  const porNumero = new Map(dias.map((d) => [d.day_number, d]));
+  const salida: D[] = [];
+  for (let n = 1; n <= tope; n++) salida.push(porNumero.get(n) ?? descanso(n));
+  return salida;
+}

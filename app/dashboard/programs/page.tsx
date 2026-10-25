@@ -16,7 +16,8 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario } from "@/src/features/studio/progress";
 import { CATEGORIA_LABEL, nivelEnTexto } from "@/src/features/studio/catalogo-clases";
-import { avanceDelPlan, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
+import { avanceDelPlan, completarConDescansos, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
+import { portadaDeClase } from "@/src/lib/video/portada";
 
 /**
  * Los planes de trabajo, con candado para quien todavia no los tiene.
@@ -194,7 +195,9 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
   }
 
   // Los descansos hechos cuentan como dias hechos, igual que en la ficha.
-  for (const [programId, n] of await descansosHechos(supabase, user.id)) {
+  const duraciones = new Map(programs.map((p) => [p.id, p.duration_days] as [string, number]));
+  const datosPlanes = await datosDeMisPlanes(supabase, user.id, duraciones);
+  for (const [programId, n] of datosPlanes.hechos) {
     const current = progressByProgram.get(programId) ?? { completedDays: 0, maxPercent: 0 };
     current.completedDays += n;
     progressByProgram.set(programId, current);
@@ -316,7 +319,10 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
             {enPagina.map((program) => {
               const cerrado = bloqueado(program.id);
               const progress = progressByProgram.get(program.id);
-              const totalDays = daysByProgram.get(program.id) ?? 0;
+              // La duracion del plan, con sus descansos: un plan de 14 dias con 6
+              // clases dura 14, no 6 (ver completarConDescansos).
+              const totalDays = Math.max(program.duration_days || 0, daysByProgram.get(program.id) ?? 0);
+              const portada = program.cover_image_url || (cerrado ? null : datosPlanes.portadas.get(program.id) ?? null);
               const completedDays = progress?.completedDays ?? 0;
               const progressPercent = safePercent(
                 totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : progress?.maxPercent ?? 0
@@ -332,7 +338,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
                     href={(cerrado ? "/dashboard/plan" : `/dashboard/programs/${program.slug}`) as never}
                   >
                     <div className="sp-portada">
-                      {program.cover_image_url && <img src={program.cover_image_url} alt="" />}
+                      {portada && <img src={portada} alt="" />}
                       <span className="sp-dias"><strong>{totalDays || program.duration_days}</strong> días</span>
                       {program.is_featured && !cerrado && (
                         <span className="sp-dest"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacado</span>
@@ -400,21 +406,38 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
  *    siquiera que dias son descanso. Sin la migracion 20261025 el select falla
  *    (42703) y no hay descansos que contar.
  */
-async function descansosHechos(
+async function datosDeMisPlanes(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  userId: string
-): Promise<Map<string, number>> {
+  userId: string,
+  duraciones: Map<string, number>
+): Promise<{ hechos: Map<string, number>; portadas: Map<string, string> }> {
   const hechos = new Map<string, number>();
+  const portadas = new Map<string, string>();
   const { data: dias, error } = await supabase
     .from("program_days")
-    .select("program_id, day_number, es_descanso");
+    .select("program_id, day_number, es_descanso, videos(thumbnail_url, bunny_video_id, stream_playback_id)")
+    .order("day_number", { ascending: true });
   if (error) {
     if (!esFaltaDeColumnaDescanso(error)) console.error("[programs] descansos:", error.message);
-    return hechos;
+    return { hechos, portadas };
   }
-  const filas = (dias ?? []) as { program_id: string; day_number: number; es_descanso: boolean }[];
+  type Fila = { program_id: string; day_number: number; es_descanso: boolean; videos: unknown };
+  const cargadas = (dias ?? []) as unknown as Fila[];
+  // Portada de respaldo: la foto de la primera clase de cada plan que VE.
+  for (const d of cargadas) {
+    if (portadas.has(d.program_id) || d.es_descanso) continue;
+    const v = (Array.isArray(d.videos) ? d.videos[0] : d.videos) as { thumbnail_url?: string | null; bunny_video_id?: string | null; stream_playback_id?: string | null } | null;
+    const foto = v ? portadaDeClase(v) : null;
+    if (foto) portadas.set(d.program_id, foto);
+  }
+  // Los dias sin cargar hasta la duracion son descansos (igual que en la ficha).
+  const filas: Fila[] = [];
+  for (const programId of new Set(cargadas.map((d) => d.program_id))) {
+    const delPlan = cargadas.filter((d) => d.program_id === programId);
+    filas.push(...completarConDescansos(delPlan, duraciones.get(programId) ?? 0, (n) => ({ program_id: programId, day_number: n, es_descanso: true, videos: null })));
+  }
   const conDescanso = new Set(filas.filter((d) => d.es_descanso).map((d) => d.program_id));
-  if (conDescanso.size === 0) return hechos;
+  if (conDescanso.size === 0) return { hechos, portadas };
 
   const { data: progreso } = await supabase
     .from("user_progress")
@@ -432,7 +455,7 @@ async function descansosHechos(
     const n = delPlan.filter((d) => d.es_descanso && hecho.get(d.day_number)).length;
     if (n > 0) hechos.set(programId, n);
   }
-  return hechos;
+  return { hechos, portadas };
 }
 
 const CSS = `

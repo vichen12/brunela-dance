@@ -181,7 +181,7 @@ describe("dia de descanso: pantallas", () => {
       expect(deAdmin).not.toMatch(new RegExp(`\\b${prohibido}\\b`));
     }
     // Los descansos se cuentan con el cliente DE LA ALUMNA (RLS).
-    const fn = src.slice(src.indexOf("async function descansosHechos"));
+    const fn = src.slice(src.indexOf("async function datosDeMisPlanes"));
     expect(fn).toMatch(/supabase\s*\.from\("program_days"\)/);
     expect(fn).not.toMatch(/admin\.from|createSupabaseAdminClient/);
   });

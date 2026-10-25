@@ -10,7 +10,7 @@ import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { portadaDeClase } from "@/src/lib/video/portada";
-import { NOTA_DESCANSO_POR_DEFECTO, avanceDelPlan, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
+import { NOTA_DESCANSO_POR_DEFECTO, avanceDelPlan, completarConDescansos, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Moon, Play, Sparkles } from "lucide-react";
 
 /**
@@ -113,7 +113,7 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
     return <PlanBloqueado slug={slug} />;
   }
 
-  const [days, { data: progressData }] = await Promise.all([
+  const [diasCargados, { data: progressData }] = await Promise.all([
     diasDelPlan(supabase, program.id),
     supabase
       .from("user_progress")
@@ -121,6 +121,14 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
       .eq("user_id", user.id)
       .eq("program_id", program.id)
   ]);
+
+  // Los dias sin nada cargado, hasta la duracion del plan, son DESCANSO.
+  const days = completarConDescansos(diasCargados, program.duration_days, (n) => ({
+    day_number: n, video_id: null, es_descanso: true, nota: null, videos: null,
+  }));
+  // Portada del plan; si Brunela no subio una, la foto de su primera clase.
+  const primeraClase = days.map((d) => (d.es_descanso ? null : claseDe(d.videos))).find(Boolean) ?? null;
+  const portadaPlan = program.cover_image_url || (primeraClase ? portadaDeClase(primeraClase) : null);
 
   const progressMap = new Map<number, ProgressRecord>();
   for (const item of (progressData ?? []) as ProgressRecord[]) {
@@ -163,7 +171,7 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
           <article className="pd-hero">
             <div
               className="pd-portada"
-              style={{ backgroundImage: program.cover_image_url ? `url(${program.cover_image_url})` : undefined }}
+              style={{ backgroundImage: portadaPlan ? `url(${portadaPlan})` : undefined }}
             />
 
             <div className="pd-hero-txt">
