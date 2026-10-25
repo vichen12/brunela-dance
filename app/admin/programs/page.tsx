@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CATEGORIAS } from "@/src/features/studio/catalogo-clases";
 import { BuscadorDeClases } from "@/components/buscador-de-clases";
 import type { ClaseParaBuscar } from "@/src/features/admin/buscar-clases";
 import { portadaDeClase, portadaDePlan } from "@/src/lib/video/portada";
@@ -104,6 +105,16 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   // Buscador del lado del servidor, mismo criterio que clases y sesiones.
   const q = (typeof params.q === "string" ? params.q : "").trim();
   const fEstadoProg = ESTADOS_PROG.some((e) => e.key === params.estado) ? (params.estado as string) : "";
+  // Filtros nuevos (2026-10-25): quien lo ve, y que categorias trabaja (las de
+  // sus clases).
+  const OPC_PLAN = [
+    { key: "", label: "Cualquier plan" },
+    { key: "solista", label: "Desde Solista" },
+    { key: "principal", label: "Solo Principal" },
+  ];
+  const OPC_CATEGORIA = [{ key: "", label: "Cualquier categoría" }, ...CATEGORIAS.map((c) => ({ key: c.slug as string, label: c.label as string }))];
+  const fPlanProg = OPC_PLAN.some((o) => o.key && o.key === params.plan) ? (params.plan as string) : "";
+  const fCategoriaProg = OPC_CATEGORIA.some((o) => o.key && o.key === params.categoria) ? (params.categoria as string) : "";
 
   const { count: totalProgramas } = await supabase
     .from("programs").select("*", { count: "exact", head: true });
@@ -114,6 +125,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         .from("programs")
         .select("id, slug, title_i18n, description_i18n, membership_tier_required, status, duration_days, cover_image_url, is_featured");
       if (fEstadoProg) c = c.eq("status", fEstadoProg);
+      if (fPlanProg) c = c.eq("membership_tier_required", fPlanProg);
       if (q) {
         const t = q.replace(/[,()]/g, " ");
         c = c.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
@@ -123,7 +135,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
     cargarDias(supabase),
     // title_i18n hace falta para que el selector de clases muestre titulos y no
     // slugs. Se ordena por titulo para que la lista se pueda recorrer con la vista.
-    supabase.from("videos").select("id, slug, title_i18n, thumbnail_url, bunny_video_id, stream_playback_id").order("title_i18n->>es", { ascending: true })
+    supabase.from("videos").select("id, slug, title_i18n, thumbnail_url, bunny_video_id, stream_playback_id, category_slugs").order("title_i18n->>es", { ascending: true })
   ]);
 
   const programDays = programDaysData.dias;
@@ -164,7 +176,13 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
     }
   }
 
-  const programs = (programsData ?? []) as ProgramRecord[];
+  // La categoria no es del plan sino de sus clases: se filtra aca, en memoria
+  // (son pocos planes y los dias ya estan cargados).
+  const categoriasDeVideo = new Map(((videosData ?? []) as { id: string; category_slugs?: string[] | null }[]).map((v) => [v.id, v.category_slugs ?? []]));
+  const programs = ((programsData ?? []) as ProgramRecord[]).filter((pr) =>
+    !fCategoriaProg ||
+    programDays.some((d) => d.program_id === pr.id && d.video_id && (categoriasDeVideo.get(d.video_id) ?? []).includes(fCategoriaProg))
+  );
 
   // Para las sugerencias del buscador: TODOS los planes, sin el filtro de la
   // busqueda (si no, al escribir solo se sugeriria lo que ya esta en pantalla).
@@ -193,7 +211,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   const videoById = new Map(videos.map((v) => [v.id, v]));
   const publicados = programs.filter((p) => p.status === "published").length;
 
-  const hayFiltro = Boolean(q || fEstadoProg);
+  const hayFiltro = Boolean(q || fEstadoProg || fPlanProg || fCategoriaProg);
   // El estudio todavia no tiene NINGUN plan (no es lo mismo que un filtro sin
   // resultados): ahi se muestra la guia en vez de cifras en cero.
   const estudioVacio = (totalProgramas ?? 0) === 0;
@@ -270,7 +288,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         // Sugerencias mientras se escribe, como en Clases. Se busca entre TODOS
         // los planes (son pocos), no solo los de esta pagina.
         entrada={<BuscadorDeClases de="plan" q={q} placeholder="Buscar por título o dirección" clases={planesParaBuscar} />}
-        filtros={[{ name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG }]}
+        filtros={[
+          { name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG },
+          { name: "plan", valor: fPlanProg, etiqueta: "Lo ve", opciones: OPC_PLAN },
+          { name: "categoria", valor: fCategoriaProg, etiqueta: "Categoría", opciones: OPC_CATEGORIA },
+        ]}
         total={totalProgramas ?? programs.length}
         mostrando={programs.length}
       />
@@ -369,7 +391,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
           })}
         </ul>
       )}
-      <Paginacion pagina={pagina} total={programs.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/programs", { q, estado: fEstadoProg })} />
+      <Paginacion pagina={pagina} total={programs.length} porPagina={POR_PAGINA} href={hrefConPagina("/admin/programs", { q, estado: fEstadoProg, plan: fPlanProg, categoria: fCategoriaProg })} />
         </>
       )}
     </main>

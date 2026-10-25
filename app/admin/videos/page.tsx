@@ -17,6 +17,10 @@ import {
 } from "@/src/features/admin/planes-de-trabajo";
 import {
   CATEGORIA_LABEL,
+  CATEGORIAS,
+  NIVELES,
+  TIPOS_DE_CONTENIDO,
+  nivelARango,
   nivelEnTexto,
   planesDesde,
   planesEnTexto,
@@ -320,6 +324,17 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const q = (typeof params.q === "string" ? params.q : "").trim();
   const fEstado = ESTADOS.some((e) => e.key === params.estado) ? (params.estado as string) : "";
   const fPlan = PLANES.some((e) => e.key === params.plan) ? (params.plan as string) : "";
+  // Filtros por vocabulario de la clase (2026-10-25). Las opciones salen del
+  // mismo catalogo que el formulario: solo se acepta un valor que exista.
+  const OPC_CATEGORIA = [{ key: "", label: "Cualquier categoría" }, ...CATEGORIAS.map((c) => ({ key: c.slug as string, label: c.label as string }))];
+  const OPC_NIVEL = [{ key: "", label: "Cualquier nivel" }, ...NIVELES.map((n) => ({ key: n.slug as string, label: n.label as string }))];
+  const OPC_MATERIAL = [{ key: "", label: "Cualquier material" }, ...materiales.map((m) => ({ key: m.slug, label: m.label }))];
+  const OPC_TIPO = [{ key: "", label: "Cualquier tipo" }, ...TIPOS_DE_CONTENIDO.map((t) => ({ key: t.slug as string, label: t.label as string }))];
+  const elegido = (opciones: { key: string }[], v: unknown) => (typeof v === "string" && v && opciones.some((o) => o.key === v) ? v : "");
+  const fCategoria = elegido(OPC_CATEGORIA, params.categoria);
+  const fNivel = elegido(OPC_NIVEL, params.nivel);
+  const fMaterial = elegido(OPC_MATERIAL, params.material);
+  const fTipo = elegido(OPC_TIPO, params.tipo);
   const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
   // ?editar=<id>: viene de una sugerencia del buscador. La lista se reduce a
   // esa clase y su panel llega abierto. La lista es paginada, asi que sin el
@@ -349,6 +364,14 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
     // encontraria una clase {corps, solista} -- su minimo es corps -- aunque
     // Solista la vea perfectamente.
     if (fPlan) c = c.contains("planes_permitidos", [fPlan]);
+    if (fCategoria) c = c.contains("category_slugs", [fCategoria]);
+    if (fMaterial) c = c.contains("equipment", [fMaterial]);
+    if (fTipo) c = c.eq("content_type", fTipo);
+    if (fNivel) {
+      // El nivel es un rango guardado en dos columnas (ver catalogo-clases.ts).
+      const r = nivelARango(fNivel);
+      c = c.eq("recommended_min_level", r.min).eq("recommended_max_level", r.max);
+    }
     if (editar) c = c.eq("id", editar);
     if (q && idsQueCoinciden.length <= 200) {
       c = c.in("id", idsQueCoinciden.length ? idsQueCoinciden : [NINGUNA]);
@@ -461,7 +484,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   // "Nueva clase" de la cabecera abre el formulario: un <details> no se abre
   // con un ancla, asi que se pide por la URL y el servidor lo pinta abierto.
   const abrirNueva = params.nueva === "1";
-  const hayFiltro = Boolean(q || fEstado || fPlan || editar);
+  const hayFiltro = Boolean(q || fEstado || fPlan || fCategoria || fNivel || fMaterial || fTipo || editar);
 
   // Enlace a otra pagina conservando buscador y filtros.
   const conPagina = (p: number) => {
@@ -469,6 +492,10 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
     if (q) u.set("q", q);
     if (fEstado) u.set("estado", fEstado);
     if (fPlan) u.set("plan", fPlan);
+    if (fCategoria) u.set("categoria", fCategoria);
+    if (fNivel) u.set("nivel", fNivel);
+    if (fMaterial) u.set("material", fMaterial);
+    if (fTipo) u.set("tipo", fTipo);
     if (p > 0) u.set("pagina", String(p));
     const s = u.toString();
     return s ? `/admin/videos?${s}` : "/admin/videos";
@@ -511,6 +538,10 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
         filtros={[
           { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS },
           { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES },
+          { name: "categoria", valor: fCategoria, etiqueta: "Categoría", opciones: OPC_CATEGORIA },
+          { name: "nivel", valor: fNivel, etiqueta: "Nivel", opciones: OPC_NIVEL },
+          { name: "material", valor: fMaterial, etiqueta: "Material", opciones: OPC_MATERIAL },
+          { name: "tipo", valor: fTipo, etiqueta: "Tipo", opciones: OPC_TIPO },
         ]}
       />
 
