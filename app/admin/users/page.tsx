@@ -1,7 +1,8 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { Paginacion } from "@/components/paginacion";
-import { ArrowRight, Check, ChevronDown, Gift, Pencil, Shield, UserPlus } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Gift, Heart, MailCheck, Pencil, Send, Shield, UserPlus } from "lucide-react";
+import { mandarVolverAlEstudioAction } from "@/src/features/admin/volver-actions";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva } from "@/components/admin-ui";
 import { NuevaAlumnaGratis } from "@/components/nueva-alumna-gratis";
 import { AccesoGratisControles, ChipGratis, ChipRenovacion, type EstadoGratis, type EstadoRenovacion } from "@/components/acceso-gratis-admin";
@@ -183,7 +184,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   // La lista es de TODAS las sin acceso, no de la pagina: se elige a quien
   // mandarle, y elegir solo entre 10 obligaria a pasar paginas.
   let invitar: { alumnas: AlumnaParaVolver[]; novedades: Awaited<ReturnType<typeof leerNovedades>>; disponible: boolean; aviso: string } | null = null;
-  if (plan === "sin-acceso") {
+  // Se lee en TODAS las vistas: cada alumna sin plan lleva su boton "Invitar a
+  // volver" en la fila, este donde este. El panel y el boton masivo, solo en
+  // "Sin plan".
+  {
     const [disponible, novedades, lectura] = await Promise.all([
       registroVolverDisponible(db),
       leerNovedades(db),
@@ -209,6 +213,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       };
     }
   }
+  // Por alumna: se le puede mandar (null) o por que no.
+  const volverDe = new Map((invitar?.alumnas ?? []).map((a) => [a.id, a]));
+  const elegiblesVolver = (invitar?.alumnas ?? []).filter((a) => !a.motivo);
+  const volverA = plan ? `/admin/users?plan=${plan}` : "/admin/users";
   const invitarAbierto = params.invitar === "1" || Boolean((success || error) && plan === "sin-acceso");
   const profiles = crudas;
   const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
@@ -266,8 +274,30 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         ))}
       </div>
 
-      {invitar && (
-        <AdminNueva id="invitar-a-volver" abierto={invitarAbierto} titulo="Invitarlas a volver por mail" sub="Elegí a quiénes, mirá el mail y mandalo">
+      {/* Todas de una, sin abrir nada: el pedido fue "un boton masivo". El
+          panel de abajo sigue para elegir una por una y ver el mail. */}
+      {invitar && plan === "sin-acceso" && (
+        <form action={mandarVolverAlEstudioAction} className="au-masivo">
+          <input type="hidden" name="volverA" value="/admin/users?plan=sin-acceso" />
+          {elegiblesVolver.map((a) => <input key={a.id} type="hidden" name="alumna" value={a.id} />)}
+          <span className="au-masivo-ico" aria-hidden="true"><Heart size={18} strokeWidth={0} fill="currentColor" /></span>
+          <span className="au-masivo-txt">
+            <strong>{elegiblesVolver.length === 0 ? "Por ahora no hay a quién invitar" : elegiblesVolver.length === 1 ? "1 alumna sin plan puede recibir la invitación" : `${elegiblesVolver.length} alumnas sin plan pueden recibir la invitación`}</strong>
+            <small>Un mail tuyo, cálido, para que vuelvan al estudio. Nunca habla de pagos.{invitar.alumnas.length > elegiblesVolver.length ? ` ${invitar.alumnas.length - elegiblesVolver.length} no lo reciben ahora (se dieron de baja o ya les llegó hace poco).` : ""}</small>
+          </span>
+          {elegiblesVolver.length > 0 && <BotonEnviar
+            className="au-masivo-btn"
+            pendingLabel="Mandando…"
+            disabled={!invitar.disponible || elegiblesVolver.length === 0}
+            confirmar={`¿Mandarle el mail para que vuelvan a ${elegiblesVolver.length === 1 ? "1 alumna" : `${elegiblesVolver.length} alumnas`}?`}
+          >
+            <Send size={15} strokeWidth={2.2} aria-hidden="true" /> {elegiblesVolver.length === 1 ? "Invitarla a volver" : `Invitar a las ${elegiblesVolver.length} a volver`}
+          </BotonEnviar>}
+        </form>
+      )}
+
+      {invitar && plan === "sin-acceso" && (
+        <AdminNueva id="invitar-a-volver" abierto={invitarAbierto} titulo="Elegir a quiénes y ver el mail" sub="Para mandarle solo a algunas, o mirar cómo les llega">
           <InvitarAVolver
             alumnas={invitar.alumnas}
             novedades={invitar.novedades}
@@ -329,6 +359,23 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                       {profile.onboarding_completed ? <><Check size={12} strokeWidth={3} aria-hidden="true" /> Onboarding</> : "Onboarding pendiente"}
                     </span>
                   </div>
+                  {/* Sin plan: invitarla a volver desde la fila. */}
+                  {volverDe.has(profile.id) && (() => {
+                    const v = volverDe.get(profile.id)!;
+                    return v.motivo ? (
+                      <span className="au-volver-no" title={v.motivo + (v.desde ? ` · se puede ${v.desde}` : "")}>
+                        <MailCheck size={13} strokeWidth={2.2} aria-hidden="true" /> {v.desde ? "Ya invitada" : v.motivo}
+                      </span>
+                    ) : (
+                      <form action={mandarVolverAlEstudioAction}>
+                        <input type="hidden" name="volverA" value={volverA} />
+                        <input type="hidden" name="alumna" value={profile.id} />
+                        <BotonEnviar className="au-volver" pendingLabel="Mandando…" disabled={!invitar?.disponible} confirmar={`¿Mandarle a ${name} el mail para que vuelva al estudio?`}>
+                          <Heart size={13} strokeWidth={0} fill="currentColor" aria-hidden="true" /> Invitar a volver
+                        </BotonEnviar>
+                      </form>
+                    );
+                  })()}
                   {/* La ficha completa: progreso, plan, reservas y mensajes. */}
                   <Link href={`/admin/users/${profile.id}` as never} className="au-ficha">
                     Ficha <ArrowRight size={14} strokeWidth={2.2} aria-hidden="true" />
@@ -416,6 +463,18 @@ const CSS = `
 .au-cifra.es-activa .au-cifra-label { color: var(--pink-deep); }
 .au-cifra-num { font-family: var(--font-display), sans-serif; font-weight: 900; font-size: 38px; line-height: 0.95; letter-spacing: -0.03em; color: var(--ink); }
 
+.au-masivo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 16px 18px; border-radius: var(--radio); border: 1.5px solid var(--pink-line); background: linear-gradient(110deg, #FFF0F0 0%, #FFF8F6 60%, #fff 100%); }
+.au-masivo-ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0; background: #fff; color: var(--pink); box-shadow: var(--sombra); }
+.au-masivo-txt { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.au-masivo-txt strong { font-size: 15px; font-weight: 800; color: var(--ink); }
+.au-masivo-txt small { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.au-masivo-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border: 0; border-radius: 99px; cursor: pointer; background: var(--pink); color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.au-masivo-btn:hover:not(:disabled) { background: var(--pink-mid); }
+.au-masivo-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.au-volver { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 99px; cursor: pointer; border: 1.5px solid var(--pink-line); background: var(--rubor); color: var(--pink-deep); font: inherit; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.au-volver:hover:not(:disabled) { background: var(--pink); border-color: var(--pink); color: #fff; }
+.au-volver:disabled { opacity: .5; cursor: not-allowed; }
+.au-volver-no { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--muted); background: var(--crema); padding: 6px 11px; border-radius: 99px; white-space: nowrap; }
 .au-lista { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .au-fila { border: 1px solid var(--linea); border-radius: var(--radio); background: #fff; box-shadow: var(--sombra); transition: transform .35s var(--curva), border-color .2s, box-shadow .35s var(--curva); }
 .au-fila:hover { transform: translateY(-2px); border-color: var(--linea-fuerte); box-shadow: var(--sombra-alta); }
