@@ -150,6 +150,9 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
   const hayBloqueados = programs.some((p) => bloqueado(p.id));
 
   const daysByProgram = new Map<string, number>();
+  // Dias con clase (los de descanso no traen video). La tarjeta muestra los dos
+  // numeros: "14 dias · 6 clases".
+  const clasesPorPrograma = new Map<string, number>();
   // Nivel exigido = el mas alto entre los minimos de sus clases. Es el nivel que
   // hace falta para seguir el plan entero, no el de la clase mas facil.
   const nivelPorPrograma = new Map<string, string>();
@@ -159,6 +162,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
     daysByProgram.set(day.program_id, (daysByProgram.get(day.program_id) ?? 0) + 1);
 
     const clase = claseDelDia(day.videos);
+    if (clase) clasesPorPrograma.set(day.program_id, (clasesPorPrograma.get(day.program_id) ?? 0) + 1);
     const nivel = clase?.recommended_min_level;
     if (nivel) {
       const actual = nivelPorPrograma.get(day.program_id);
@@ -339,7 +343,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
                   >
                     <div className="sp-portada">
                       {portada && <img src={portada} alt="" />}
-                      <span className="sp-dias"><strong>{totalDays || program.duration_days}</strong> días</span>
+                      <span className="sp-dias"><strong>{totalDays || program.duration_days}</strong> días{(clasesPorPrograma.get(program.id) ?? 0) > 0 && <> · <strong>{clasesPorPrograma.get(program.id)}</strong> {clasesPorPrograma.get(program.id) === 1 ? "clase" : "clases"}</>}</span>
                       {program.is_featured && !cerrado && (
                         <span className="sp-dest"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacado</span>
                       )}
@@ -369,7 +373,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
                           <>
                             <div className="sp-progreso">
                               <span className="sp-progreso-txt">
-                                {terminado ? <><Check size={13} strokeWidth={2.8} aria-hidden="true" /> Completado</> : <><strong>{completedDays}</strong> de {totalDays} días</>}
+                                {terminado ? <><Check size={13} strokeWidth={2.8} aria-hidden="true" /> Completado</> : <><strong>{completedDays}</strong> de {totalDays} días{(clasesPorPrograma.get(program.id) ?? 0) > 0 && <> · {clasesPorPrograma.get(program.id)} {clasesPorPrograma.get(program.id) === 1 ? "clase" : "clases"}</>}</>}
                               </span>
                               <span className="sp-progreso-pct">{progressPercent}%</span>
                             </div>
