@@ -1,14 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { signOutAction } from "@/src/features/auth/actions";
 import type { Route } from "next";
 import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
   MessageCircleHeart, Shield, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
-  Lock, UserPlus, Dumbbell } from "lucide-react";
+  Lock, UserPlus, Dumbbell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 /**
  * Menú del panel de administración.
@@ -88,6 +88,20 @@ const NAV: { label: string; items: NavItem[] }[] = [
 export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string | null }) {
   const pathname = usePathname();
 
+  // COMPACTA (2026-10-25, "que se pueda compactar"): solo iconos, el nombre
+  // aparece al pasar el mouse. Se recuerda en este navegador. En pantallas
+  // chicas no aplica: ahi el menu es un cajon y entra entero.
+  const [compacta, setCompacta] = useState(false);
+  useEffect(() => {
+    try { setCompacta(localStorage.getItem("admin.menu-compacto") === "1"); } catch {}
+  }, []);
+  const alternar = () => {
+    setCompacta((c) => {
+      try { localStorage.setItem("admin.menu-compacto", c ? "0" : "1"); } catch {}
+      return !c;
+    });
+  };
+
   // En pantallas chicas el menu es un cajon: se cierra al navegar.
   useEffect(() => {
     const t = document.getElementById("menu-admin") as HTMLInputElement | null;
@@ -113,13 +127,13 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
   };
 
   return (
-    <aside className="sb" aria-label="Menú de administración">
+    <aside className={"sb" + (compacta ? " sb--compacta" : "")} aria-label="Menú de administración">
       <Link href={"/admin" as Route} className="sb-marca">
         <span className="sb-marca-ico">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/isologo-icon.png" alt="" />
         </span>
-        <span>
+        <span className="sb-marca-txt">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/brunela-dance-trainer-wordmark.png" alt="Brunela Dance Trainer" className="sb-marca-wm" />
           <span className="sb-marca-sub" style={{ display: "block" }}>Panel del estudio</span>
@@ -127,9 +141,9 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
       </Link>
 
       {/* Accion principal: el equivalente a "Explorar clases" del lado alumna */}
-      <Link href={"/admin/videos?nueva=1#nueva" as Route} className="sb-cta">
+      <Link href={"/admin/videos?nueva=1#nueva" as Route} className="sb-cta" title={compacta ? "Subir una clase" : undefined}>
         <span className="sb-cta-ico"><Plus size={15} strokeWidth={2.8} aria-hidden="true" /></span>
-        Subir una clase
+        <span className="sb-txt">Subir una clase</span>
       </Link>
 
       <nav className="sb-nav">
@@ -139,9 +153,9 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
             {grupo.items.map(({ href, exact, label, Icon }) => {
               const active = isActive(href, exact);
               return (
-                <Link key={href} href={href as Route} className={"sb-item" + (active ? " es-activo" : "")} aria-current={active ? "page" : undefined}>
+                <Link key={href} href={href as Route} className={"sb-item" + (active ? " es-activo" : "")} aria-current={active ? "page" : undefined} title={compacta ? label : undefined} aria-label={compacta ? label : undefined}>
                   <span className="sb-item-ico"><Icon size={18} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" /></span>
-                  {label}
+                  <span className="sb-txt">{label}</span>
                 </Link>
               );
             })}
@@ -150,6 +164,10 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
       </nav>
 
       <div className="sb-pie">
+        <button type="button" className="sb-compactar" onClick={alternar} aria-pressed={compacta} title={compacta ? "Mostrar el menú completo" : "Compactar el menú"}>
+          {compacta ? <PanelLeftOpen size={17} strokeWidth={2} aria-hidden="true" /> : <PanelLeftClose size={17} strokeWidth={2} aria-hidden="true" />}
+          <span className="sb-txt">Compactar menú</span>
+        </button>
         {/* "Ver como alumna" vive en la cabecera: aca restaba alto a un menu de 14 items. */}
         <div className="sb-perfil">
           <Link href={"/admin/perfil" as Route} className="sb-avatar" title="Mi perfil" aria-label="Mi perfil">

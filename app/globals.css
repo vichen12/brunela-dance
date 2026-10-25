@@ -4130,6 +4130,23 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .sb-perfil-plan { display: inline-block; margin-top: 3px; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 800; color: var(--pink-deep); background: var(--rubor); }
 .sb-salir { width: 34px; height: 34px; flex-shrink: 0; border: 0; border-radius: 12px; display: grid; place-items: center; background: transparent; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
 .sb-salir:hover { background: var(--rubor); color: var(--pink-deep); }
+/* Menu compacto: solo iconos (boton "Compactar menu"). Solo en pantallas
+   grandes; debajo de 900 px el menu es un cajon y entra entero. */
+.sb { transition: width .25s var(--curva); }
+.sb-compactar { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sb-compactar:hover { background: rgba(255, 226, 211, 0.45); color: var(--pink-deep); }
+@media (min-width: 901px) {
+  .sb--compacta { width: 84px; }
+  .sb--compacta .sb-txt, .sb--compacta .sb-marca-txt, .sb--compacta .sb-perfil-txt, .sb--compacta .sb-salir { display: none !important; }
+  .sb--compacta .sb-marca { justify-content: center; padding: 22px 0 18px; }
+  .sb--compacta .sb-cta { margin: 0 auto 14px; width: 50px; padding: 0; }
+  .sb--compacta .sb-nav { padding: 4px 12px 18px; }
+  .sb--compacta .sb-grupo-titulo { font-size: 0; height: 1px; margin: 6px 10px 8px; padding: 0; background: var(--linea); }
+  .sb--compacta .sb-item { justify-content: center; padding: 4px; }
+  .sb--compacta .sb-compactar { justify-content: center; padding: 0; }
+  .sb--compacta .sb-perfil { justify-content: center; padding: 6px; border: 0; background: transparent; }
+}
+@media (max-width: 900px) { .sb-compactar { display: none; } }
 .sb-extra { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 14px; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 700; color: var(--ink); background: rgba(255, 226, 211, 0.5); transition: background .2s; }
 .sb-extra:hover { background: var(--melocoton); }
 .sb-extra.es-activo { background: var(--melocoton); color: var(--melocoton-deep); }

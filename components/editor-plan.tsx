@@ -541,6 +541,8 @@ const CSS = `
 .epl-mas { gap: 0; }
 /* La portada ya va dentro de su bloque: sin el segundo borde punteado. */
 .epl-bloque .spc { padding: 0; border: 0; background: transparent; }
+/* En la columna angosta, foto arriba y texto abajo SIEMPRE (con o sin fotos para elegir). */
+.epl-bloque .spc { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
 .epl-mas > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
 .epl-mas > summary::-webkit-details-marker { display: none; }
 .epl-mas > summary::after { content: "+"; font-size: 20px; font-weight: 600; color: var(--pink-deep); }
