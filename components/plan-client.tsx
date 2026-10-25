@@ -1,5 +1,5 @@
 'use client';
-import { Check, Lock, Settings } from 'lucide-react';
+import { AlertCircle, CalendarClock, Check, CreditCard, Lock, RotateCcw, Settings, XCircle } from 'lucide-react';
 import { AdminCabecera } from '@/components/admin-ui';
 
 import Link from "next/link";
@@ -129,6 +129,15 @@ export function PlanClient({
     : null;
 
   const hasActiveSub = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const pagoPendiente = subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid';
+  // El estado de la suscripcion en UNA palabra, para que la alumna no tenga
+  // que deducirlo de un parrafo (2026-10-25: "es confuso para el alumno").
+  const estado: 'prueba' | 'activa' | 'cancelada' | 'pendiente' | null =
+    pagoPendiente ? 'pendiente'
+    : !hasActiveSub ? null
+    : cancelaAlFinal ? 'cancelada'
+    : subscriptionStatus === 'trialing' ? 'prueba' : 'activa';
+  const nombrePlan = PLAN_META[currentTier as keyof typeof PLAN_META]?.name ?? null;
   const orderedTiers = catalog
     ? [...catalog.tiers].sort((a, b) => a.display_order - b.display_order)
     : [];
@@ -270,9 +279,7 @@ export function PlanClient({
         <AdminCabecera
           eyebrow="Suscripción"
           titulo="Mi plan"
-          lede={<>Cambiá de plan cuando quieras, sin permanencias.{renewDate && (cancelaAlFinal
-            ? <> Cancelaste tu plan: tenés acceso hasta el <strong>{renewDate}</strong> y no se te va a volver a cobrar.</>
-            : <> Tu plan se renueva el <strong>{renewDate}</strong>.</>)}</>}
+          lede={<>Cambiá de plan cuando quieras, sin permanencias.</>}
         />
       </div>
 
@@ -284,35 +291,52 @@ export function PlanClient({
 
         {aviso}
 
-        {/* Active subscription banner + manage */}
-        {hasActiveSub && (
-          <div className="mp-activa">
-            <span className="mp-activa-izq">
-              <span className="mp-activa-ico">
-                <Check size={18} strokeWidth={2.6} aria-hidden="true" />
+        {/* Tu suscripcion: estado en una palabra, la fecha que importa y las
+            acciones con su nombre. Todas abren el portal de Stripe ("Gestionar"),
+            que es donde de verdad se cancela, se reactiva o se cambia la tarjeta. */}
+        {estado && (
+          <section className={'mp-sus mp-sus--' + estado} aria-label="Tu suscripción">
+            <div className="mp-sus-cab">
+              <span className="mp-sus-ico" aria-hidden="true">
+                {estado === 'cancelada' ? <XCircle size={20} strokeWidth={2.2} />
+                  : estado === 'pendiente' ? <AlertCircle size={20} strokeWidth={2.2} />
+                  : estado === 'prueba' ? <CalendarClock size={20} strokeWidth={2.2} />
+                  : <Check size={20} strokeWidth={2.6} />}
               </span>
-              <span className="mp-activa-txt">
-                <span className="mp-activa-titulo">
-                  {cancelaAlFinal
-                    ? `Tu plan termina el ${renewDate ?? "final del período"}`
-                    : subscriptionStatus === 'trialing' ? 'Estás en tu prueba gratuita' : 'Tu suscripción está activa'}
-                </span>
-                <span className="mp-activa-sub">
-                  {cancelaAlFinal
-                    ? 'Ya está dada de baja: no se te va a cobrar más. Si cambiás de idea, la reactivás desde «Gestionar».'
-                    : 'Desde «Gestionar» cambiás de plan o de tarjeta, ves tus facturas o cancelás.'}
-                </span>
-              </span>
-            </span>
-            <button
-              onClick={openPortal}
-              disabled={loadingTier === 'portal'}
-              className="mp-gestionar"
-            >
-              <Settings size={15} strokeWidth={2} aria-hidden="true" />
-              {loadingTier === 'portal' ? 'Abriendo…' : 'Gestionar'}
-            </button>
-          </div>
+              <div className="mp-sus-txt">
+                <p className="mp-sus-plan">
+                  Tu plan: <strong>{nombrePlan ?? 'tu plan'}</strong>
+                  <span className="mp-sus-chip">
+                    {estado === 'prueba' ? 'Prueba gratis' : estado === 'activa' ? 'Activo' : estado === 'cancelada' ? 'Cancelado' : 'Pago pendiente'}
+                  </span>
+                </p>
+                <p className="mp-sus-detalle">
+                  {estado === 'prueba' && <>Tu prueba gratis termina el <strong>{renewDate ?? '—'}</strong>. Ese día se cobra el primer período, salvo que canceles antes.</>}
+                  {estado === 'activa' && <>Próximo cobro: <strong>{renewDate ?? '—'}</strong>. Se renueva solo hasta que lo canceles.</>}
+                  {estado === 'cancelada' && <>Lo cancelaste: seguís teniendo acceso hasta el <strong>{renewDate ?? 'final del período'}</strong> y <strong>no se te va a volver a cobrar</strong>.</>}
+                  {estado === 'pendiente' && <>No pudimos cobrar tu plan. Actualizá la tarjeta para no perder el acceso.</>}
+                </p>
+              </div>
+            </div>
+            <div className="mp-sus-acciones">
+              {estado === 'cancelada' ? (
+                <button onClick={openPortal} disabled={loadingTier === 'portal'} className="mp-sus-btn mp-sus-btn--lleno">
+                  <RotateCcw size={15} strokeWidth={2.2} aria-hidden="true" /> {loadingTier === 'portal' ? 'Abriendo…' : 'Reactivar mi plan'}
+                </button>
+              ) : estado === 'pendiente' ? (
+                <button onClick={openPortal} disabled={loadingTier === 'portal'} className="mp-sus-btn mp-sus-btn--lleno">
+                  <CreditCard size={15} strokeWidth={2.2} aria-hidden="true" /> {loadingTier === 'portal' ? 'Abriendo…' : 'Actualizar tarjeta'}
+                </button>
+              ) : (
+                <button onClick={openPortal} disabled={loadingTier === 'portal'} className="mp-sus-btn">
+                  <XCircle size={15} strokeWidth={2.2} aria-hidden="true" /> {loadingTier === 'portal' ? 'Abriendo…' : 'Cancelar mi plan'}
+                </button>
+              )}
+              <button onClick={openPortal} disabled={loadingTier === 'portal'} className="mp-sus-btn">
+                <Settings size={15} strokeWidth={2.2} aria-hidden="true" /> Tarjeta y facturas
+              </button>
+            </div>
+          </section>
         )}
 
         {/* Selector de periodo: un interruptor, no dos pestanas. */}
@@ -683,10 +707,37 @@ const CSS = `
 .mp-boton:disabled { opacity: .6; cursor: default; transform: none; }
 .mp-activo {
   display: flex; align-items: center; justify-content: center; gap: 7px; height: 52px; border-radius: 99px;
-  font-size: 15px; font-weight: 800; color: var(--salvia-deep); background: var(--salvia); border: 1.5px solid #CFE3C9;
+  font-size: 15px; font-weight: 800; color: var(--pink-deep); background: var(--rubor); border: 1.5px solid var(--pink-line);
 }
 .mp-actual { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 11px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
-.mp-actual-punto { width: 8px; height: 8px; border-radius: 50%; background: var(--salvia-deep); box-shadow: 0 0 0 4px var(--salvia); }
+.mp-actual-punto { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 4px var(--rubor); }
+
+/* Tu suscripcion (reemplaza a .mp-activa, que era verde). */
+.mp-sus { max-width: 1060px; margin: 0 auto 30px; padding: 18px 20px; border-radius: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(110deg, var(--rubor) 0%, #FFF8F5 60%, #fff 100%); border: 1px solid var(--pink-line); }
+.mp-sus--cancelada { background: linear-gradient(110deg, #F7F1EE 0%, #FBF8F6 60%, #fff 100%); border-color: var(--linea-fuerte); }
+.mp-sus--pendiente { background: linear-gradient(110deg, #FFE9DE 0%, #FFF6F1 60%, #fff 100%); border-color: #F5C2A6; }
+.mp-sus-cab { display: flex; align-items: flex-start; gap: 13px; flex: 1 1 420px; min-width: 0; }
+.mp-sus-ico { width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: 0 8px 18px -12px rgba(176,58,62,.55); }
+.mp-sus--cancelada .mp-sus-ico { color: var(--muted); }
+.mp-sus--pendiente .mp-sus-ico { color: #C25E3A; }
+.mp-sus-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mp-sus-plan { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 16px; color: var(--ink); }
+.mp-sus-plan strong { font-weight: 900; }
+.mp-sus-chip { font-size: 11.5px; font-weight: 900; letter-spacing: .02em; padding: 3px 10px; border-radius: 99px; background: var(--pink); color: #fff; }
+.mp-sus--prueba .mp-sus-chip { background: var(--melocoton); color: #8A4A2E; }
+.mp-sus--cancelada .mp-sus-chip { background: #EDE3DF; color: var(--muted); }
+.mp-sus--pendiente .mp-sus-chip { background: #F5C2A6; color: #8A3A1E; }
+.mp-sus-detalle { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin: 0; }
+.mp-sus-detalle strong { color: var(--ink); font-weight: 800; }
+.mp-sus-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.mp-sus-btn { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 16px; border-radius: 99px; cursor: pointer;
+  background: #fff; color: var(--ink); border: 1.5px solid var(--linea-fuerte); font-family: inherit; font-size: 13.5px; font-weight: 800; transition: background .2s, border-color .2s; }
+.mp-sus-btn:hover { background: var(--rubor); border-color: var(--pink-line); }
+.mp-sus-btn--lleno { background: var(--pink); color: #fff; border-color: var(--pink); }
+.mp-sus-btn--lleno:hover { background: var(--pink-mid); border-color: var(--pink-mid); }
+.mp-sus-btn:disabled { opacity: .6; cursor: default; }
+@media (max-width: 640px) { .mp-sus-acciones { width: 100%; } .mp-sus-btn { flex: 1 1 auto; justify-content: center; } }
 
 /* Confianza */
 .mp-confianza { max-width: 1060px; margin: 34px auto 0; padding: 28px; border-radius: 30px; border: 1px solid var(--linea); background: linear-gradient(150deg, #FFF8F4 0%, #fff 60%); }
