@@ -82,6 +82,12 @@ export interface PlantillaCorreo {
   imagen?: { url: string; alt: string; enlace?: string };
   /** Enlace de baja visible en el pie (avisos opcionales, como "clase nueva"). */
   baja?: { texto: string; url: string };
+  /**
+   * Lista corta con miniatura y titulo (las clases nuevas en "volver al
+   * estudio"). La foto es opcional por fila y, como `imagen`, tiene que ser
+   * una URL PUBLICA que no venza.
+   */
+  galeria?: { titulo: string; imagen?: string | null; enlace?: string }[];
 }
 
 export function escapar(texto: string): string {
@@ -187,6 +193,26 @@ function imagen(i: { url: string; alt: string; enlace?: string }): string {
   <tr>
     <td align="center">${i.enlace ? `<a href="${escapar(i.enlace)}" target="_blank" style="text-decoration:none;">${img}</a>` : img}</td>
   </tr>
+</table>`;
+}
+
+function galeria(items: { titulo: string; imagen?: string | null; enlace?: string }[]): string {
+  const filas = items
+    .map((it, i) => {
+      const titulo = `<span class="bd-texto" style="font-family:${FUENTE};font-size:16px;line-height:22px;font-weight:800;color:${COLORES.ciruela};">${escapar(it.titulo)}</span>`;
+      const foto = it.imagen
+        ? `<img src="${escapar(it.imagen)}" width="112" height="70" alt="" style="display:block;width:112px;height:70px;object-fit:cover;border:0;outline:none;border-radius:12px;">`
+        : `<div style="width:112px;height:70px;border-radius:12px;background-color:${COLORES.melocoton};line-height:70px;text-align:center;font-family:${FUENTE};font-size:22px;color:${COLORES.coral};">&#9654;</div>`;
+      const conEnlace = (html: string) => (it.enlace ? `<a href="${escapar(it.enlace)}" target="_blank" style="text-decoration:none;">${html}</a>` : html);
+      return `
+  <tr>
+    <td valign="middle" width="112" style="width:112px;padding:${i === 0 ? "16px" : "10px"} 0 ${i === items.length - 1 ? "16px" : "10px"} 16px;">${conEnlace(foto)}</td>
+    <td valign="middle" style="padding:${i === 0 ? "16px" : "10px"} 16px ${i === items.length - 1 ? "16px" : "10px"} 16px;">${conEnlace(titulo)}</td>
+  </tr>`;
+    })
+    .join("");
+  return `
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="bd-nota" style="background-color:${COLORES.nota};border:1px solid ${COLORES.bordeNota};border-radius:18px;margin:2px 0 26px 0;">${filas}
 </table>`;
 }
 
@@ -315,6 +341,7 @@ export function plantillaCorreo(p: PlantillaCorreo): string {
                   ${saludo}
                   ${parrafos}
                   ${p.imagen ? imagen(p.imagen) : ""}
+                  ${p.galeria && p.galeria.length > 0 ? galeria(p.galeria) : ""}
                   ${p.detalles && p.detalles.length > 0 ? detalles(p.detalles) : ""}
                   ${p.codigo ? codigo(p.codigo) : ""}
                   ${p.boton ? boton(p.boton.texto, p.boton.url) : ""}
@@ -353,6 +380,10 @@ export function textoPlano(p: PlantillaCorreo): string {
   partes.push(p.titulo.toUpperCase(), "");
   if (p.saludo) partes.push(p.saludo, "");
   for (const t of p.parrafos) partes.push(sinMarcas(t), "");
+  if (p.galeria && p.galeria.length > 0) {
+    for (const g of p.galeria) partes.push(`· ${g.titulo}`);
+    partes.push("");
+  }
   if (p.detalles) {
     for (const d of p.detalles) partes.push(`${d.etiqueta}: ${d.valor}`);
     partes.push("");

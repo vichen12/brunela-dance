@@ -208,3 +208,66 @@ export function claseNueva(datos: {
     baja: { texto: "No quiero más avisos de clases nuevas", url: datos.urlBaja },
   });
 }
+
+// ---------------------------------------------------------------------------
+
+export interface NovedadParaVolver {
+  titulo: string;
+  /** URL PUBLICA de la foto subida (portadaPublicaDeClase), o null. */
+  portada?: string | null;
+}
+
+/**
+ * Invitacion a VOLVER al estudio, para una alumna que hoy no tiene acceso. La
+ * manda Brunela a mano desde /admin/users (src/features/correos/volver-al-estudio.ts),
+ * nunca sola, y como mucho una vez cada 14 dias por alumna.
+ *
+ * 🔴 PEDIDO EXPLICITO DE LA DUEÑA: es una invitacion, no una factura. NUNCA
+ *    "pagá", "pagar", precios ni importes. tests/sistema/volver-al-estudio.test.ts
+ *    revisa el HTML y el texto enteros (incluida la plantilla) buscando "pag",
+ *    "precio" y "€".
+ *
+ * Es opcional como clase nueva: lleva el enlace de baja visible (y quien lo
+ * manda agrega la cabecera List-Unsubscribe).
+ */
+export function volverAlEstudio(datos: {
+  nombre?: string | null;
+  /** Clases publicadas en los ultimos 30 dias. */
+  clasesNuevas: number;
+  /** Las mas recientes, hasta 3. */
+  novedades: NovedadParaVolver[];
+  urlVolver: string;
+  urlBaja: string;
+}): CorreoArmado {
+  const n = Math.max(0, Math.floor(datos.clasesNuevas));
+  const novedades = datos.novedades.slice(0, 3);
+  const parrafos = [
+    "Hace un tiempo que no te veo por el estudio y quería escribirte para contarte que **tu lugar sigue acá**, esperándote.",
+  ];
+  if (n > 0) {
+    parrafos.push(
+      n === 1
+        ? "En el último mes subí **una clase nueva**, pensada para que la hagas a tu ritmo, desde casa."
+        : `En el último mes subí **${n} clases nuevas**, pensadas para que las hagas a tu ritmo, desde casa.${novedades.length > 0 ? " Estas son las más recientes:" : ""}`,
+    );
+  } else {
+    parrafos.push("Sigo preparando clases y planes de trabajo para que entrenes a tu ritmo, desde casa, con la misma dedicación de siempre.");
+  }
+  const cierre = "Cuando quieras volver, elegís cómo seguir y retomás donde lo dejaste: **tu progreso sigue guardado**.";
+
+  return armar("Te guardé tu lugar en el estudio 💗", {
+    preheader: n > 0 ? `Subí ${n === 1 ? "una clase nueva" : `${n} clases nuevas`} y me encantaría que vuelvas a bailar.` : "Me encantaría que vuelvas a bailar conmigo.",
+    etiqueta: "Te extrañamos",
+    titulo: "El estudio te está esperando",
+    saludo: saludo(datos.nombre),
+    parrafos: n > 0 && novedades.length > 0 ? parrafos : [...parrafos, cierre],
+    galeria: n > 0 && novedades.length > 0 ? novedades.map((v) => ({ titulo: v.titulo, imagen: v.portada ?? null, enlace: datos.urlVolver })) : undefined,
+    detalles: undefined,
+    boton: { texto: "Volver al estudio", url: datos.urlVolver },
+    nota: n > 0 && novedades.length > 0
+      ? `${cierre} Y si algo no te convenció o necesitás algo distinto, respondé este correo: lo leo yo.`
+      : "Si algo no te convenció o necesitás algo distinto, respondé este correo: lo leo yo.",
+    motivo: MOTIVO_CUENTA,
+    baja: { texto: "No quiero recibir más correos como este", url: datos.urlBaja },
+  });
+}

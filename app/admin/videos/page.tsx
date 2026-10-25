@@ -3,6 +3,8 @@ import { Archive, BarChart3, Check, Clapperboard, Clock, Eye, EyeOff, Languages,
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { BuscadorDeClases } from "@/components/buscador-de-clases";
+import { buscarClases, type ClaseParaBuscar } from "@/src/features/admin/buscar-clases";
 import { Paginacion } from "@/components/paginacion";
 import { EditarClase } from "@/components/admin-video-drawer";
 import { AdminVideoUpload } from "@/components/admin-video-upload";
@@ -273,14 +275,34 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const error = typeof params.error === "string" ? params.error : null;
   const bunnyReady = hasBunnyStreamEnv();
 
-  // Materiales escritos a mano con "Otro" en cualquier clase: aparecen como
-  // fichas en el formulario para no tener que tipearlos de nuevo. Solo la
-  // columna equipment de todas las clases (son decenas, no miles).
-  const { data: equipos } = await supabase.from("videos").select("equipment");
+  // Lista LIVIANA de todas las clases (son decenas, no miles), para dos cosas:
+  //   · los materiales escritos a mano con "Otro" en cualquier clase: aparecen
+  //     como fichas en el formulario para no tener que tipearlos de nuevo;
+  //   · las sugerencias del buscador mientras se escribe, y la busqueda del
+  //     servidor con la MISMA regla (sin acentos: ver buscar-clases.ts).
+  const { data: livianas } = await supabase
+    .from("videos")
+    .select("id, slug, title_i18n, description_i18n, status, duration_seconds, category_slugs, equipment, thumbnail_url, bunny_video_id, stream_playback_id")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+  type Liviana = Pick<VideoRecord, "id" | "slug" | "title_i18n" | "description_i18n" | "status" | "duration_seconds" | "category_slugs" | "equipment" | "thumbnail_url" | "bunny_video_id" | "stream_playback_id">;
+  const todasLivianas = (livianas ?? []) as unknown as Liviana[];
   const conocidos = new Set<string>(MATERIALES.map((m) => m.slug as string));
   const materialesEscritos = [...new Set(
-    ((equipos ?? []) as { equipment: string[] | null }[]).flatMap((v) => v.equipment ?? []).filter((m) => m && !conocidos.has(m))
+    todasLivianas.flatMap((v) => v.equipment ?? []).filter((m) => m && !conocidos.has(m))
   )];
+  const clasesParaBuscar: ClaseParaBuscar[] = todasLivianas.map((v) => ({
+    id: v.id,
+    slug: v.slug,
+    titulo: v.title_i18n?.es ?? "",
+    tituloEn: v.title_i18n?.en ?? "",
+    categorias: (v.category_slugs ?? []).map((c) => CATEGORIA_LABEL[c] ?? c).join(", "),
+    // Recortada: es para encontrar, no para leer, y viaja al navegador.
+    descripcion: (v.description_i18n?.es ?? "").slice(0, 240),
+    estado: v.status,
+    duracionMin: Math.floor((v.duration_seconds ?? 0) / 60),
+    portada: portadaDeClase(v),
+  }));
 
   // Buscador y filtros, del lado del SERVIDOR.
   //
@@ -292,6 +314,18 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const fEstado = ESTADOS.some((e) => e.key === params.estado) ? (params.estado as string) : "";
   const fPlan = PLANES.some((e) => e.key === params.plan) ? (params.plan as string) : "";
   const paginaPedida = Math.max(0, Math.min(1000, Math.floor(Number(params.pagina)) || 0));
+  // ?editar=<id>: viene de una sugerencia del buscador. La lista se reduce a
+  // esa clase y su panel llega abierto. La lista es paginada, asi que sin el
+  // filtro la clase elegida podria no estar en esta pagina.
+  const editar = typeof params.editar === "string" && /^[0-9a-f-]{36}$/i.test(params.editar) ? params.editar : "";
+
+  // La busqueda por texto usa la MISMA regla que las sugerencias (sin acentos,
+  // titulo ES/EN, direccion, categoria y descripcion), sobre la lista liviana.
+  // Postgres con ilike distingue acentos: «releve» no encontraria «Relevé» y el
+  // Enter contradiria a la lista desplegable. Con muchisimas coincidencias el
+  // `in` armaria una URL enorme, y ahi se vuelve al ilike de antes.
+  const idsQueCoinciden = q ? buscarClases(clasesParaBuscar, q).map((c) => c.id) : [];
+  const NINGUNA = "00000000-0000-0000-0000-000000000000";
 
   const COLUMNAS = "id, slug, title_i18n, description_i18n, status, membership_tier_required, planes_permitidos, content_type, recommended_min_level, recommended_max_level, duration_seconds, category_slugs, equipment, thumbnail_url, stream_playback_id, bunny_video_id, audio_tracks, is_featured";
 
@@ -308,7 +342,10 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
     // encontraria una clase {corps, solista} -- su minimo es corps -- aunque
     // Solista la vea perfectamente.
     if (fPlan) c = c.contains("planes_permitidos", [fPlan]);
-    if (q) {
+    if (editar) c = c.eq("id", editar);
+    if (q && idsQueCoinciden.length <= 200) {
+      c = c.in("id", idsQueCoinciden.length ? idsQueCoinciden : [NINGUNA]);
+    } else if (q) {
       // Titulo en espanol o slug. `or` de PostgREST: una sola consulta.
       const t = q.replace(/[,()]/g, " ");
       c = c.or(`slug.ilike.%${t}%,title_i18n->>es.ilike.%${t}%`);
@@ -417,7 +454,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   // "Nueva clase" de la cabecera abre el formulario: un <details> no se abre
   // con un ancla, asi que se pide por la URL y el servidor lo pinta abierto.
   const abrirNueva = params.nueva === "1";
-  const hayFiltro = Boolean(q || fEstado || fPlan);
+  const hayFiltro = Boolean(q || fEstado || fPlan || editar);
 
   // Enlace a otra pagina conservando buscador y filtros.
   const conPagina = (p: number) => {
@@ -459,9 +496,11 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
       <AdminBuscador
         action="/admin/videos"
         q={q}
-        placeholder="Buscar por título o dirección"
+        placeholder="Buscar por título, categoría o dirección"
         total={totalVideos ?? coinciden}
         mostrando={coinciden}
+        filtrado={Boolean(editar)}
+        entrada={<BuscadorDeClases q={q} placeholder="Buscar por título, categoría o dirección" clases={clasesParaBuscar} />}
         filtros={[
           { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS },
           { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES },
@@ -569,6 +608,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         planes={programas}
                         ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
                         materialesEscritos={materialesEscritos}
+                        abrirAlInicio={video.id === editar}
                       />
                       {video.status !== "published" && (
                         <form action={quickStatusAction}>

@@ -16,11 +16,14 @@ export type TipoCorreo =
   | "gratis_terminado"
   | "recordatorio_vivo"
   | "invitacion_vivo"
-  | "clase_nueva";
+  | "clase_nueva"
+  | "volver_al_estudio";
 
 export const MIGRACION_CORREOS = "20261009_3_correos_enviados.sql";
 /** Agrega el tipo 'clase_nueva' a correos_enviados y profiles.correos_desactivados. */
 export const MIGRACION_CLASE_NUEVA = "20261012_clase_nueva.sql";
+/** Agrega el tipo 'volver_al_estudio' a correos_enviados. */
+export const MIGRACION_VOLVER = "20261025_2_volver_al_estudio.sql";
 
 /**
  * La tabla no existe todavia: la duena no corrio la migracion.
@@ -56,6 +59,8 @@ export const claves = {
   invitacion: (sesionId: string, alumnaId: string) => `invitacion:${sesionId}:${alumnaId}`,
   /** Una por clase y alumna, para siempre: despublicar y volver a publicar no la repite. */
   claseNueva: (videoId: string, alumnaId: string) => `clase-nueva:${videoId}:${alumnaId}`,
+  /** Una por alumna y DIA (Madrid). Los 14 dias entre una y otra los mira motivoNoRecibeVolver. */
+  volver: (alumnaId: string, ahoraIso: string) => `volver:${alumnaId}:${diaMadrid(ahoraIso)}`,
 };
 
 // ─── Acceso gratis ─────────────────────────────────────────────────────────
@@ -304,4 +309,80 @@ export function urlDeBaja(appUrl: string, token: string) {
 export function avisoDeClaseNueva(cuantas: number | null | undefined): string {
   if (!cuantas || cuantas < 1) return "";
   return cuantas === 1 ? " Se le va a avisar por mail a 1 alumna." : ` Se les va a avisar por mail a ${cuantas} alumnas.`;
+}
+
+// ─── Volver al estudio ────────────────────────────────────────────────────
+//
+// Pedido de la dueña (2026-10-25): desde /admin/users, invitar por mail a
+// volver a las alumnas que hoy no tienen acceso. Es una INVITACION, no una
+// cuenta por cobrar: el correo nunca habla de pagar ni de precios.
+//
+// A quien: sin acceso al estudio (la regla de src/features/acceso/reglas.ts),
+// no admin, con correo, sin baja explicita (la misma baja que clase_nueva: el
+// enlace de /baja), y sin otra invitacion en los ultimos 14 dias.
+
+/** Dias minimos entre una invitacion y la siguiente a la misma alumna. */
+export const DIAS_ENTRE_VOLVER = 14;
+
+export type MotivoNoRecibeVolver = "admin" | "con_acceso" | "sin_correo" | "baja" | "reciente";
+
+/** Como se lo explica el panel a Brunela, en la lista y en el resultado. */
+export const TEXTO_NO_RECIBE_VOLVER: Record<MotivoNoRecibeVolver, string> = {
+  admin: "es admin",
+  con_acceso: "ya tiene acceso al estudio",
+  sin_correo: "no tiene correo",
+  baja: "no recibe correos",
+  reciente: `ya le llegó hace menos de ${DIAS_ENTRE_VOLVER} días`,
+};
+
+export type PerfilParaVolver = {
+  is_admin: boolean | null;
+  email: string | null;
+  marketing_opt_in?: boolean | null;
+  marketing_opt_out_at?: string | null;
+  /** tieneAccesoAlEstudio(...) de esta alumna. */
+  tieneAcceso: boolean;
+  /** enviado_at de su ultima invitacion a volver, o null. */
+  ultimoVolver: string | null;
+};
+
+/** null = se le puede mandar. Si no, el PRIMER motivo por el que no. */
+export function motivoNoRecibeVolver(p: PerfilParaVolver, ahora = Date.now()): MotivoNoRecibeVolver | null {
+  if (p.is_admin) return "admin";
+  if (p.tieneAcceso) return "con_acceso";
+  if (!p.email?.trim()) return "sin_correo";
+  if (dioDeBajaClasesNuevas(p)) return "baja";
+  if (p.ultimoVolver && Date.parse(p.ultimoVolver) > ahora - DIAS_ENTRE_VOLVER * 86400000) return "reciente";
+  return null;
+}
+
+/** Desde cuando se le puede volver a mandar (ISO), o null si ya se puede. */
+export function proximoVolverPosible(ultimoVolver: string | null, ahora = Date.now()): string | null {
+  if (!ultimoVolver) return null;
+  const desde = Date.parse(ultimoVolver) + DIAS_ENTRE_VOLVER * 86400000;
+  return desde > ahora ? new Date(desde).toISOString() : null;
+}
+
+/** "Se mandó a 3 alumnas." / "Se mandó a 1 alumna." / "No se mandó a nadie." */
+export function textoSeMando(n: number): string {
+  if (n <= 0) return "No se mandó a nadie.";
+  return n === 1 ? "Se mandó a 1 alumna." : `Se mandó a ${n} alumnas.`;
+}
+
+/** Las que no recibieron, agrupadas por motivo y con tope de nombres: va en la URL del aviso. */
+export function textoSalteadas(salteadas: readonly { nombre: string; motivo: string }[], tope = 6): string {
+  if (salteadas.length === 0) return "";
+  const porMotivo = new Map<string, string[]>();
+  for (const s of salteadas) porMotivo.set(s.motivo, [...(porMotivo.get(s.motivo) ?? []), s.nombre]);
+  const partes = [...porMotivo.entries()].map(([motivo, nombres]) => {
+    const vistos = nombres.slice(0, tope).join(", ");
+    const mas = nombres.length > tope ? ` y ${nombres.length - tope} más` : "";
+    return `${vistos}${mas} (${motivo})`;
+  });
+  return ` No se mandó a: ${partes.join("; ")}.`;
+}
+
+/** /registro/plan: donde elige con que volver. */
+export function urlDeVolver(appUrl: string) {
+  return `${appUrl.replace(/\/$/, "")}/registro/plan`;
 }

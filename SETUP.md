@@ -83,7 +83,21 @@ no es el que devuelve `ls`:
                                                NULL, + es_descanso, + nota, +
                                                CHECK clase-o-descanso. No
                                                redefine nada
+40. 20261025_2_volver_al_estudio.sql       <-- DESPUES de la 38 (vuelve a
+                                               cambiar el CHECK de tipo de
+                                               correos_enviados: lista de la
+                                               38 + 'volver_al_estudio'),
+                                               + un indice y una funcion
+                                               nueva solo para service_role.
+                                               No redefine nada
 ```
+
+> **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin
+> ella el boton «Invitarlas a volver por mail» de /admin/users y «Mandarle un
+> mail para que vuelva» de la ficha aparecen apagados con «falta correr la
+> migración 20261025_2_volver_al_estudio.sql». Si se corriera ANTES de la 38,
+> el CHECK de la 38 la pisaria y el tipo nuevo dejaria de entrar: por eso trae
+> una guarda que falla si la 38 no corrio.
 
 > **La 39 (dia de descanso) se puede correr sola, en cualquier momento.** Sin
 > ella el panel de Planes de trabajo esconde la opcion «Descanso» y avisa

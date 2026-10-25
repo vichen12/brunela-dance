@@ -334,13 +334,16 @@ export function EditarClase({
   planes = [],
   ubicaciones = [],
   materialesEscritos = [],
+  abrirAlInicio = false,
 }: {
   video: VideoRecord;
   planes?: PlanParaElegir[];
   ubicaciones?: UbicacionEnPlan[];
   materialesEscritos?: string[];
+  /** Llega abierto: /admin/videos?editar=<id>, desde las sugerencias del buscador. */
+  abrirAlInicio?: boolean;
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abrirAlInicio);
   const [guardado, setGuardado] = useState(false);
 
   // El aviso se borra solo. Un cartel que se queda obliga a cerrarlo a mano

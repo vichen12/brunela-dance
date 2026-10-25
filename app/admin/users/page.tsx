@@ -11,8 +11,19 @@ import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { getAppUrl } from "@/src/lib/env";
+import { InvitarAVolver, type AlumnaParaVolver } from "@/components/invitar-a-volver";
+import {
+  leerCandidatasVolver, leerNovedades, registroVolverDisponible, sinPlanQueIgualEntran, AVISO_FALTA_MIGRACION_VOLVER,
+} from "@/src/features/correos/volver-al-estudio";
+import { TEXTO_NO_RECIBE_VOLVER } from "@/src/features/correos/reglas";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+// "Invitarlas a volver por mail" manda por lotes desde una server action de
+// esta pantalla, y espera la respuesta para decir a cuantas les llego.
+export const maxDuration = 60;
 
 /** Alumnas por pagina. Con 50 entra una pantalla larga sin scroll infinito. */
 const POR_PAGINA = 10;
@@ -27,7 +38,11 @@ const FILTROS_PLAN: Record<string, string> = {
   principal: "Principal",
   solista: "Solista",
   corps_de_ballet: "Corps de Ballet",
-  none: "Sin plan",
+  none: "Sin plan (todas)",
+  // Lo que cuenta la tarjeta "Sin plan": plan 'none', no admin, y que tampoco
+  // entra por un pack o un acceso gratis vigente (src/features/acceso/reglas.ts).
+  // Es a quienes se puede invitar a volver por mail.
+  "sin-acceso": "Sin acceso al estudio",
 };
 
 type ProfileRow = {
@@ -89,11 +104,29 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   const conPlan = (p: number) =>
     `/admin/users?${plan ? `plan=${plan}&` : ""}${q ? `q=${encodeURIComponent(q)}&` : ""}pagina=${p}`;
 
+  // Las de plan 'none' que IGUAL entran (pack o regalo vigente). Salen de
+  // "sin acceso" en la tarjeta y en la lista filtrada. service_role: esta
+  // pantalla ya paso requireAdmin.
+  const db = createSupabaseAdminClient();
+  const { data: sinPlanData } = await supabase.from("profiles").select("id").eq("membership_tier", "none").eq("is_admin", false);
+  const idsSinPlan = (sinPlanData ?? []).map((p) => p.id as string);
+  let entranSinPlan = new Set<string>();
+  try {
+    entranSinPlan = await sinPlanQueIgualEntran(db, idsSinPlan);
+  } catch (e) {
+    console.error("[admin/users] sin acceso:", e instanceof Error ? e.message : String(e));
+  }
+  const sinAccesoCount = idsSinPlan.filter((id) => !entranSinPlan.has(id)).length;
+
   let consulta = supabase
     .from("profiles")
     .select("id, email, full_name, membership_tier, technical_level, training_goals, onboarding_completed, is_admin, created_at", { count: "exact" });
   if (plan === "con-plan") consulta = consulta.neq("membership_tier", "none");
-  else if (plan) consulta = consulta.eq("membership_tier", plan as "none");
+  else if (plan === "sin-acceso") {
+    consulta = consulta.eq("membership_tier", "none").eq("is_admin", false);
+    // Lista chica a proposito: solo las de plan 'none' que entran igual.
+    if (entranSinPlan.size > 0) consulta = consulta.not("id", "in", `(${[...entranSinPlan].join(",")})`);
+  } else if (plan) consulta = consulta.eq("membership_tier", plan as "none");
   if (q) {
     const t = q.replace(/[,()%]/g, " ");
     consulta = consulta.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
@@ -145,6 +178,38 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
     }
   }
   const nueva = params.nueva === "1";
+
+  // "Invitarlas a volver por mail": solo en la vista "Sin plan" (sin acceso).
+  // La lista es de TODAS las sin acceso, no de la pagina: se elige a quien
+  // mandarle, y elegir solo entre 10 obligaria a pasar paginas.
+  let invitar: { alumnas: AlumnaParaVolver[]; novedades: Awaited<ReturnType<typeof leerNovedades>>; disponible: boolean; aviso: string } | null = null;
+  if (plan === "sin-acceso") {
+    const [disponible, novedades, lectura] = await Promise.all([
+      registroVolverDisponible(db),
+      leerNovedades(db),
+      leerCandidatasVolver(db).catch((e: unknown) => {
+        console.error("[admin/users] volver:", e instanceof Error ? e.message : String(e));
+        return null;
+      }),
+    ]);
+    if (lectura) {
+      const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+      invitar = {
+        disponible: disponible && lectura.registro,
+        aviso: lectura.registro ? AVISO_FALTA_MIGRACION_VOLVER : "Para mandar este mail falta correr la migración 20261009_3_correos_enviados.sql en Supabase.",
+        novedades,
+        alumnas: lectura.candidatas.map((c) => ({
+          id: c.id,
+          nombre: c.nombre,
+          nombreCompleto: c.full_name,
+          email: c.email,
+          motivo: c.motivo ? TEXTO_NO_RECIBE_VOLVER[c.motivo] : null,
+          desde: c.motivo === "reciente" && c.proximo ? `desde el ${fechaCorta(c.proximo)}` : null,
+        })),
+      };
+    }
+  }
+  const invitarAbierto = params.invitar === "1" || Boolean((success || error) && plan === "sin-acceso");
   const profiles = crudas;
   const totalPaginas = Math.max(1, Math.ceil((totalFiltradas ?? 0) / POR_PAGINA));
 
@@ -177,14 +242,17 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         {gratisDisponible ? <NuevaAlumnaGratis /> : <div role="status" className="ad-aviso ad-aviso--error">{AVISO_FALTA_MIGRACION}</div>}
       </AdminNueva>
 
-      {/* Las cifras filtran, y suman: cada cuenta cae en exactamente un plan. */}
+      {/* Las cifras filtran. "Sin plan" cuenta las que NO entran al estudio (sin
+          pack ni regalo vigente, y sin las admin): son a quienes se puede
+          invitar a volver. Las demas de plan 'none' estan en el desplegable,
+          "Sin plan (todas)". */}
       <div className="au-cifras">
         {[
           { value: totalCuentas, label: "Todas", filtro: "" },
           { value: tierCounts["principal"] ?? 0, label: "Principal", filtro: "principal" },
           { value: tierCounts["solista"] ?? 0, label: "Solista", filtro: "solista" },
           { value: tierCounts["corps_de_ballet"] ?? 0, label: "Corps de Ballet", filtro: "corps_de_ballet" },
-          { value: tierCounts["none"] ?? 0, label: "Sin plan", filtro: "none" },
+          { value: sinAccesoCount, label: "Sin plan", filtro: "sin-acceso" },
         ].map((c) => (
           <Link
             key={c.label}
@@ -197,6 +265,19 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           </Link>
         ))}
       </div>
+
+      {invitar && (
+        <AdminNueva id="invitar-a-volver" abierto={invitarAbierto} titulo="Invitarlas a volver por mail" sub="Elegí a quiénes, mirá el mail y mandalo">
+          <InvitarAVolver
+            alumnas={invitar.alumnas}
+            novedades={invitar.novedades}
+            disponible={invitar.disponible}
+            avisoNoDisponible={invitar.aviso}
+            appUrl={getAppUrl()}
+            volverA="/admin/users?plan=sin-acceso"
+          />
+        </AdminNueva>
+      )}
 
       <AdminBuscador
         action="/admin/users"

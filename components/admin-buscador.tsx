@@ -27,6 +27,8 @@ export function AdminBuscador({
   filtros = [],
   total,
   mostrando,
+  entrada,
+  filtrado = false,
 }: {
   /** Ruta del listado, p. ej. "/admin/videos". */
   action: string;
@@ -36,18 +38,27 @@ export function AdminBuscador({
   filtros?: { name: string; valor: string; etiqueta: string; opciones: OpcionFiltro[] }[];
   total: number;
   mostrando: number;
+  /**
+   * Reemplaza la caja de texto por otra (con name="q"): /admin/videos pone la
+   * suya, con sugerencias mientras se escribe (components/buscador-de-clases.tsx).
+   */
+  entrada?: React.ReactNode;
+  /** Hay un filtro que no es q ni los desplegables (p. ej. ?editar=<id>). */
+  filtrado?: boolean;
 }) {
-  const hayAlgo = Boolean(q) || filtros.some((f) => f.valor);
+  const hayAlgo = filtrado || Boolean(q) || filtros.some((f) => f.valor);
 
   return (
     <form method="get" action={action} className="abus" role="search">
-      <label className="abus-buscar">
-        <Search size={17} strokeWidth={1.8} className="abus-buscar-ico" aria-hidden="true" />
-        <input type="search" name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} />
-        <button type="submit" className="abus-buscar-btn" aria-label="Buscar">
-          <ArrowRight size={16} strokeWidth={2} />
-        </button>
-      </label>
+      {entrada ?? (
+        <label className="abus-buscar">
+          <Search size={17} strokeWidth={1.8} className="abus-buscar-ico" aria-hidden="true" />
+          <input type="search" name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} />
+          <button type="submit" className="abus-buscar-btn" aria-label="Buscar">
+            <ArrowRight size={16} strokeWidth={2} />
+          </button>
+        </label>
+      )}
 
       {filtros.map((f) => (
         <Desplegable

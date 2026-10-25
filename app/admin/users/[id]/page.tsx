@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, CalendarPlus, Lock, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Heart, BookOpen, CalendarPlus, Lock, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
 import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
 import { esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -17,6 +17,16 @@ import {
   AVISO_FALTA_MIGRACION_PRIVADAS, COLUMNAS_PRIVADA, CUPO_MENSUAL, claveMes, contarDelMes, esFaltaDeTabla, finDe,
   type SesionPrivada,
 } from "@/src/features/studio/sesiones-privadas-reglas";
+
+import { InvitarAVolver } from "@/components/invitar-a-volver";
+import {
+  leerCandidatasVolver, leerNovedades, registroVolverDisponible, AVISO_FALTA_MIGRACION_VOLVER,
+} from "@/src/features/correos/volver-al-estudio";
+import { TEXTO_NO_RECIBE_VOLVER } from "@/src/features/correos/reglas";
+import { getAppUrl } from "@/src/lib/env";
+
+// "Mandarle un mail para que vuelva" corre desde una server action de esta ficha.
+export const maxDuration = 60;
 
 /** Clases por pagina en «Sus últimas clases» (la ficha trae hasta 20). */
 const CLASES_POR_PAGINA = 10;
@@ -102,6 +112,21 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
   const cuandoSes = (x: Ses) => new Intl.DateTimeFormat("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: x.session_timezone || "Europe/Madrid" }).format(new Date(x.starts_at));
   const horaMsg = (iso: string) => new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }).format(new Date(iso));
 
+  // ¿Esta SIN ACCESO? Entonces se la puede invitar a volver por mail. Si tiene
+  // plan, pack, regalo vigente o es admin, la lectura no la devuelve y la
+  // seccion no aparece: el boton del mail lleva a elegir plan, y a quien ya
+  // entra al estudio /registro/plan la manda de vuelta al estudio.
+  const [volverLectura, volverDisponible, volverNovedades] = await Promise.all([
+    leerCandidatasVolver(db, { soloIds: [id] }).catch((e: unknown) => {
+      console.error("[ficha] volver:", e instanceof Error ? e.message : String(e));
+      return null;
+    }),
+    registroVolverDisponible(db),
+    leerNovedades(db),
+  ]);
+  const volver = volverLectura?.candidatas[0] ?? null;
+  const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+
   const inactiva = f.actividad.diasSinEntrar !== null && f.actividad.diasSinEntrar > 14;
 
   // Sin full_name, getFichaAlumna devuelve "Sin nombre". Se muestra el prefijo
@@ -158,6 +183,11 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
           <Link href={editarPlan as never} className="fa-btn">
             <CreditCard size={16} strokeWidth={2.2} aria-hidden="true" /> Cambiar su plan
           </Link>
+          {volver && (
+            <a href="#volver" className="fa-btn">
+              <Heart size={16} strokeWidth={2.2} aria-hidden="true" /> Mail para que vuelva
+            </a>
+          )}
           <a href={`mailto:${f.perfil.email}`} className="fa-btn">
             <Mail size={16} strokeWidth={2.2} aria-hidden="true" /> Correo
           </a>
@@ -236,6 +266,34 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
           )}
         </section>
       </div>
+
+      {volver && volverLectura && (
+        <section id="volver" className="fa-tarjeta fa-ancla">
+          <div className="fa-tarjeta-cab">
+            <span className="fa-burbuja"><Heart size={18} strokeWidth={2.2} aria-hidden="true" /></span>
+            <div>
+              <h2 className="fa-h2">Invitarla a volver</h2>
+              <p className="fa-sub">Hoy no tiene acceso al estudio. Un mail tuyo para que vuelva a elegir su plan.</p>
+            </div>
+          </div>
+          <InvitarAVolver
+            una
+            alumnas={[{
+              id: volver.id,
+              nombre: volver.nombre,
+              nombreCompleto: volver.full_name,
+              email: volver.email,
+              motivo: volver.motivo ? TEXTO_NO_RECIBE_VOLVER[volver.motivo] : null,
+              desde: volver.motivo === "reciente" && volver.proximo ? `desde el ${fechaCorta(volver.proximo)}` : null,
+            }]}
+            novedades={volverNovedades}
+            disponible={volverDisponible && volverLectura.registro}
+            avisoNoDisponible={volverLectura.registro ? AVISO_FALTA_MIGRACION_VOLVER : "Para mandar este mail falta correr la migración 20261009_3_correos_enviados.sql en Supabase."}
+            appUrl={getAppUrl()}
+            volverA={`/admin/users/${id}`}
+          />
+        </section>
+      )}
 
       {gratisDisponible && (
         <section className="fa-tarjeta fa-ancla fa-gratis">
