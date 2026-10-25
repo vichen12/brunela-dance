@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { portadaDeClase, portadaDePlan } from "@/src/lib/video/portada";
-import { CalendarDays, Check, Eye, Pencil, Plus, Rocket, Star } from "lucide-react";
+import { CalendarDays, Check, Eye, Pencil, Plus, Rocket, Star, Heart } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminVacio, AdminGuia } from "@/components/admin-ui";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
@@ -307,7 +307,9 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                             !d || d.es_descanso ? `Día ${i + 1}: descanso`
                             : `Día ${i + 1}: ${tituloDe(d.video_id ? videoById.get(d.video_id) : undefined, "clase")}`
                           }
-                        />
+                        >
+                          {!(d && !d.es_descanso) && <Heart size={15} strokeWidth={0} fill="currentColor" aria-hidden="true" />}
+                        </span>
                       );
                     })}
                     {total > 31 && <span className="apl-dias-mas">+{total - 31}</span>}
@@ -389,7 +391,8 @@ const CSS_PLANES = `
 .apl-dia { width: 16px; height: 16px; border-radius: 6px; background: #FFEBDF; transition: transform .25s var(--curva); }
 .apl-dia.es-cargado { background: var(--pink); box-shadow: 0 4px 8px -4px rgba(230,79,85,.7); }
 /* Descanso: cargado, pero en melocoton y redondo, para que se distinga de una clase. */
-.apl-dia.es-descanso { background: var(--melocoton, #FFC9A8); border-radius: 50%; box-shadow: inset 0 0 0 2px #fff; }
+/* Descanso: un corazon (pedido 2026-10-25). */
+.apl-dia.es-descanso { background: none; display: grid; place-items: center; color: var(--pink-soft, #F7A8AB); }
 .apl-dia:hover { transform: scale(1.25); }
 .apl-dias-mas { font-size: 12px; font-weight: 800; color: var(--muted); align-self: center; margin-left: 2px; }
 .apl-dias-txt {
