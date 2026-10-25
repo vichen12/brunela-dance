@@ -30,8 +30,11 @@ export type OpcionBuscable = { value: string; label: string; detalle?: string; i
 type Props = {
   opciones: OpcionBuscable[];
   fijas?: OpcionBuscable[];
-  name: string;
+  /** Sin name no manda nada en el formulario: el valor se lee con onChange. */
+  name?: string;
   required?: boolean;
+  /** Abre la lista con el foco puesto (al tocar "Cambiar" en un dia). */
+  autoFocus?: boolean;
   placeholder?: string;
   etiqueta?: string;
   /** Valor inicial (p. ej. al editar un dia que ya tiene clase). */
@@ -39,7 +42,7 @@ type Props = {
   onChange?: (valor: string) => void;
 };
 
-export function ElegirConBuscador({ opciones, fijas = [], name, required, placeholder = "Buscá por título…", etiqueta, defaultValue = "", onChange }: Props) {
+export function ElegirConBuscador({ opciones, fijas = [], name, required, placeholder = "Buscá por título…", etiqueta, defaultValue = "", onChange, autoFocus }: Props) {
   const id = useId();
   const inicial = [...fijas, ...opciones].find((o) => o.value === defaultValue);
   const [valor, setValor] = useState(inicial ? defaultValue : "");
@@ -68,6 +71,11 @@ export function ElegirConBuscador({ opciones, fijas = [], name, required, placeh
     if (!abierto) return;
     lista.current?.querySelector<HTMLElement>(`[data-i="${activo}"]`)?.scrollIntoView({ block: "nearest" });
   }, [abierto, activo]);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    campo.current?.focus();
+  }, [autoFocus]);
 
   // form.reset() (tras guardar) tiene que vaciar tambien el estado de React.
   useEffect(() => {
@@ -103,7 +111,12 @@ export function ElegirConBuscador({ opciones, fijas = [], name, required, placeh
   function teclear(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") { e.preventDefault(); setAbierto(true); setActivo((a) => Math.min(visibles.length - 1, abierto ? a + 1 : 0)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActivo((a) => Math.max(0, a - 1)); }
-    else if (e.key === "Enter") { if (abierto && visibles[activo]) { e.preventDefault(); elegir(visibles[activo]); } }
+    else if (e.key === "Enter") {
+      if (abierto && visibles[activo]) { e.preventDefault(); elegir(visibles[activo]); }
+      // Sin name (el editor de plan) el formulario de afuera es OTRO: un Enter
+      // buscando no tiene que guardar el plan entero.
+      else if (!name) e.preventDefault();
+    }
     else if (e.key === "Escape") { if (abierto) { e.preventDefault(); setAbierto(false); } }
     else if (e.key === "Tab") setAbierto(false);
   }
@@ -145,16 +158,18 @@ export function ElegirConBuscador({ opciones, fijas = [], name, required, placeh
         )}
       </div>
 
-      <input
-        className="ecb-valor"
-        name={name}
-        value={valor}
-        required={required}
-        onChange={() => {}}
-        tabIndex={-1}
-        aria-hidden="true"
-        onFocus={() => campo.current?.focus()}
-      />
+      {name && (
+        <input
+          className="ecb-valor"
+          name={name}
+          value={valor}
+          required={required}
+          onChange={() => {}}
+          tabIndex={-1}
+          aria-hidden="true"
+          onFocus={() => campo.current?.focus()}
+        />
+      )}
 
       {abierto && (
         <ul ref={lista} id={idLista} role="listbox" aria-label={etiqueta} className="ecb-lista">

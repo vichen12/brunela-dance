@@ -3802,7 +3802,7 @@ details[open] > summary .ad-flecha { transform: rotate(180deg); }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   FORMULARIO DE PLAN DE TRABAJO (ProgramForm en admin-program-drawer.tsx)
+   FORMULARIO DE PLAN DE TRABAJO (ya sin uso: el editor de planes, components/editor-plan.tsx, trae su CSS)
    Se usa en la pagina (ancha) y en el panel lateral (angosto): las grillas
    son auto-fit para acomodarse a los dos.
    ════════════════════════════════════════════════════════════════════════ */

@@ -34,6 +34,11 @@ export type PlanParaElegir = {
   titulo: string;
   /** El primer dia libre, para no hacerselo buscar a mano. */
   proximoDia: number;
+  /**
+   * Los dias que son DESCANSO (fila sin clase). Para avisar antes de poner una
+   * clase encima: «El día 4 es un descanso: esta clase lo reemplaza».
+   */
+  descansos: number[];
 };
 
 /** Donde esta ya puesta una clase. */
@@ -68,9 +73,12 @@ type PlanCrudo = { id: string; title_i18n: Record<string, string> | null; durati
  */
 export function armarPlanesDeTrabajo(planes: PlanCrudo[], dias: DiaDePlan[]) {
   const ocupadosPorPlan = new Map<string, Set<number>>();
+  const descansosPorPlan = new Map<string, number[]>();
   for (const dia of dias) {
     if (!ocupadosPorPlan.has(dia.program_id)) ocupadosPorPlan.set(dia.program_id, new Set());
     ocupadosPorPlan.get(dia.program_id)!.add(dia.day_number);
+    // video_id null = descanso (el CHECK de 20261025 no deja otra cosa).
+    if (!dia.video_id) descansosPorPlan.set(dia.program_id, [...(descansosPorPlan.get(dia.program_id) ?? []), dia.day_number]);
   }
 
   const nombreDe = new Map<string, string>();
@@ -81,6 +89,7 @@ export function armarPlanesDeTrabajo(planes: PlanCrudo[], dias: DiaDePlan[]) {
       id: plan.id,
       titulo: `${nombre} · ${plan.duration_days} días`,
       proximoDia: primerDiaLibre(ocupadosPorPlan.get(plan.id) ?? []),
+      descansos: (descansosPorPlan.get(plan.id) ?? []).sort((a, b) => a - b),
     };
   });
 

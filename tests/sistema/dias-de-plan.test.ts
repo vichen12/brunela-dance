@@ -187,7 +187,7 @@ describe("dia de descanso: pantallas", () => {
   });
 
   it("la portada del plan se sube, no se pega", () => {
-    const src = leer("components/admin-program-drawer.tsx");
+    const src = leer("components/editor-plan.tsx");
     expect(src).toMatch(/<SubirPortadaClase\s+name="coverImageUrl"/);
     expect(src).not.toMatch(/placeholder="https:\/\/…"/);
   });

@@ -182,7 +182,8 @@ export async function getAnalitica(): Promise<Analitica> {
       .select("user_id, video_id, program_id, program_day_number, completion_percent, is_completed, updated_at"),
     supabase.from("videos").select("id, slug, title_i18n, status, published_at"),
     supabase.from("programs").select("id, slug, title_i18n, duration_days, status"),
-    supabase.from("program_days").select("program_id, day_number"),
+    // video_id para reconocer los DESCANSOS (video_id null): no dejan progreso.
+    supabase.from("program_days").select("program_id, day_number, video_id"),
   ]);
 
   const P = perfiles ?? [];
@@ -238,6 +239,10 @@ export async function getAnalitica(): Promise<Analitica> {
   // ── Programas ──────────────────────────────────────────────────────────────
   const diasPorPrograma = new Map<string, number>();
   for (const d of PD) {
+    // El ultimo dia CON CLASE: un descanso no tiene video y no deja fila de
+    // progreso, asi que un plan que termina en descanso no lo "terminaria"
+    // nadie si contara hasta ese dia.
+    if (!d.video_id) continue;
     diasPorPrograma.set(d.program_id, Math.max(diasPorPrograma.get(d.program_id) ?? 0, d.day_number));
   }
 

@@ -14,6 +14,7 @@ import {
   nivelARango
 } from "@/src/features/studio/catalogo-clases";
 import { prepararAvisoDeClaseNueva } from "@/src/features/correos/clase-nueva";
+import { esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 
 // El aviso de clase nueva sale en after(), por lotes, con hasta 40 s de
 // presupuesto (src/features/correos/disparadores.ts). Lo que no entra lo
@@ -200,14 +201,20 @@ export async function POST(request: Request) {
   let avisoPlan: string | null = null;
 
   if (data.programId && data.programDayNumber) {
-    const { error: planError } = await supabase.from("program_days").upsert(
-      {
-        program_id: data.programId,
-        day_number: data.programDayNumber,
-        video_id: result.data.id
-      },
-      { onConflict: "program_id,day_number" }
-    );
+    const fila = {
+      program_id: data.programId,
+      day_number: data.programDayNumber,
+      video_id: result.data.id
+    };
+    // es_descanso/nota van JUNTO con la clase: si ese dia era un descanso, pasa
+    // a ser esta clase (si no, el CHECK de 20261025_dia_de_descanso.sql la
+    // rechaza). Sin esa migracion las columnas no existen: se reintenta como antes.
+    let { error: planError } = await supabase
+      .from("program_days")
+      .upsert({ ...fila, es_descanso: false, nota: null }, { onConflict: "program_id,day_number" });
+    if (planError && esFaltaDeColumnaDescanso(planError)) {
+      ({ error: planError } = await supabase.from("program_days").upsert(fila, { onConflict: "program_id,day_number" }));
+    }
 
     if (planError) {
       avisoPlan = `La clase se guardó, pero no se pudo agregar al plan: ${planError.message}. Se puede agregar a mano desde Planes de trabajo.`;

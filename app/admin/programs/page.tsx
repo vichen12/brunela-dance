@@ -1,6 +1,6 @@
-import { CalendarDays, Check, Eye, Plus, Rocket, Star } from "lucide-react";
-import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio, AdminGuia } from "@/components/admin-ui";
-import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
+import Link from "next/link";
+import { CalendarDays, Check, Eye, Pencil, Plus, Rocket, Star } from "lucide-react";
+import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminVacio, AdminGuia } from "@/components/admin-ui";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -124,7 +124,6 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   ]);
 
   const programDays = programDaysData.dias;
-  const descansoDisponible = !programDaysData.faltaMigracion;
 
   // Cuantas alumnas empezaron y terminaron cada programa.
   //
@@ -167,7 +166,6 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   const videoById = new Map(videos.map((v) => [v.id, v]));
   const publicados = programs.filter((p) => p.status === "published").length;
 
-  const abrirNueva = params.nueva === "1";
   const hayFiltro = Boolean(q || fEstadoProg);
   // El estudio todavia no tiene NINGUN plan (no es lo mismo que un filtro sin
   // resultados): ahi se muestra la guia en vez de cifras en cero.
@@ -188,7 +186,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         titulo="Planes de trabajo"
         lede="Recorridos de varios días: cada día lleva una clase y la alumna avanza en orden. Es lo que suma Solista sobre Corps de Ballet."
         acciones={<>
-          <AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nuevo plan</AdminBoton>
+          <AdminBoton href="/admin/programs/nuevo" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Nuevo plan</AdminBoton>
           <AdminBoton href="/dashboard/programs"><Eye size={15} strokeWidth={2} aria-hidden="true" /> Ver como alumna</AdminBoton>
         </>}
       />
@@ -223,15 +221,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
             titulo="Armalo en tres pasos."
             pasos={[
               { icono: <Plus size={18} strokeWidth={2.2} />, titulo: "Creá el plan", texto: "Nombre, cuántos días dura y qué plan lo ve. Por ejemplo: «Trabajo de pies, 14 días», para Solista." },
-              { icono: <CalendarDays size={18} strokeWidth={2} />, titulo: "Asigná una clase a cada día", texto: "Desde «Editar y días», o al subir una clase. Los días que falten se ven marcados." },
+              { icono: <CalendarDays size={18} strokeWidth={2} />, titulo: "Asigná una clase a cada día", texto: "Ahí mismo, al crearlo: cada día una clase o un descanso. Después, desde «Editar»." },
               { icono: <Rocket size={18} strokeWidth={2} />, titulo: "Publicalo", texto: "La alumna lo encuentra en «Planes de trabajo», ve qué le toca hoy y su plan recuerda por dónde va." },
             ]}
-            cta={<AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primer plan</AdminBoton>}
+            cta={<AdminBoton href="/admin/programs/nuevo" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primer plan</AdminBoton>}
           />
-
-          <AdminNueva abierto={abrirNueva} titulo="Crear un plan de trabajo" sub="Título, cuántos días, plan que lo ve y portada. Los días se cargan después.">
-            <ProgramForm actionLabel="Crear plan" />
-          </AdminNueva>
         </>
       ) : (
         <>
@@ -241,10 +235,6 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         { label: "Días cargados", value: programDays.length, sub: "en todos los planes" },
         { label: "Alumnas", value: totalEmpezaron, sub: "empezaron alguno" },
       ]} />
-
-      <AdminNueva abierto={abrirNueva} titulo="Crear un plan de trabajo" sub="Título, cuántos días, plan que lo ve y portada. Los días se cargan después.">
-        <ProgramForm actionLabel="Crear plan" />
-      </AdminNueva>
 
       <AdminBuscador
         action="/admin/programs"
@@ -262,7 +252,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
           ) : (
             <>
               <p>Un plan es una serie de días en orden — «Trabajo de pies, 14 días». Creás el plan y después le asignás una clase a cada día.</p>
-              <AdminBoton href="/admin/programs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primero</AdminBoton>
+              <AdminBoton href="/admin/programs/nuevo" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primero</AdminBoton>
             </>
           )}
         </AdminVacio>
@@ -332,7 +322,10 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                   )}
 
                   <div className="apl-pie">
-                    <EditarPrograma program={program} days={days} videos={videos} videoById={videoById} descansoDisponible={descansoDisponible} />
+                    {/* Un solo boton: abre el editor a pantalla completa (datos y dias). */}
+                    <Link href={`/admin/programs/${program.id}`} className="ad-editar">
+                      <Pencil size={14} strokeWidth={2} aria-hidden="true" /> Editar
+                    </Link>
                   </div>
                 </div>
               </li>
@@ -403,7 +396,7 @@ const CSS_PLANES = `
 .apl-uso { margin-top: 8px; font-size: 13px; color: var(--muted); }
 .apl-uso strong { color: var(--ink); }
 .apl-pie { margin-top: auto; padding-top: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.apl .ad-editar {
+.apl .ad-editar { text-decoration: none;
   display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 18px; border-radius: 99px; cursor: pointer;
   border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 800;
   transition: background .2s, border-color .2s, transform .3s var(--curva);

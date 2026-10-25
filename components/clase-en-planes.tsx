@@ -5,7 +5,11 @@ import { useState } from "react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { campoSuave, etiquetaSuave } from "@/components/admin-drawer";
 import { CalendarDays, Plus, X } from "lucide-react";
-import { agregarClaseAPlanAction, quitarClaseDePlanAction } from "@/src/features/admin/actions";
+import { quitarClaseDePlanAction } from "@/src/features/admin/actions";
+// Poner la clase va por la accion nueva: escribe es_descanso = false y nota =
+// null junto con la clase, asi un dia que era DESCANSO pasa a ser esta clase
+// en vez de chocar con el CHECK de la base (20261025_dia_de_descanso.sql).
+import { ponerClaseEnDiaDePlanAction } from "@/src/features/admin/dias-de-plan-actions";
 import type { PlanParaElegir, UbicacionEnPlan } from "@/src/features/admin/planes-de-trabajo";
 
 /**
@@ -47,6 +51,7 @@ export function ClaseEnPlanes({
   const elegido = planes.find((p) => p.id === programId);
   // Ya esta en ese plan y en ese dia exacto: agregar no haria nada.
   const yaEstaAhi = ubicaciones.some((u) => u.programId === programId && String(u.dia) === dia);
+  const esDescanso = Boolean(elegido?.descansos.includes(Number(dia)));
 
   return (
     <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px dashed #E9CFC5" }}>
@@ -168,7 +173,7 @@ export function ClaseEnPlanes({
 
             <BotonEnviar
               pendingLabel="Agregando…"
-              formAction={agregarClaseAPlanAction}
+              formAction={ponerClaseEnDiaDePlanAction}
               disabled={!programId || !dia || yaEstaAhi}
               style={{
                 display: "inline-flex",
@@ -188,13 +193,15 @@ export function ClaseEnPlanes({
                 whiteSpace: "nowrap",
               }}
             >
-              <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Agregar
+              <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> {esDescanso ? "Reemplazar el descanso" : "Agregar"}
             </BotonEnviar>
           </div>
 
           <p style={{ fontSize: 12.5, color: "#8A6F68", marginTop: 10, lineHeight: 1.55 }}>
             {yaEstaAhi
               ? "Esta clase ya está en ese día."
+              : esDescanso
+                ? <strong style={{ color: "#C25E3A" }}>El día {dia} es un día de descanso: si agregás la clase, el descanso se reemplaza por esta clase.</strong>
               : elegido
                 ? "Si ese día ya tenía otra clase, esta la reemplaza."
                 : "Una clase puede estar en varios planes y en varios días."}

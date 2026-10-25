@@ -133,7 +133,9 @@ describe("los formularios del panel no tienen bloques vacios", () => {
     "components/admin-live-drawer.tsx",
     "components/admin-pack-drawer.tsx",
     "components/admin-video-drawer.tsx",
-    "components/admin-program-drawer.tsx",
+    // El panel lateral de planes se reemplazo por el editor a pantalla
+    // completa (2026-10-25): las mismas dos reglas valen para el.
+    "components/editor-plan.tsx",
   ];
 
   it.each(drawers)("%s no deja contenedores sin nada adentro", (p) => {
@@ -322,7 +324,21 @@ describe("la dirección se completa sola desde el nombre", () => {
     expect(leer(archivo)).toContain(`<AutoDireccion desde="${campo}"`);
   });
 
-  const compartidos = ["components/admin-live-drawer.tsx", "components/admin-program-drawer.tsx"];
+  const compartidos = ["components/admin-live-drawer.tsx"];
+
+  it("el editor de planes la genera SOLO al crear, y el servidor no la cambia al editar", () => {
+    // components/editor-plan.tsx no usa AutoDireccion (los campos no son un
+    // formulario con action): la deriva del titulo mientras nadie la toco, y
+    // al editar arranca "tocada" y de solo lectura.
+    const src = leer("components/editor-plan.tsx");
+    expect(src).toMatch(/useState\(Boolean\(plan\)\)/);
+    expect(src).toMatch(/if \(!slugTocado\) setSlug\(aDireccion\(/);
+    expect(src).toMatch(/readOnly=\{!esNuevo\}/);
+    const accion = leer("src/features/admin/dias-de-plan-actions.ts");
+    const update = accion.slice(accion.indexOf('.from("programs").update(datos)') - 200, accion.indexOf('.from("programs").update(datos)'));
+    expect(update).toContain("La direccion NO se cambia al editar");
+    expect(accion).not.toMatch(/const datos = \{[^}]*\bslug\b/);
+  });
 
   it.each(compartidos)("%s la genera SOLO al crear", (archivo) => {
     const src = leer(archivo);
