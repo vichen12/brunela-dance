@@ -1,4 +1,5 @@
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
+import { leerMateriales } from "@/src/features/studio/materiales";
 import { Archive, BarChart3, Check, Clapperboard, Clock, Eye, EyeOff, Languages, Play, Plus, Rocket, Search, Star, Tag, Users, X } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVacio } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -20,6 +21,8 @@ import {
   planesDesde,
   planesEnTexto,
   MATERIALES,
+  materialesConEscritos,
+  type Opcion,
 } from "@/src/features/studio/catalogo-clases";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -246,7 +249,7 @@ function MuxStatus({ job }: { job: MuxJob }) {
 
 // ── Upload form (real Bunny upload: video file + audio file per language) ────────
 
-function UploadForm({ bunnyReady, programas, materialesEscritos }: { bunnyReady: boolean; programas: PlanParaElegir[]; materialesEscritos: string[] }) {
+function UploadForm({ bunnyReady, programas, materiales }: { bunnyReady: boolean; programas: PlanParaElegir[]; materiales: Opcion[] }) {
   if (!bunnyReady) {
     return (
       <div style={{ marginTop: 16, fontSize: 13.5, color: "#8A4A2E", background: "#FFF4E8", border: "1px solid #FFE2D3", borderRadius: 20, padding: "16px 18px", lineHeight: 1.6 }}>
@@ -258,7 +261,7 @@ function UploadForm({ bunnyReady, programas, materialesEscritos }: { bunnyReady:
     );
   }
 
-  return <AdminVideoUpload programas={programas} materialesEscritos={materialesEscritos} />;
+  return <AdminVideoUpload programas={programas} materiales={materiales} />;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -291,6 +294,10 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const materialesEscritos = [...new Set(
     todasLivianas.flatMap((v) => v.equipment ?? []).filter((m) => m && !conocidos.has(m))
   )];
+  // La lista que edita Brunela en /admin/materiales, mas lo escrito con «Otro»
+  // en otras clases (salvo lo que ella borro de la lista).
+  const ajusteMateriales = await leerMateriales();
+  const materiales = materialesConEscritos(materialesEscritos, ajusteMateriales.lista, ajusteMateriales.ocultos);
   const clasesParaBuscar: ClaseParaBuscar[] = todasLivianas.map((v) => ({
     id: v.id,
     slug: v.slug,
@@ -490,7 +497,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
       {/* Subir una clase, plegado. */}
       <AdminNueva abierto={abrirNueva} titulo="Subir una clase nueva" sub="Video, idiomas, categoría, nivel, materiales y planes">
-        <UploadForm bunnyReady={bunnyReady} programas={programas} materialesEscritos={materialesEscritos} />
+        <UploadForm bunnyReady={bunnyReady} programas={programas} materiales={materiales} />
       </AdminNueva>
 
       <AdminBuscador
@@ -607,7 +614,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         video={video}
                         planes={programas}
                         ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
-                        materialesEscritos={materialesEscritos}
+                        materiales={materiales}
                         abrirAlInicio={video.id === editar}
                       />
                       {video.status !== "published" && (

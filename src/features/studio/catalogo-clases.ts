@@ -165,9 +165,13 @@ export function limpiarMaterialEscrito(texto: string): string {
  * escribieron a mano en otras clases, para no tener que tipearlos de nuevo.
  * Sin repetidos (ni por slug ni por nombre, sin importar mayusculas).
  */
-export function materialesConEscritos(escritos: readonly string[]): Opcion[] {
-  const vistos = new Set<string>();
-  for (const m of MATERIALES) { vistos.add(m.slug.toLowerCase()); vistos.add(m.label.toLowerCase()); }
+export function materialesConEscritos(
+  escritos: readonly string[],
+  catalogo: readonly Opcion[] = MATERIALES,
+  ocultos: readonly string[] = [],
+): Opcion[] {
+  const vistos = new Set<string>(ocultos.map((o) => o.toLowerCase()));
+  for (const m of catalogo) { vistos.add(m.slug.toLowerCase()); vistos.add(m.label.toLowerCase()); }
   const extra: Opcion[] = [];
   for (const crudo of escritos) {
     const t = limpiarMaterialEscrito(crudo);
@@ -175,8 +179,44 @@ export function materialesConEscritos(escritos: readonly string[]): Opcion[] {
     vistos.add(t.toLowerCase());
     extra.push({ slug: t, label: t });
   }
-  extra.sort((a, b) => a.label.localeCompare(b.label, "es"));
-  return [...MATERIALES, ...extra];
+  return ordenarMateriales([...catalogo, ...extra]);
+}
+
+/**
+ * Orden de las fichas (2026-10-25, "ordenalo mejor"): «Sin material» primero,
+ * porque es la excepcion que se marca sola, y el resto alfabetico, sin
+ * importar acentos ni mayusculas. Antes era el orden en que se fueron sumando.
+ */
+export function ordenarMateriales(lista: readonly Opcion[]): Opcion[] {
+  const sin = lista.filter((m) => m.slug === SIN_MATERIAL);
+  const resto = lista
+    .filter((m) => m.slug !== SIN_MATERIAL)
+    .sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
+  return [...sin, ...resto];
+}
+
+/**
+ * La lista que edita Brunela en /admin/materiales. Vive en site_settings
+ * (clave AJUSTE_MATERIALES), no en una tabla: es una lista corta que cambia
+ * poco, y asi no hizo falta migracion.
+ *
+ *   lista    las fichas que ofrece el formulario.
+ *   ocultos  materiales escritos a mano con «Otro» que ella borro. Sin esto,
+ *            borrar uno que alguna clase ya usa no serviria: volveria a
+ *            aparecer en el formulario por estar guardado en esa clase.
+ */
+export const AJUSTE_MATERIALES = "clases.materiales";
+export type AjusteMateriales = { lista: Opcion[]; ocultos: string[] };
+
+/** Lo guardado, o el catalogo de fabrica si todavia no se edito nunca. */
+export function materialesDeAjuste(valor: Partial<AjusteMateriales> | null | undefined): AjusteMateriales {
+  const lista = Array.isArray(valor?.lista) && valor.lista.length > 0
+    ? valor.lista.filter((m): m is Opcion => !!m && typeof m.slug === "string" && typeof m.label === "string")
+    : [...MATERIALES];
+  // «Sin material» no se puede borrar: el formulario lo necesita para la regla excluyente.
+  if (!lista.some((m) => m.slug === SIN_MATERIAL)) lista.unshift({ slug: SIN_MATERIAL, label: "Sin material" });
+  const ocultos = Array.isArray(valor?.ocultos) ? valor.ocultos.filter((o): o is string => typeof o === "string") : [];
+  return { lista: ordenarMateriales(lista), ocultos };
 }
 
 /** Para mostrar: "Theraband, Mat". Un slug desconocido se muestra crudo. */

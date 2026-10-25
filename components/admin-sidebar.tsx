@@ -8,8 +8,7 @@ import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
   MessageCircleHeart, Shield, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
-  Lock, UserPlus,
-} from "lucide-react";
+  Lock, UserPlus, Dumbbell } from "lucide-react";
 
 /**
  * Menú del panel de administración.
@@ -45,6 +44,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/videos",     label: "Clases",     Icon: Play },
       { href: "/admin/categories", label: "Categorías", Icon: Grid2x2 },
+      { href: "/admin/materiales", label: "Materiales", Icon: Dumbbell },
       { href: "/admin/programs",   label: "Planes de trabajo",  Icon: AlignLeft },
       { href: "/admin/documents",  label: "Documentos", Icon: FileText },
       { href: "/admin/packs",      label: "Packs",      Icon: Package },

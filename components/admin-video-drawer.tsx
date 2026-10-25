@@ -17,6 +17,7 @@ import {
   CATEGORIAS,
   ESTADOS,
   MATERIALES,
+  type Opcion,
   materialesConEscritos,
   limpiarMaterialEscrito,
   NIVELES,
@@ -117,13 +118,13 @@ function VideoForm({
   video,
   planes,
   ubicaciones,
-  materialesEscritos,
+  materiales,
   onGuardado,
 }: {
   video: VideoRecord;
   planes: PlanParaElegir[];
   ubicaciones: UbicacionEnPlan[];
-  materialesEscritos: string[];
+  materiales?: Opcion[];
   onGuardado: () => void;
 }) {
   // Read-only: audio_tracks is owned by the mux worker, not by this form.
@@ -197,10 +198,10 @@ function VideoForm({
 
       {/* 9 — materiales */}
       <div style={{ marginTop: 14 }}>
-        <Lbl>Materiales</Lbl>
+        <Lbl>Materiales <a href="/admin/materiales" target="_blank" rel="noopener" style={{ float: "right", fontSize: 12, fontWeight: 800, color: "var(--pink-deep)" }}>Editar la lista</a></Lbl>
         <SelectorMultiple
           name="equipment"
-          opciones={materialesConEscritos(materialesEscritos)}
+          opciones={materiales ?? materialesConEscritos([])}
           permitirOtro
           limpiarOtro={limpiarMaterialEscrito}
           inicial={video.equipment ?? []}
@@ -333,13 +334,13 @@ export function EditarClase({
   video,
   planes = [],
   ubicaciones = [],
-  materialesEscritos = [],
+  materiales,
   abrirAlInicio = false,
 }: {
   video: VideoRecord;
   planes?: PlanParaElegir[];
   ubicaciones?: UbicacionEnPlan[];
-  materialesEscritos?: string[];
+  materiales?: Opcion[];
   /** Llega abierto: /admin/videos?editar=<id>, desde las sugerencias del buscador. */
   abrirAlInicio?: boolean;
 }) {
@@ -376,7 +377,7 @@ export function EditarClase({
           video={video}
           planes={planes}
           ubicaciones={ubicaciones}
-              materialesEscritos={materialesEscritos}
+              materiales={materiales}
           onGuardado={() => { setAbierto(false); setGuardado(true); }}
         />
       </AdminDrawer>

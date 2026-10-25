@@ -21,6 +21,7 @@ import {
   CATEGORIAS,
   ESTADOS,
   MATERIALES,
+  type Opcion,
   materialesConEscritos,
   limpiarMaterialEscrito,
   NIVELES,
@@ -149,7 +150,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function AdminVideoUpload({ programas = [], materialesEscritos = [] }: { programas?: PlanParaElegir[]; materialesEscritos?: string[] }) {
+export function AdminVideoUpload({ programas = [], materiales }: { programas?: PlanParaElegir[]; materiales?: Opcion[] }) {
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
   const videoIdRef = useRef<string | null>(null);
@@ -513,10 +514,10 @@ export function AdminVideoUpload({ programas = [], materialesEscritos = [] }: { 
 
       {/* 9 — materiales */}
       <div style={{ marginTop: 14 }}>
-        <span style={lbl}>Materiales</span>
+        <span style={{ ...lbl, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>Materiales <a href="/admin/materiales" target="_blank" rel="noopener" style={{ fontSize: 12, fontWeight: 800, color: "var(--pink-deep)" }}>Editar la lista</a></span>
         <SelectorMultiple
           name="equipment"
-          opciones={materialesConEscritos(materialesEscritos)}
+          opciones={materiales ?? materialesConEscritos([])}
           permitirOtro
           limpiarOtro={limpiarMaterialEscrito}
           excluyente={SIN_MATERIAL}
