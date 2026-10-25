@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { BuscadorDeClases } from "@/components/buscador-de-clases";
+import type { ClaseParaBuscar } from "@/src/features/admin/buscar-clases";
 import { portadaDeClase, portadaDePlan } from "@/src/lib/video/portada";
 import { CalendarDays, Check, Eye, Pencil, Plus, Rocket, Star, Heart } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminVacio, AdminGuia } from "@/components/admin-ui";
@@ -163,6 +165,30 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   }
 
   const programs = (programsData ?? []) as ProgramRecord[];
+
+  // Para las sugerencias del buscador: TODOS los planes, sin el filtro de la
+  // busqueda (si no, al escribir solo se sugeriria lo que ya esta en pantalla).
+  const { data: todosLosPlanes } = await supabase
+    .from("programs")
+    .select("id, slug, title_i18n, description_i18n, status, duration_days, cover_image_url")
+    .order("created_at", { ascending: false });
+  const planesParaBuscar: ClaseParaBuscar[] = ((todosLosPlanes ?? []) as Pick<ProgramRecord, "id" | "slug" | "title_i18n" | "description_i18n" | "status" | "duration_days" | "cover_image_url">[]).map((pl) => {
+    const dias = programDays.filter((d) => d.program_id === pl.id);
+    const primera = dias.find((d) => d.video_id && !d.es_descanso);
+    const v = primera ? (videosData ?? []).find((x) => x.id === primera.video_id) : null;
+    const nClases = dias.filter((d) => d.video_id && !d.es_descanso).length;
+    return {
+      id: pl.id,
+      slug: pl.slug,
+      titulo: pl.title_i18n?.es ?? "",
+      tituloEn: pl.title_i18n?.en ?? "",
+      categorias: nClases === 1 ? "1 clase" : `${nClases} clases`,
+      descripcion: (pl.description_i18n?.es ?? "").slice(0, 160),
+      estado: (["draft", "published", "archived"].includes(pl.status) ? pl.status : "draft") as ClaseParaBuscar["estado"],
+      duracionMin: pl.duration_days,
+      portada: portadaDePlan(pl.cover_image_url) || (v ? portadaDeClase(v) : null),
+    };
+  });
   const videos = (videosData ?? []) as VideoLookup[];
   const videoById = new Map(videos.map((v) => [v.id, v]));
   const publicados = programs.filter((p) => p.status === "published").length;
@@ -241,6 +267,9 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
         action="/admin/programs"
         q={q}
         placeholder="Buscar por título o dirección"
+        // Sugerencias mientras se escribe, como en Clases. Se busca entre TODOS
+        // los planes (son pocos), no solo los de esta pagina.
+        entrada={<BuscadorDeClases de="plan" q={q} placeholder="Buscar por título o dirección" clases={planesParaBuscar} />}
         filtros={[{ name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG }]}
         total={totalProgramas ?? programs.length}
         mostrando={programs.length}

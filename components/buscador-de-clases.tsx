@@ -28,7 +28,18 @@ const ESTADO: Record<ClaseParaBuscar["estado"], { clase: string; label: string }
 
 const MAXIMO = 8;
 
-export function BuscadorDeClases({ q, placeholder, clases }: { q: string; placeholder: string; clases: ClaseParaBuscar[] }) {
+/**
+ * El mismo buscador sirve para los planes de trabajo (/admin/programs): `de="plan"`
+ * cambia los textos, a donde lleva la sugerencia y la unidad (dias, no minutos).
+ * Para un plan, `duracionMin` lleva sus DIAS y `categorias` lo que diga debajo.
+ */
+const TEXTOS = {
+  clase: { lista: "Clases que coinciden", ninguna: "Ninguna clase coincide", abre: "abre la clase", unidad: "min", estado: { published: "Publicada", draft: "Borrador", archived: "Archivada" } },
+  plan: { lista: "Planes que coinciden", ninguna: "Ningún plan coincide", abre: "abre el plan", unidad: "días", estado: { published: "Publicado", draft: "Borrador", archived: "Archivado" } },
+} as const;
+
+export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: string; placeholder: string; clases: ClaseParaBuscar[]; de?: "clase" | "plan" }) {
+  const t = TEXTOS[de];
   const router = useRouter();
   const idLista = useId();
   const [texto, setTexto] = useState(q);
@@ -41,7 +52,7 @@ export function BuscadorDeClases({ q, placeholder, clases }: { q: string; placeh
 
   function abrirClase(c: ClaseParaBuscar) {
     setAbierto(false);
-    router.push(urlParaEditarClase(c.id) as never);
+    router.push((de === "plan" ? `/admin/programs/${encodeURIComponent(c.id)}` : urlParaEditarClase(c.id)) as never);
   }
 
   function alTeclear(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -99,9 +110,9 @@ export function BuscadorDeClases({ q, placeholder, clases }: { q: string; placeh
       {visible && (
         <div className="bcl-panel">
           {sugerencias.length === 0 ? (
-            <p className="bcl-vacio">Ninguna clase coincide con «{texto.trim()}».</p>
+            <p className="bcl-vacio">{t.ninguna} con «{texto.trim()}».</p>
           ) : (
-            <ul id={idLista} role="listbox" aria-label="Clases que coinciden" className="bcl-lista">
+            <ul id={idLista} role="listbox" aria-label={t.lista} className="bcl-lista">
               {sugerencias.map((c, i) => {
                 const st = ESTADO[c.estado] ?? ESTADO.draft;
                 return (
@@ -123,15 +134,15 @@ export function BuscadorDeClases({ q, placeholder, clases }: { q: string; placeh
                       <span className="bcl-titulo">{c.titulo || c.slug}</span>
                       {c.categorias && <span className="bcl-sub">{c.categorias}</span>}
                     </span>
-                    <span className={"bcl-chip " + st.clase}>{st.label}</span>
-                    <span className="bcl-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {c.duracionMin} min</span>
+                    <span className={"bcl-chip " + st.clase}>{t.estado[c.estado] ?? st.label}</span>
+                    <span className="bcl-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {c.duracionMin} {t.unidad}</span>
                   </li>
                 );
               })}
             </ul>
           )}
           <p className="bcl-pie">
-            <kbd>↑</kbd><kbd>↓</kbd> para elegir · <kbd>Enter</kbd> {marcada >= 0 ? "abre la clase" : "busca en la lista"} · <kbd>Esc</kbd> cierra
+            <kbd>↑</kbd><kbd>↓</kbd> para elegir · <kbd>Enter</kbd> {marcada >= 0 ? t.abre : "busca en la lista"} · <kbd>Esc</kbd> cierra
           </p>
         </div>
       )}
