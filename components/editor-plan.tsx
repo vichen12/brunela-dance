@@ -187,106 +187,124 @@ export function EditorPlan({
         <aside className="epl-datos">
           <p className="epl-eyebrow">{esNuevo ? "Plan nuevo" : "Editando el plan"}</p>
 
-          <label className="epl-campo">
-            <span className="epl-etq">Título</span>
-            <input
-              name="titleEs" required defaultValue={plan?.title_i18n?.es ?? ""} placeholder="Trabajo de pies en 14 días"
-              onChange={(e) => { if (!slugTocado) setSlug(aDireccion(e.target.value)); }}
-            />
-          </label>
-          <label className="epl-campo">
-            <span className="epl-etq">Título en inglés <small>opcional</small></span>
-            <input name="titleEn" defaultValue={plan?.title_i18n?.en ?? ""} placeholder="Footwork in 14 days" />
-          </label>
-          <label className="epl-campo">
-            <span className="epl-etq">Descripción <small>la lee la alumna antes de empezar</small></span>
-            <textarea name="descriptionEs" required rows={4} defaultValue={plan?.description_i18n?.es ?? ""} placeholder="Qué trabaja este plan y para quién es…" />
-          </label>
-          <label className="epl-campo">
-            <span className="epl-etq">Descripción en inglés <small>opcional</small></span>
-            <textarea name="descriptionEn" rows={2} defaultValue={plan?.description_i18n?.en ?? ""} />
-          </label>
-
-          <label className="epl-campo">
-            <span className="epl-etq">Dirección <small>{esNuevo ? "se completa sola con el título" : "no se cambia: rompería los enlaces ya compartidos"}</small></span>
-            <div className="epl-direccion">
-              <span>…/programs/</span>
-              <input
-                name="slug" required readOnly={!esNuevo} value={slug} placeholder="trabajo-de-pies-14-dias"
-                onChange={(e) => { setSlug(e.target.value); setSlugTocado(true); }}
+          {/* Bloques en el orden en que se piensa un plan: como se ve, que es,
+              cuanto dura y para quien, y si ya se publica. Sin scroll propio:
+              la caja crece con su contenido y scrollea la pagina (antes era una
+              caja con scroll dentro de otra, y la portada quedaba escondida). */}
+          <section className="epl-bloque">
+            <p className="epl-bloque-tit">Portada</p>
+            <div className="epl-campo">
+                          <SubirPortadaClase
+                name="coverImageUrl"
+                defaultValue={plan?.cover_image_url ?? ""}
+                porDefecto={portadaPorDefecto}
+                opciones={fotosDelPlan}
+                ayudaVacio={portadaPorDefecto ? "Si no elegís ninguna, se usa la foto de la primera clase del plan." : "Elegí una foto horizontal. Si no ponés ninguna, se usa la de la primera clase del plan."}
+                ayudaLista="Es la imagen que ven las alumnas en la tarjeta del plan y arriba de su ficha."
               />
             </div>
-          </label>
+          </section>
 
-          <div className="epl-campo">
-            <span className="epl-etq" id="epl-cant">Cuántos días dura</span>
-            <div className="epl-cantidad">
-              <button type="button" aria-label="Un día menos" disabled={dias.length <= 1} onClick={() => ponerCantidad(dias.length - 1)}>
-                <Minus size={16} strokeWidth={2.2} />
-              </button>
+          <section className="epl-bloque">
+            <p className="epl-bloque-tit">Qué es</p>
+            <label className="epl-campo">
+              <span className="epl-etq">Título</span>
               <input
-                aria-labelledby="epl-cant" type="number" min={1} max={MAX_DIAS_PLAN} value={dias.length}
-                onChange={(e) => ponerCantidad(Number(e.target.value))}
+                name="titleEs" required defaultValue={plan?.title_i18n?.es ?? ""} placeholder="Trabajo de pies en 14 días"
+                onChange={(e) => { if (!slugTocado) setSlug(aDireccion(e.target.value)); }}
               />
-              <button type="button" aria-label="Un día más" disabled={dias.length >= MAX_DIAS_PLAN} onClick={() => ponerCantidad(dias.length + 1)}>
-                <Plus size={16} strokeWidth={2.2} />
-              </button>
-            </div>
-            <div className="epl-atajos" role="group" aria-label="Duraciones comunes">
-              {[7, 14, 21, 28].map((n) => (
-                <button key={n} type="button" className={dias.length === n ? "es-activo" : ""} onClick={() => ponerCantidad(n)}>{n} días</button>
-              ))}
-            </div>
-          </div>
+            </label>
+            <label className="epl-campo">
+              <span className="epl-etq">Descripción <small>la lee la alumna antes de empezar</small></span>
+              <textarea name="descriptionEs" required rows={4} defaultValue={plan?.description_i18n?.es ?? ""} placeholder="Qué trabaja este plan y para quién es…" />
+            </label>
+          </section>
 
-          <div className="epl-campo">
-            <span className="epl-etq">Quién lo ve</span>
-            <div className="epl-opciones" role="radiogroup" aria-label="Plan que lo puede ver">
-              {[
-                { value: "solista", titulo: "Solista", sub: "Lo ven Solista y Principal" },
-                { value: "principal", titulo: "Principal", sub: "Solo Principal" },
-              ].map((o) => (
-                <label key={o.value}>
-                  <input type="radio" name="membershipTierRequired" value={o.value} defaultChecked={(plan?.membership_tier_required ?? "solista") === o.value} />
-                  <span><strong>{o.titulo}</strong><small>{o.sub}</small></span>
-                </label>
-              ))}
+          <section className="epl-bloque">
+            <p className="epl-bloque-tit">Duración y acceso</p>
+            <div className="epl-campo">
+              <span className="epl-etq" id="epl-cant">Cuántos días dura</span>
+              <div className="epl-cantidad">
+                <button type="button" aria-label="Un día menos" disabled={dias.length <= 1} onClick={() => ponerCantidad(dias.length - 1)}>
+                  <Minus size={16} strokeWidth={2.2} />
+                </button>
+                <input
+                  aria-labelledby="epl-cant" type="number" min={1} max={MAX_DIAS_PLAN} value={dias.length}
+                  onChange={(e) => ponerCantidad(Number(e.target.value))}
+                />
+                <button type="button" aria-label="Un día más" disabled={dias.length >= MAX_DIAS_PLAN} onClick={() => ponerCantidad(dias.length + 1)}>
+                  <Plus size={16} strokeWidth={2.2} />
+                </button>
+              </div>
+              <div className="epl-atajos" role="group" aria-label="Duraciones comunes">
+                {[7, 14, 21, 28].map((n) => (
+                  <button key={n} type="button" className={dias.length === n ? "es-activo" : ""} onClick={() => ponerCantidad(n)}>{n} días</button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="epl-campo">
-            <span className="epl-etq">Estado</span>
-            <div className="epl-segmento" role="radiogroup" aria-label="Estado">
-              {[
-                { value: "draft", label: "Borrador" },
-                { value: "published", label: "Publicado" },
-                { value: "archived", label: "Archivado" },
-              ].map((o) => (
-                <label key={o.value}>
-                  <input type="radio" name="status" value={o.value} defaultChecked={(plan?.status ?? "draft") === o.value} />
-                  <span>{o.label}</span>
-                </label>
-              ))}
+            <div className="epl-campo">
+              <span className="epl-etq">Quién lo ve</span>
+              <div className="epl-opciones" role="radiogroup" aria-label="Plan que lo puede ver">
+                {[
+                  { value: "solista", titulo: "Solista", sub: "Lo ven Solista y Principal" },
+                  { value: "principal", titulo: "Principal", sub: "Solo Principal" },
+                ].map((o) => (
+                  <label key={o.value}>
+                    <input type="radio" name="membershipTierRequired" value={o.value} defaultChecked={(plan?.membership_tier_required ?? "solista") === o.value} />
+                    <span><strong>{o.titulo}</strong><small>{o.sub}</small></span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          </section>
 
-          <label className="epl-switch">
-            <input type="checkbox" name="isFeatured" defaultChecked={plan?.is_featured ?? false} />
-            <span className="epl-switch-pista" aria-hidden="true"><span /></span>
-            <span>Destacar <small>aparece primero para las alumnas</small></span>
-          </label>
+          <section className="epl-bloque">
+            <p className="epl-bloque-tit">Publicación</p>
+            <div className="epl-campo">
+              <span className="epl-etq">Estado</span>
+              <div className="epl-segmento" role="radiogroup" aria-label="Estado">
+                {[
+                  { value: "draft", label: "Borrador" },
+                  { value: "published", label: "Publicado" },
+                  { value: "archived", label: "Archivado" },
+                ].map((o) => (
+                  <label key={o.value}>
+                    <input type="radio" name="status" value={o.value} defaultChecked={(plan?.status ?? "draft") === o.value} />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <label className="epl-switch">
+              <input type="checkbox" name="isFeatured" defaultChecked={plan?.is_featured ?? false} />
+              <span className="epl-switch-pista" aria-hidden="true"><span /></span>
+              <span>Destacar <small>aparece primero para las alumnas</small></span>
+            </label>
+          </section>
 
-          <div className="epl-campo">
-            <span className="epl-etq">Portada <small>opcional</small></span>
-            <SubirPortadaClase
-              name="coverImageUrl"
-              defaultValue={plan?.cover_image_url ?? ""}
-              porDefecto={portadaPorDefecto}
-              opciones={fotosDelPlan}
-              ayudaVacio={portadaPorDefecto ? "Si no elegís ninguna, se usa la foto de la primera clase del plan." : "Elegí una foto horizontal. Si no ponés ninguna, se usa la de la primera clase del plan."}
-              ayudaLista="Es la imagen que ven las alumnas en la tarjeta del plan y arriba de su ficha."
-            />
-          </div>
+          <details className="epl-bloque epl-mas" open={esNuevo ? undefined : false}>
+            <summary className="epl-bloque-tit"><span>Inglés y dirección <small>opcional</small></span></summary>
+            <div className="epl-mas-cuerpo">
+              <label className="epl-campo">
+                <span className="epl-etq">Título en inglés <small>opcional</small></span>
+                <input name="titleEn" defaultValue={plan?.title_i18n?.en ?? ""} placeholder="Footwork in 14 days" />
+              </label>
+              <label className="epl-campo">
+                <span className="epl-etq">Descripción en inglés <small>opcional</small></span>
+                <textarea name="descriptionEn" rows={2} defaultValue={plan?.description_i18n?.en ?? ""} />
+              </label>
+              <label className="epl-campo">
+                <span className="epl-etq">Dirección <small>{esNuevo ? "se completa sola con el título" : "no se cambia: rompería los enlaces ya compartidos"}</small></span>
+                <div className="epl-direccion">
+                  <span>…/programs/</span>
+                  <input
+                    name="slug" required readOnly={!esNuevo} value={slug} placeholder="trabajo-de-pies-14-dias"
+                    onChange={(e) => { setSlug(e.target.value); setSlugTocado(true); }}
+                  />
+                </div>
+              </label>
+            </div>
+          </details>
         </aside>
 
         {/* ── Los dias ───────────────────────────────────────────────── */}
@@ -513,11 +531,21 @@ const CSS = `
 .epl-volver--suave { padding: 0 18px; color: var(--pink-deep); }
 
 .epl-grilla { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.epl-datos {
-  position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; padding: 22px;
-  border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra);
-  max-height: calc(100vh - 32px); overflow-y: auto;
+.epl-datos { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.epl-bloque {
+  display: flex; flex-direction: column; gap: 14px; padding: 18px;
+  border-radius: 24px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra);
 }
+.epl-bloque-tit { margin: 0; font-size: 12.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-deep); }
+.epl-bloque-tit small { font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--muted); margin-left: 6px; }
+.epl-mas { gap: 0; }
+/* La portada ya va dentro de su bloque: sin el segundo borde punteado. */
+.epl-bloque .spc { padding: 0; border: 0; background: transparent; }
+.epl-mas > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.epl-mas > summary::-webkit-details-marker { display: none; }
+.epl-mas > summary::after { content: "+"; font-size: 20px; font-weight: 600; color: var(--pink-deep); }
+.epl-mas[open] > summary::after { content: "–"; }
+.epl-mas-cuerpo { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; }
 .epl-eyebrow { font-size: 12.5px; font-weight: 800; color: var(--pink-deep); text-transform: uppercase; letter-spacing: .08em; }
 .epl-campo { display: flex; flex-direction: column; gap: 6px; }
 .epl-etq { font-size: 13px; font-weight: 800; color: var(--ink); }
@@ -643,10 +671,9 @@ const CSS = `
 
 @media (max-width: 1080px) {
   .epl-grilla { grid-template-columns: minmax(0, 1fr); }
-  .epl-datos { position: static; max-height: none; }
 }
 @media (max-width: 640px) {
-  .epl-datos { padding: 16px; border-radius: 22px; }
+  .epl-bloque { padding: 16px; border-radius: 20px; }
   .epl-dia-fila { flex-wrap: wrap; }
   .epl-dia-cuerpo { flex-basis: calc(100% - 66px); }
   .epl-dia-acciones { width: 100%; justify-content: flex-end; }
