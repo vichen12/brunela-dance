@@ -600,12 +600,7 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <a
-                className="about-portfolio-card"
-                href="https://brune-dance.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <Link className="about-portfolio-card" href="/portfolio">
                 <div className="about-portfolio-card-text">
                   <p className="about-portfolio-card-label"><T id="about.portfolio.label" /></p>
                   <p className="about-portfolio-card-desc"><T id="about.portfolio.desc" /></p>
@@ -615,7 +610,7 @@ export default async function HomePage() {
                     <path d="M2 11L11 2M11 2H5M11 2V8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </span>
-              </a>
+              </Link>
             </div>
           </div>
         </section>
