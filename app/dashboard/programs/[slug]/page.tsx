@@ -9,7 +9,7 @@ import {
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import { portadaDeClase } from "@/src/lib/video/portada";
+import { portadaDeClase, portadaDePlan, portadaDePlanVitrina } from "@/src/lib/video/portada";
 import { NOTA_DESCANSO_POR_DEFECTO, avanceDelPlan, completarConDescansos, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Moon, Play, Sparkles } from "lucide-react";
 
@@ -128,7 +128,7 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
   }));
   // Portada del plan; si Brunela no subio una, la foto de su primera clase.
   const primeraClase = days.map((d) => (d.es_descanso ? null : claseDe(d.videos))).find(Boolean) ?? null;
-  const portadaPlan = program.cover_image_url || (primeraClase ? portadaDeClase(primeraClase) : null);
+  const portadaPlan = portadaDePlan(program.cover_image_url) || (primeraClase ? portadaDeClase(primeraClase) : null);
 
   const progressMap = new Map<number, ProgressRecord>();
   for (const item of (progressData ?? []) as ProgressRecord[]) {
@@ -467,7 +467,7 @@ async function PlanBloqueado({ slug }: { slug: string }) {
         <section className="pd-hero pd-hero--cerrado">
           <div
             className="pd-portada pd-portada--cerrada"
-            style={{ backgroundImage: plan.cover_image_url ? `url(${plan.cover_image_url})` : undefined }}
+            style={{ backgroundImage: portadaDePlanVitrina(plan.cover_image_url) ? `url(${portadaDePlanVitrina(plan.cover_image_url)})` : undefined }}
           >
             <span className="pd-candado"><Lock size={22} strokeWidth={2} aria-hidden="true" /></span>
           </div>

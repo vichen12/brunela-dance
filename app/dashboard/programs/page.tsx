@@ -17,7 +17,7 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario } from "@/src/features/studio/progress";
 import { CATEGORIA_LABEL, nivelEnTexto } from "@/src/features/studio/catalogo-clases";
 import { avanceDelPlan, completarConDescansos, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
-import { portadaDeClase } from "@/src/lib/video/portada";
+import { portadaDeClase, portadaDePlan, portadaDePlanVitrina } from "@/src/lib/video/portada";
 
 /**
  * Los planes de trabajo, con candado para quien todavia no los tiene.
@@ -326,7 +326,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
               // La duracion del plan, con sus descansos: un plan de 14 dias con 6
               // clases dura 14, no 6 (ver completarConDescansos).
               const totalDays = Math.max(program.duration_days || 0, daysByProgram.get(program.id) ?? 0);
-              const portada = program.cover_image_url || (cerrado ? null : datosPlanes.portadas.get(program.id) ?? null);
+              const portada = cerrado ? portadaDePlanVitrina(program.cover_image_url) : (portadaDePlan(program.cover_image_url) || (datosPlanes.portadas.get(program.id) ?? null));
               const completedDays = progress?.completedDays ?? 0;
               const progressPercent = safePercent(
                 totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : progress?.maxPercent ?? 0

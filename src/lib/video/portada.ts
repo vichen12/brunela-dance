@@ -1,4 +1,4 @@
-import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
+import { bunnySignedUrls, bunnyThumbnailUrl, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import { esUrlDeBunny } from "./portada-publica";
 
 // La portada para CORREOS (sin firma, que no vence) vive en portada-publica.ts:
@@ -34,4 +34,34 @@ export function portadaDeClase(v: {
   if (bunnyId && hasBunnyStreamEnv()) return bunnySignedUrls(bunnyId).thumbnail;
 
   return null;
+}
+
+/**
+ * La foto de una clase en una forma que se puede GUARDAR (en la portada de un
+ * plan): la foto subida tal cual, o el cuadro de Bunny SIN firma. Una URL
+ * firmada vence; esta se firma al mostrarla, con portadaDePlan().
+ */
+export function portadaFijaDeClase(v: {
+  thumbnail_url?: string | null;
+  bunny_video_id?: string | null;
+  stream_playback_id?: string | null;
+}): string | null {
+  const guardada = v.thumbnail_url?.trim() || null;
+  if (guardada && !esUrlDeBunny(guardada)) return guardada;
+  const bunnyId = v.bunny_video_id ?? bunnyVideoIdFromUrl(v.stream_playback_id) ?? bunnyVideoIdFromUrl(guardada);
+  return bunnyId && hasBunnyStreamEnv() ? bunnyThumbnailUrl(bunnyId) : null;
+}
+
+/** La portada guardada de un plan, lista para mostrar: si es un cuadro de Bunny, se firma. */
+export function portadaDePlan(cover: string | null | undefined): string | null {
+  return cover ? portadaDeClase({ thumbnail_url: cover }) : null;
+}
+
+/**
+ * Para quien NO tiene el plan (vitrina con candado y pagina de venta): solo una
+ * foto subida. Un cuadro de Bunny llevaria el id del video en la URL, y la
+ * vitrina no expone ids de video.
+ */
+export function portadaDePlanVitrina(cover: string | null | undefined): string | null {
+  return cover && !esUrlDeBunny(cover) ? cover : null;
 }

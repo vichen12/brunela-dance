@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { portadaDeClase } from "@/src/lib/video/portada";
+import { portadaDeClase, portadaDePlan, portadaFijaDeClase } from "@/src/lib/video/portada";
 import { formatDurationLabel } from "@/src/features/studio/helpers";
 import { esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 
@@ -17,6 +17,8 @@ export type ClaseElegible = {
   titulo: string;
   duracion: string;
   portada: string | null;
+  /** La misma foto en forma guardable, para elegirla como portada de un plan. */
+  portadaFija: string | null;
   estado: string;
 };
 
@@ -61,6 +63,7 @@ export async function cargarClasesElegibles(): Promise<ClaseElegible[]> {
     titulo: v.title_i18n?.es ?? v.title_i18n?.en ?? v.slug,
     duracion: v.duration_seconds ? formatDurationLabel(v.duration_seconds) : "",
     portada: portadaDeClase(v),
+    portadaFija: portadaFijaDeClase(v),
     estado: v.status,
   }));
 }

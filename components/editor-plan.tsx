@@ -153,6 +153,14 @@ export function EditorPlan({
   }
 
   const cargados = dias.filter((d) => d.tipo !== "vacio").length;
+  // Sin portada propia, el plan usa la foto de su primera clase (misma regla que
+  // ve la alumna en app/dashboard/programs).
+  const primeraClase = dias.find((d) => d.tipo === "clase");
+  const portadaPorDefecto = primeraClase && primeraClase.tipo === "clase" ? porId.get(primeraClase.videoId)?.portada ?? null : null;
+  // Las fotos de las clases del plan, para elegir una como portada.
+  const fotosDelPlan = [...new Set(dias.flatMap((d) => (d.tipo === "clase" ? [d.videoId] : [])))]
+    .map((id) => porId.get(id))
+    .flatMap((c) => (c?.portada && c.portadaFija ? [{ url: c.portadaFija, vista: c.portada, titulo: c.titulo }] : []));
   const descansos = dias.filter((d) => d.tipo === "descanso").length;
   const vacios = dias.length - cargados;
   const hayDescansoSinMigracion = !descansoDisponible && descansos > 0;
@@ -273,7 +281,9 @@ export function EditorPlan({
             <SubirPortadaClase
               name="coverImageUrl"
               defaultValue={plan?.cover_image_url ?? ""}
-              ayudaVacio="Elegí una foto horizontal. Si no ponés ninguna, se usa un degradé."
+              porDefecto={portadaPorDefecto}
+              opciones={fotosDelPlan}
+              ayudaVacio={portadaPorDefecto ? "Si no elegís ninguna, se usa la foto de la primera clase del plan." : "Elegí una foto horizontal. Si no ponés ninguna, se usa la de la primera clase del plan."}
               ayudaLista="Es la imagen que ven las alumnas en la tarjeta del plan y arriba de su ficha."
             />
           </div>

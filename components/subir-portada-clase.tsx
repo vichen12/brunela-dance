@@ -18,13 +18,17 @@ const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_MB = 10;
 
 export function SubirPortadaClase({
-  name, defaultValue = "", ayudaVacio, ayudaLista,
+  name, defaultValue = "", ayudaVacio, ayudaLista, porDefecto = null, opciones = [],
 }: {
   name: string;
   defaultValue?: string;
   ayudaVacio?: string;
   /** Texto con foto ya elegida. Por defecto habla de "la clase"; los planes de trabajo pasan el suyo. */
   ayudaLista?: string;
+  /** Foto que se usa si no se elige ninguna (en un plan: la de su primera clase). Solo se muestra, no se guarda. */
+  porDefecto?: string | null;
+  /** Fotos para elegir con un toque (en un plan: las de sus clases). url = lo que se guarda, vista = lo que se muestra. */
+  opciones?: { url: string; vista: string; titulo: string }[];
 }) {
   const [url, setUrl] = useState(defaultValue);
   const [estado, setEstado] = useState<"" | "subiendo" | "error">("");
@@ -68,7 +72,7 @@ export function SubirPortadaClase({
 
   return (
     <div
-      className={"spc" + (url ? " tiene" : "")}
+      className={"spc" + (url ? " tiene" : "") + (opciones.length > 0 ? " con-opciones" : "")}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) subir(f); }}
     >
@@ -79,7 +83,13 @@ export function SubirPortadaClase({
       <button type="button" className="spc-vista" onClick={() => input.current?.click()} aria-label={url ? "Cambiar la foto de portada" : "Elegir una foto de portada"}>
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" />
+          <img src={opciones.find((o) => o.url === url)?.vista ?? url} alt="" />
+        ) : porDefecto ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={porDefecto} alt="" />
+            <span className="spc-defecto">Por defecto</span>
+          </>
         ) : (
           <span className="spc-vacio"><ImagePlus size={26} strokeWidth={1.8} aria-hidden="true" />Soltá la foto acá</span>
         )}
@@ -99,6 +109,28 @@ export function SubirPortadaClase({
             </button>
           )}
         </div>
+        {opciones.length > 0 && (
+          <div className="spc-opciones">
+            <span className="spc-opciones-etq">O elegí la foto de una de sus clases:</span>
+            <div className="spc-opciones-lista">
+              {opciones.map((o) => (
+                <button
+                  key={o.url}
+                  type="button"
+                  className={"spc-opcion" + (o.url === url ? " es-elegida" : "")}
+                  onClick={() => setUrl(o.url)}
+                  title={o.titulo}
+                  aria-label={"Usar la foto de " + o.titulo}
+                  aria-pressed={o.url === url}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={o.vista} alt="" loading="lazy" />
+                  {o.url === url && <span className="spc-opcion-ok"><Check size={12} strokeWidth={3} aria-hidden="true" /></span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {error && <p className="spc-error" role="alert">{error}</p>}
       </div>
     </div>
@@ -106,6 +138,21 @@ export function SubirPortadaClase({
 }
 
 const CSS = `
+.spc-opciones { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.spc-opciones-etq { font-size: 12px; font-weight: 700; color: var(--muted, #7a6a6f); }
+.spc-opciones-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Si hay fotos para elegir, la columna es angosta (editor de planes): una debajo de la otra. */
+.spc.con-opciones { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+.spc.con-opciones .spc-opcion { width: calc((100% - 16px) / 3); height: auto; aspect-ratio: 16 / 10; }
+.spc-opcion { position: relative; width: 74px; height: 50px; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: #f3ecea; }
+.spc-opcion img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.spc-opcion:hover { border-color: var(--pink-line, #f2c4c6); }
+.spc-opcion.es-elegida { border-color: var(--pink, #E64F55); }
+.spc-opcion-ok { position: absolute; right: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--pink, #E64F55); color: #fff; }
+
+.spc-vista { position: relative; }
+.spc-defecto { position: absolute; left: 8px; bottom: 8px; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.92); color: var(--ink, #2b2024); }
+
 .spc { display: grid; grid-template-columns: minmax(160px, 240px) minmax(0, 1fr); gap: 18px; align-items: center; padding: 14px; border-radius: 22px; border: 1.5px dashed var(--linea-fuerte, #E9CFC5); background: var(--crema, #FFFAF6); }
 .spc.tiene { border-style: solid; border-color: var(--pink-line, #F2C6C6); background: #fff; }
 .spc-vista { position: relative; aspect-ratio: 16 / 10; width: 100%; border: 0; padding: 0; border-radius: 16px; overflow: hidden; cursor: pointer; background: linear-gradient(135deg, #FFE9DE, #FFDADA); }

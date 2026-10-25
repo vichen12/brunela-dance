@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { portadaDeClase, portadaDePlan } from "@/src/lib/video/portada";
 import { CalendarDays, Check, Eye, Pencil, Plus, Rocket, Star } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminVacio, AdminGuia } from "@/components/admin-ui";
 import { AdminBuscador } from "@/components/admin-buscador";
@@ -120,7 +121,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
     cargarDias(supabase),
     // title_i18n hace falta para que el selector de clases muestre titulos y no
     // slugs. Se ordena por titulo para que la lista se pueda recorrer con la vista.
-    supabase.from("videos").select("id, slug, title_i18n").order("title_i18n->>es", { ascending: true })
+    supabase.from("videos").select("id, slug, title_i18n, thumbnail_url, bunny_video_id, stream_playback_id").order("title_i18n->>es", { ascending: true })
   ]);
 
   const programDays = programDaysData.dias;
@@ -272,7 +273,13 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
             return (
               <li key={program.id} className={"apl-card apl-card--" + program.status}>
                 <div className="apl-portada">
-                  {program.cover_image_url && <img src={program.cover_image_url} alt="" />}
+                  {(() => {
+                    // Sin portada propia: la foto de la primera clase del plan.
+                    const primera = days.find((d) => d.video_id);
+                    const v = primera ? (videosData ?? []).find((x) => x.id === primera.video_id) : null;
+                    const src = portadaDePlan(program.cover_image_url) || (v ? portadaDeClase(v) : null);
+                    return src ? <img src={src} alt="" /> : null;
+                  })()}
                   <span className="apl-dias-num">
                     <strong>{program.duration_days}</strong> días
                   </span>
