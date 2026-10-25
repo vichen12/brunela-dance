@@ -4349,8 +4349,12 @@ a.nt-item:hover { background: var(--crema); }
    cada titulo (0,1,0), asi no hay que tocar los ~40 titulos uno por uno. La
    landing no tiene .sistema y no cambia. Serif con x-height baja: se le da un
    poco mas de cuerpo y se afloja el interletrado negativo pensado para Nunito. */
+/* !important SOLO en la familia: varios titulos de la portada tienen reglas
+   propias mas especificas (.lp .about-title, .lp .faq-title...) que le
+   ganaban a esta, y quedaban unos con la letra nueva y otros con la vieja
+   (2026-10-25). Peso, tamaño y color siguen siendo de cada titulo. */
 .sistema :is(h1, h2) {
-  font-family: var(--font-titulo), "Cormorant Garamond", Georgia, serif;
+  font-family: var(--font-titulo), "Cormorant Garamond", Georgia, serif !important;
   font-weight: 700;
   letter-spacing: -0.005em;
   font-size-adjust: 0.5;
