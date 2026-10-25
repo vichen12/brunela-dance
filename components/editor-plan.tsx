@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import {
-  ArrowDown, ArrowLeft, ArrowUp, CalendarDays, Check, Clock, CornerDownRight, Eraser, Loader2, Minus, Moon,
-  Pencil, Plus, Trash2, X,
+  ArrowDown, ArrowLeft, ArrowUp, CalendarDays, Check, Clock, CornerDownRight, Eraser, Loader2, Minus,
+  Pencil, Plus, Trash2, X, Heart,
 } from "lucide-react";
 import { SubirPortadaClase } from "@/components/subir-portada-clase";
 import { ElegirConBuscador, type OpcionBuscable } from "@/components/elegir-con-buscador";
@@ -91,7 +91,7 @@ export function EditorPlan({
   );
   const fijas: OpcionBuscable[] = useMemo(
     () => descansoDisponible
-      ? [{ value: VALOR_DESCANSO, label: "Descanso", detalle: "Un día sin clase, con un mensaje para ella", icono: <Moon size={15} strokeWidth={2.2} /> }]
+      ? [{ value: VALOR_DESCANSO, label: "Descanso", detalle: "Un día sin clase, con un mensaje para ella", icono: <Heart size={15} strokeWidth={0} fill="currentColor" /> }]
       : [],
     [descansoDisponible]
   );
@@ -417,7 +417,11 @@ function FilaDia({
   const [destino, setDestino] = useState(String(n));
   useEffect(() => setDestino(String(n)), [n]);
 
-  const mostrarBuscador = dia.tipo === "vacio" || abierta;
+  // Un dia sin clase YA es descanso (asi lo ve la alumna): no se muestra la
+  // caja de busqueda abierta en cada uno, sino la tarjeta de descanso con dos
+  // botones claros. El recien agregado si la trae abierta, para cargarlo ya.
+  const mostrarBuscador = abierta || (dia.tipo === "vacio" && autoFocus);
+  const esDescanso = dia.tipo === "vacio" || dia.tipo === "descanso";
   const valorActual = dia.tipo === "clase" ? dia.videoId : dia.tipo === "descanso" ? VALOR_DESCANSO : "";
 
   return (
@@ -443,16 +447,15 @@ function FilaDia({
               </span>
             </div>
           )}
-          {dia.tipo === "descanso" && !abierta && (
+          {esDescanso && !mostrarBuscador && (
             <div className="epl-clase">
-              <span className="epl-clase-foto epl-clase-foto--descanso" aria-hidden="true"><Moon size={20} strokeWidth={1.9} /></span>
+              <span className="epl-clase-foto epl-clase-foto--descanso" aria-hidden="true"><Heart size={20} strokeWidth={0} fill="currentColor" /></span>
               <span className="epl-clase-txt">
                 <strong>Descanso</strong>
-                <small className="epl-nota-corta">{dia.nota.trim() || NOTA_DESCANSO_POR_DEFECTO}</small>
+                <small className="epl-nota-corta">«{(dia.tipo === "descanso" && dia.nota.trim()) || NOTA_DESCANSO_POR_DEFECTO}»</small>
               </span>
             </div>
           )}
-          {dia.tipo === "vacio" && !abierta && <p className="epl-vacio-txt">Día de descanso. Si querés, elegí una clase para este día.</p>}
         </div>
 
         <div className="epl-dia-acciones">
@@ -462,10 +465,31 @@ function FilaDia({
           <button type="button" className="epl-ico" onClick={() => onMover(1)} disabled={i === total - 1} aria-label={`Bajar el día ${n}`} title="Bajar">
             <ArrowDown size={15} strokeWidth={2.2} />
           </button>
-          {dia.tipo !== "vacio" && (
-            <button type="button" className="epl-btn" onClick={onAbrir} aria-expanded={abierta}>
-              {abierta ? <><X size={13} strokeWidth={2.4} aria-hidden="true" /> Listo</> : <><Pencil size={12} strokeWidth={2.4} aria-hidden="true" /> Cambiar</>}
+          {abierta ? (
+            <button type="button" className="epl-btn" onClick={onAbrir} aria-expanded>
+              <X size={13} strokeWidth={2.4} aria-hidden="true" /> Listo
             </button>
+          ) : dia.tipo === "clase" ? (
+            <button type="button" className="epl-btn" onClick={onAbrir} aria-expanded={false}>
+              <Pencil size={12} strokeWidth={2.4} aria-hidden="true" /> Cambiar
+            </button>
+          ) : (
+            <>
+              {/* Pasa a "descanso" con mensaje propio y abre el texto. */}
+              {dia.tipo === "vacio" && fijas.length > 0 && (
+                <button type="button" className="epl-btn epl-btn--suave" title="Cambiar el mensaje que lee la alumna ese día" onClick={() => onElegir(VALOR_DESCANSO)}>
+                  <Pencil size={12} strokeWidth={2.4} aria-hidden="true" /> Mensaje
+                </button>
+              )}
+              {dia.tipo === "descanso" && (
+                <button type="button" className="epl-btn epl-btn--suave" title="Cambiar el mensaje que lee la alumna ese día" onClick={onAbrir}>
+                  <Pencil size={12} strokeWidth={2.4} aria-hidden="true" /> Mensaje
+                </button>
+              )}
+              <button type="button" className="epl-btn epl-btn--lleno" onClick={onAbrir}>
+                <Plus size={13} strokeWidth={2.6} aria-hidden="true" /> Poner una clase
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -475,11 +499,11 @@ function FilaDia({
           <ElegirConBuscador
             key={valorActual}
             etiqueta={`Qué va el día ${n}`}
-            placeholder={fijas.length ? "Elegí una clase o «Descanso»…" : "Buscá una clase por su título…"}
+            placeholder="Buscá la clase por su nombre…"
             opciones={opciones}
             fijas={fijas}
             defaultValue={valorActual}
-            autoFocus={autoFocus}
+            autoFocus={autoFocus || (abierta && dia.tipo !== "descanso")}
             onChange={onElegir}
           />
 
@@ -512,10 +536,6 @@ function FilaDia({
         </div>
       )}
 
-      {/* Un dia vacio no tiene "Cambiar": las opciones de mover y sacar, a mano. */}
-      {dia.tipo === "vacio" && !abierta && total > 1 && (
-        <button type="button" className="epl-dia-mas-link" onClick={onAbrir}>Mover o sacar este día</button>
-      )}
     </li>
   );
 }
@@ -602,24 +622,29 @@ const CSS = `
 .epl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .epl-dia { border-radius: 22px; background: #fff; border: 1px solid var(--linea); padding: 10px; transition: border-color .2s, box-shadow .2s; }
 .epl-dia.esta-abierta { border-color: var(--pink-line); box-shadow: var(--sombra); }
-.epl-dia--vacio { background: #FFFAF6; border: 1.5px dashed #EBCFC4; }
-.epl-dia--descanso { background: linear-gradient(100deg, #FFF6EF 0%, #FFFAF6 80%); border-color: #F3D9C8; }
+.epl-dia--vacio { background: linear-gradient(100deg, #FFF4F2 0%, #FFFAF8 80%); border-color: #F6D9D6; }
+.epl-dia--descanso { background: linear-gradient(100deg, #FFF4F2 0%, #FFFAF8 80%); border-color: #F6D9D6; }
+.epl-btn--lleno { background: var(--pink) !important; border-color: var(--pink) !important; color: #fff !important; }
+.epl-btn--lleno:hover { background: var(--pink-mid) !important; }
+.epl-btn--suave { background: transparent !important; }
 .epl-dia-fila { display: flex; align-items: center; gap: 12px; }
 .epl-dia-num {
   flex-shrink: 0; width: 54px; height: 54px; border-radius: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: #FFF2EE; color: #B03A3E; font-size: 19px; font-weight: 900; line-height: 1;
 }
 .epl-dia-num small { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; color: inherit; opacity: .75; }
-.epl-dia--vacio .epl-dia-num { background: #fff; color: #B39189; border: 1px dashed #EBCFC4; }
-.epl-dia--descanso .epl-dia-num { background: #FFE8D6; color: var(--melocoton-deep); }
+.epl-dia--vacio .epl-dia-num { background: #FFE6E6; color: var(--pink-deep); }
+.epl-dia--descanso .epl-dia-num { background: #FFE6E6; color: var(--pink-deep); }
 .epl-dia-cuerpo { flex: 1; min-width: 0; }
 .epl-clase { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .epl-clase-foto { width: 88px; aspect-ratio: 16 / 10; border-radius: 13px; overflow: hidden; flex-shrink: 0; position: relative; background: linear-gradient(135deg, #FFE9DE, #FFDADA); }
 .epl-clase-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.epl-clase-foto--descanso { display: grid; place-items: center; color: var(--melocoton-deep); background: radial-gradient(60px 40px at 70% 20%, #FFE2D3, transparent 70%), #FFF1E6; }
+.epl-clase-foto--descanso { display: grid; place-items: center; color: var(--pink, #E64F55); background: radial-gradient(60px 40px at 70% 20%, #FFE4E4, transparent 70%), #FFF3F2; }
 .epl-clase-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .epl-clase-txt strong { font-size: 15.5px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.epl-dia--descanso .epl-clase-txt strong { color: var(--melocoton-deep); }
+.epl-dia--descanso .epl-clase-txt strong, .epl-dia--vacio .epl-clase-txt strong { color: var(--pink-deep); }
+.epl-dia--vacio .epl-nota-corta, .epl-dia--descanso .epl-nota-corta { font-style: italic; }
+.epl-dia--vacio .epl-clase-foto--descanso, .epl-dia--descanso .epl-clase-foto--descanso { width: 64px; }
 .epl-clase-txt small { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); font-weight: 700; }
 .epl-clase-txt em { font-style: normal; color: var(--melocoton-deep); }
 .epl-nota-corta { display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 600 !important; line-height: 1.45; }
