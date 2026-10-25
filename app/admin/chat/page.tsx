@@ -1,6 +1,5 @@
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
-import { leerCategorias } from "@/src/lib/categorias";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -41,24 +40,6 @@ function resolveExpiry(duration: string): string | null {
   return new Date(Date.now() + ms).toISOString();
 }
 
-type Room = {
-  id: string;
-  type: string;
-  name: string;
-  tier_required: string;
-  is_archived: boolean;
-};
-
-type Message = {
-  id: string;
-  room_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  is_deleted: boolean;
-  profiles: { full_name: string | null; email: string; is_admin: boolean } | null;
-};
-
 type Ban = {
   id: string;
   user_id: string;
@@ -79,52 +60,10 @@ type Mute = {
 
 // ── Server actions ────────────────────────────────────────────────────────────
 
-async function createRoomAction(formData: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-
-  const schema = z.object({
-    name: z.string().min(2),
-    type: z.enum(["community", "tier"]),
-    tier_required: z.enum(["none", "corps_de_ballet", "solista", "principal"]),
-  });
-
-  const parsed = schema.safeParse({
-    name: formData.get("name"),
-    type: formData.get("type"),
-    tier_required: formData.get("tier_required"),
-  });
-
-  if (!parsed.success) redirect("/admin/chat?error=Datos+inválidos" as never);
-
-  const { error } = await supabase.from("chat_rooms").insert({
-    name: parsed.data.name.trim(),
-    type: parsed.data.type,
-    tier_required: parsed.data.type === "community" ? "none" : parsed.data.tier_required,
-    is_archived: false,
-    participant_ids: [],
-  });
-
-  if (error) redirect((`/admin/chat?error=${encodeURIComponent(error.message)}`) as never);
-
-  revalidatePath("/admin/chat");
-  revalidatePath("/dashboard/community");
-  redirect("/admin/chat?success=Sala+creada" as never);
-}
-
-async function archiveRoomAction(formData: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-  const id = String(formData.get("id") ?? "");
-  const archived = formData.get("archived") === "true";
-  await supabase.from("chat_rooms").update({ is_archived: !archived }).eq("id", id);
-  revalidatePath("/admin/chat");
-  revalidatePath("/dashboard/community");
-  redirect("/admin/chat?tab=rooms&success=Sala+actualizada" as never);
-}
-
+// Las salas (crear, archivar) se manejan en /admin/comunidad. Antes estaban
+// las dos pantallas haciendo lo mismo, y aca ademas "canales de categoria" que
+// ninguna pantalla de alumna usaba. Esta queda para moderar: quien puede
+// escribirle a Brunela, baneos y muteos.
 
 async function unbanUserAction(formData: FormData) {
   "use server";
@@ -183,58 +122,8 @@ async function saveDmAccessAction(formData: FormData) {
 }
 
 
-async function createCategoryRoomAction(formData: FormData) {
-  "use server";
-  await requireAdmin();
-  const supabase = createSupabaseAdminClient();
-
-  const schema = z.object({
-    category_slug: z.string().min(1),
-    name: z.string().min(2),
-    tier_required: z.enum(["none", "corps_de_ballet", "solista", "principal"]),
-  });
-  const parsed = schema.safeParse({
-    category_slug: formData.get("category_slug"),
-    name: formData.get("name"),
-    tier_required: formData.get("tier_required"),
-  });
-  if (!parsed.success) redirect("/admin/chat?tab=rooms&error=Datos+invalidos" as never);
-
-  // Avoid duplicate channels for the same category.
-  const { data: existing } = await supabase
-    .from("chat_rooms")
-    .select("id")
-    .eq("category_slug", parsed.data.category_slug)
-    .maybeSingle<{ id: string }>();
-
-  if (existing) {
-    redirect(`/admin/chat?tab=rooms&room=${existing.id}&error=Ya+existe+un+canal+para+esa+categoria` as never);
-  }
-
-  const { error } = await supabase.from("chat_rooms").insert({
-    name: parsed.data.name.trim(),
-    type: "tier",
-    tier_required: parsed.data.tier_required,
-    category_slug: parsed.data.category_slug,
-    is_archived: false,
-    participant_ids: [],
-  });
-
-  if (error) redirect(`/admin/chat?tab=rooms&error=${encodeURIComponent(error.message)}` as never);
-
-  revalidatePath("/admin/chat");
-  revalidatePath("/dashboard/community");
-  redirect("/admin/chat?tab=rooms&success=Canal+de+categoria+creado" as never);
-}
-
 // ── UI helpers ────────────────────────────────────────────────────────────────
 
-const ROOM_TYPE_LABEL: Record<string, string> = {
-  community: "Para todas", tier: "Por plan", dm: "Chat privado",
-};
-const TIER_LABEL: Record<string, string> = {
-  none: "Todas", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
-};
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -245,31 +134,17 @@ export default async function AdminChatPage({ searchParams }: {
   const adminUserId = adminUser.id;
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
-  const tab = typeof params.tab === "string" ? params.tab : "rooms";
+  const tabPedida = typeof params.tab === "string" ? params.tab : "dm";
+  const tab = ["dm", "bans", "mutes"].includes(tabPedida) ? tabPedida : "dm";
   const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
   const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
-  const activeRoomId = typeof params.room === "string" ? params.room : null;
-
-  // Cinco consultas independientes que estaban encadenadas: eran cinco viajes
-  // seguidos a Supabase. Medido antes: 1728 ms de espera pura en esta pantalla.
+  // Consultas independientes en paralelo: encadenadas eran un viaje tras otro
+  // a Supabase (medido antes: 1728 ms de espera pura en esta pantalla).
   const [
-    { data: roomsData },
     { data: bansData },
     { data: mutesData },
     dmAccess,
-    categoriesData,
   ] = await Promise.all([
-    supabase
-      .from("chat_rooms")
-      .select("id, type, name, tier_required, is_archived")
-      // Fase D: los DM se descartan en SQL y no en memoria.
-      //
-      // Esta pantalla ya los filtraba con `rooms.filter(r => r.type !== "dm")`,
-      // pero DESPUES de traerlos. Y hay UN DM POR ALUMNA: con 500 alumnas eran
-      // 500 filas viajando en cada carga para tirarlas al llegar. Es la clase
-      // de consulta que anda perfecto hasta que el estudio crece.
-      .neq("type", "dm")
-      .order("created_at"),
     supabase
       .from("chat_bans")
       .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
@@ -279,28 +154,10 @@ export default async function AdminChatPage({ searchParams }: {
       .select("id, user_id, reason, expires_at, created_at, profiles(full_name, email)")
       .order("created_at", { ascending: false }),
     getDmAccess(),
-    // Fase E: cacheado. Las categorias no dependen de quien mira.
-    leerCategorias(),
   ]);
 
-  const rooms = (roomsData ?? []) as Room[];
   const bans = (bansData ?? []) as unknown as Ban[];
   const mutes = (mutesData ?? []) as unknown as Mute[];
-  const categories = categoriesData ?? [];
-
-  const publicRooms = rooms.filter((r) => r.type !== "dm");
-  const activeRoom = publicRooms.find((r) => r.id === activeRoomId) ?? null;
-
-  let messages: Message[] = [];
-  if (activeRoom) {
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("*, profiles(full_name, email, is_admin)")
-      .eq("room_id", activeRoom.id)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    messages = (data ?? []) as unknown as Message[];
-  }
 
   // Paginas por pestana. Las tres listas llegan enteras (son chicas y las
   // pestanas muestran el total), asi que se cortan aca. Un solo `pagina`:
@@ -310,13 +167,11 @@ export default async function AdminChatPage({ searchParams }: {
     const p = Math.min(paginaPedida, Math.max(1, Math.ceil(lista.length / POR_PAGINA)) - 1);
     return { pagina: p, filas: lista.slice(p * POR_PAGINA, p * POR_PAGINA + POR_PAGINA) };
   };
-  const pagSalas = cortar(publicRooms);
   const pagBans = cortar(bans);
   const pagMutes = cortar(mutes);
-  const hrefPagina = hrefConPagina("/admin/chat", { tab, room: activeRoomId ?? undefined });
+  const hrefPagina = hrefConPagina("/admin/chat", { tab });
 
   const TABS = [
-    { key: "rooms", label: `Salas (${publicRooms.length})` },
     { key: "dm", label: "Chat directo" },
     { key: "bans", label: `Baneos (${bans.length})` },
     { key: "mutes", label: `Muteos (${mutes.length})` },
@@ -329,7 +184,7 @@ export default async function AdminChatPage({ searchParams }: {
       <AdminCabecera
         eyebrow="Comunidad"
         titulo="Moderación"
-        lede="Salas, mensajes, muteos y baneos del estudio."
+        lede="Quién puede escribirte por chat directo, y las alumnas baneadas o muteadas."
       />
 
       <AdminAviso mensaje={success} tono="ok" />
@@ -354,185 +209,11 @@ export default async function AdminChatPage({ searchParams }: {
       </nav>
 
       {/* ── ROOMS TAB ── */}
-      {tab === "rooms" && (
-        <div className="ch-salas">
+      <p className="ch-nota">
+        Los canales de la comunidad se crean y se archivan en{" "}
+        <Link href={"/admin/comunidad" as never}>Comunidad</Link>.
+      </p>
 
-          {/* Left: room list + create form */}
-          <div className="ch-col">
-
-            {/* Create room */}
-            {/* LA LISTA PRIMERO.
-                Antes los dos formularios ocupaban la columna entera siempre y
-                la lista quedaba empujada al fondo: al crear una sala no habia
-                forma de encontrarla. Lo que se ve por defecto tiene que ser lo
-                que YA existe; crear es la excepcion, no lo normal. */}
-            <div className="ch-caja">
-              <p className="ch-caja-titulo">Salas <span>{publicRooms.length}</span></p>
-              <div className="ch-lista">
-                {pagSalas.filas.map((room) => {
-                  const active = room.id === activeRoomId;
-                  const Icon = room.type === "community" ? Users : Gem;
-                  return (
-                    <div key={room.id} className={"ch-sala" + (active ? " es-activa" : "")}>
-                      <Link href={`/admin/chat?tab=rooms&room=${room.id}${pagSalas.pagina > 0 ? `&pagina=${pagSalas.pagina}` : ""}` as never} className="ch-sala-link">
-                        <span className="ch-sala-ico"><Icon size={16} strokeWidth={2.1} aria-hidden="true" /></span>
-                        <div className="ch-sala-txt">
-                          <p className="ch-sala-nombre">{room.name}</p>
-                          <div className="ch-sala-meta">
-                            <span>{ROOM_TYPE_LABEL[room.type]}</span>
-                            {room.tier_required !== "none" && (
-                              <span className="ch-sala-plan">{TIER_LABEL[room.tier_required]}</span>
-                            )}
-                            {room.is_archived && (
-                              <span className="ch-sala-arch">Archivada</span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                      <form action={archiveRoomAction} className="ch-sala-form">
-                        <input type="hidden" name="id" value={room.id} />
-                        <input type="hidden" name="archived" value={String(room.is_archived)} />
-                        <BotonEnviar pendingLabel="…" className="ch-sala-archivar">{room.is_archived ? "Desarchivar" : "Archivar"}</BotonEnviar>
-                      </form>
-                    </div>
-                  );
-                })}
-                {publicRooms.length === 0 && (
-                  <div className="ch-lista-vacia">
-                    <span className="ch-burbuja"><Users size={18} strokeWidth={2.2} aria-hidden="true" /></span>
-                    <p>No hay salas todavía. Creá la primera.</p>
-                  </div>
-                )}
-              </div>
-              <Paginacion compacta pagina={pagSalas.pagina} total={publicRooms.length} porPagina={POR_PAGINA} href={hrefPagina} />
-            </div>
-
-            <details className="ch-crear">
-              <summary>
-                <span className="ch-crear-ico" aria-hidden="true"><Plus size={17} strokeWidth={2.4} /></span>
-                <span className="ch-crear-txt">Crear una sala</span>
-                <ChevronDown size={17} strokeWidth={2} className="ch-crear-flecha" aria-hidden="true" />
-              </summary>
-              <div className="ch-crear-cuerpo">
-            <div className="ch-form-caja">
-              <p className="ch-form-titulo">Nueva sala</p>
-              <form action={createRoomAction} className="ch-form">
-                <div className="pf-campo">
-                  <label className="pf-etq">Nombre</label>
-                  <input className="ch-inp" name="name" required placeholder="General · Ballet Avanzado..." />
-                </div>
-                <div className="pf-campo">
-                  <label className="pf-etq">Tipo</label>
-                  <Desplegable
-                    name="type" defaultValue="community"
-                    opciones={[
-                      { value: "community", label: "Comunidad (todas)" },
-                      { value: "tier", label: "Exclusiva por plan" },
-                    ]}
-                  />
-                </div>
-                <div className="pf-campo">
-                  <label className="pf-etq">Plan mínimo</label>
-                  <Desplegable
-                    name="tier_required" defaultValue="none"
-                    opciones={[
-                      { value: "none", label: "Sin restricción" },
-                      { value: "corps_de_ballet", label: "Corps de Ballet" },
-                      { value: "solista", label: "Solista" },
-                      { value: "principal", label: "Principal" },
-                    ]}
-                  />
-                </div>
-                <button className="pf-guardar ch-ancho" type="submit">Crear sala</button>
-              </form>
-            </div>
-              <div className="ch-form-caja">
-                <p className="ch-form-titulo">Canal por categoría</p>
-                <p className="ch-form-sub">
-                  Crea un canal alineado con una categoría de la biblioteca.
-                </p>
-                <form action={createCategoryRoomAction} className="ch-form">
-                  <div className="pf-campo">
-                    <label className="pf-etq">Categoría</label>
-                    <Desplegable
-                      name="category_slug"
-                      required
-                      defaultValue=""
-                      placeholder="Elegí una categoría…"
-                      opciones={categories.map((c) => ({ value: c.slug, label: c.name_i18n?.es ?? c.slug }))}
-                    />
-                  </div>
-                  <div className="pf-campo">
-                    <label className="pf-etq">Nombre del canal</label>
-                    <input className="ch-inp" name="name" required placeholder="Ballet · Comunidad" />
-                  </div>
-                  <div className="pf-campo">
-                    <label className="pf-etq">Plan mínimo</label>
-                    <Desplegable
-                      name="tier_required" defaultValue="none"
-                      opciones={[
-                        { value: "none", label: "Sin restricción" },
-                        { value: "corps_de_ballet", label: "Corps de Ballet" },
-                        { value: "solista", label: "Solista" },
-                        { value: "principal", label: "Principal" },
-                      ]}
-                    />
-                  </div>
-                  <button className="ch-btn-sec ch-ancho" type="submit">Crear canal de categoría</button>
-                </form>
-              </div>
-              </div>
-            </details>
-          </div>
-
-          {/* Right: messages */}
-          <div className="ch-mensajes">
-            {activeRoom ? (
-              /*
-               * El MISMO componente que usan las alumnas.
-               *
-               * POR QUE SE REEMPLAZO LO QUE HABIA
-               *   Esta pantalla tenia su propia implementacion: los mensajes se
-               *   renderizaban en el servidor y enviar disparaba una server
-               *   action que terminaba en revalidatePath x2 + redirect(). O sea
-               *   UNA NAVEGACION COMPLETA por cada mensaje. Ademas no tenia
-               *   realtime: para ver lo que escribia una alumna habia que
-               *   recargar a mano.
-               *
-               *   Eran dos implementaciones del mismo chat, y la de Brunela era
-               *   la peor de las dos.
-               *
-               * `canModerate` va explicito (ya no sale de isAdmin): eliminar,
-               * mutear y banear siguen estando -- pero al pasar el mouse, no
-               * como botones gritando en cada mensaje.
-               */
-              <div className="ch-sala-abierta">
-                <ChatRoom
-                  roomId={activeRoom.id}
-                  userId={adminUserId}
-                  isAdmin
-                  canModerate
-                  initialMessages={messages as unknown as ChatMessage[]}
-                  roomName={activeRoom.name}
-                  placeholder="Escribí un mensaje como Brunela…"
-                />
-              </div>
-            ) : (
-              <div className="ch-elegir">
-                <div className="ch-elegir-burbujas" aria-hidden="true">
-                  <span><Users size={20} strokeWidth={2.2} /></span>
-                  <span><MessageSquare size={24} strokeWidth={2.2} /></span>
-                  <span><Gem size={20} strokeWidth={2.2} /></span>
-                </div>
-                <p className="ch-elegir-titulo">Seleccioná una sala para ver sus mensajes</p>
-                <p className="ch-elegir-txt">O creá una sala nueva desde el panel izquierdo</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── DM ACCESS TAB ── */}
       {tab === "dm" && (
         <div className="ch-panel ch-panel--angosto">
           <div className="ch-panel-cab">
@@ -671,6 +352,8 @@ const CSS = `
 .ch { display: flex; flex-direction: column; gap: 20px; }
 .ch .ad-mast { margin-bottom: 0; }
 
+.ch-nota { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
+.ch-nota a { color: var(--pink-deep); font-weight: 800; }
 .ch-tabs { display: flex; gap: 6px; flex-wrap: wrap; width: fit-content; max-width: 100%; padding: 6px; border-radius: 99px; background: var(--rubor); border: 1px solid var(--linea); }
 .ch-tab { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 99px; text-decoration: none; font-size: 13.5px; font-weight: 800; color: var(--muted); transition: background .2s, color .2s, box-shadow .3s; }
 .ch-tab:hover { color: var(--pink-deep); background: rgba(255,255,255,.6); }

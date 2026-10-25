@@ -4,6 +4,7 @@ import { Gem, MessageCircle, Shield, Users } from "lucide-react";
 import { AdminBoton, AdminCabecera, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
+import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +81,9 @@ export default async function CommunityPage({ searchParams }: {
   }
 
   if (accessibleRooms.length === 0) {
+    // "Mientras tanto, escribile a Brunela" solo si su plan puede: si no, el
+    // boton llevaba a un candado.
+    const puedeEscribirle = tierCanStartDm(await getDmAccess(), tier);
     return (
       <main className="cm-vacio">
         <style>{CSS}</style>
@@ -91,7 +95,7 @@ export default async function CommunityPage({ searchParams }: {
           <AdminCabecera
             eyebrow="Comunidad"
             titulo="El chat del estudio"
-            lede="Canales para escribir con las demás alumnas de tu plan. Todavía no hay ninguno abierto para el tuyo."
+            lede="Canales para escribir con las demás alumnas del estudio. Todavía no hay ninguno abierto."
           />
           <AdminGuia
             rotuloEjemplo="Así se ve un canal"
@@ -110,7 +114,9 @@ export default async function CommunityPage({ searchParams }: {
               { icono: <MessageCircle size={18} strokeWidth={2} />, titulo: "En tiempo real", texto: "Los mensajes llegan al instante, sin recargar." },
               { icono: <Shield size={18} strokeWidth={2} />, titulo: "Moderado por Brunela", texto: "Un espacio cuidado para entrenar en compañía." },
             ]}
-            cta={<AdminBoton href="/dashboard/chat" lleno><MessageCircle size={16} strokeWidth={2} aria-hidden="true" /> Mientras tanto, escribile a Brunela</AdminBoton>}
+            cta={puedeEscribirle
+              ? <AdminBoton href="/dashboard/chat" lleno><MessageCircle size={16} strokeWidth={2} aria-hidden="true" /> Mientras tanto, escribile a Brunela</AdminBoton>
+              : <AdminBoton href="/dashboard/library" lleno><MessageCircle size={16} strokeWidth={2} aria-hidden="true" /> Mientras tanto, seguí con tus clases</AdminBoton>}
           />
         </section>
       </main>
@@ -142,7 +148,7 @@ export default async function CommunityPage({ searchParams }: {
                   <span className="cm-sala-txt">
                     <span className="cm-sala-nombre">{room.name}</span>
                     {room.type === "tier" && room.tier_required !== "none" ? (
-                      <span className="cm-sala-sub">Exclusivo {TIER_LABEL[room.tier_required]}</span>
+                      <span className="cm-sala-sub">Desde {TIER_LABEL[room.tier_required]}</span>
                     ) : null}
                   </span>
                 </Link>
@@ -167,7 +173,7 @@ export default async function CommunityPage({ searchParams }: {
                 ? "Elegí un canal para empezar"
                 : currentRoom.type === "community"
                   ? "Canal abierto a todas las alumnas"
-                  : `Exclusivo para ${TIER_LABEL[currentRoom.tier_required]}`}
+                  : `Para ${TIER_LABEL[currentRoom.tier_required]} en adelante`}
             </p>
           </div>
         </header>

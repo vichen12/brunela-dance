@@ -47,21 +47,21 @@ async function createRoomAction(formData: FormData) {
   // RLS. La guarda va PRIMERO.
   await requireAdmin();
   const supabase = createSupabaseAdminClient();
+  // Un solo campo, "Quien lo ve". Antes eran dos (Tipo y Plan minimo) y con
+  // Tipo = Comunidad el plan se ignoraba en silencio.
   const schema = z.object({
     name: z.string().min(2),
-    type: z.enum(["community", "tier"]),
-    tier_required: z.enum(["none", "corps_de_ballet", "solista", "principal"]),
+    quien: z.enum(["none", "corps_de_ballet", "solista", "principal"]),
   });
   const parsed = schema.safeParse({
     name: formData.get("name"),
-    type: formData.get("type"),
-    tier_required: formData.get("tier_required"),
+    quien: formData.get("quien"),
   });
   if (!parsed.success) redirect(`${BASE}?create=1` as never);
   const { data: creada } = await supabase.from("chat_rooms").insert({
     name: parsed.data.name.trim(),
-    type: parsed.data.type,
-    tier_required: parsed.data.type === "community" ? "none" : parsed.data.tier_required,
+    type: parsed.data.quien === "none" ? "community" : "tier",
+    tier_required: parsed.data.quien,
     is_archived: false,
     participant_ids: [],
   }).select("id").maybeSingle<{ id: string }>();
@@ -198,19 +198,12 @@ export default async function AdminComunidadPage({ searchParams }: {
                 <input name="name" required placeholder="General · Ballet" autoFocus />
               </label>
               <label className="cm-campo">
-                <span>Tipo</span>
-                <Desplegable name="type" defaultValue="community" opciones={[
-                  { value: "community", label: "Comunidad (todas)" },
-                  { value: "tier", label: "Exclusiva de un plan" },
-                ]} />
-              </label>
-              <label className="cm-campo">
-                <span>Plan mínimo</span>
-                <Desplegable name="tier_required" defaultValue="none" opciones={[
-                  { value: "none", label: "Sin restricción" },
-                  { value: "corps_de_ballet", label: "Corps de Ballet" },
-                  { value: "solista", label: "Solista" },
-                  { value: "principal", label: "Principal" },
+                <span>Quién lo ve</span>
+                <Desplegable name="quien" defaultValue="none" opciones={[
+                  { value: "none", label: "Todas las alumnas" },
+                  { value: "corps_de_ballet", label: "Desde Corps de Ballet" },
+                  { value: "solista", label: "Desde Solista (y Principal)" },
+                  { value: "principal", label: "Solo Principal" },
                 ]} />
               </label>
               <BotonEnviar className="cm-crear-btn" pendingLabel="Creando…"><Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Crear canal</BotonEnviar>

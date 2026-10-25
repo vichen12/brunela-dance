@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { Mail, Search } from "lucide-react";
+import { Mail, MessageCircle, Search, Send } from "lucide-react";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminCabecera } from "@/components/admin-ui";
 import { Paginacion } from "@/components/paginacion";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -30,6 +33,52 @@ type DmRoom = {
 };
 
 const BASE = "/admin/mensajes";
+
+/**
+ * El PRIMER mensaje de Brunela a una alumna. Recien aca se crea la sala.
+ *
+ * 🔴 Antes la sala se creaba con solo ABRIR la conversacion en esta pantalla
+ *    (2026-10-25). Y del lado de la alumna "una conversacion que ya existe
+ *    sigue abierta" sin mirar el plan: con un clic de Brunela sobre su nombre,
+ *    una alumna de Corps o Solista quedaba con chat directo, que es de
+ *    Principal. Ahora la sala nace con un mensaje adentro, porque Brunela
+ *    decidio escribirle.
+ */
+async function empezarConversacionAction(fd: FormData) {
+  "use server";
+  const { user } = await requireAdmin();
+  const alumnaId = String(fd.get("alumna") ?? "");
+  const texto = String(fd.get("texto") ?? "").trim().slice(0, 4000);
+  if (!/^[0-9a-f-]{36}$/i.test(alumnaId)) redirect(BASE as never);
+  if (!texto) redirect(`${BASE}?user=${alumnaId}` as never);
+
+  const supabase = await createSupabaseServerClient();
+  // Por si se creo mientras tanto (otra pestaña): se usa esa.
+  const { data: existente } = await supabase
+    .from("chat_rooms")
+    .select("id")
+    .eq("type", "dm")
+    .contains("participant_ids", [user.id, alumnaId])
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  let salaId = existente?.id ?? null;
+  if (!salaId) {
+    const { data: alumna } = await supabase
+      .from("profiles").select("full_name, email").eq("id", alumnaId).eq("is_admin", false)
+      .maybeSingle<{ full_name: string | null; email: string }>();
+    if (!alumna) redirect(BASE as never);
+    const { data: nueva } = await supabase
+      .from("chat_rooms")
+      .insert({ type: "dm", name: `DM: Brunela — ${alumna.full_name ?? alumna.email}`, participant_ids: [user.id, alumnaId] })
+      .select("id")
+      .single<{ id: string }>();
+    salaId = nueva?.id ?? null;
+  }
+  if (salaId) await supabase.from("chat_messages").insert({ room_id: salaId, user_id: user.id, content: texto });
+  revalidatePath(BASE);
+  redirect(`${BASE}?user=${alumnaId}` as never);
+}
 
 /** Alumnas por pagina en la barra lateral de mensajes privados. */
 const POR_PAGINA_MIEMBROS = 15;
@@ -83,7 +132,40 @@ export default async function AdminMensajesPage({ searchParams }: {
     return BASE + (t ? "?" + t : "");
   };
 
-  const activeUserId = selectedUserId ?? (filtrando ? null : members[0]?.id ?? null);
+  // CONVERSACIONES CON ACTIVIDAD, la mas reciente primero. La lista de alumnas
+  // va por fecha de alta, asi que una alumna que acababa de escribir podia
+  // quedar en la pagina 2 sin ningun aviso. Son las salas de Brunela y su
+  // ultimo mensaje; "te escribio" = la ultima palabra es de la alumna.
+  const { data: misSalas } = await supabase
+    .from("chat_rooms")
+    .select("id, participant_ids")
+    .eq("type", "dm")
+    .contains("participant_ids", [user.id]);
+  const alumnaDeSala = new Map(((misSalas ?? []) as { id: string; participant_ids: string[] }[])
+    .map((s) => [s.id, s.participant_ids.find((p) => p !== user.id) ?? ""] as const)
+    .filter(([, a]) => a));
+  const ultimos = new Map<string, { cuando: string; deElla: boolean }>();
+  if (alumnaDeSala.size) {
+    const { data: msgs } = await supabase
+      .from("chat_messages")
+      .select("room_id, user_id, created_at")
+      .in("room_id", [...alumnaDeSala.keys()])
+      .eq("is_deleted", false)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    for (const m of (msgs ?? []) as { room_id: string; user_id: string; created_at: string }[]) {
+      const alumna = alumnaDeSala.get(m.room_id);
+      if (alumna && !ultimos.has(alumna)) ultimos.set(alumna, { cuando: m.created_at, deElla: m.user_id !== user.id });
+    }
+  }
+  const { data: perfilesConv } = ultimos.size
+    ? await supabase.from("profiles").select("id, full_name, email, membership_tier, is_admin").in("id", [...ultimos.keys()]).eq("is_admin", false)
+    : { data: [] };
+  const conversaciones = ((perfilesConv ?? []) as Profile[])
+    .map((p) => ({ ...p, ...ultimos.get(p.id)! }))
+    .sort((a, b) => b.cuando.localeCompare(a.cuando));
+
+  const activeUserId = selectedUserId ?? (filtrando ? null : conversaciones[0]?.id ?? members[0]?.id ?? null);
   let activeRoom: DmRoom | null = null;
 
   if (activeUserId) {
@@ -102,23 +184,9 @@ export default async function AdminMensajesPage({ searchParams }: {
       .limit(1)
       .maybeSingle<DmRoom>();
 
+    // Sin sala no se crea nada: se muestra la caja del primer mensaje
+    // (empezarConversacionAction).
     activeRoom = encontrada ?? null;
-
-    if (!activeRoom) {
-      const activeMember = members.find((m) => m.id === activeUserId);
-      if (activeMember) {
-        const { data: newRoom } = await supabase
-          .from("chat_rooms")
-          .insert({
-            type: "dm",
-            name: `DM: Brunela — ${activeMember.full_name ?? activeMember.email}`,
-            participant_ids: [user.id, activeUserId],
-          })
-          .select("id, type, participant_ids")
-          .single<DmRoom>();
-        activeRoom = newRoom;
-      }
-    }
   }
 
   let initialMessages: ChatMessage[] = [];
@@ -135,7 +203,15 @@ export default async function AdminMensajesPage({ searchParams }: {
     initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
   }
 
-  const activeMember = members.find((m) => m.id === activeUserId);
+  const activeMember = members.find((m) => m.id === activeUserId) ?? conversaciones.find((m) => m.id === activeUserId);
+  const haceCuanto = (iso: string) => {
+    const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return "recién";
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" });
+  };
 
   const TIER_BADGE: Record<string, string> = {
     none: "Sin plan", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal",
@@ -176,6 +252,26 @@ export default async function AdminMensajesPage({ searchParams }: {
           </nav>
         </div>
         <nav className="dm-lista">
+          {!filtrando && conversaciones.length > 0 && (
+            <>
+              <p className="dm-seccion">Conversaciones</p>
+              {conversaciones.map((m) => {
+                const active = m.id === activeUserId;
+                const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
+                return (
+                  <Link key={"c" + m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+                    <span className="dm-ini">{name[0]?.toUpperCase()}</span>
+                    <span className="dm-persona-txt">
+                      <span className="dm-persona-nombre">{name}</span>
+                      <span className="dm-persona-cuando">{haceCuanto(m.cuando)}</span>
+                    </span>
+                    {m.deElla && <span className="dm-nuevo" title="La última palabra es de ella">Te escribió</span>}
+                  </Link>
+                );
+              })}
+              <p className="dm-seccion">Todas las alumnas</p>
+            </>
+          )}
           {members.length === 0 && (
             <div className="dm-sin">
               <p>Ninguna alumna coincide.</p>
@@ -234,6 +330,30 @@ export default async function AdminMensajesPage({ searchParams }: {
               placeholder={`Escribirle a ${activeMember.full_name?.split(" ")[0] ?? "alumna"}…`}
             />
           </>
+        ) : activeMember ? (
+          <>
+            <header className="dm-cab">
+              <span className="dm-cab-ini">{(activeMember.full_name ?? activeMember.email)[0]?.toUpperCase()}</span>
+              <div style={{ minWidth: 0 }}>
+                <p className="dm-cab-nombre">{activeMember.full_name ?? activeMember.email.split("@")[0]}</p>
+                <p className="dm-cab-sub">{activeMember.email} · {TIER_BADGE[activeMember.membership_tier] ?? "Sin plan"}</p>
+              </div>
+              <Link href={`/admin/users/${activeMember.id}` as never} className="dm-perfil">Ver perfil</Link>
+            </header>
+            <form action={empezarConversacionAction} className="dm-primero">
+              <input type="hidden" name="alumna" value={activeMember.id} />
+              <span className="dm-vacio-ico"><MessageCircle size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+              <p className="dm-vacio-titulo">Todavía no hablaron</p>
+              <p>
+                Escribile el primer mensaje. Desde ese momento {activeMember.full_name?.split(" ")[0] ?? "ella"} ve la conversación en «Mi chat» y te puede responder
+                {activeMember.membership_tier !== "principal" ? ", aunque el chat directo no esté en su plan" : ""}.
+              </p>
+              <textarea name="texto" required maxLength={4000} rows={3} placeholder={`Escribirle a ${activeMember.full_name?.split(" ")[0] ?? "la alumna"}…`} aria-label="Primer mensaje" />
+              <BotonEnviar className="dm-primero-btn" pendingLabel="Mandando…">
+                <Send size={15} strokeWidth={2.2} aria-hidden="true" /> Mandar
+              </BotonEnviar>
+            </form>
+          </>
         ) : (
           <div className="dm-vacio">
             <span className="dm-vacio-ico"><Mail size={28} strokeWidth={1.6} aria-hidden="true" /></span>
@@ -255,6 +375,15 @@ const CSS_DM = `
 .dm-plan { padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; text-decoration: none; color: var(--muted); background: #fff; border: 1px solid var(--linea); transition: background .2s, color .2s; }
 .dm-plan:hover { background: var(--rubor); color: var(--pink-deep); }
 .dm-plan.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; }
+.dm-seccion { margin: 10px 10px 4px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-muted); }
+.dm-persona-cuando { font-size: 12px; color: var(--muted); }
+.dm-nuevo { margin-left: auto; flex-shrink: 0; padding: 3px 9px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.dm-primero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.dm-primero > p:not(.dm-vacio-titulo) { max-width: 52ch; margin: 0; }
+.dm-primero textarea { width: min(560px, 100%); margin-top: 8px; padding: 12px 16px; border-radius: 18px; border: 1.5px solid var(--linea-fuerte); background: #fff; font: inherit; font-size: 15px; color: var(--ink); resize: vertical; outline: none; }
+.dm-primero textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.dm-primero-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border: 0; border-radius: 99px; cursor: pointer; background: var(--pink); color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+.dm-primero-btn:hover:not(:disabled) { background: var(--pink-mid); }
 .dm-sin { padding: 18px 8px; text-align: center; font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
 .dmA { display: flex; flex-direction: column; gap: 20px; }
 .dm { display: flex; height: calc(100vh - 150px); min-height: 560px; overflow: hidden; background: #fff; border: 1px solid var(--linea); border-radius: 28px; box-shadow: var(--sombra); }

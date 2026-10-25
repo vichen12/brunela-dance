@@ -104,9 +104,18 @@ export default async function ChatPage({ searchParams }: {
       .limit(1)
       .maybeSingle<DmRoom>();
 
-    if (existingRoom) {
-      // An existing conversation (possibly started by the admin) stays open
-      // regardless of the current plan.
+    if (existingRoom && !canStartDm) {
+      // Una conversacion que ya existe sigue abierta aunque su plan no tenga
+      // chat directo: es que Brunela le escribio. PERO solo si hay mensajes.
+      // Hubo una epoca en que el panel creaba la sala con solo abrir la
+      // conversacion (2026-10-25): una sala vacia no le habilita nada.
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("room_id", existingRoom.id)
+        .eq("is_deleted", false);
+      dmRoom = (count ?? 0) > 0 ? existingRoom : null;
+    } else if (existingRoom) {
       dmRoom = existingRoom;
     } else if (canStartDm) {
       const { data: newRoom } = await supabase
