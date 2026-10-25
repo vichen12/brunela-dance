@@ -9,7 +9,9 @@ import {
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Play, Sparkles } from "lucide-react";
+import { portadaDeClase } from "@/src/lib/video/portada";
+import { NOTA_DESCANSO_POR_DEFECTO, avanceDelPlan, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Moon, Play, Sparkles } from "lucide-react";
 
 /**
  * Un plan de trabajo, dia por dia.
@@ -29,6 +31,22 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock, ListChecks, Lock, Pl
  *   Decidido el 2026-09-21. Se pueden abrir: si alguien se va de viaje y quiere
  *   adelantar dos dias, puede. Bloquearlos forzaria el orden, pero castiga
  *   justo a la que mas engancha.
+ *
+ * DIAS DE DESCANSO (2026-10-25)
+ *   Un dia puede ser descanso en vez de clase: se ve en su lugar de la lista
+ *   ("Día 4 · Descanso"), con una tarjeta tranquila y sin enlace a ninguna
+ *   clase. Cuenta en el total. Como no tiene video no deja progreso: se da por
+ *   hecho cuando ella ya avanzo a un dia posterior, o termino todas las clases
+ *   (regla en src/features/studio/dias-de-plan.ts, probada en
+ *   tests/sistema/dias-de-plan.test.ts).
+ *
+ *   Un numero de dia sin nada cargado NO se inventa como descanso: no aparece.
+ *   El hueco se lo marca el panel a Brunela.
+ *
+ * LAS FOTOS
+ *   Cada dia muestra la portada de su clase (portadaDeClase: la foto subida o
+ *   el cuadro de Bunny firmado). Solo se llega aca si RLS devolvio el plan, o
+ *   sea si lo tiene: la pagina de venta (PlanBloqueado) no consulta ningun dia.
  */
 
 type Params = Promise<{ slug: string }>;
@@ -47,11 +65,17 @@ type ClaseDelDia = {
   slug: string;
   title_i18n: Record<string, string>;
   duration_seconds: number;
+  thumbnail_url: string | null;
+  bunny_video_id: string | null;
+  stream_playback_id: string | null;
 };
 
 type ProgramDayRecord = {
   day_number: number;
-  video_id: string;
+  /** null en un dia de descanso. */
+  video_id: string | null;
+  es_descanso?: boolean;
+  nota?: string | null;
   // PostgREST tipa el embed como arreglo aunque la relacion sea a-uno.
   videos: ClaseDelDia | ClaseDelDia[] | null;
 };
@@ -89,12 +113,8 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
     return <PlanBloqueado slug={slug} />;
   }
 
-  const [{ data: daysData }, { data: progressData }] = await Promise.all([
-    supabase
-      .from("program_days")
-      .select("day_number, video_id, videos(slug, title_i18n, duration_seconds)")
-      .eq("program_id", program.id)
-      .order("day_number", { ascending: true }),
+  const [days, { data: progressData }] = await Promise.all([
+    diasDelPlan(supabase, program.id),
     supabase
       .from("user_progress")
       .select("video_id, program_day_number, is_completed, completion_percent")
@@ -102,7 +122,6 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
       .eq("program_id", program.id)
   ]);
 
-  const days = (daysData ?? []) as ProgramDayRecord[];
   const progressMap = new Map<number, ProgressRecord>();
   for (const item of (progressData ?? []) as ProgressRecord[]) {
     if (item.program_day_number) progressMap.set(item.program_day_number, item);
@@ -116,15 +135,18 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
    * chip que decia "14 días", y las dos cifras eran ciertas y se contradecian.
    * Para la alumna manda lo que existe.
    */
-  const total = days.length;
-  const completos = days.filter((d) => progressMap.get(d.day_number)?.is_completed).length;
+  const avance = avanceDelPlan(days, progressMap);
+  const { total, completos, terminado } = avance;
   const porcentaje = total > 0 ? Math.round((completos / total) * 100) : 0;
   const faltan = Math.max(0, total - completos);
 
-  /** El primero sin terminar. Es "lo que te toca hoy". */
-  const hoy = days.find((d) => !progressMap.get(d.day_number)?.is_completed) ?? null;
-  const claseDeHoy = hoy ? claseDe(hoy.videos) : null;
-  const terminado = total > 0 && completos === total;
+  /** El primero sin hacer. Es "lo que te toca hoy": una clase o un descanso. */
+  const hoy = avance.hoy;
+  const claseDeHoy = hoy && !hoy.es_descanso ? claseDe(hoy.videos) : null;
+  const fotoDeHoy = claseDeHoy ? portadaDeClase(claseDeHoy) : null;
+  const descansoDeHoy = hoy?.es_descanso ? hoy : null;
+  const despuesDelDescanso = descansoDeHoy ? avance.siguienteClase : null;
+  const claseDespues = despuesDelDescanso ? claseDe(despuesDelDescanso.videos) : null;
 
   const titulo = resolveI18nText(program.title_i18n);
 
@@ -176,9 +198,33 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
             </div>
           </article>
 
-          <aside className="pd-hoy">
-            {claseDeHoy && hoy ? (
+          <aside className={"pd-hoy" + (descansoDeHoy ? " pd-hoy--descanso" : "")}>
+            {descansoDeHoy ? (
               <>
+                <span className="pd-hoy-eyebrow pd-hoy-eyebrow--calma">
+                  <Moon size={14} strokeWidth={2.2} aria-hidden="true" /> Hoy te toca
+                </span>
+                <div className="pd-hoy-dia">
+                  <span className="pd-hoy-rot">Día</span>
+                  <span className="pd-hoy-num pd-hoy-num--calma">{descansoDeHoy.day_number}</span>
+                </div>
+                <h2 className="pd-hoy-titulo">Día de descanso</h2>
+                <p className="pd-hoy-txt">{descansoDeHoy.nota?.trim() || NOTA_DESCANSO_POR_DEFECTO}</p>
+                {despuesDelDescanso && claseDespues && (
+                  <Link
+                    className="pd-boton pd-boton--suave"
+                    href={`/dashboard/library/${claseDespues.slug}?programId=${program.id}&day=${despuesDelDescanso.day_number}`}
+                  >
+                    Seguir con el día {despuesDelDescanso.day_number} <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
+                  </Link>
+                )}
+              </>
+            ) : claseDeHoy && hoy ? (
+              <>
+                {fotoDeHoy && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="pd-hoy-foto" src={fotoDeHoy} alt="" />
+                )}
                 <span className="pd-hoy-eyebrow">
                   <Sparkles size={14} strokeWidth={2.2} aria-hidden="true" />
                   {completos === 0 ? "Empezá por acá" : "Seguí por acá"}
@@ -242,8 +288,43 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
             ) : null}
 
             {days.map((day) => {
+              if (day.es_descanso) {
+                const hecho = avance.hecho.get(day.day_number) ?? false;
+                const esHoyDescanso = hoy?.day_number === day.day_number;
+                // Un div y no un Link: un descanso no lleva a ninguna clase.
+                return (
+                  <div
+                    key={`descanso-${day.day_number}`}
+                    className={"pd-dia pd-dia--descanso" + (esHoyDescanso ? " es-hoy" : hecho ? " es-hecho" : " es-futuro")}
+                  >
+                    <span aria-hidden className="pd-dia-marca">
+                      {hecho ? (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M2.5 7.2l3 3L11.5 4" stroke="currentColor" strokeWidth="2.2"
+                            strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : (
+                        day.day_number
+                      )}
+                    </span>
+                    <span aria-hidden className="pd-dia-foto pd-dia-foto--descanso">
+                      <Moon size={20} strokeWidth={1.9} />
+                    </span>
+                    <div className="pd-dia-txt">
+                      <p className="pd-dia-rot">
+                        Día {day.day_number} · Descanso
+                        {esHoyDescanso && " · Te toca ahora"}
+                      </p>
+                      <h3 className="pd-dia-titulo">Día de descanso</h3>
+                      <p className="pd-dia-nota">{day.nota?.trim() || NOTA_DESCANSO_POR_DEFECTO}</p>
+                    </div>
+                  </div>
+                );
+              }
+
               const clase = claseDe(day.videos);
               if (!clase) return null;
+              const foto = portadaDeClase(clase);
 
               const progreso = progressMap.get(day.day_number);
               const completado = progreso?.is_completed ?? false;
@@ -277,6 +358,11 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
                     )}
                   </span>
 
+                  <span aria-hidden className="pd-dia-foto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {foto && <img src={foto} alt="" loading="lazy" />}
+                  </span>
+
                   <div className="pd-dia-txt">
                     <p className="pd-dia-rot">
                       Día {day.day_number}
@@ -301,6 +387,35 @@ export default async function DashboardProgramDetailPage({ params }: { params: P
       </section>
     </main>
   );
+}
+
+/**
+ * Los dias del plan, con el CLIENTE DE LA ALUMNA (RLS decide).
+ *
+ * Pide las columnas del descanso; sin la migracion 20261025_dia_de_descanso.sql
+ * el select da 42703 y se repite como antes, sin ellas: la ficha no cambia.
+ */
+async function diasDelPlan(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  programId: string
+): Promise<ProgramDayRecord[]> {
+  const CLASE = "videos(slug, title_i18n, duration_seconds, thumbnail_url, bunny_video_id, stream_playback_id)";
+  const nuevo = await supabase
+    .from("program_days")
+    .select(`day_number, video_id, es_descanso, nota, ${CLASE}`)
+    .eq("program_id", programId)
+    .order("day_number", { ascending: true });
+  if (!nuevo.error) return (nuevo.data ?? []) as unknown as ProgramDayRecord[];
+  if (!esFaltaDeColumnaDescanso(nuevo.error)) {
+    console.error("[programs/slug] program_days:", nuevo.error.message);
+    return [];
+  }
+  const viejo = await supabase
+    .from("program_days")
+    .select(`day_number, video_id, ${CLASE}`)
+    .eq("program_id", programId)
+    .order("day_number", { ascending: true });
+  return (viejo.data ?? []) as unknown as ProgramDayRecord[];
 }
 
 /**
@@ -492,6 +607,29 @@ const CSS = `
 .pd-dia.es-empezado .pd-dia-rot { color: var(--melocoton-deep); }
 .pd-dia.es-futuro { opacity: .62; }
 
+/* Foto de la clase en cada fila. */
+.pd-dia-foto {
+  width: 76px; aspect-ratio: 16 / 10; border-radius: 14px; flex-shrink: 0; overflow: hidden; position: relative;
+  background: linear-gradient(135deg, #FFE9DE 0%, #FFDADA 100%);
+}
+.pd-dia-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Descanso: la misma fila, en crema y melocoton, sin flecha ni enlace. */
+.pd-dia--descanso { background: linear-gradient(100deg, #FFF6EF 0%, #FFFAF6 80%); border-style: dashed; border-color: #F3D9C8; }
+.pd-dia--descanso:hover { transform: none; box-shadow: none; border-color: #F3D9C8; }
+.pd-dia--descanso .pd-dia-rot { color: var(--melocoton-deep); }
+.pd-dia-foto--descanso { display: grid; place-items: center; color: var(--melocoton-deep); background: radial-gradient(60px 40px at 70% 20%, #FFE2D3, transparent 70%), #FFF1E6; }
+.pd-dia-nota { margin-top: 3px; font-size: 13px; line-height: 1.5; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pd-dia--descanso.es-hoy { background: linear-gradient(100deg, #FFEFE3 0%, #FFF8F2 70%); border: 1.5px solid var(--melocoton); box-shadow: 0 0 0 4px rgba(255,170,120,.12); }
+.pd-dia--descanso.es-hoy .pd-dia-marca { background: var(--melocoton); color: var(--melocoton-deep); border-color: var(--melocoton); box-shadow: none; }
+.pd-dia--descanso.es-hecho .pd-dia-marca { background: #FFEBDF; color: var(--melocoton-deep); border-color: #F3D9C8; }
+
+/* Tarjeta de hoy: con la foto de la clase arriba, o tranquila si es descanso. */
+.pd-hoy-foto { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 22px; margin-bottom: 4px; box-shadow: 0 18px 30px -22px rgba(120,50,40,.55); }
+.pd-hoy--descanso { background: linear-gradient(160deg, #FFF6EF 0%, #FFFDFB 70%); }
+.pd-hoy-eyebrow--calma { background: #FFEBDF; color: var(--melocoton-deep); }
+.pd-hoy-num--calma { background: linear-gradient(160deg, #FFF1E6 0%, #FFE2D3 100%); color: var(--melocoton-deep); }
+
 /* Venta del plan cerrado */
 .pd-hero--cerrado { max-width: 980px; }
 .pd-venta {
@@ -510,6 +648,7 @@ const CSS = `
   .pd-dia { gap: 10px; padding: 10px 12px 10px 10px; }
   .pd-dia-flecha { display: none; }
   .pd-dia-titulo { font-size: 15px; }
+  .pd-dia-foto { width: 56px; border-radius: 11px; }
   .pd-venta .pd-boton { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .pd-barra > div { animation: none; } }

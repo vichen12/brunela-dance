@@ -16,6 +16,7 @@ import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario } from "@/src/features/studio/progress";
 import { CATEGORIA_LABEL, nivelEnTexto } from "@/src/features/studio/catalogo-clases";
+import { avanceDelPlan, esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 
 /**
  * Los planes de trabajo, con candado para quien todavia no los tiene.
@@ -190,6 +191,13 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
     if (progress.is_completed) current.completedDays += 1;
 
     progressByProgram.set(progress.program_id, current);
+  }
+
+  // Los descansos hechos cuentan como dias hechos, igual que en la ficha.
+  for (const [programId, n] of await descansosHechos(supabase, user.id)) {
+    const current = progressByProgram.get(programId) ?? { completedDays: 0, maxPercent: 0 };
+    current.completedDays += n;
+    progressByProgram.set(programId, current);
   }
 
   const mios = programs.filter((p) => !bloqueado(p.id)).length;
@@ -378,6 +386,53 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
       </section>
     </main>
   );
+}
+
+/**
+ * Cuantos dias de DESCANSO ya cuentan como hechos, por plan.
+ *
+ * Un descanso no tiene video y no deja fila en user_progress: se da por hecho
+ * con la misma regla que la ficha (avanceDelPlan). Sin esto la tarjeta diria
+ * "10 de 14" a quien termino un plan con 4 descansos.
+ *
+ * 🔴 Con el cliente DE LA ALUMNA, no con service_role: RLS solo devuelve los
+ *    dias de los planes que tiene, asi que de un plan cerrado no sale ni
+ *    siquiera que dias son descanso. Sin la migracion 20261025 el select falla
+ *    (42703) y no hay descansos que contar.
+ */
+async function descansosHechos(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<Map<string, number>> {
+  const hechos = new Map<string, number>();
+  const { data: dias, error } = await supabase
+    .from("program_days")
+    .select("program_id, day_number, es_descanso");
+  if (error) {
+    if (!esFaltaDeColumnaDescanso(error)) console.error("[programs] descansos:", error.message);
+    return hechos;
+  }
+  const filas = (dias ?? []) as { program_id: string; day_number: number; es_descanso: boolean }[];
+  const conDescanso = new Set(filas.filter((d) => d.es_descanso).map((d) => d.program_id));
+  if (conDescanso.size === 0) return hechos;
+
+  const { data: progreso } = await supabase
+    .from("user_progress")
+    .select("program_id, program_day_number, is_completed")
+    .eq("user_id", userId)
+    .in("program_id", [...conDescanso]);
+
+  for (const programId of conDescanso) {
+    const delPlan = filas.filter((d) => d.program_id === programId);
+    const mapa = new Map<number, { is_completed: boolean }>();
+    for (const p of progreso ?? []) {
+      if (p.program_id === programId && p.program_day_number) mapa.set(p.program_day_number, p);
+    }
+    const { hecho } = avanceDelPlan(delPlan, mapa);
+    const n = delPlan.filter((d) => d.es_descanso && hecho.get(d.day_number)).length;
+    if (n > 0) hechos.set(programId, n);
+  }
+  return hechos;
 }
 
 const CSS = `

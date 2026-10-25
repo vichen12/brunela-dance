@@ -23,7 +23,8 @@ export type DiaDePlan = {
   id: string;
   program_id: string;
   day_number: number;
-  video_id: string;
+  /** null en un dia de descanso (migracion 20261025_dia_de_descanso.sql). */
+  video_id: string | null;
 };
 
 /** Un plan ofrecible en un desplegable. */
@@ -90,6 +91,9 @@ export function armarPlanesDeTrabajo(planes: PlanCrudo[], dias: DiaDePlan[]) {
     // Un dia cuyo plan no vino en la consulta (filtrada, por ejemplo) se saltea:
     // mostrar "undefined · Día 3" es peor que no mostrarlo.
     if (!titulo) continue;
+    // Un descanso ocupa su dia (cuenta para primerDiaLibre, arriba) pero no es
+    // la ubicacion de ninguna clase.
+    if (!dia.video_id) continue;
 
     const lista = ubicacionesPorClase.get(dia.video_id) ?? [];
     lista.push({ programDayId: dia.id, programId: dia.program_id, titulo, dia: dia.day_number });

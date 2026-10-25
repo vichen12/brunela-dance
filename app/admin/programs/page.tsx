@@ -3,13 +3,8 @@ import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminNueva, AdminVa
 import { EditarPrograma, ProgramForm } from "@/components/admin-program-drawer";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
-import {
-  deleteProgramAction,
-  deleteProgramDayAction,
-  upsertProgramAction,
-  upsertProgramDayAction
-} from "@/src/features/admin/actions";
 import { requireAdmin } from "@/src/features/auth/guards";
+import { esFaltaDeColumnaDescanso } from "@/src/features/studio/dias-de-plan";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +33,15 @@ type ProgramRecord = {
   is_featured: boolean;
 };
 
-type ProgramDayRecord = { id: string; program_id: string; day_number: number; video_id: string };
+type ProgramDayRecord = {
+  id: string;
+  program_id: string;
+  day_number: number;
+  /** null en un descanso. */
+  video_id: string | null;
+  es_descanso?: boolean;
+  nota?: string | null;
+};
 type VideoLookup = { id: string; slug: string; title_i18n: Record<string, string> | null };
 
 // ── Estilos compartidos con el resto del panel ────────────────────────────────
@@ -62,6 +65,30 @@ const TIER_STYLE: Record<string, { label: string }> = {
 const tituloDe = (v: VideoLookup | undefined, fallback: string) =>
   v ? (v.title_i18n?.es ?? v.title_i18n?.en ?? v.slug) : fallback;
 
+// ── Días ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Los dias de todos los planes. Pide las columnas del descanso; si la migracion
+ * 20261025_dia_de_descanso.sql no corrio, el select da 42703 y se repite sin
+ * ellas: la pantalla sigue andando y el panel avisa que falta la migracion.
+ */
+async function cargarDias(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
+  const nuevo = await supabase
+    .from("program_days")
+    .select("id, program_id, day_number, video_id, es_descanso, nota")
+    .order("day_number", { ascending: true });
+  if (!nuevo.error) return { dias: (nuevo.data ?? []) as ProgramDayRecord[], faltaMigracion: false };
+  if (!esFaltaDeColumnaDescanso(nuevo.error)) {
+    console.error("[admin/programs] program_days:", nuevo.error.message);
+    return { dias: [] as ProgramDayRecord[], faltaMigracion: false };
+  }
+  const viejo = await supabase
+    .from("program_days")
+    .select("id, program_id, day_number, video_id")
+    .order("day_number", { ascending: true });
+  return { dias: (viejo.data ?? []) as ProgramDayRecord[], faltaMigracion: true };
+}
+
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default async function AdminProgramsPage({ searchParams }: { searchParams?: SearchParams }) {
@@ -78,7 +105,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   const { count: totalProgramas } = await supabase
     .from("programs").select("*", { count: "exact", head: true });
 
-  const [{ data: programsData }, { data: programDaysData }, { data: videosData }] = await Promise.all([
+  const [{ data: programsData }, programDaysData, { data: videosData }] = await Promise.all([
     (() => {
       let c = supabase
         .from("programs")
@@ -90,11 +117,14 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       }
       return c.order("created_at", { ascending: false });
     })(),
-    supabase.from("program_days").select("id, program_id, day_number, video_id").order("day_number", { ascending: true }),
+    cargarDias(supabase),
     // title_i18n hace falta para que el selector de clases muestre titulos y no
     // slugs. Se ordena por titulo para que la lista se pueda recorrer con la vista.
     supabase.from("videos").select("id, slug, title_i18n").order("title_i18n->>es", { ascending: true })
   ]);
+
+  const programDays = programDaysData.dias;
+  const descansoDisponible = !programDaysData.faltaMigracion;
 
   // Cuantas alumnas empezaron y terminaron cada programa.
   //
@@ -117,9 +147,11 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       m.set(g.user_id, Math.max(m.get(g.user_id) ?? 0, dia));
     }
     for (const [pid, m] of llegoHasta) {
+      // El ultimo dia CON CLASE: un descanso no deja progreso (no tiene
+      // video), asi que un plan que termina en descanso no lo terminaria nadie.
       const totalDias = Math.max(
         0,
-        ...(programDaysData ?? []).filter((d) => d.program_id === pid).map((d) => d.day_number)
+        ...programDays.filter((d) => d.program_id === pid && !d.es_descanso).map((d) => d.day_number)
       );
       usoPorPrograma.set(pid, {
         empezaron: m.size,
@@ -131,7 +163,6 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
   }
 
   const programs = (programsData ?? []) as ProgramRecord[];
-  const programDays = (programDaysData ?? []) as ProgramDayRecord[];
   const videos = (videosData ?? []) as VideoLookup[];
   const videoById = new Map(videos.map((v) => [v.id, v]));
   const publicados = programs.filter((p) => p.status === "published").length;
@@ -244,6 +275,8 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
             const uso = usoPorPrograma.get(program.id);
             const cargados = new Map(days.map((d) => [d.day_number, d]));
             const total = Math.max(program.duration_days, ...days.map((d) => d.day_number), 0);
+            // Un descanso es un dia CARGADO: solo falta lo que no tiene nada.
+            const descansos = days.filter((d) => d.es_descanso).length;
             const faltan = Math.max(0, program.duration_days - days.length);
 
             return (
@@ -265,14 +298,18 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
 
                   {/* Un cuadrito por dia: lleno si ya tiene clase. Es lo que
                       hay que mirar para saber que falta cargar. */}
-                  <div className="apl-dias" aria-label={`${days.length} de ${program.duration_days} días con clase`}>
+                  <div className="apl-dias" aria-label={`${days.length} de ${program.duration_days} días cargados${descansos ? `, ${descansos} de descanso` : ""}`}>
                     {Array.from({ length: Math.min(total, 31) }, (_, i) => {
                       const d = cargados.get(i + 1);
                       return (
                         <span
                           key={i}
-                          className={"apl-dia" + (d ? " es-cargado" : "")}
-                          title={d ? `Día ${i + 1}: ${tituloDe(videoById.get(d.video_id), "clase")}` : `Día ${i + 1}: sin clase`}
+                          className={"apl-dia" + (d ? (d.es_descanso ? " es-descanso" : " es-cargado") : "")}
+                          title={
+                            !d ? `Día ${i + 1}: sin cargar`
+                            : d.es_descanso ? `Día ${i + 1}: descanso`
+                            : `Día ${i + 1}: ${tituloDe(d.video_id ? videoById.get(d.video_id) : undefined, "clase")}`
+                          }
                         />
                       );
                     })}
@@ -280,8 +317,10 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                   </div>
                   <p className={"apl-dias-txt" + (faltan > 0 ? " es-faltan" : "")}>
                     {faltan > 0
-                      ? <><strong>{days.length}</strong> de {program.duration_days} días con clase · faltan {faltan}</>
-                      : <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Los {program.duration_days} días tienen clase</>}
+                      ? <><strong>{days.length}</strong> de {program.duration_days} días{descansos > 0 && <> · {descansos} de descanso</>} · faltan {faltan}</>
+                      : descansos > 0
+                        ? <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> {days.length} de {program.duration_days} días · {descansos} de descanso</>
+                        : <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Los {program.duration_days} días tienen clase</>}
                   </p>
 
                   {uso && uso.empezaron > 0 && (
@@ -293,7 +332,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                   )}
 
                   <div className="apl-pie">
-                    <EditarPrograma program={program} days={days} videos={videos} videoById={videoById} />
+                    <EditarPrograma program={program} days={days} videos={videos} videoById={videoById} descansoDisponible={descansoDisponible} />
                   </div>
                 </div>
               </li>
@@ -351,6 +390,8 @@ const CSS_PLANES = `
 .apl-dias { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 14px; }
 .apl-dia { width: 16px; height: 16px; border-radius: 6px; background: #FFEBDF; transition: transform .25s var(--curva); }
 .apl-dia.es-cargado { background: var(--pink); box-shadow: 0 4px 8px -4px rgba(230,79,85,.7); }
+/* Descanso: cargado, pero en melocoton y redondo, para que se distinga de una clase. */
+.apl-dia.es-descanso { background: var(--melocoton, #FFC9A8); border-radius: 50%; box-shadow: inset 0 0 0 2px #fff; }
 .apl-dia:hover { transform: scale(1.25); }
 .apl-dias-mas { font-size: 12px; font-weight: 800; color: var(--muted); align-self: center; margin-left: 2px; }
 .apl-dias-txt {

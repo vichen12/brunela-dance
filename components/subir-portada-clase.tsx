@@ -17,7 +17,15 @@ import { Check, ImagePlus, Loader2, Trash2 } from "lucide-react";
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_MB = 10;
 
-export function SubirPortadaClase({ name, defaultValue = "", ayudaVacio }: { name: string; defaultValue?: string; ayudaVacio?: string }) {
+export function SubirPortadaClase({
+  name, defaultValue = "", ayudaVacio, ayudaLista,
+}: {
+  name: string;
+  defaultValue?: string;
+  ayudaVacio?: string;
+  /** Texto con foto ya elegida. Por defecto habla de "la clase"; los planes de trabajo pasan el suyo. */
+  ayudaLista?: string;
+}) {
   const [url, setUrl] = useState(defaultValue);
   const [estado, setEstado] = useState<"" | "subiendo" | "error">("");
   const [progreso, setProgreso] = useState(0);
@@ -80,7 +88,7 @@ export function SubirPortadaClase({ name, defaultValue = "", ayudaVacio }: { nam
 
       <div className="spc-txt">
         <p className="spc-titulo">Foto de portada {url && estado !== "subiendo" && <span className="spc-ok"><Check size={12} strokeWidth={3} aria-hidden="true" /> Lista</span>}</p>
-        <p className="spc-ayuda">{url ? "Es la imagen que ven las alumnas en la tarjeta de la clase." : ayudaVacio ?? "Elegí una foto horizontal. Es la que ven las alumnas en la tarjeta de la clase."}</p>
+        <p className="spc-ayuda">{url ? ayudaLista ?? "Es la imagen que ven las alumnas en la tarjeta de la clase." : ayudaVacio ?? "Elegí una foto horizontal. Es la que ven las alumnas en la tarjeta de la clase."}</p>
         <div className="spc-acciones">
           <button type="button" className="spc-btn" onClick={() => input.current?.click()} disabled={estado === "subiendo"}>
             <ImagePlus size={15} strokeWidth={2.2} aria-hidden="true" /> {url ? "Cambiar foto" : "Elegir foto"}

@@ -78,7 +78,18 @@ no es el que devuelve `ls`:
                                                correos_enviados, agrega
                                                profiles.correos_desactivados).
                                                No redefine nada
+39. 20261025_dia_de_descanso.sql           <-- al final; solo necesita phase_a.
+                                               program_days.video_id pasa a
+                                               NULL, + es_descanso, + nota, +
+                                               CHECK clase-o-descanso. No
+                                               redefine nada
 ```
+
+> **La 39 (dia de descanso) se puede correr sola, en cualquier momento.** Sin
+> ella el panel de Planes de trabajo esconde la opcion «Descanso» y avisa
+> «falta correr la migracion 20261025_dia_de_descanso.sql»; la ficha de la
+> alumna sigue igual que antes. No toca ninguna policy: la de `program_days`
+> mira solo el plan, nunca `videos`, asi que un `video_id` NULL no abre nada.
 
 > **La 38 (clase nueva) tambien se puede correr sola, despues de la 36.** Sin
 > ella NO sale ningun aviso de clase nueva (la reserva en `correos_enviados`
