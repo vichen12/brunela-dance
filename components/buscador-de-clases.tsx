@@ -142,6 +142,9 @@ export function BuscadorDeClases({ q, placeholder, clases }: { q: string; placeh
 
 const CSS = `
 .bcl { position: relative; }
+/* La barra del buscador por ENCIMA de la lista de clases: sin esto el panel de
+   sugerencias quedaba detras de las tarjetas (cada una arma su propia capa). */
+.abus:has(.bcl) { position: relative; z-index: 30; }
 .bcl-panel {
   position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 8px); min-width: 300px;
   background: #fff; border: 1.5px solid var(--linea-fuerte); border-radius: 22px; overflow: hidden;
