@@ -127,6 +127,7 @@ export const MATERIALES = [
   { slug: "theraloop", label: "TheraLoop" },
   { slug: "fit-ball", label: "Fit Ball" },
   { slug: "fusion-ball", label: "Fusion Ball" },
+  { slug: "aro-de-pilates", label: "Aro de pilates" },
   { slug: "mat", label: "Mat" },
   { slug: "barra-de-ballet", label: "Barra de ballet" },
   { slug: "pared", label: "Pared" },
@@ -146,6 +147,37 @@ export type MaterialSlug = (typeof MATERIALES)[number]["slug"];
 export const MATERIAL_LABEL: Record<string, string> = Object.fromEntries(
   MATERIALES.map((m) => [m.slug, m.label])
 );
+
+/**
+ * Materiales que Brunela escribe a mano con "Otro" (2026-10-25). Se guardan
+ * como TEXTO tal cual en equipment, no como slug: "Banda larga" se muestra
+ * "Banda larga". Por eso un valor desconocido se muestra crudo (abajo).
+ */
+export const MATERIAL_OTRO_MAX = 40;
+
+/** Limpia lo que se escribio: espacios de mas y largo maximo. */
+export function limpiarMaterialEscrito(texto: string): string {
+  return texto.replace(/\s+/g, " ").trim().slice(0, MATERIAL_OTRO_MAX);
+}
+
+/**
+ * La lista de fichas del formulario: el catalogo mas los materiales que ya se
+ * escribieron a mano en otras clases, para no tener que tipearlos de nuevo.
+ * Sin repetidos (ni por slug ni por nombre, sin importar mayusculas).
+ */
+export function materialesConEscritos(escritos: readonly string[]): Opcion[] {
+  const vistos = new Set<string>();
+  for (const m of MATERIALES) { vistos.add(m.slug.toLowerCase()); vistos.add(m.label.toLowerCase()); }
+  const extra: Opcion[] = [];
+  for (const crudo of escritos) {
+    const t = limpiarMaterialEscrito(crudo);
+    if (!t || vistos.has(t.toLowerCase())) continue;
+    vistos.add(t.toLowerCase());
+    extra.push({ slug: t, label: t });
+  }
+  extra.sort((a, b) => a.label.localeCompare(b.label, "es"));
+  return [...MATERIALES, ...extra];
+}
 
 /** Para mostrar: "Theraband, Mat". Un slug desconocido se muestra crudo. */
 export function materialesEnTexto(slugs: string[] | null | undefined): string {

@@ -8,7 +8,7 @@ import { bunnyHlsUrl, bunnyThumbnailUrl, deleteBunnyVideo } from "@/src/lib/vide
 import { audioLabel, audioObjectPath, isAudioLocale, ORIGINAL_LOCALE } from "@/src/lib/audio/config";
 import {
   CATEGORIA_SLUGS,
-  MATERIAL_SLUGS,
+  limpiarMaterialEscrito,
   NIVEL_SLUGS,
   TIPO_SLUGS,
   nivelARango
@@ -72,7 +72,7 @@ const schema = z.object({
    * este en la lista se rechaza en vez de guardarse, porque guardarlo lo deja
    * invisible en todos los filtros sin dar ningun error.
    */
-  equipment: z.array(z.enum(MATERIAL_SLUGS)).default([]),
+  equipment: z.array(z.string().transform(limpiarMaterialEscrito).pipe(z.string().min(1))).max(30).default([]),
   /** Enganchar la clase a un plan de trabajo es opcional: casi siempre es null. */
   programId: z.string().uuid().nullable().optional(),
   programDayNumber: z.coerce.number().int().positive().nullable().optional(),

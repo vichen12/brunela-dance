@@ -16,7 +16,8 @@ import {
   CATEGORIA_LABEL,
   nivelEnTexto,
   planesDesde,
-  planesEnTexto
+  planesEnTexto,
+  MATERIALES,
 } from "@/src/features/studio/catalogo-clases";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -243,7 +244,7 @@ function MuxStatus({ job }: { job: MuxJob }) {
 
 // ── Upload form (real Bunny upload: video file + audio file per language) ────────
 
-function UploadForm({ bunnyReady, programas }: { bunnyReady: boolean; programas: PlanParaElegir[] }) {
+function UploadForm({ bunnyReady, programas, materialesEscritos }: { bunnyReady: boolean; programas: PlanParaElegir[]; materialesEscritos: string[] }) {
   if (!bunnyReady) {
     return (
       <div style={{ marginTop: 16, fontSize: 13.5, color: "#8A4A2E", background: "#FFF4E8", border: "1px solid #FFE2D3", borderRadius: 20, padding: "16px 18px", lineHeight: 1.6 }}>
@@ -255,7 +256,7 @@ function UploadForm({ bunnyReady, programas }: { bunnyReady: boolean; programas:
     );
   }
 
-  return <AdminVideoUpload programas={programas} />;
+  return <AdminVideoUpload programas={programas} materialesEscritos={materialesEscritos} />;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -271,6 +272,15 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
   const success = typeof params.success === "string" ? params.success : null;
   const error = typeof params.error === "string" ? params.error : null;
   const bunnyReady = hasBunnyStreamEnv();
+
+  // Materiales escritos a mano con "Otro" en cualquier clase: aparecen como
+  // fichas en el formulario para no tener que tipearlos de nuevo. Solo la
+  // columna equipment de todas las clases (son decenas, no miles).
+  const { data: equipos } = await supabase.from("videos").select("equipment");
+  const conocidos = new Set<string>(MATERIALES.map((m) => m.slug as string));
+  const materialesEscritos = [...new Set(
+    ((equipos ?? []) as { equipment: string[] | null }[]).flatMap((v) => v.equipment ?? []).filter((m) => m && !conocidos.has(m))
+  )];
 
   // Buscador y filtros, del lado del SERVIDOR.
   //
@@ -443,7 +453,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
 
       {/* Subir una clase, plegado. */}
       <AdminNueva abierto={abrirNueva} titulo="Subir una clase nueva" sub="Video, idiomas, categoría, nivel, materiales y planes">
-        <UploadForm bunnyReady={bunnyReady} programas={programas} />
+        <UploadForm bunnyReady={bunnyReady} programas={programas} materialesEscritos={materialesEscritos} />
       </AdminNueva>
 
       <AdminBuscador
@@ -558,6 +568,7 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
                         video={video}
                         planes={programas}
                         ubicaciones={ubicacionesPorClase.get(video.id) ?? SIN_UBICACION}
+                        materialesEscritos={materialesEscritos}
                       />
                       {video.status !== "published" && (
                         <form action={quickStatusAction}>

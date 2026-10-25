@@ -13,7 +13,7 @@ import { invalidarAjustes } from "@/src/lib/settings";
 import { deleteBunnyVideo, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import {
   CATEGORIA_SLUGS,
-  MATERIAL_SLUGS,
+  limpiarMaterialEscrito,
   NIVEL_SLUGS,
   PLAN_SLUGS,
   TIPO_SLUGS,
@@ -50,7 +50,7 @@ const videoSchema = z.object({
    * "colchoneta" eran dos materiales distintos para la base, y una clase con un
    * slug mal escrito desaparecia de todos los filtros sin dar ningun error.
    */
-  equipment: z.array(z.enum(MATERIAL_SLUGS)).default([]),
+  equipment: z.array(z.string().transform(limpiarMaterialEscrito).pipe(z.string().min(1))).max(30).default([]),
   thumbnailUrl: z.string().optional(),
   // streamPlaybackId y streamAssetId NO estan aca a proposito: ver el payload.
   // NOTE: audio_tracks is deliberately absent. It is written by the mux worker

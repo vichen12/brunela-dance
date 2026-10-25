@@ -19,7 +19,7 @@ export const PLAN_TEXTOS: Record<PlanPago, { nombre: string; desc: string; inclu
   corps_de_ballet: {
     nombre: "Corps de Ballet",
     desc: "Acceso a todo lo básico que necesitás.",
-    incluye: ["Biblioteca completa", "Filtros por nivel y foco", "Progreso guardado", "7 días de prueba gratuita"],
+    incluye: ["Biblioteca completa", "Filtros por nivel y foco", "Progreso guardado"],
   },
   solista: {
     nombre: "Solista",

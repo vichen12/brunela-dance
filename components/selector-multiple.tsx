@@ -40,6 +40,15 @@ type Props = {
    * aviso empieza a hablar de una seleccion que ya no es la que hay.
    */
   onCambio?: (elegidos: string[]) => void;
+  /**
+   * Agrega una ficha "Otro" que abre un campo para escribir una opcion nueva
+   * (materiales, 2026-10-25). Lo escrito viaja como texto en el mismo `name`.
+   * Con esto, lo que ya estaba guardado y no esta en `opciones` NO se pierde:
+   * se muestra como ficha elegida.
+   */
+  permitirOtro?: boolean;
+  /** Arregla lo que se escribio (espacios, largo). Por defecto, trim. */
+  limpiarOtro?: (texto: string) => string;
 };
 
 export function SelectorMultiple({
@@ -51,10 +60,37 @@ export function SelectorMultiple({
   requerido = false,
   mensajeRequerido = "Elegí al menos una opción.",
   onCambio,
+  permitirOtro = false,
+  limpiarOtro = (t) => t.trim(),
 }: Props) {
-  const [elegidos, setElegidos] = useState<string[]>(() =>
-    inicial.filter((s) => opciones.some((o) => o.slug === s))
+  // Con "Otro", lo guardado que no esta en el catalogo se conserva como ficha.
+  const [extras, setExtras] = useState<Opcion[]>(() =>
+    permitirOtro
+      ? inicial.filter((s) => s && !opciones.some((o) => o.slug === s)).map((s) => ({ slug: s, label: s }))
+      : []
   );
+  const todas = [...opciones, ...extras];
+  const [elegidos, setElegidos] = useState<string[]>(() =>
+    inicial.filter((s) => opciones.some((o) => o.slug === s) || (permitirOtro && !!s))
+  );
+  const [escribiendo, setEscribiendo] = useState(false);
+  const [texto, setTexto] = useState("");
+
+  function agregarOtro() {
+    const limpio = limpiarOtro(texto);
+    if (!limpio) return;
+    // Si ya existe (por slug o por nombre, sin importar mayusculas), se elige esa.
+    const igual = todas.find((o) => o.slug.toLowerCase() === limpio.toLowerCase() || o.label.toLowerCase() === limpio.toLowerCase());
+    const slug = igual?.slug ?? limpio;
+    if (!igual) setExtras((xs) => [...xs, { slug, label: limpio }]);
+    if (!elegidos.includes(slug)) {
+      const siguiente = [...elegidos.filter((s) => s !== excluyente), slug];
+      setElegidos(siguiente);
+      onCambio?.(siguiente);
+    }
+    setTexto("");
+    setEscribiendo(false);
+  }
 
   function alternar(slug: string) {
     // Se calcula el siguiente valor a mano en vez de con el updater funcional
@@ -77,7 +113,7 @@ export function SelectorMultiple({
   return (
     <div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {opciones.map((opcion) => {
+        {todas.map((opcion) => {
           const activo = elegidos.includes(opcion.slug);
           return (
             <button
@@ -141,6 +177,42 @@ export function SelectorMultiple({
             </button>
           );
         })}
+
+        {permitirOtro && !escribiendo && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setEscribiendo(true)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 7, minHeight: 38, padding: "7px 14px",
+              borderRadius: 99, cursor: disabled ? "default" : "pointer", fontFamily: "inherit", fontSize: 13,
+              fontWeight: 800, color: "#B03A3E", background: "#fff", border: "1.5px dashed #E9CFC5",
+              opacity: disabled ? 0.55 : 1,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>+</span> Otro
+          </button>
+        )}
+        {permitirOtro && escribiendo && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: 4, borderRadius: 99, border: "1.5px solid #E64F55", background: "#fff" }}>
+            <input
+              autoFocus
+              value={texto}
+              maxLength={60}
+              placeholder="Escribí el material"
+              aria-label="Material nuevo"
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter agrega y NO envia el formulario de la clase.
+                if (e.key === "Enter") { e.preventDefault(); agregarOtro(); }
+                if (e.key === "Escape") { setEscribiendo(false); setTexto(""); }
+              }}
+              style={{ border: 0, outline: "none", padding: "6px 10px", fontFamily: "inherit", fontSize: 13, minWidth: 170, background: "transparent", color: "#3B2A2C" }}
+            />
+            <button type="button" onClick={agregarOtro} style={{ border: 0, borderRadius: 99, padding: "6px 14px", background: "#E64F55", color: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 12.5, cursor: "pointer" }}>Agregar</button>
+            <button type="button" aria-label="Cancelar" onClick={() => { setEscribiendo(false); setTexto(""); }} style={{ border: 0, background: "transparent", color: "#8A6F68", fontSize: 16, cursor: "pointer", padding: "0 8px" }}>×</button>
+          </span>
+        )}
       </div>
 
       {elegidos.map((slug) => (

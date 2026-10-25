@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave } from "@/src/features/auth/permiso-cambio-clave";
+import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave, sesionRecienDeEnlace } from "@/src/features/auth/permiso-cambio-clave";
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -29,7 +29,8 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
   // Si no, una admin logueada que abre la invitacion de una alumna le cambiaba
   // la contraseña a su PROPIA cuenta.
   const permiso = (await cookies()).get(COOKIE_CAMBIO_CLAVE)?.value;
-  const habilitado = Boolean(user) && puedeCambiarClave(permiso, user?.id);
+  const { data: { session } } = await supabase.auth.getSession();
+  const habilitado = Boolean(user) && (puedeCambiarClave(permiso, user?.id) || sesionRecienDeEnlace(session?.access_token));
 
   return (
     <main className="acc-sola sistema">

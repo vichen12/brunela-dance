@@ -101,6 +101,7 @@ export function PlanClient({
   currentTier,
   subscriptionStatus,
   renewsAt,
+  cancelaAlFinal = false,
   catalog,
   packs = [],
   planGratis = null,
@@ -113,6 +114,8 @@ export function PlanClient({
   aviso?: React.ReactNode;
   subscriptionStatus: string | null;
   renewsAt: string | null;
+  /** Pidio la baja: sigue con acceso hasta renewsAt y no se le cobra mas. */
+  cancelaAlFinal?: boolean;
   catalog: Catalog;
   packs?: PackDeAlumna[];
 }) {
@@ -267,7 +270,9 @@ export function PlanClient({
         <AdminCabecera
           eyebrow="Suscripción"
           titulo="Mi plan"
-          lede={<>Cambiá de plan cuando quieras, sin permanencias.{renewDate && <> Tu plan se renueva el <strong>{renewDate}</strong>.</>}</>}
+          lede={<>Cambiá de plan cuando quieras, sin permanencias.{renewDate && (cancelaAlFinal
+            ? <> Cancelaste tu plan: tenés acceso hasta el <strong>{renewDate}</strong> y no se te va a volver a cobrar.</>
+            : <> Tu plan se renueva el <strong>{renewDate}</strong>.</>)}</>}
         />
       </div>
 
@@ -288,9 +293,15 @@ export function PlanClient({
               </span>
               <span className="mp-activa-txt">
                 <span className="mp-activa-titulo">
-                  {subscriptionStatus === 'trialing' ? 'Estás en tu prueba gratuita' : 'Tu suscripción está activa'}
+                  {cancelaAlFinal
+                    ? `Tu plan termina el ${renewDate ?? "final del período"}`
+                    : subscriptionStatus === 'trialing' ? 'Estás en tu prueba gratuita' : 'Tu suscripción está activa'}
                 </span>
-                <span className="mp-activa-sub">Desde «Gestionar» cambiás la tarjeta, ves tus facturas o cancelás.</span>
+                <span className="mp-activa-sub">
+                  {cancelaAlFinal
+                    ? 'Ya está dada de baja: no se te va a cobrar más. Si cambiás de idea, la reactivás desde «Gestionar».'
+                    : 'Desde «Gestionar» cambiás de plan o de tarjeta, ves tus facturas o cancelás.'}
+                </span>
               </span>
             </span>
             <button
@@ -429,12 +440,16 @@ export function PlanClient({
                       </>
                     ) : (
                       <button
-                        onClick={() => startCheckout(entry.tier)}
-                        disabled={loadingTier === entry.tier}
+                        // Con un plan pago activo, cambiar es MODIFICAR esa
+                        // suscripcion desde el portal, nunca un checkout nuevo
+                        // (que cobraria dos planes; el servidor tambien lo frena).
+                        onClick={() => (hasActiveSub ? openPortal() : startCheckout(entry.tier))}
+                        disabled={loadingTier === entry.tier || loadingTier === 'portal'}
                         className="mp-boton"
                       >
                         {loadingTier === entry.tier
                           ? 'Redirigiendo…'
+                          : hasActiveSub ? 'Cambiar a este plan'
                           : planGratis === entry.tier ? `Seguir con ${meta.name}`
                           : isUpgrade ? 'Empezar 7 días gratis' : 'Cambiar a este plan'}
                       </button>

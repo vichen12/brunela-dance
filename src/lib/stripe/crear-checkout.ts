@@ -89,6 +89,25 @@ export async function crearCheckoutDeSuscripcion(a: {
     return { ok: false, status: 503, error: "Stripe no esta configurado." };
   }
 
+  // 🔴 NUNCA UNA SEGUNDA SUSCRIPCION (2026-10-25). Una alumna que ya pagaba veia
+  //    en "Mi plan" los otros planes con "Empezar 7 dias gratis"; tocarlo abria
+  //    un checkout NUEVO y Stripe le habria cobrado dos planes a la vez. Cambiar
+  //    de plan se hace desde el portal ("Gestionar"), que modifica la suscripcion
+  //    existente. Esto lo impone el servidor: la pantalla solo deja de ofrecerlo.
+  const { data: yaTiene, error: errorYaTiene } = await createSupabaseAdminClient()
+    .from("subscriptions")
+    .select("status")
+    .eq("user_id", a.user.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle<{ status: string }>();
+  if (errorYaTiene) {
+    return { ok: false, status: 503, error: "No pudimos comprobar tu plan actual. Probá de nuevo en un momento." };
+  }
+  if (yaTiene) {
+    return { ok: false, status: 409, error: "Ya tenés un plan activo. Para cambiarlo, tocá «Gestionar» en Mi plan." };
+  }
+
   const catalog = await getSubscriptionCatalog();
   if (!catalog) {
     return { ok: false, status: 500, error: "Catalogo de precios no configurado." };

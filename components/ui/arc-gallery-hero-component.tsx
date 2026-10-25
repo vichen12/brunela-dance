@@ -199,13 +199,16 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
               rgba(255, 255, 255, 0.62) 92%,
               #FFFFFF 100%
             ),
+            /* 2026-10-25, foto nueva: Brunela esta al CENTRO (no a la derecha
+               como en la anterior), asi que el lavado termina antes, en el 52%,
+               para no dejarla brumosa. La copia vive en el ~40% izquierdo. */
             linear-gradient(
               96deg,
               rgba(255, 255, 255, 0.90) 0%,
-              rgba(255, 255, 255, 0.86) 30%,
-              rgba(255, 255, 255, 0.64) 46%,
-              rgba(255, 255, 255, 0.24) 62%,
-              rgba(255, 255, 255, 0) 74%
+              rgba(255, 255, 255, 0.84) 26%,
+              rgba(255, 255, 255, 0.55) 38%,
+              rgba(255, 255, 255, 0.14) 48%,
+              rgba(255, 255, 255, 0) 52%
             );
         }
 

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
 import { cookies } from "next/headers";
-import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave } from "@/src/features/auth/permiso-cambio-clave";
+import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave, sesionRecienDeEnlace } from "@/src/features/auth/permiso-cambio-clave";
 
 const signInSchema = z.object({
   email: z.string().email(),
@@ -132,7 +132,8 @@ export async function updatePasswordAction(formData: FormData) {
   // enlace del correo de ESA cuenta (src/features/auth/permiso-cambio-clave.ts).
   const almacen = await cookies();
   const { data: { user: quien } } = await supabase.auth.getUser();
-  if (!puedeCambiarClave(almacen.get(COOKIE_CAMBIO_CLAVE)?.value, quien?.id)) {
+  const { data: { session: sesion } } = await supabase.auth.getSession();
+  if (!quien || !(puedeCambiarClave(almacen.get(COOKIE_CAMBIO_CLAVE)?.value, quien.id) || sesionRecienDeEnlace(sesion?.access_token))) {
     redirect("/sign-in/reset-password");
   }
 

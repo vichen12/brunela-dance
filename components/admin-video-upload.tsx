@@ -21,6 +21,8 @@ import {
   CATEGORIAS,
   ESTADOS,
   MATERIALES,
+  materialesConEscritos,
+  limpiarMaterialEscrito,
   NIVELES,
   PLANES,
   SIN_MATERIAL,
@@ -147,7 +149,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegir[] }) {
+export function AdminVideoUpload({ programas = [], materialesEscritos = [] }: { programas?: PlanParaElegir[]; materialesEscritos?: string[] }) {
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
   const videoIdRef = useRef<string | null>(null);
@@ -514,7 +516,9 @@ export function AdminVideoUpload({ programas = [] }: { programas?: PlanParaElegi
         <span style={lbl}>Materiales</span>
         <SelectorMultiple
           name="equipment"
-          opciones={MATERIALES}
+          opciones={materialesConEscritos(materialesEscritos)}
+          permitirOtro
+          limpiarOtro={limpiarMaterialEscrito}
           excluyente={SIN_MATERIAL}
           disabled={busy}
           requerido

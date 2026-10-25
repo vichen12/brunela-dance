@@ -29,7 +29,7 @@ export default async function PlanPage() {
   ] =
     await Promise.all([
       getCurrentProfile(user.id),
-      supabase.from("subscriptions").select("status, current_period_ends_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle<{ status: string; current_period_ends_at: string | null }>(),
+      supabase.from("subscriptions").select("status, current_period_ends_at, cancel_at_period_end").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle<{ status: string; current_period_ends_at: string | null; cancel_at_period_end: boolean | null }>(),
       getSubscriptionCatalog(),
       // Los packs publicados. La policy ya filtra los que no lo estan, asi que
       // no hace falta condicionarlo aca -- y condicionarlo sugeriria que la
@@ -130,6 +130,7 @@ export default async function PlanPage() {
       }
       subscriptionStatus={subscription?.status ?? null}
       renewsAt={subscription?.current_period_ends_at ?? null}
+      cancelaAlFinal={!!subscription?.cancel_at_period_end}
       catalog={catalog}
       packs={packs}
     />

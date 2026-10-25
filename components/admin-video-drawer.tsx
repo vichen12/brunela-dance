@@ -17,6 +17,8 @@ import {
   CATEGORIAS,
   ESTADOS,
   MATERIALES,
+  materialesConEscritos,
+  limpiarMaterialEscrito,
   NIVELES,
   PLANES,
   SIN_MATERIAL,
@@ -115,11 +117,13 @@ function VideoForm({
   video,
   planes,
   ubicaciones,
+  materialesEscritos,
   onGuardado,
 }: {
   video: VideoRecord;
   planes: PlanParaElegir[];
   ubicaciones: UbicacionEnPlan[];
+  materialesEscritos: string[];
   onGuardado: () => void;
 }) {
   // Read-only: audio_tracks is owned by the mux worker, not by this form.
@@ -196,7 +200,9 @@ function VideoForm({
         <Lbl>Materiales</Lbl>
         <SelectorMultiple
           name="equipment"
-          opciones={MATERIALES}
+          opciones={materialesConEscritos(materialesEscritos)}
+          permitirOtro
+          limpiarOtro={limpiarMaterialEscrito}
           inicial={video.equipment ?? []}
           excluyente={SIN_MATERIAL}
           requerido
@@ -327,10 +333,12 @@ export function EditarClase({
   video,
   planes = [],
   ubicaciones = [],
+  materialesEscritos = [],
 }: {
   video: VideoRecord;
   planes?: PlanParaElegir[];
   ubicaciones?: UbicacionEnPlan[];
+  materialesEscritos?: string[];
 }) {
   const [abierto, setAbierto] = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -365,6 +373,7 @@ export function EditarClase({
           video={video}
           planes={planes}
           ubicaciones={ubicaciones}
+              materialesEscritos={materialesEscritos}
           onGuardado={() => { setAbierto(false); setGuardado(true); }}
         />
       </AdminDrawer>

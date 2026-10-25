@@ -28,3 +28,32 @@ export const DURACION_CAMBIO_CLAVE = 60 * 30;
 export function puedeCambiarClave(cookie: string | undefined | null, userId: string | undefined | null): boolean {
   return Boolean(cookie && userId && cookie === userId);
 }
+
+/**
+ * Segunda via, mas robusta que la cookie (2026-10-25): el token de la SESION
+ * dice con que metodo se abrio (`amr`). Si se abrio con un enlace de correo
+ * (otp / recovery / invite / magiclink) hace menos de 30 minutos, esa sesion
+ * ES la del enlace, aunque la cookie se haya perdido (enlace abierto dos veces,
+ * otra ventana, el paso por la puerta de acceso). Una sesion abierta con
+ * contraseña o con Google NO pasa: es justo el caso que protege la cookie
+ * (una admin logueada que abre la invitacion de otra persona).
+ */
+const METODOS_DE_ENLACE = new Set(["otp", "recovery", "invite", "magiclink", "email", "email/signup"]);
+
+export function sesionRecienDeEnlace(accessToken: string | null | undefined, ahoraMs: number = Date.now()): boolean {
+  if (!accessToken) return false;
+  try {
+    const cuerpo = accessToken.split(".")[1];
+    if (!cuerpo) return false;
+    const json = JSON.parse(Buffer.from(cuerpo.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")) as {
+      amr?: { method?: string; timestamp?: number }[];
+    };
+    const limite = ahoraMs / 1000 - DURACION_CAMBIO_CLAVE;
+    // El metodo que cuenta es el MAS RECIENTE: si despues del enlace entro con
+    // contraseña, ya no es la sesion del enlace.
+    const ultimo = [...(json.amr ?? [])].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))[0];
+    return !!ultimo && METODOS_DE_ENLACE.has(String(ultimo.method)) && (ultimo.timestamp ?? 0) >= limite;
+  } catch {
+    return false;
+  }
+}
