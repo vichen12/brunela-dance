@@ -313,9 +313,9 @@ export function EditorPlan({
             <div>
               <h1 className="epl-titulo">Días del plan</h1>
               <p className="epl-resumen">
-                <strong>{cargados}</strong> de {dias.length} días cargados
-                {descansos > 0 && <> · {descansos} de descanso</>}
-                {vacios > 0 && <span className="epl-faltan"> · {vacios} sin cargar</span>}
+                {/* Un dia sin clase la alumna lo ve como descanso: se cuenta asi. */}
+                <strong>{dias.length - descansos - vacios}</strong> {dias.length - descansos - vacios === 1 ? "clase" : "clases"}
+                {descansos + vacios > 0 && <> · {descansos + vacios} {descansos + vacios === 1 ? "día" : "días"} de descanso</>}
               </p>
             </div>
           </header>
@@ -452,7 +452,7 @@ function FilaDia({
               </span>
             </div>
           )}
-          {dia.tipo === "vacio" && !abierta && <p className="epl-vacio-txt">Sin cargar: elegí una clase o «Descanso».</p>}
+          {dia.tipo === "vacio" && !abierta && <p className="epl-vacio-txt">Día de descanso. Si querés, elegí una clase para este día.</p>}
         </div>
 
         <div className="epl-dia-acciones">

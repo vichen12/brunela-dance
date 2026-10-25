@@ -96,13 +96,12 @@ export const ArcGalleryHero: React.FC<ArcGalleryHeroProps> = ({
           />
         <img
           className="brand-hero-bg"
-          /* ⚠️ Esta imagen esta ESPEJADA respecto del original de la sesion.
-                No es un efecto: en la foto real el suelo despejado cae a la
-                DERECHA, y ahi es justo donde no sirve, porque encima va el logo
-                y el titular a la izquierda. Se volteo al generarla (no por CSS,
-                para no pagar una transformacion en el LCP). Se puede espejar sin
-                que se note porque no hay texto, ni cara, ni nada asimetrico
-                reconocible en el cuadro. */
+          /* Foto _C1A6254 de la sesion real (2026-10-25), en 2560 px. Es VERTICAL:
+                para el formato apaisado se la puso a la derecha y se alargo hacia
+                la izquierda la pared y las barras (son horizontales, no se nota),
+                difuminado hacia el blanco donde va el titular. La anterior era
+                una foto de 1264 px estirada a pantalla completa, y por eso se
+                veia borrosa. */
           src="/fotos-landing/hero.avif"
           alt=""
           // Es la imagen mas grande de la primera pantalla: sin esto compite

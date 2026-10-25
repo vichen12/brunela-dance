@@ -266,9 +266,10 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
             const uso = usoPorPrograma.get(program.id);
             const cargados = new Map(days.map((d) => [d.day_number, d]));
             const total = Math.max(program.duration_days, ...days.map((d) => d.day_number), 0);
-            // Un descanso es un dia CARGADO: solo falta lo que no tiene nada.
-            const descansos = days.filter((d) => d.es_descanso).length;
-            const faltan = Math.max(0, program.duration_days - days.length);
+            // Un dia sin clase ES descanso, igual que lo ve la alumna
+            // (completarConDescansos): los marcados y los que quedaron libres.
+            const clases = days.filter((d) => !d.es_descanso && d.video_id).length;
+            const descansos = Math.max(0, total - clases);
 
             return (
               <li key={program.id} className={"apl-card apl-card--" + program.status}>
@@ -295,16 +296,15 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
 
                   {/* Un cuadrito por dia: lleno si ya tiene clase. Es lo que
                       hay que mirar para saber que falta cargar. */}
-                  <div className="apl-dias" aria-label={`${days.length} de ${program.duration_days} días cargados${descansos ? `, ${descansos} de descanso` : ""}`}>
+                  <div className="apl-dias" aria-label={`${total} días: ${clases} con clase y ${descansos} de descanso`}>
                     {Array.from({ length: Math.min(total, 31) }, (_, i) => {
                       const d = cargados.get(i + 1);
                       return (
                         <span
                           key={i}
-                          className={"apl-dia" + (d ? (d.es_descanso ? " es-descanso" : " es-cargado") : "")}
+                          className={"apl-dia" + (d && !d.es_descanso ? " es-cargado" : " es-descanso")}
                           title={
-                            !d ? `Día ${i + 1}: sin cargar`
-                            : d.es_descanso ? `Día ${i + 1}: descanso`
+                            !d || d.es_descanso ? `Día ${i + 1}: descanso`
                             : `Día ${i + 1}: ${tituloDe(d.video_id ? videoById.get(d.video_id) : undefined, "clase")}`
                           }
                         />
@@ -312,12 +312,10 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
                     })}
                     {total > 31 && <span className="apl-dias-mas">+{total - 31}</span>}
                   </div>
-                  <p className={"apl-dias-txt" + (faltan > 0 ? " es-faltan" : "")}>
-                    {faltan > 0
-                      ? <><strong>{days.length}</strong> de {program.duration_days} días{descansos > 0 && <> · {descansos} de descanso</>} · faltan {faltan}</>
-                      : descansos > 0
-                        ? <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> {days.length} de {program.duration_days} días · {descansos} de descanso</>
-                        : <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> Los {program.duration_days} días tienen clase</>}
+                  <p className={"apl-dias-txt" + (clases === 0 ? " es-faltan" : "")}>
+                    {clases === 0
+                      ? <>Todavía no tiene clases</>
+                      : <><Check size={13} strokeWidth={2.6} aria-hidden="true" /> {clases} {clases === 1 ? "clase" : "clases"}{descansos > 0 && <> · {descansos} {descansos === 1 ? "día" : "días"} de descanso</>}</>}
                   </p>
 
                   {uso && uso.empezaron > 0 && (
