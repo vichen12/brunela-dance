@@ -4376,7 +4376,7 @@ a.nt-item:hover { background: var(--crema); }
 .sb-marca-wm { display: block; height: 40px; width: auto; max-width: 170px; object-fit: contain; object-position: left center; }
 .sb-marca > span:not(.sb-marca-ico) { display: flex; flex-direction: column; gap: 3px; }
 
-/* ── Titulos del sistema: Cormorant Garamond (pedido de Brunela, 2026-10-14) ──
+/* ── Titulos del sistema: la letra de la landing, Bodoni Moda (antes Cormorant, 2026-10-14) ──
    Solo h1 y h2 dentro de .sistema (estudio de la alumna, panel de admin y las
    pantallas sueltas de acceso). `.sistema h1` (0,1,1) le gana a la clase de
    cada titulo (0,1,0), asi no hay que tocar los ~40 titulos uno por uno. La
@@ -4387,8 +4387,17 @@ a.nt-item:hover { background: var(--crema); }
    ganaban a esta, y quedaban unos con la letra nueva y otros con la vieja
    (2026-10-25). Peso, tamaño y color siguen siendo de cada titulo. */
 .sistema :is(h1, h2) {
-  font-family: var(--font-titulo), "Cormorant Garamond", Georgia, serif !important;
-  font-weight: 700;
-  letter-spacing: -0.005em;
-  font-size-adjust: 0.5;
+  font-family: var(--font-serif), "Bodoni Moda", Georgia, serif !important;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+/* 2026-10-26: "la misma letra que los titulos de la landing, en todo el
+   sistema: videos, clases, packs". La landing usa Bodoni Moda (--font-serif),
+   no Cormorant: el sistema pasa a la misma. Y ademas de h1/h2, los titulos de
+   las TARJETAS (clase, pack, plan de trabajo, sesion), que son <p>/<span> con
+   su propia clase. */
+.sistema :is(.bib-card-titulo, .fc-card-titulo, .ini-card-titulo, .ultimo-card-title, .sp-titulo, .pd-titulo, .pd-dia-titulo, .pk-nombre, .pk-titulo, .pk-clase-titulo, .mp-pack-nombre, .sv-titulo, .mis-titulo, .apl-titulo, .acl-titulo-clase, .epl-clase-txt strong) {
+  font-family: var(--font-serif), "Bodoni Moda", Georgia, serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
 }
