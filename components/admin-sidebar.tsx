@@ -3,6 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/src/features/auth/actions";
+import { ContadorChat } from "@/components/chat-avisos";
+
+/** Que contador de mensajes sin leer lleva cada item del menu. */
+const CONTADOR_DE: Record<string, "dm" | "canal"> = {
+  "/dashboard/chat": "dm",
+  "/dashboard/community": "canal",
+  "/admin/mensajes": "dm",
+  "/admin/comunidad": "canal",
+};
 import type { Route } from "next";
 import {
   ChartColumn,
@@ -85,7 +94,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
  * `nombre` es el de quien entro: hay tres cuentas admin y antes las tres
  * leian "BRUNELA" al pie del menu.
  */
-export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string | null }) {
+export function AdminSidebar({ nombre, foto, sinLeer }: { nombre: string; foto?: string | null; sinLeer?: { dm: number; canal: number } }) {
   const pathname = usePathname();
 
   // COMPACTA (2026-10-25, "que se pueda compactar"): solo iconos, el nombre
@@ -156,6 +165,7 @@ export function AdminSidebar({ nombre, foto }: { nombre: string; foto?: string |
                 <Link key={href} href={href as Route} className={"sb-item" + (active ? " es-activo" : "")} aria-current={active ? "page" : undefined} title={compacta ? label : undefined} aria-label={compacta ? label : undefined}>
                   <span className="sb-item-ico"><Icon size={18} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" /></span>
                   <span className="sb-txt">{label}</span>
+                  {CONTADOR_DE[href] && <ContadorChat tipo={CONTADOR_DE[href]} inicial={sinLeer?.[CONTADOR_DE[href]] ?? 0} />}
                 </Link>
               );
             })}

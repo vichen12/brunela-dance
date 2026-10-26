@@ -8,6 +8,8 @@ import { NuevaAlumnaGratis } from "@/components/nueva-alumna-gratis";
 import { AccesoGratisControles, ChipGratis, ChipRenovacion, type EstadoGratis, type EstadoRenovacion } from "@/components/acceso-gratis-admin";
 import { AVISO_FALTA_MIGRACION, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { AdminBuscador } from "@/components/admin-buscador";
+import { BuscadorDeClases } from "@/components/buscador-de-clases";
+import type { ClaseParaBuscar } from "@/src/features/admin/buscar-clases";
 import { updateProfileAdminAction } from "@/src/features/admin/actions";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -143,7 +145,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
     consulta
       .order("created_at", { ascending: false })
       .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1),
-    supabase.from("profiles").select("membership_tier, is_admin"),
+    // Tambien nombre y correo: alimentan las sugerencias del buscador.
+    supabase.from("profiles").select("id, full_name, email, membership_tier, is_admin").order("created_at", { ascending: false }),
   ]);
 
   const crudas = (data ?? []) as ProfileRow[];
@@ -229,6 +232,20 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
   // suman las cifras por plan. Antes "Alumnas" contaba sin admin y los planes
   // con admin, y las cifras no cerraban.
   const totalCuentas = (todosLosTiers ?? []).length;
+  // Sugerencias mientras se escribe, como en Clases y Planes: todas las
+  // cuentas (son decenas), filtradas en el navegador.
+  const PLAN_CORTO: Record<string, string> = { none: "Sin plan", corps_de_ballet: "Corps", solista: "Solista", principal: "Principal" };
+  const alumnasParaBuscar: ClaseParaBuscar[] = ((todosLosTiers ?? []) as { id: string; full_name: string | null; email: string; membership_tier: string; is_admin: boolean }[]).map((p) => ({
+    id: p.id,
+    slug: p.email,
+    titulo: p.full_name?.trim() || p.email.split("@")[0],
+    tituloEn: "",
+    categorias: p.is_admin ? "Admin" : PLAN_CORTO[p.membership_tier] ?? "Sin plan",
+    descripcion: "",
+    estado: "published",
+    duracionMin: 0,
+    portada: null,
+  }));
 
   return (
     <main className="au">
@@ -313,6 +330,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         action="/admin/users"
         q={q}
         placeholder="Buscar por nombre o correo"
+        entrada={<BuscadorDeClases de="alumna" q={q} placeholder="Buscar por nombre o correo" clases={alumnasParaBuscar} />}
         total={totalCuentas}
         mostrando={profiles.length}
         filtros={[{

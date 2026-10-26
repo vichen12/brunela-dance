@@ -4,6 +4,9 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { Archive, ArchiveRestore, Gem, Plus, Shield, Users } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { AdminBoton, AdminCabecera } from "@/components/admin-ui";
+import { ContadorSala } from "@/components/chat-avisos";
+import { getChatsSinLeer } from "@/src/features/studio/chat-sin-leer";
+
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
@@ -133,6 +136,8 @@ export default async function AdminComunidadPage({ searchParams }: {
     initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse();
   }
 
+  const sinLeer = await getChatsSinLeer(user.id, true);
+  const noLeidosDeSala = new Map(sinLeer.salas.map((s) => [s.roomId, s.noLeidos]));
   const fila = (room: Room) => {
     const active = room.id === currentRoom?.id;
     return (
@@ -145,6 +150,7 @@ export default async function AdminComunidadPage({ searchParams }: {
             <span className="cm-sala-nombre">{room.name}</span>
             <span className={"cm-sala-sub" + (room.tier_required !== "none" ? " es-plan" : "")}>{subtitulo(room)}</span>
           </span>
+          <ContadorSala roomId={room.id} inicial={noLeidosDeSala.get(room.id) ?? 0} />
         </Link>
         <form action={archiveRoomAction}>
           <input type="hidden" name="id" value={room.id} />

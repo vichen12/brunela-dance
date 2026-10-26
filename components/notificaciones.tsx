@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Bell, CalendarCheck, CalendarHeart, Check, Link2Off, Megaphone, X } from "lucide-react";
+import { AlarmClock, Bell, CalendarCheck, CalendarHeart, Check, Link2Off, Megaphone, MessageCircleHeart, X } from "lucide-react";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
 
 /**
@@ -30,6 +30,7 @@ function Icono({ tipo }: { tipo: Notificacion["tipo"] }) {
   if (tipo === "invitacion") return <CalendarHeart size={17} strokeWidth={2.2} />;
   if (tipo === "pendiente") return <Link2Off size={17} strokeWidth={2.3} />;
   if (tipo === "completar") return <CalendarCheck size={17} strokeWidth={2.2} />;
+  if (tipo === "mensaje") return <MessageCircleHeart size={17} strokeWidth={2.2} />;
   return <Megaphone size={17} strokeWidth={2.2} />;
 }
 
@@ -40,6 +41,7 @@ const CSS = `
 .nt-item.es-recordatorio .nt-item-titulo { color: var(--pink-deep); }
 .nt-ico--pendiente { background: var(--melocoton); color: var(--melocoton-deep); }
 .nt-ico--completar { background: var(--rubor); color: var(--pink-deep); }
+.nt-ico--mensaje { background: var(--pink); color: #fff; }
 .nt-externo { display: inline-flex; align-self: flex-start; margin-top: 4px; padding: 3px 10px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11.5px; font-weight: 800; }
 .nt--cabecera { margin-top: 0; }
 .nt--cabecera .nt-campana { width: 38px; height: 38px; box-shadow: none; border: 1.5px solid var(--linea-fuerte); background: #fff; backdrop-filter: none; }

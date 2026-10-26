@@ -5,6 +5,9 @@ import { AdminBoton, AdminCabecera, AdminGuia } from "@/components/admin-ui";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getDmAccess, tierCanStartDm } from "@/src/features/admin/chat-settings";
+import { ContadorSala } from "@/components/chat-avisos";
+import { getChatsSinLeer } from "@/src/features/studio/chat-sin-leer";
+
 import { ChatRoom, type ChatMessage } from "@/components/chat-room";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +68,8 @@ export default async function CommunityPage({ searchParams }: {
   );
 
   const currentRoom = accessibleRooms.find((r) => r.id === activeRoomId) ?? accessibleRooms[0];
+  const sinLeer = await getChatsSinLeer(user.id, false);
+  const noLeidosDeSala = new Map(sinLeer.salas.map((s) => [s.roomId, s.noLeidos]));
 
   let initialMessages: ChatMessage[] = [];
   if (currentRoom) {
@@ -151,6 +156,7 @@ export default async function CommunityPage({ searchParams }: {
                       <span className="cm-sala-sub">Desde {TIER_LABEL[room.tier_required]}</span>
                     ) : null}
                   </span>
+                  <ContadorSala roomId={room.id} inicial={noLeidosDeSala.get(room.id) ?? 0} />
                 </Link>
               </div>
             );

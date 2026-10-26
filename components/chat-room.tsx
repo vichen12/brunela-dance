@@ -4,6 +4,7 @@ import { MessageCircle, SendHorizontal } from 'lucide-react';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/src/lib/supabase/client';
+import { marcarSalaLeida, salaAbierta } from '@/components/chat-avisos';
 import { banearUsuarioAction } from '@/src/features/admin/chat-moderation';
 
 export type ChatMessage = {
@@ -309,6 +310,34 @@ export function ChatRoom({
   // nuevo y el efecto de abajo, que ahora depende de el, se resuscribiria en
   // bucle.
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+
+  // ── LEIDO ──────────────────────────────────────────────────────────────
+  // Tener la sala abierta y a la vista ES leerla: se adelanta chat_lecturas
+  // hasta el ultimo mensaje de otra persona y el numerito del menu vuelve a
+  // cero (components/chat-avisos.tsx). Con la hora del SERVIDOR (created_at
+  // del mensaje), no la del dispositivo: un reloj adelantado marcaria como
+  // leido lo que todavia no llego.
+  // Sin la migracion 20261026_chat_lecturas.sql el upsert falla en silencio.
+  useEffect(() => {
+    salaAbierta(roomId);
+    return () => salaAbierta(null);
+  }, [roomId]);
+  const ultimoAjeno = [...messages].reverse().find((m) => m.user_id !== userId);
+  const ultimoAjenoCuando = ultimoAjeno?.created_at ?? null;
+  useEffect(() => {
+    const marcar = () => {
+      if (document.visibilityState !== 'visible') return;
+      marcarSalaLeida(roomId);
+      if (!ultimoAjenoCuando) return;
+      void supabase
+        .from('chat_lecturas')
+        .upsert({ user_id: userId, room_id: roomId, leido_hasta: ultimoAjenoCuando }, { onConflict: 'user_id,room_id' })
+        .then(() => undefined);
+    };
+    marcar();
+    document.addEventListener('visibilitychange', marcar);
+    return () => document.removeEventListener('visibilitychange', marcar);
+  }, [roomId, userId, ultimoAjenoCuando, supabase]);
 
   // Bajar solo cuando llega un mensaje NUEVO, no cuando se carga historial.
   //

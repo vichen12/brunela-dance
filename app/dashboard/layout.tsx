@@ -9,6 +9,8 @@ import { MobileDashboardNav } from "@/components/mobile-dashboard-nav";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
 import { getNotificaciones } from "@/src/features/studio/notificaciones";
 import { Notificaciones } from "@/components/notificaciones";
+import { getChatsSinLeer, chatsComoNotificaciones } from "@/src/features/studio/chat-sin-leer";
+import { ChatAvisosVivo } from "@/components/chat-avisos";
 import { AvisoFinGratis } from "@/components/aviso-fin-gratis";
 import { aplicarBajaSiVencio, getAccesoGratis } from "@/src/features/studio/acceso-gratis";
 import { PLAN_LABEL, diasRestantes, estaVencido, fechaLarga } from "@/src/features/studio/acceso-gratis-reglas";
@@ -128,7 +130,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // "Sesiones privadas" en el menu: solo para Principal (que las trae en el
   // plan) o para quien ya tiene alguna. A las demas no les sirve de nada.
   const verPrivadas = privadas.disponible && (profile?.membership_tier === "principal" || privadas.sesiones.length > 0);
-  const notificaciones = await getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin);
+  const [notificaciones, chats] = await Promise.all([
+    getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin),
+    // Mensajes sin leer: campanita, numerito del menu y contador en vivo.
+    getChatsSinLeer(user.id, false),
+  ]);
+  const chatPorSala = Object.fromEntries(chats.salas.map((s) => [s.roomId, s.noLeidos]));
+  const sinLeer = {
+    dm: chats.salas.filter((s) => s.tipo === "dm").reduce((n, s) => n + s.noLeidos, 0),
+    canal: chats.salas.filter((s) => s.tipo === "canal").reduce((n, s) => n + s.noLeidos, 0),
+  };
 
   // Recordatorios del acceso gratis en la campanita: a 7 dias, a 1 y el dia
   // que termina. El id cambia con la etapa (y con la fecha, por si se lo
@@ -176,14 +187,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             isAdmin={isAdmin}
             seguirViendo={seguirViendo}
             verPrivadas={verPrivadas}
+            sinLeer={sinLeer}
           />
         </div>
         <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden", position: "relative" }}>
           {/* Campanita: invitaciones y anuncios, arriba a la derecha. */}
-          <div className="nt-barra"><Notificaciones items={[...recordatoriosGratis, ...notificaciones]} /></div>
+          <div className="nt-barra"><Notificaciones items={[...chatsComoNotificaciones(chats, false), ...recordatoriosGratis, ...notificaciones]} /></div>
           {children}
         </div>
-        <MobileDashboardNav isAdmin={isAdmin} verPrivadas={verPrivadas} />
+        <MobileDashboardNav isAdmin={isAdmin} verPrivadas={verPrivadas} sinLeer={sinLeer} />
+        <ChatAvisosVivo userId={user.id} porSala={chatPorSala} tipos={chats.tipos} />
         {mostrarAvisoFin && (
           <AvisoFinGratis plan={acceso.plan ? PLAN_LABEL[acceso.plan] : null} nombre={profile?.full_name?.trim().split(/\s+/)[0] ?? ""} />
         )}

@@ -4,6 +4,9 @@ import { Mail, MessageCircle, Search, Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
+import { ContadorSala } from "@/components/chat-avisos";
+import { getChatsSinLeer } from "@/src/features/studio/chat-sin-leer";
+
 import { AdminCabecera } from "@/components/admin-ui";
 import { Paginacion } from "@/components/paginacion";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -144,6 +147,11 @@ export default async function AdminMensajesPage({ searchParams }: {
   const alumnaDeSala = new Map(((misSalas ?? []) as { id: string; participant_ids: string[] }[])
     .map((s) => [s.id, s.participant_ids.find((p) => p !== user.id) ?? ""] as const)
     .filter(([, a]) => a));
+  const salaDeAlumna = new Map([...alumnaDeSala].map(([sala, alumna]) => [alumna, sala]));
+  // Cuantos mensajes sin leer tiene cada conversacion (memoizado: el layout
+  // ya lo pidio en este mismo render).
+  const sinLeer = await getChatsSinLeer(user.id, true);
+  const noLeidosDeSala = new Map(sinLeer.salas.map((s) => [s.roomId, s.noLeidos]));
   const ultimos = new Map<string, { cuando: string; deElla: boolean }>();
   if (alumnaDeSala.size) {
     const { data: msgs } = await supabase
@@ -265,7 +273,9 @@ export default async function AdminMensajesPage({ searchParams }: {
                       <span className="dm-persona-nombre">{name}</span>
                       <span className="dm-persona-cuando">{haceCuanto(m.cuando)}</span>
                     </span>
-                    {m.deElla && <span className="dm-nuevo" title="La última palabra es de ella">Te escribió</span>}
+                    {salaDeAlumna.get(m.id) && (noLeidosDeSala.get(salaDeAlumna.get(m.id)!) ?? 0) > 0
+                      ? <ContadorSala roomId={salaDeAlumna.get(m.id)!} inicial={noLeidosDeSala.get(salaDeAlumna.get(m.id)!) ?? 0} />
+                      : m.deElla && <span className="dm-nuevo dm-nuevo--suave" title="La última palabra es de ella">Sin responder</span>}
                   </Link>
                 );
               })}
@@ -288,6 +298,7 @@ export default async function AdminMensajesPage({ searchParams }: {
                   <span className="dm-persona-nombre">{name}</span>
                   <span className="dm-persona-plan">{TIER_BADGE[m.membership_tier] ?? "Sin plan"}</span>
                 </span>
+                {salaDeAlumna.get(m.id) && <ContadorSala roomId={salaDeAlumna.get(m.id)!} inicial={noLeidosDeSala.get(salaDeAlumna.get(m.id)!) ?? 0} />}
               </Link>
             );
           })}
@@ -377,6 +388,7 @@ const CSS_DM = `
 .dm-plan.es-activo { background: var(--pink); border-color: var(--pink); color: #fff; }
 .dm-seccion { margin: 10px 10px 4px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--pink-muted); }
 .dm-persona-cuando { font-size: 12px; color: var(--muted); }
+.dm-nuevo--suave { background: var(--rubor) !important; color: var(--pink-deep) !important; }
 .dm-nuevo { margin-left: auto; flex-shrink: 0; padding: 3px 9px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .dm-primero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
 .dm-primero > p:not(.dm-vacio-titulo) { max-width: 52ch; margin: 0; }

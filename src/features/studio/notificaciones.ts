@@ -22,7 +22,7 @@ export type Notificacion = {
    * invitacion / anuncio / recordatorio: alumna.
    * pendiente / completar (y recordatorio): admin, src/features/admin/recordatorios.ts.
    */
-  tipo: "invitacion" | "anuncio" | "recordatorio" | "pendiente" | "completar";
+  tipo: "invitacion" | "anuncio" | "recordatorio" | "pendiente" | "completar" | "mensaje";
   titulo: string;
   texto: string;
   /** ISO: fecha de la clase o de publicacion. null = no se muestra fecha. */

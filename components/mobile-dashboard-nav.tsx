@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { CalendarDays, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { ContadorChat } from '@/components/chat-avisos';
 
 /**
  * Los MISMOS destinos que el sidebar de escritorio. Antes habia cinco y
@@ -34,7 +35,16 @@ const NAV = [
 /** Los que quedan a un toque en la barra. El resto, en la hoja. */
 const PRIMARIOS = ['/dashboard', '/dashboard/library', '/dashboard/chat', '/dashboard/community'];
 
-export function MobileDashboardNav({ isAdmin, verPrivadas = false }: { isAdmin: boolean; verPrivadas?: boolean }) {
+
+/** Que contador de mensajes sin leer lleva cada item del menu. */
+const CONTADOR_DE: Record<string, "dm" | "canal"> = {
+  "/dashboard/chat": "dm",
+  "/dashboard/community": "canal",
+  "/admin/mensajes": "dm",
+  "/admin/comunidad": "canal",
+};
+
+export function MobileDashboardNav({ isAdmin, verPrivadas = false, sinLeer }: { isAdmin: boolean; verPrivadas?: boolean; sinLeer?: { dm: number; canal: number } }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
 
@@ -73,7 +83,10 @@ export function MobileDashboardNav({ isAdmin, verPrivadas = false }: { isAdmin: 
                 const on = active(item.href, item.exact);
                 return (
                   <Link key={item.href} href={item.href as never} className={'mn-op' + (on ? ' es-activo' : '')}>
-                    <span className="mn-op-ico"><item.Icon size={18} strokeWidth={2} aria-hidden="true" /></span>
+                    <span className="mn-op-ico">
+                      <item.Icon size={18} strokeWidth={2} aria-hidden="true" />
+                      {CONTADOR_DE[item.href] && <ContadorChat tipo={CONTADOR_DE[item.href]} inicial={sinLeer?.[CONTADOR_DE[item.href]] ?? 0} className="chat-globo--ico" />}
+                    </span>
                     {item.label}
                   </Link>
                 );
@@ -95,7 +108,10 @@ export function MobileDashboardNav({ isAdmin, verPrivadas = false }: { isAdmin: 
             const on = active(item.href, item.exact);
             return (
               <Link key={item.href} href={item.href as never} className={'mn-item' + (on ? ' es-activo' : '')} aria-current={on ? 'page' : undefined}>
-                <span className="mn-item-ico"><item.Icon size={19} strokeWidth={on ? 2.4 : 2} aria-hidden="true" /></span>
+                <span className="mn-item-ico">
+                  <item.Icon size={19} strokeWidth={on ? 2.4 : 2} aria-hidden="true" />
+                  {CONTADOR_DE[item.href] && <ContadorChat tipo={CONTADOR_DE[item.href]} inicial={sinLeer?.[CONTADOR_DE[item.href]] ?? 0} className="chat-globo--ico" />}
+                </span>
                 {item.label}
               </Link>
             );

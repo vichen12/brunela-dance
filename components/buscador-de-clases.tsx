@@ -36,9 +36,11 @@ const MAXIMO = 8;
 const TEXTOS = {
   clase: { lista: "Clases que coinciden", ninguna: "Ninguna clase coincide", abre: "abre la clase", unidad: "min", estado: { published: "Publicada", draft: "Borrador", archived: "Archivada" } },
   plan: { lista: "Planes que coinciden", ninguna: "Ningún plan coincide", abre: "abre el plan", unidad: "días", estado: { published: "Publicado", draft: "Borrador", archived: "Archivado" } },
+  // Alumnas: `titulo` = nombre, `slug` = correo, `categorias` = su plan.
+  alumna: { lista: "Alumnas que coinciden", ninguna: "Ninguna alumna coincide", abre: "abre su ficha", unidad: "", estado: { published: "", draft: "", archived: "" } },
 } as const;
 
-export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: string; placeholder: string; clases: ClaseParaBuscar[]; de?: "clase" | "plan" }) {
+export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: string; placeholder: string; clases: ClaseParaBuscar[]; de?: "clase" | "plan" | "alumna" }) {
   const t = TEXTOS[de];
   const router = useRouter();
   const idLista = useId();
@@ -52,7 +54,11 @@ export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: 
 
   function abrirClase(c: ClaseParaBuscar) {
     setAbierto(false);
-    router.push((de === "plan" ? `/admin/programs/${encodeURIComponent(c.id)}` : urlParaEditarClase(c.id)) as never);
+    router.push((
+      de === "plan" ? `/admin/programs/${encodeURIComponent(c.id)}`
+      : de === "alumna" ? `/admin/users/${encodeURIComponent(c.id)}`
+      : urlParaEditarClase(c.id)
+    ) as never);
   }
 
   function alTeclear(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -128,14 +134,24 @@ export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: 
                     onMouseEnter={() => setMarcada(i)}
                   >
                     <span className="bcl-mini">
-                      {c.portada ? <img src={c.portada} alt="" loading="lazy" /> : <Play size={14} strokeWidth={2} fill="currentColor" aria-hidden="true" />}
+                      {de === "alumna"
+                        ? <span className="bcl-inicial">{(c.titulo || c.slug)[0]?.toUpperCase()}</span>
+                        : c.portada ? <img src={c.portada} alt="" loading="lazy" /> : <Play size={14} strokeWidth={2} fill="currentColor" aria-hidden="true" />}
                     </span>
                     <span className="bcl-txt">
                       <span className="bcl-titulo">{c.titulo || c.slug}</span>
-                      {c.categorias && <span className="bcl-sub">{c.categorias}</span>}
+                      {de === "alumna"
+                        ? <span className="bcl-sub">{c.slug}</span>
+                        : c.categorias && <span className="bcl-sub">{c.categorias}</span>}
                     </span>
-                    <span className={"bcl-chip " + st.clase}>{t.estado[c.estado] ?? st.label}</span>
-                    <span className="bcl-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {c.duracionMin} {t.unidad}</span>
+                    {de === "alumna" ? (
+                      <span className="bcl-chip bcl-chip--pub">{c.categorias}</span>
+                    ) : (
+                      <>
+                        <span className={"bcl-chip " + st.clase}>{t.estado[c.estado] ?? st.label}</span>
+                        <span className="bcl-dur"><Clock size={11} strokeWidth={2.4} aria-hidden="true" /> {c.duracionMin} {t.unidad}</span>
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -152,6 +168,8 @@ export function BuscadorDeClases({ q, placeholder, clases, de = "clase" }: { q: 
 }
 
 const CSS = `
+.bcl-inicial { width: 100%; height: 100%; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: var(--pink-deep); background: linear-gradient(135deg, var(--melocoton, #FFD9C4), var(--pink-soft, #FFDADA)); }
+
 .bcl { position: relative; }
 /* La barra del buscador por ENCIMA de la lista de clases: sin esto el panel de
    sugerencias quedaba detras de las tarjetas (cada una arma su propia capa). */

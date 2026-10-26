@@ -4,6 +4,8 @@ import { AdminHeader } from "@/components/admin-header";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
 import { cargarRecordatoriosAdmin, recordatoriosComoNotificaciones } from "@/src/features/admin/recordatorios";
+import { getChatsSinLeer, chatsComoNotificaciones } from "@/src/features/studio/chat-sin-leer";
+import { ChatAvisosVivo } from "@/components/chat-avisos";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +14,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const nombre =
     profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "admin";
   // La foto de perfil, para el avatar de la cabecera y del menu.
-  const [{ data: fotoData }, recordatorios] = await Promise.all([
+  const [{ data: fotoData }, recordatorios, chats] = await Promise.all([
     (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
     // Campanita de la cabecera: enlaces sin cargar, la clase de hoy y las que
     // faltan completar. Memoizado: /admin y /admin/live lo piden en el mismo render.
     cargarRecordatoriosAdmin(),
+    // Lo que le escribieron: chats directos y canales.
+    getChatsSinLeer(user.id, true),
   ]);
+  const chatPorSala = Object.fromEntries(chats.salas.map((s) => [s.roomId, s.noLeidos]));
+  const sinLeer = {
+    dm: chats.salas.filter((s) => s.tipo === "dm").reduce((n, s) => n + s.noLeidos, 0),
+    canal: chats.salas.filter((s) => s.tipo === "canal").reduce((n, s) => n + s.noLeidos, 0),
+  };
   const foto = fotoData?.avatar_url ?? null;
 
   // overflow-x: clip y no hidden: hidden rompe position: sticky de adentro.
@@ -32,10 +41,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <input type="checkbox" id="menu-admin" className="adm-toggle" tabIndex={-1} aria-hidden="true" />
       <label htmlFor="menu-admin" className="adm-velo" aria-hidden="true" />
       <div className="adm-lateral">
-        <AdminSidebar nombre={nombre} foto={foto} />
+        <AdminSidebar nombre={nombre} foto={foto} sinLeer={sinLeer} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} foto={foto} recordatorios={recordatoriosComoNotificaciones(recordatorios)} />
+        <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} foto={foto} recordatorios={[...chatsComoNotificaciones(chats, true), ...recordatoriosComoNotificaciones(recordatorios)]} />
+        <ChatAvisosVivo userId={user.id} porSala={chatPorSala} tipos={chats.tipos} />
         <div className="zona-app adm-contenido" style={{ flex: 1, padding: "32px 36px", overflowX: "hidden" }}>
           {children}
         </div>
