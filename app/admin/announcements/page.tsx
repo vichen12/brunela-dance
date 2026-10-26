@@ -2,6 +2,8 @@ import { Desplegable } from "@/components/desplegable";
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { destinatariasDelAnuncio, mandarAnuncio } from "@/src/features/correos/anuncio";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
@@ -33,20 +35,39 @@ async function createAnnouncementAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
 
-  const { error } = await supabase.from("studio_announcements").insert({
+  const { data: creado, error } = await supabase.from("studio_announcements").insert({
     title: (fd.get("title") as string).trim(),
     content: (fd.get("content") as string).trim(),
     tier_target: (fd.get("tierTarget") as string) || "all",
     is_active: true,
     expires_at: fd.get("expiresAt") ? new Date(fd.get("expiresAt") as string).toISOString() : null,
     created_by: user.id,
-  });
+  }).select("id, title, content, tier_target").single<{ id: string; title: string; content: string; tier_target: string }>();
 
-  if (error) redirect(`/admin/announcements?error=${encodeURIComponent(error.message)}` as never);
+  if (error || !creado) redirect(`/admin/announcements?error=${encodeURIComponent(error?.message ?? "No se pudo publicar")}` as never);
+
+  // Tambien por mail (pedido 2026-10-26), si no destildo la casilla. La lista
+  // se arma ahora (para decir a cuantas) y el envio corre en after(): Brunela
+  // no espera. Un fallo del mail nunca deshace el anuncio.
+  let mensaje = "Anuncio publicado.";
+  if (fd.get("porMail") === "si") {
+    try {
+      const destinatarias = await destinatariasDelAnuncio(supabase, creado);
+      if (destinatarias.length > 0) {
+        after(() => mandarAnuncio(supabase, creado, destinatarias).then(() => undefined));
+        mensaje += ` Le llega por mail a ${destinatarias.length === 1 ? "1 alumna" : `${destinatarias.length} alumnas`}.`;
+      } else {
+        mensaje += " No había alumnas de ese plan para mandarle el mail.";
+      }
+    } catch (e) {
+      console.error("[anuncio] no se pudo armar la lista:", e instanceof Error ? e.message : String(e));
+      mensaje += " El mail no salió: no se pudo armar la lista.";
+    }
+  }
 
   revalidatePath("/admin/announcements");
   revalidatePath("/dashboard");
-  redirect("/admin/announcements?success=Anuncio+publicado" as never);
+  redirect(`/admin/announcements?success=${encodeURIComponent(mensaje)}` as never);
 }
 
 async function deactivateAnnouncementAction(fd: FormData) {
@@ -176,6 +197,10 @@ export default async function AdminAnnouncementsPage({
               <span className="pf-etq">Vence el <small>opcional</small></span>
               <input className="an-inp" name="expiresAt" type="datetime-local" />
             </label>
+            <label className="an-mail">
+              <input type="checkbox" name="porMail" value="si" defaultChecked />
+              <span>Mandarlo también por mail <small>a las alumnas de ese plan que no se dieron de baja</small></span>
+            </label>
             <BotonEnviar className="pf-guardar">
               <Send size={15} strokeWidth={2.4} aria-hidden="true" /> Publicar anuncio
             </BotonEnviar>
@@ -253,6 +278,9 @@ export default async function AdminAnnouncementsPage({
 }
 
 const CSS = `
+.an-mail { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 800; color: var(--ink); }
+.an-mail input { width: 18px; height: 18px; accent-color: var(--pink); flex-shrink: 0; cursor: pointer; }
+.an-mail small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
 .an { display: flex; flex-direction: column; }
 .an > section + section { margin-top: 26px; }
 .an-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }

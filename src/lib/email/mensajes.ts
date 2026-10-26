@@ -211,6 +211,32 @@ export function claseNueva(datos: {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Un anuncio del estudio, por mail (src/features/correos/anuncio.ts). El texto
+ * es el que escribio Brunela tal cual: cada linea en blanco, un parrafo.
+ */
+export function anuncio(datos: {
+  nombre?: string | null;
+  titulo: string;
+  contenido: string;
+  urlEstudio: string;
+  urlBaja: string;
+}): CorreoArmado {
+  const parrafos = datos.contenido.split(/\n\s*\n/).map((p) => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
+  return armar(datos.titulo, {
+    preheader: parrafos[0]?.slice(0, 110) ?? "Un anuncio de Brunela",
+    etiqueta: "Anuncio del estudio",
+    titulo: datos.titulo,
+    saludo: saludo(datos.nombre),
+    parrafos: parrafos.length ? parrafos : [datos.titulo],
+    boton: { texto: "Entrar al estudio", url: datos.urlEstudio },
+    motivo: "Recibiste este correo porque tenés una cuenta en Brunela Dance y este anuncio es para tu plan.",
+    baja: { texto: "No quiero más correos de novedades", url: datos.urlBaja },
+  });
+}
+
+// ---------------------------------------------------------------------------
+
 export interface NovedadParaVolver {
   titulo: string;
   /** URL PUBLICA de la foto subida (portadaPublicaDeClase), o null. */

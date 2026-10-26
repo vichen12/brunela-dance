@@ -17,13 +17,16 @@ export type TipoCorreo =
   | "recordatorio_vivo"
   | "invitacion_vivo"
   | "clase_nueva"
-  | "volver_al_estudio";
+  | "volver_al_estudio"
+  | "anuncio";
 
 export const MIGRACION_CORREOS = "20261009_3_correos_enviados.sql";
 /** Agrega el tipo 'clase_nueva' a correos_enviados y profiles.correos_desactivados. */
 export const MIGRACION_CLASE_NUEVA = "20261012_clase_nueva.sql";
 /** Agrega el tipo 'volver_al_estudio' a correos_enviados. */
 export const MIGRACION_VOLVER = "20261025_2_volver_al_estudio.sql";
+/** Agrega el tipo 'anuncio' a correos_enviados y a correos_desactivados. */
+export const MIGRACION_ANUNCIOS = "20261026_2_anuncios_por_mail.sql";
 
 /**
  * La tabla no existe todavia: la duena no corrio la migracion.
@@ -61,6 +64,8 @@ export const claves = {
   claseNueva: (videoId: string, alumnaId: string) => `clase-nueva:${videoId}:${alumnaId}`,
   /** Una por alumna y DIA (Madrid). Los 14 dias entre una y otra los mira motivoNoRecibeVolver. */
   volver: (alumnaId: string, ahoraIso: string) => `volver:${alumnaId}:${diaMadrid(ahoraIso)}`,
+  /** Una por anuncio y alumna, para siempre. */
+  anuncio: (anuncioId: string, alumnaId: string) => `anuncio:${anuncioId}:${alumnaId}`,
 };
 
 // ─── Acceso gratis ─────────────────────────────────────────────────────────
@@ -183,11 +188,11 @@ export function alumnaParaBienvenida(
 // opcionales: no estan en ninguna de las dos.
 
 /** Los tipos que una alumna puede apagar desde Mi perfil (fuera de clase_nueva). */
-export const TIPOS_DESACTIVABLES = ["recordatorio_vivo", "invitacion_vivo", "gratis_por_vencer", "gratis_terminado"] as const;
+export const TIPOS_DESACTIVABLES = ["recordatorio_vivo", "invitacion_vivo", "gratis_por_vencer", "gratis_terminado", "anuncio"] as const;
 export type TipoDesactivable = (typeof TIPOS_DESACTIVABLES)[number];
 
 export type InterruptorDeCorreo = {
-  campo: "clase_nueva" | "recordatorio_vivo" | "invitacion_vivo" | "acceso_gratis";
+  campo: "clase_nueva" | "anuncio" | "recordatorio_vivo" | "invitacion_vivo" | "acceso_gratis";
   titulo: string;
   descripcion: string;
   /** Lo que se guarda en correos_desactivados si lo apaga. Vacio = va por las columnas de marketing. */
@@ -197,6 +202,7 @@ export type InterruptorDeCorreo = {
 /** Los interruptores de Mi perfil. "Acceso gratis" apaga los dos avisos juntos. */
 export const INTERRUPTORES_DE_CORREO: readonly InterruptorDeCorreo[] = [
   { campo: "clase_nueva", titulo: "Clases nuevas", descripcion: "Un correo cuando Brunela sube una clase que podés ver.", tipos: [] },
+  { campo: "anuncio", titulo: "Anuncios del estudio", descripcion: "Cuando Brunela publica un anuncio para tu plan.", tipos: ["anuncio"] },
   { campo: "recordatorio_vivo", titulo: "Recordatorio el día de tu clase en vivo", descripcion: "Esa mañana, si reservaste lugar en una clase en vivo.", tipos: ["recordatorio_vivo"] },
   { campo: "invitacion_vivo", titulo: "Invitaciones de Brunela a clases en vivo", descripcion: "Cuando Brunela te invita a una clase que no está en tu plan.", tipos: ["invitacion_vivo"] },
   { campo: "acceso_gratis", titulo: "Avisos de tu acceso gratis", descripcion: "Unos días antes de que termine, y cuando terminó.", tipos: ["gratis_por_vencer", "gratis_terminado"] },

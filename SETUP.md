@@ -90,6 +90,16 @@ no es el que devuelve `ls`:
                                                + un indice y una funcion
                                                nueva solo para service_role.
                                                No redefine nada
+41. 20261026_chat_lecturas.sql             <-- al final; tabla nueva (hasta
+                                               donde leyo cada persona cada
+                                               chat). Solo necesita chat_rooms.
+                                               No redefine nada
+42. 20261026_2_anuncios_por_mail.sql       <-- DESPUES de la 40 (vuelve a
+                                               cambiar el CHECK de tipo de
+                                               correos_enviados: lista de la
+                                               40 + 'anuncio'; y el de
+                                               correos_desactivados + 'anuncio').
+                                               No redefine nada
 ```
 
 > **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin

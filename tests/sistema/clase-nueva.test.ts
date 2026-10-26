@@ -382,12 +382,12 @@ describe("mandarClaseNueva: por lotes y nunca dos veces", () => {
 
 describe("Mis correos: lo que apago cada alumna", () => {
   it("los interruptores: clases nuevas va por marketing; acceso gratis apaga los dos avisos", () => {
-    expect(INTERRUPTORES_DE_CORREO.map((i) => i.campo)).toEqual(["clase_nueva", "recordatorio_vivo", "invitacion_vivo", "acceso_gratis"]);
-    expect(desactivadosDesdeInterruptores(new Set(["clase_nueva", "recordatorio_vivo", "invitacion_vivo", "acceso_gratis"]))).toEqual([]);
+    expect(INTERRUPTORES_DE_CORREO.map((i) => i.campo)).toEqual(["clase_nueva", "anuncio", "recordatorio_vivo", "invitacion_vivo", "acceso_gratis"]);
+    expect(desactivadosDesdeInterruptores(new Set(["clase_nueva", "anuncio", "recordatorio_vivo", "invitacion_vivo", "acceso_gratis"]))).toEqual([]);
     expect(desactivadosDesdeInterruptores(new Set(["clase_nueva"]))).toEqual([
-      "recordatorio_vivo", "invitacion_vivo", "gratis_por_vencer", "gratis_terminado",
+      "anuncio", "recordatorio_vivo", "invitacion_vivo", "gratis_por_vencer", "gratis_terminado",
     ]);
-    expect(desactivadosDesdeInterruptores(new Set(["recordatorio_vivo", "invitacion_vivo"]))).toEqual(["gratis_por_vencer", "gratis_terminado"]);
+    expect(desactivadosDesdeInterruptores(new Set(["anuncio", "recordatorio_vivo", "invitacion_vivo"]))).toEqual(["gratis_por_vencer", "gratis_terminado"]);
     // clase_nueva NUNCA va a la lista.
     expect(desactivadosDesdeInterruptores(new Set())).not.toContain("clase_nueva");
   });
@@ -472,7 +472,14 @@ describe("la migracion", () => {
     const m = sql.match(/correos_desactivados <@ array\[([^\]]*)\]::text\[\]/);
     expect(m).not.toBeNull();
     const permitidos = m![1].split(",").map((x) => x.trim().replace(/'/g, ""));
-    expect(new Set(permitidos)).toEqual(new Set(TIPOS_DESACTIVABLES));
+    // 'anuncio' se sumo despues (20261026_2_anuncios_por_mail.sql): esta
+    // migracion admite los de su epoca, y la ultima que redefine el CHECK
+    // tiene que coincidir con TIPOS_DESACTIVABLES.
+    expect(new Set([...permitidos, "anuncio"])).toEqual(new Set(TIPOS_DESACTIVABLES));
+    const ultima = sinComentariosSql(leer("supabase/migrations/20261026_2_anuncios_por_mail.sql"))
+      .match(/correos_desactivados <@ array\[([^\]]*)\]::text\[\]/)![1]
+      .split(",").map((x) => x.trim().replace(/'/g, ""));
+    expect(new Set(ultima)).toEqual(new Set(TIPOS_DESACTIVABLES));
     expect(permitidos).not.toContain("clase_nueva");
     expect(sql).not.toMatch(/array_length/);
   });
