@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { leerOfertasVigentes, type OfertaPack } from "@/src/features/studio/ofertas";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
 import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, puedeComprarPack, textoSoloPara } from "@/src/features/studio/packs-reglas";
@@ -33,6 +34,8 @@ export type PackTienda = {
    * boton a Mi plan): quien lo impone es crearCheckoutDePack.
    */
   puedeComprar: boolean;
+  /** Oferta vigente (20261026_3), o null. */
+  oferta: OfertaPack | null;
 };
 
 /**
@@ -66,7 +69,7 @@ export async function getPacksTienda(tierActual: string | null = null): Promise<
   // todas las alumnas, y sin este filtro Brunela veria "Ya es tuyo" en los
   // packs que compro cualquiera.
   const { data: { user } } = await supabase.auth.getUser();
-  const [{ data: packs }, { data: compras }, { data: rel }, restricciones] = await Promise.all([
+  const [{ data: packs }, { data: compras }, { data: rel }, restricciones, ofertas] = await Promise.all([
     supabase
       .from("packs")
       .select("id, slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, is_published, stripe_price_id_test, stripe_price_id_live")
@@ -75,6 +78,7 @@ export async function getPacksTienda(tierActual: string | null = null): Promise<
     supabase.from("pack_purchases").select("pack_id, purchased_at").eq("user_id", user?.id ?? "00000000-0000-0000-0000-000000000000"),
     supabase.from("pack_videos").select("pack_id"),
     getRestriccionesDePacks(),
+    leerOfertasVigentes(supabase),
   ]);
   const comprado = new Map(((compras ?? []) as { pack_id: string; purchased_at: string }[]).map((c) => [c.pack_id, c.purchased_at]));
   const cuantas = ((rel ?? []) as { pack_id: string }[]).reduce<Record<string, number>>((a, r) => { a[r.pack_id] = (a[r.pack_id] ?? 0) + 1; return a; }, {});
@@ -96,6 +100,7 @@ export async function getPacksTienda(tierActual: string | null = null): Promise<
       compradoEl: comprado.get(p.id) ?? null,
       soloPara: textoSoloPara(restricciones.get(p.id)),
       puedeComprar: puedeComprarPack(tierActual, restricciones.get(p.id)),
+      oferta: ofertas.get(p.id) ?? null,
     }));
 }
 

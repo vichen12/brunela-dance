@@ -8,6 +8,8 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-precio";
 import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
+import { esFaltaDeColumnaOferta, ofertaVigente } from "@/src/features/studio/ofertas";
+import { isoAMadrid } from "@/src/features/studio/sesiones-privadas-reglas";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, planesDeCompraEnTexto } from "@/src/features/studio/packs-reglas";
 
@@ -70,6 +72,17 @@ export default async function AdminPacksPage({
       // pantalla sin ningun pack. Asi, sin ella, el control avisa y listo.
       supabase.from("packs").select("id, planes_que_pueden_comprar"),
     ]);
+  // La oferta, aparte y tolerante (20261026_3), por la misma razon.
+  const ofertasRes = await supabase.from("packs").select("id, price_cents, oferta_precio_cents, oferta_hasta");
+  const faltaMigracionOferta = !!ofertasRes.error && esFaltaDeColumnaOferta(ofertasRes.error);
+  const ofertaDe = new Map(
+    ((ofertasRes.data ?? []) as { id: string; price_cents: number; oferta_precio_cents: number | null; oferta_hasta: string | null }[])
+      .filter((f) => f.oferta_precio_cents && f.oferta_hasta)
+      .map((f) => {
+        const m = isoAMadrid(f.oferta_hasta!);
+        return [f.id, { precioCentimos: f.oferta_precio_cents!, hastaLocal: `${m.fecha}T${m.hora}`, vigente: !!ofertaVigente(f) }];
+      })
+  );
 
   const faltaMigracionPlanes = !!planesRes.error && esFaltaDeColumnaPlanes(planesRes.error);
   if (planesRes.error && !faltaMigracionPlanes) console.error("[admin/packs] planes que pueden comprar:", planesRes.error.message);
@@ -105,7 +118,7 @@ export default async function AdminPacksPage({
   //    afirmaria a tsc que el dato ya viene de la base y no habria error: el
   //    aviso quedaria en undefined y simplemente no se dibujaria nunca. Un cast
   //    de mas es una comprobacion de menos.
-  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive" | "planesQuePuedenComprar" | "faltaMigracionPlanes">;
+  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive" | "planesQuePuedenComprar" | "faltaMigracionPlanes" | "oferta" | "faltaMigracionOferta">;
 
   // Los avisos se resuelven ACA, en el servidor, y bajan como objeto plano.
   // Todos en paralelo: en serie serian dos viajes a Stripe por cada pack.
@@ -126,6 +139,8 @@ export default async function AdminPacksPage({
         avisoLive: live ? leerVerificacion(live, p.price_cents, p.currency) : null,
         planesQuePuedenComprar: planesDe.get(p.id) ?? null,
         faltaMigracionPlanes,
+        oferta: ofertaDe.get(p.id) ?? null,
+        faltaMigracionOferta,
       };
     })
   );

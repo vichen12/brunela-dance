@@ -100,6 +100,10 @@ no es el que devuelve `ls`:
                                                40 + 'anuncio'; y el de
                                                correos_desactivados + 'anuncio').
                                                No redefine nada
+43. 20261026_3_ofertas_de_packs.sql        <-- al final; dos columnas en packs
+                                               (oferta_precio_cents, oferta_hasta)
+                                               + CHECK. NO toca la vista
+                                               packs_publicos. No redefine nada
 ```
 
 > **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin

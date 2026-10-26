@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { ofertaVigente } from "@/src/features/studio/ofertas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAppUrl, getStripeServerEnv, hasStripeServerEnv } from "@/src/lib/env";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -273,8 +274,40 @@ export async function crearCheckoutDePack(a: {
   const appUrl = getAppUrl();
   const customerId = await clienteDeStripe(stripe, admin, a.user);
 
+  // OFERTA POR TIEMPO LIMITADO (20261026_3). Se lee ACA, con la fecha de la
+  // base: la cuenta regresiva de la pantalla no decide nada. Consulta aparte y
+  // tolerante: sin la migracion no hay oferta y se cobra el precio normal.
+  //
+  // El descuento va como cupon de Stripe por la diferencia, con un id fijo
+  // por (pack, precio, fin): la primera compra lo crea y las demas lo reusan.
+  // Vence solo (redeem_by) aunque alguien deje el checkout abierto.
+  const { data: filaOferta } = await admin
+    .from("packs")
+    .select("price_cents, oferta_precio_cents, oferta_hasta")
+    .eq("id", pack.id)
+    .maybeSingle<{ price_cents: number; oferta_precio_cents: number | null; oferta_hasta: string | null }>();
+  const oferta = filaOferta ? ofertaVigente(filaOferta) : null;
+  let cupon: string | null = null;
+  if (oferta) {
+    const finSeg = Math.floor(Date.parse(oferta.hasta) / 1000);
+    const idCupon = `oferta-${pack.id.slice(0, 8)}-${oferta.precioCentimos}-${finSeg}`;
+    try {
+      cupon = (await stripe.coupons.retrieve(idCupon)).id;
+    } catch {
+      cupon = (await stripe.coupons.create({
+        id: idCupon,
+        amount_off: pack.price_cents - oferta.precioCentimos,
+        currency: pack.currency.toLowerCase(),
+        duration: "once",
+        redeem_by: finSeg,
+        name: `Oferta: ${pack.name_i18n?.es ?? pack.slug}`.slice(0, 40),
+      })).id;
+    }
+  }
+
   const session = await stripe.checkout.sessions.create(
     parametrosCheckoutPack({
+      cupon,
       userId: a.user.id,
       pack: { id: pack.id, slug: pack.slug },
       priceId,

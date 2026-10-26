@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrecioConOferta } from "@/components/precio-con-oferta";
 import { ArrowRight, Check, Lock, Package } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
@@ -59,7 +60,7 @@ export default async function PacksPage() {
                     {p.soloPara && !p.compradoEl && <span className="pk-solo">{!p.puedeComprar && <Lock size={12} strokeWidth={2.6} aria-hidden="true" />}{p.soloPara}</span>}
                     {p.descripcion && <p className="pk-desc">{p.descripcion}</p>}
                     <div className="pk-pie">
-                      {p.compradoEl ? <span /> : <span className="pk-precio">{precio(p.precioCentimos, p.moneda)}<small>pago único</small></span>}
+                      {p.compradoEl ? <span /> : <span className="pk-precio">{p.oferta ? <PrecioConOferta centimos={p.precioCentimos} moneda={p.moneda} oferta={p.oferta} /> : precio(p.precioCentimos, p.moneda)}<small>pago único</small></span>}
                       <span className={"pk-ver" + (p.compradoEl ? " es-suave" : !p.puedeComprar ? " es-plan" : "")}>
                         {p.compradoEl ? "Ver mis clases" : "Ver el pack"} <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" />
                       </span>

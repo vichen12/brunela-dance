@@ -4147,6 +4147,14 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
   .sb--compacta .sb-perfil { justify-content: center; padding: 6px; border: 0; background: transparent; }
 }
 @media (max-width: 900px) { .sb-compactar { display: none; } }
+/* Precio con oferta por tiempo limitado (components/precio-con-oferta.tsx). */
+.po { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.po-fila { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; }
+.po-antes { font-size: .72em; font-weight: 700; color: var(--muted); text-decoration-thickness: 2px; text-decoration-color: rgba(230,79,85,.7); }
+.po-ahora { color: var(--pink-deep); }
+.po-pct { align-self: center; padding: 2px 8px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11.5px; font-weight: 900; letter-spacing: 0; font-family: var(--font-body), sans-serif; }
+.po-fin { display: inline-flex; padding: 3px 10px; border-radius: 99px; background: #FFF0E6; color: #B5502C; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; font-family: var(--font-body), sans-serif; letter-spacing: 0; }
+
 /* Mensajes sin leer (components/chat-avisos.tsx). */
 .chat-globo { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; display: inline-grid; place-items: center; background: var(--pink); color: #fff; font-size: 11px; font-weight: 900; line-height: 1; box-shadow: 0 6px 12px -6px rgba(230,79,85,.9); animation: chat-globo-entra .35s var(--curva) both; }
 @keyframes chat-globo-entra { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }

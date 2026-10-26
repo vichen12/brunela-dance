@@ -14,6 +14,7 @@ import { ArcGalleryHero } from "@/components/ui/arc-gallery-hero-component";
 import { BrunelaFooter } from "@/components/ui/hover-footer";
 import { PricingPlans } from "@/components/pricing-plans";
 import { PacksPublicos, type PackPublico } from "@/components/packs-publicos";
+import { leerOfertasVigentes } from "@/src/features/studio/ofertas";
 import { getSubscriptionCatalog } from "@/src/lib/stripe/catalog";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { normalizarPlanesDeCompra, planesDeCompraEnTexto } from "@/src/features/studio/packs-reglas";
@@ -330,7 +331,7 @@ async function packsDeLaPortada(): Promise<PackPublico[]> {
     const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
     const columna = modoEsLive ? "stripe_price_id_live" : "stripe_price_id_test";
 
-    const [{ data }, { data: vendibles }, restringidos] = await Promise.all([
+    const [{ data }, { data: vendibles }, restringidos, ofertas] = await Promise.all([
       supabase
         .from("packs_publicos")
         .select("slug, name_i18n, description_i18n, price_cents, currency, cover_image_url, is_featured, cantidad_clases")
@@ -355,12 +356,14 @@ async function packsDeLaPortada(): Promise<PackPublico[]> {
                   .map((f) => [f.slug, planesDeCompraEnTexto(f.planes_que_pueden_comprar)])
               )
         ),
+      // Ofertas por tiempo limitado (20261026_3): aparte y tolerante, como arriba.
+      leerOfertasVigentes(supabase),
     ]);
 
     const sePuedeCobrar = new Set(((vendibles ?? []) as { slug: string }[]).map((p) => p.slug));
     return ((data ?? []) as PackPublico[])
       .filter((p) => sePuedeCobrar.has(p.slug))
-      .map((p) => ({ ...p, solo_para: restringidos.get(p.slug) ?? null }));
+      .map((p) => ({ ...p, solo_para: restringidos.get(p.slug) ?? null, oferta: ofertas.get(p.slug) ?? null }));
   } catch {
     return [];
   }

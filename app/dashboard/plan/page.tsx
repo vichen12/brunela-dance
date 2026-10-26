@@ -8,6 +8,7 @@ import { estaVencido } from "@/src/features/studio/acceso-gratis-reglas";
 import { FranjaGratis, TarjetaGratis } from "@/components/acceso-gratis-alumna";
 import { getRestriccionesDePacks } from "@/src/features/studio/packs";
 import { puedeComprarPack, textoSoloPara } from "@/src/features/studio/packs-reglas";
+import { leerOfertasVigentes } from "@/src/features/studio/ofertas";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function PlanPage() {
     { data: relaciones },
     acceso,
     restricciones,
+    ofertas,
   ] =
     await Promise.all([
       getCurrentProfile(user.id),
@@ -52,6 +54,8 @@ export default async function PlanPage() {
       // Packs "solo para ..." (20261009_4). Consulta aparte y tolerante: sin la
       // migracion llega vacia y todos los packs son para todas.
       getRestriccionesDePacks(),
+      // Ofertas por tiempo limitado (20261026_3), tolerante.
+      leerOfertasVigentes(supabase),
     ]);
 
   const compradosEl = new Map(
@@ -107,6 +111,7 @@ export default async function PlanPage() {
     compradoEl: compradosEl.get(p.id) ?? null,
     soloPara: textoSoloPara(restricciones.get(p.id)),
     puedeComprar: puedeComprarPack(tierPerfil, restricciones.get(p.id)),
+    oferta: ofertas.get(p.id) ?? null,
   }));
 
   // ACCESO GRATIS. Mientras dura, su membership_tier es el plan regalado, pero

@@ -86,9 +86,16 @@ export function parametrosCheckoutPack(a: {
   priceId: string;
   customerId: string;
   destinos: Destinos;
+  /**
+   * Cupon de la oferta por tiempo limitado, si el pack esta en oferta
+   * (src/features/studio/ofertas.ts). Stripe no deja combinar un descuento
+   * con "agregar codigo promocional": con oferta, no hay campo de codigo.
+   */
+  cupon?: string | null;
 }): Stripe.Checkout.SessionCreateParams {
   return {
     mode: "payment",
+    ...(a.cupon ? { discounts: [{ coupon: a.cupon }] } : { allow_promotion_codes: true }),
     customer: a.customerId,
     line_items: [{ price: a.priceId, quantity: 1 }],
     // 🔴 En un pago unico NO hay objeto suscripcion: el webhook lo lee de la
@@ -101,7 +108,6 @@ export function parametrosCheckoutPack(a: {
     },
     success_url: a.destinos.successUrl,
     cancel_url: a.destinos.cancelUrl,
-    allow_promotion_codes: true,
     custom_text: { submit: { message: TEXTO_LEGAL_PACK } },
   };
 }

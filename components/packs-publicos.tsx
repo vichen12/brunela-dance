@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Lock, Package } from "lucide-react";
 import { T } from "@/components/language-provider";
+import { PrecioConOferta } from "@/components/precio-con-oferta";
+import type { OfertaPack } from "@/src/features/studio/ofertas";
 
 /**
  * Los packs, en la portada pública.
@@ -29,6 +31,8 @@ export type PackPublico = {
    * lista) que tolera que la migracion 20261009_4 no este corrida.
    */
   solo_para?: string | null;
+  /** Oferta vigente (20261026_3), leida aparte en app/page.tsx. */
+  oferta?: OfertaPack | null;
 };
 
 function precio(centimos: number, moneda: string) {
@@ -101,7 +105,7 @@ export function PacksPublicos({ packs }: { packs: PackPublico[] }) {
               )}
 
               <p className="lp-pack-precio">
-                {precio(p.price_cents, p.currency)}
+                {p.oferta ? <PrecioConOferta centimos={p.price_cents} moneda={p.currency} oferta={p.oferta} /> : precio(p.price_cents, p.currency)}
                 <span>
                   <T id="packs.oneTime" />
                 </span>

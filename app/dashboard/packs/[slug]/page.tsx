@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrecioConOferta } from "@/components/precio-con-oferta";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Clock, Lock, Play } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
@@ -56,7 +57,7 @@ export default async function PackPage({ params }: { params: Promise<{ slug: str
                 </div>
               ) : (
                 <>
-                  <span className="pk-precio">{precio(pack.precioCentimos, pack.moneda)}</span>
+                  <span className="pk-precio">{pack.oferta ? <PrecioConOferta centimos={pack.precioCentimos} moneda={pack.moneda} oferta={pack.oferta} /> : precio(pack.precioCentimos, pack.moneda)}</span>
                   <ComprarPack slug={pack.slug} etiqueta="Comprar el pack" />
                 </>
               )}

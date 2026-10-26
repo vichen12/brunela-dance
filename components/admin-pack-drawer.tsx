@@ -1,5 +1,5 @@
 "use client";
-import { AlertTriangle, Check, CreditCard, PlayCircle, Plus, Pencil, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Check, CreditCard, PlayCircle, Plus, Pencil, Trash2, Users, X, Zap } from "lucide-react";
 import { SelectorMultiple } from "@/components/selector-multiple";
 import { PLANES } from "@/src/features/studio/catalogo-clases";
 
@@ -14,6 +14,7 @@ import {
   removeVideoFromPackAction,
   updatePackAction,
 } from "@/src/features/admin/packs-actions";
+import { guardarOfertaDePackAction, quitarOfertaDePackAction } from "@/src/features/admin/ofertas-actions";
 
 /**
  * Edicion de un pack, en panel lateral.
@@ -57,7 +58,58 @@ export type PackAdmin = {
   planesQuePuedenComprar: string[] | null;
   /** Falta 20261009_4_packs_por_plan.sql: el control se muestra apagado. */
   faltaMigracionPlanes: boolean;
+  /** La oferta cargada (vigente o vencida), con el fin en hora de Madrid para el campo. */
+  oferta: { precioCentimos: number; hastaLocal: string; vigente: boolean } | null;
+  /** Falta 20261026_3_ofertas_de_packs.sql. */
+  faltaMigracionOferta: boolean;
 };
+
+/**
+ * Oferta por tiempo limitado ("flash sale"). Va FUERA del <form> de datos
+ * (un form dentro de otro lo descarta el parser), igual que las clases.
+ */
+function OfertaDelPack({ pack }: { pack: PackAdmin }) {
+  const o = pack.oferta;
+  return (
+    <section className="adr-caja" style={{ marginTop: 24 }}>
+      <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: "0 0 6px" }}>
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFE2E2", color: "#E64F55" }}>
+          <Zap size={17} strokeWidth={2.2} />
+        </span>
+        Oferta por tiempo limitado
+        {o?.vigente && <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 900, color: "#fff", background: "#E64F55", padding: "4px 11px", borderRadius: 99 }}>En oferta</span>}
+        {o && !o.vigente && <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 800, color: "#8A6F68", background: "#fff", padding: "4px 11px", borderRadius: 99 }}>Terminó</span>}
+      </p>
+      <p style={{ margin: "0 0 14px", fontSize: 13, lineHeight: 1.55, color: "#8A6F68" }}>
+        Un precio más bajo hasta una fecha. Se ve tachado con una cuenta regresiva en la portada, la tienda y Mi plan, y al pagar se cobra el precio de oferta. Cuando llega la fecha, vuelve solo al precio normal.
+      </p>
+      {pack.faltaMigracionOferta ? (
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#B03A3E" }}>Para cargar ofertas falta correr la migración 20261026_3_ofertas_de_packs.sql.</p>
+      ) : (
+        <form action={guardarOfertaDePackAction} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+          <input type="hidden" name="packId" value={pack.id} />
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 120px" }}>
+            <Lbl>Precio de oferta ({pack.currency.toUpperCase()})</Lbl>
+            <input style={inp} name="ofertaPrecio" required inputMode="decimal" pattern={PATRON_PRECIO}
+              defaultValue={o ? String(o.precioCentimos / 100).replace(".", ",") : ""} placeholder="9,90" />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 190px" }}>
+            <Lbl>Termina el (hora de España)</Lbl>
+            <input style={inp} name="ofertaHasta" type="datetime-local" required defaultValue={o?.hastaLocal ?? ""} />
+          </label>
+          <BotonEnviar pendingLabel="Guardando…" style={botonPrincipal}>
+            <Zap size={15} strokeWidth={2.4} aria-hidden="true" /> {o ? "Guardar oferta" : "Poner en oferta"}
+          </BotonEnviar>
+          {o && (
+            <BotonEnviar pendingLabel="Quitando…" formAction={quitarOfertaDePackAction} style={botonBorrar}>
+              <X size={15} strokeWidth={2.4} aria-hidden="true" /> Quitar oferta
+            </BotonEnviar>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
 
 export type ClaseElegible = { id: string; titulo: string };
 
@@ -385,6 +437,7 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
           </div>
         </form>
 
+        <OfertaDelPack pack={pack} />
         <ClasesDelPack pack={pack} elegibles={elegibles} />
       </AdminDrawer>
     </>

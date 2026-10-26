@@ -1,5 +1,7 @@
 'use client';
 import { AlertCircle, CalendarClock, Check, CreditCard, Lock, RotateCcw, Settings, XCircle } from 'lucide-react';
+import { PrecioConOferta } from '@/components/precio-con-oferta';
+import type { OfertaPack } from '@/src/features/studio/ofertas';
 import { AdminCabecera } from '@/components/admin-ui';
 
 import Link from "next/link";
@@ -95,6 +97,8 @@ export type PackDeAlumna = {
   soloPara?: string | null;
   /** Con su plan de hoy, ¿lo puede pagar? El checkout lo impone igual. */
   puedeComprar?: boolean;
+  /** Oferta por tiempo limitado vigente, o null. */
+  oferta?: OfertaPack | null;
 };
 
 export function PlanClient({
@@ -550,10 +554,16 @@ export function PlanClient({
                       )}
 
                       <p className="mp-pack-precio">
-                        {(p.precioCentimos / 100).toLocaleString('es-ES', {
-                          minimumFractionDigits: p.precioCentimos % 100 === 0 ? 0 : 2,
-                        })}{' '}
-                        {p.moneda.toUpperCase()}
+                        {p.oferta && !comprado ? (
+                          <PrecioConOferta centimos={p.precioCentimos} moneda={p.moneda} oferta={p.oferta} />
+                        ) : (
+                          <>
+                            {(p.precioCentimos / 100).toLocaleString('es-ES', {
+                              minimumFractionDigits: p.precioCentimos % 100 === 0 ? 0 : 2,
+                            })}{' '}
+                            {p.moneda.toUpperCase()}
+                          </>
+                        )}
                       </p>
 
                       {comprado ? (
