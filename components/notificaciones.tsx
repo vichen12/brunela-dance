@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlarmClock, Bell, CalendarCheck, CalendarHeart, Check, Link2Off, Gift, Megaphone, MessageCircleHeart, X } from "lucide-react";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
+import { marcarSalasLeidas } from "@/components/chat-avisos";
+import { marcarChatsLeidosAction } from "@/src/features/studio/chat-lecturas-actions";
 
 /**
  * Campanita de notificaciones del area de alumna, arriba a la derecha.
@@ -98,6 +100,16 @@ export function Notificaciones({
     const s = new Set([...vistas, ...items.map((i) => i.id)]);
     setVistas(s);
     try { localStorage.setItem(clave, JSON.stringify([...s].slice(-200))); } catch { /* sin almacenamiento: no pasa nada */ }
+    // Los avisos de CHAT tambien quedan leidos de verdad (2026-10-27): antes
+    // solo se apagaba la campanita y el numerito del menu seguia marcando.
+    // El id de esos avisos es "chat-<sala>-<mensaje>" (chat-sin-leer.ts).
+    const salas = items
+      .filter((i) => i.tipo === "mensaje" && i.id.startsWith("chat-"))
+      .map((i) => i.id.slice(5, 41));
+    if (salas.length) {
+      marcarSalasLeidas(salas);
+      void marcarChatsLeidosAction(salas);
+    }
   }
 
   return (

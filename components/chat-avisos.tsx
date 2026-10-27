@@ -51,6 +51,14 @@ export function salaAbierta(roomId: string | null) {
   estado = { ...estado, abierta: roomId };
 }
 
+/** Varias salas leidas de una (la campanita, "Marcar como leídas"). */
+export function marcarSalasLeidas(roomIds: string[]) {
+  const porSala = { ...estado.porSala };
+  let cambio = false;
+  for (const id of roomIds) if (porSala[id]) { porSala[id] = 0; cambio = true; }
+  if (cambio) cambiar({ ...estado, porSala });
+}
+
 /** Se leyo: el contador de esa sala vuelve a cero. */
 export function marcarSalaLeida(roomId: string) {
   if (!estado.porSala[roomId]) return;
@@ -83,14 +91,39 @@ export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; por
       if (cancelado) return;
       canal = supabase
         .channel(`chat-avisos-${userId}`)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, async (payload) => {
           const m = payload.new as { room_id: string; user_id: string };
           if (!m.room_id || m.user_id === userId) return;
           const mirando = estado.abierta === m.room_id && document.visibilityState === "visible";
           if (mirando) return;
-          // Una sala que no estaba en la lista (Brunela acaba de abrirle un
-          // chat): solo puede ser un chat directo, los canales ya venian.
-          const tipo = estado.tipos[m.room_id] ?? "dm";
+          let tipo = estado.tipos[m.room_id];
+          if (!tipo) {
+            /**
+             * 🔴 UNA SALA QUE NO ESTABA EN LA LISTA (2026-10-27).
+             *
+             * Antes se daba por hecho que era un chat directo nuevo y sumaba.
+             * Pero a una ADMIN, RLS le deja ver TODOS los mensajes: los de
+             * conversaciones ajenas (otra admin con una alumna) tambien
+             * llegaban aca y sumaban a su "Mi chat"/"Mensajes". Eran avisos
+             * fantasma que no se borraban entrando a sus chats ni con "Marcar
+             * como leídas": solo recargando. Ahora se pregunta: suma solo si es
+             * un chat directo DONDE ELLA PARTICIPA o un canal activo.
+             */
+            const { data: sala } = await supabase
+              .from("chat_rooms")
+              .select("type, is_archived, participant_ids")
+              .eq("id", m.room_id)
+              .maybeSingle<{ type: string; is_archived: boolean; participant_ids: string[] | null }>();
+            if (!sala) return;
+            if (sala.type === "dm") {
+              if (!(sala.participant_ids ?? []).includes(userId)) return;
+              tipo = "dm";
+            } else if ((sala.type === "community" || sala.type === "tier") && !sala.is_archived) {
+              tipo = "canal";
+            } else {
+              return;
+            }
+          }
           cambiar({
             ...estado,
             tipos: { ...estado.tipos, [m.room_id]: tipo },
