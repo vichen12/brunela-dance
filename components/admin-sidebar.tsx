@@ -17,7 +17,7 @@ import {
   ChartColumn,
   LayoutGrid, Play, Grid2x2, AlignLeft, FileText, Users, CalendarDays,
   MessageCircleHeart, Shield, Megaphone, Settings, LogOut, Tag, Package, Home, Plus,
-  Lock, UserPlus, Dumbbell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+  Lock, UserPlus, Dumbbell, Gift, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 /**
  * Menú del panel de administración.
@@ -70,6 +70,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       // Crear una alumna vivia solo en un bloque plegado de /admin/users, y la
       // duena no lo encontraba. Abre ese bloque ya desplegado.
       { href: "/admin/users?nueva=1#nueva", label: "Invitar alumna", Icon: UserPlus },
+      { href: "/admin/referidos",     label: "Referidos",        Icon: Gift },
       { href: "/admin/sesiones-privadas", label: "Sesiones privadas", Icon: Lock },
       { href: "/admin/live",          label: "Sesiones en vivo", Icon: CalendarDays },
       // Mensajes y Comunidad vivian mezclados en /dashboard/chat y

@@ -104,6 +104,11 @@ no es el que devuelve `ls`:
                                                (oferta_precio_cents, oferta_hasta)
                                                + CHECK. NO toca la vista
                                                packs_publicos. No redefine nada
+44. 20261026_4_referidos.sql              <-- al final; dos tablas nuevas
+                                               (referidos_codigos, referidos),
+                                               solo SELECT de lo propio para
+                                               authenticated. Necesita is_admin().
+                                               No redefine nada
 ```
 
 > **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin

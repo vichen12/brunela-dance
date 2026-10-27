@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarDays, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { CalendarDays, Gift, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
 import { ContadorChat } from '@/components/chat-avisos';
 
 /**
@@ -30,6 +30,7 @@ const NAV = [
   { href: '/dashboard/documents', label: 'Documentos', exact: false, Icon: FileText },
   { href: '/dashboard/plan',      label: 'Mi plan',    exact: false, Icon: Sparkles },
   { href: '/dashboard/packs', label: 'Packs', exact: false, Icon: Package },
+  { href: '/dashboard/invitar', label: 'Invitar amiga', exact: false, Icon: Gift },
 ];
 
 /** Los que quedan a un toque en la barra. El resto, en la hoja. */

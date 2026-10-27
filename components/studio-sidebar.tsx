@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import {
   CalendarDays, CalendarHeart, FileText, Flower2, House, LayoutGrid, ListOrdered,
-  Lock, LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
+  Gift, Lock, LogOut, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users,
 } from 'lucide-react';
 import { signOutAction } from '@/src/features/auth/actions';
 import { ContadorChat } from '@/components/chat-avisos';
@@ -68,6 +68,8 @@ const NAV: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/plan', label: 'Mi plan', Icon: Sparkles },
       // Los packs se compran en Mi plan; sin este acceso nadie los encontraba.
       { href: '/dashboard/packs', label: 'Packs de clases', Icon: Package },
+      // Programa de referidos (2026-10-26): un mes gratis por cada amiga que paga.
+      { href: '/dashboard/invitar', label: 'Invitá a una amiga', Icon: Gift },
     ],
   },
 ];

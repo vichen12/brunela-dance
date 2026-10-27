@@ -10,6 +10,7 @@ const ROUTES: Record<string, string> = {
   "/admin/videos":        "Clases",
   "/admin/categories":    "Categorías",
   "/admin/materiales":    "Materiales",
+  "/admin/referidos":     "Referidos",
   "/admin/programs":      "Planes de trabajo",
   "/admin/documents":     "Documentos",
   "/admin/users":         "Alumnas",

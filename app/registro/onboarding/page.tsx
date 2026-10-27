@@ -2,6 +2,10 @@ import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { completarOnboardingAction } from "@/src/features/auth/registro";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { anotarReferidaSiCorresponde } from "@/src/features/referidos/servidor";
+import { COOKIE_REFERIDO } from "@/src/features/referidos/reglas";
 import { fuenteSistema } from "@/src/lib/fuente-sistema";
 import { leerAccesoAlEstudio } from "@/src/features/acceso/servidor";
 import { onboardingPideElPago } from "@/src/features/acceso/reglas";
@@ -62,6 +66,11 @@ export default async function OnboardingPage({ searchParams }: Props) {
   // Ya lo completo: no se le vuelve a pedir. Sin esto, la compuerta del layout
   // y esta pantalla podrian rebotarse entre si.
   if (profile?.onboarding_completed) redirect("/dashboard" as never);
+
+  // REFERIDOS: toda cuenta nueva pasa por aca. Si llego con el enlace de una
+  // amiga (cookie de components/guardar-referido.tsx), queda anotada. La regla
+  // (solo cuentas nuevas, nunca a si misma, una vez) vive en servidor.ts.
+  await anotarReferidaSiCorresponde(createSupabaseAdminClient(), user.id, (await cookies()).get(COOKIE_REFERIDO)?.value);
 
   // El plan puede venir por URL (Google) o de la metadata del alta (correo).
   const meta = user.user_metadata as {

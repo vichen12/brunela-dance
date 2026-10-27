@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { premiarReferente, quienPagoEnEvento } from "@/src/features/referidos/servidor";
 import { after, NextResponse } from "next/server";
 import { getStripeServerEnv } from "@/src/lib/env";
 import { getSubscriptionCatalog, resolveTierFromPriceId } from "@/src/lib/stripe/catalog";
@@ -356,6 +357,15 @@ export async function POST(request: Request) {
         // Y el aviso a Brunela: mismo momento, mismo "una sola vez".
         await avisarAdminDeAlta(db, bienvenida, event as unknown as Parameters<typeof avisarAdminDeAlta>[2]);
       });
+    }
+
+    // REFERIDOS: si quien pago fue invitada por una amiga, esa amiga gana un
+    // mes gratis. En after(): no demora ni cambia la respuesta a Stripe, y
+    // premiarReferente nunca lanza. Que se pague UNA vez lo garantiza la fila
+    // (premiado_at), no este evento: Stripe puede reintentarlo.
+    const amigaQuePago = quienPagoEnEvento(event);
+    if (amigaQuePago) {
+      after(() => premiarReferente(createServiceRoleClient(), stripe, amigaQuePago));
     }
 
     // A skip is a correct outcome, not an error, so it is audited as processed.

@@ -22,7 +22,7 @@ export type Notificacion = {
    * invitacion / anuncio / recordatorio: alumna.
    * pendiente / completar (y recordatorio): admin, src/features/admin/recordatorios.ts.
    */
-  tipo: "invitacion" | "anuncio" | "recordatorio" | "pendiente" | "completar" | "mensaje";
+  tipo: "invitacion" | "anuncio" | "recordatorio" | "pendiente" | "completar" | "mensaje" | "premio";
   titulo: string;
   texto: string;
   /** ISO: fecha de la clase o de publicacion. null = no se muestra fecha. */
@@ -201,7 +201,7 @@ export const getNotificaciones = cache(async (userId: string, tier: string, esAd
     anuncios = anuncios.in("tier_target", ["all", ...Object.keys(RANGO).filter((t) => t !== "none" && RANGO[t] <= r)]);
   }
 
-  const [{ data: an }, { data: inv }, cercanas, privadas] = await Promise.all([
+  const [{ data: an }, { data: inv }, cercanas, privadas, { data: premios }] = await Promise.all([
     anuncios,
     supabase
       .from("live_session_invitations")
@@ -210,6 +210,14 @@ export const getNotificaciones = cache(async (userId: string, tier: string, esAd
     getMisClasesCercanas(userId),
     // Sin la migracion 20261009_2 llega vacia: no aparece nada.
     getMisSesionesPrivadas(userId),
+    // Referidos (20261026_4): los meses gratis que gano en los ultimos 30 dias.
+    // Sin la migracion la consulta falla y llega vacia.
+    supabase
+      .from("referidos")
+      .select("referida_id, premiado_at")
+      .eq("referente_id", userId)
+      .eq("estado", "otorgado")
+      .gte("premiado_at", new Date(Date.now() - 30 * 86400000).toISOString()),
   ]);
 
   type Ses = { id: string; slug: string; title_i18n: Record<string, string>; starts_at: string; status: string };
@@ -234,6 +242,15 @@ export const getNotificaciones = cache(async (userId: string, tier: string, esAd
     href: null,
   }));
 
+  const mesesGratis: Notificacion[] = ((premios ?? []) as { referida_id: string; premiado_at: string }[]).map((p) => ({
+    id: "premio-" + p.referida_id,
+    tipo: "premio",
+    titulo: "¡Ganaste un mes gratis!",
+    texto: "Una amiga que invitaste se sumó al estudio. Se te descuenta solo de tu próximo cobro.",
+    cuando: p.premiado_at,
+    href: "/dashboard/invitar",
+  }));
+
   // Los recordatorios van PRIMERO: son lo unico de la lista con hora.
-  return [...recordatoriosPrivadas(privadas.sesiones), ...recordatorios(cercanas), ...invitaciones, ...avisos];
+  return [...recordatoriosPrivadas(privadas.sesiones), ...recordatorios(cercanas), ...mesesGratis, ...invitaciones, ...avisos];
 });

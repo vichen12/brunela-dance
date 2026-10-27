@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bodoni_Moda, Great_Vibes, Montserrat, Roboto } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { PublicLanguageProvider } from "@/components/language-provider";
+import { GuardarReferido } from "@/components/guardar-referido";
 import "./globals.css";
 import "./estilos/landing.css";
 import "./estilos/acceso.css";
@@ -53,6 +54,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body className={`${bodyFont.variable} ${displayFont.variable} ${scriptFont.variable} ${serifFont.variable} ${fuenteSistema.variable} ${fuenteTitulos.variable}`} suppressHydrationWarning>
+        {/* ?ref=<codigo>: guarda la invitacion hasta que se registre (referidos). */}
+        <GuardarReferido />
         <PublicLanguageProvider>
           {children}
         </PublicLanguageProvider>
