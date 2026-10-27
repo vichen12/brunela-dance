@@ -15,6 +15,7 @@ import {
   type PlanPago,
   type TarjetaPlan,
 } from "@/src/features/planes/planes";
+import { ofertaVigente, type OfertaPack } from "@/src/features/studio/ofertas";
 
 export type PackResumen = {
   slug: string;
@@ -22,6 +23,10 @@ export type PackResumen = {
   descripcion: string;
   precio: string;
   clases: number;
+  /** Para mostrar la oferta igual que en la tienda: el normal tachado. */
+  centimos: number;
+  moneda: string;
+  oferta: OfertaPack | null;
 };
 
 export type EleccionDePlan = {
@@ -106,7 +111,18 @@ export async function cargarEleccionDePlan(pedido: {
         .from("pack_videos")
         .select("pack_id", { count: "exact", head: true })
         .eq("pack_id", data.id);
+      // OFERTA (20261026_3): consulta aparte y tolerante, como en el cobro.
+      // Sin esto el alta mostraba el precio normal y Stripe cobraba el de
+      // oferta: la alumna veia 20 € y pagaba 12,50 €.
+      const { data: fo } = await supabase
+        .from("packs")
+        .select("price_cents, oferta_precio_cents, oferta_hasta")
+        .eq("id", data.id)
+        .maybeSingle<{ price_cents: number; oferta_precio_cents: number | null; oferta_hasta: string | null }>();
       pack = {
+        centimos: data.price_cents,
+        moneda: data.currency,
+        oferta: fo ? ofertaVigente(fo) : null,
         slug: data.slug,
         nombre: data.name_i18n?.es ?? data.slug,
         descripcion: data.description_i18n?.es ?? "",

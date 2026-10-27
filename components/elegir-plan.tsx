@@ -1,5 +1,6 @@
 import { Check, Gift, Lock, Package } from "lucide-react";
 import type { EleccionDePlan } from "@/src/features/planes/eleccion";
+import { PrecioConOferta } from "@/components/precio-con-oferta";
 
 /**
  * El selector de plan del final del registro: lo usan el onboarding (paso 4)
@@ -34,7 +35,9 @@ export function ElegirPlan({ eleccion }: { eleccion: EleccionDePlan }) {
               {pack.clases > 0 ? `${pack.clases} ${pack.clases === 1 ? "clase" : "clases"} · ` : ""}pago único · son tuyas para siempre
             </span>
           </span>
-          <span className="ep-pack-precio">{pack.precio}</span>
+          <span className="ep-pack-precio">
+            {pack.oferta ? <PrecioConOferta centimos={pack.centimos} moneda={pack.moneda} oferta={pack.oferta} /> : pack.precio}
+          </span>
         </div>
       </div>
     );
