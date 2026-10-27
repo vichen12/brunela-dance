@@ -13,10 +13,12 @@
  *    solo puede exportar funciones async, y esto es una funcion pura.
  */
 
+/**
+ * Solo el importe. Los codigos de Stripe ya no se escriben a mano desde el
+ * 2026-10-27: los pone asegurarPrecioDePack() despues de guardar.
+ */
 export type CamposDePrecio = {
   price_cents: number;
-  stripe_price_id_test: string | null;
-  stripe_price_id_live: string | null;
 };
 
 /** Devuelve los campos listos para la base, o un motivo legible. */
@@ -33,16 +35,9 @@ export function leerCamposDePrecio(fd: FormData): CamposDePrecio | { fallo: stri
     return { fallo: "El precio tiene que ser mayor que cero." };
   }
 
-  const texto = (campo: string) => {
-    const v = ((fd.get(campo) as string) ?? "").trim();
-    return v.length > 0 ? v : null;
-  };
-
   return {
     // En centimos, como Stripe. Guardar euros en coma flotante es como se
     // pierden centimos: 0.1 + 0.2 no da 0.3.
     price_cents: Math.round(euros * 100),
-    stripe_price_id_test: texto("priceTest"),
-    stripe_price_id_live: texto("priceLive"),
   };
 }

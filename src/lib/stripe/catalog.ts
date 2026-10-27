@@ -88,3 +88,5 @@ export function resolveTierFromPriceId(
   );
   return entry?.tier ?? null;
 }
+
+export { resolveTierFromPrice } from "@/src/lib/stripe/plan-de-precio";

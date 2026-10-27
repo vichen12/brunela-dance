@@ -185,3 +185,31 @@ export function leerVerificacion(
     }
   }
 }
+
+/**
+ * La linea corta debajo de cada precio en /admin/precios y en el panel del pack.
+ *
+ * Desde que el sistema crea los precios solo (asegurar-precio.ts), Brunela ya
+ * no tiene nada que corregir en Stripe: cualquier diferencia se arregla
+ * guardando. Por eso cada caso que no es "todo bien" dice eso mismo.
+ */
+export function estadoDelCobro(
+  r: ResultadoVerificacion | null,
+  esperadoCentimos: number,
+  sufijo = ""
+): { tono: "ok" | "aviso" | "gris"; texto: string } {
+  const euros = (c: number) =>
+    `${(c / 100).toLocaleString("es-ES", { minimumFractionDigits: c % 100 === 0 ? 0 : 2 })} €`;
+  if (!r) return { tono: "aviso", texto: "Todavía no está en Stripe. Guardá y se crea solo." };
+  switch (r.estado) {
+    case "ok":
+      return r.importeCentimos === esperadoCentimos
+        ? { tono: "ok", texto: `Stripe cobra ${euros(r.importeCentimos)}${sufijo}` }
+        : { tono: "aviso", texto: `Stripe cobra ${euros(r.importeCentimos)}${sufijo}. Guardá y se corrige solo.` };
+    case "no_verificable":
+    case "error":
+      return { tono: "gris", texto: "No pude consultar Stripe ahora. Guardar funciona igual." };
+    default:
+      return { tono: "aviso", texto: "En Stripe no está bien. Guardá y se arregla solo." };
+  }
+}

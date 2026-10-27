@@ -376,32 +376,45 @@ describe("la dirección se completa sola desde el nombre", () => {
 
 // ── El price id se carga donde se crea el pack ──────────────────────────────
 
-describe("el identificador de Stripe se carga en el panel del pack", () => {
-  it("el drawer tiene los tres campos de cobro", () => {
+describe("el precio en Stripe lo pone el sistema, no Brunela (2026-10-27)", () => {
+  it("el panel del pack pide solo el importe: ningun casillero de codigo de Stripe", () => {
     const src = leer("components/admin-pack-drawer.tsx");
-    for (const campo of ["precio", "priceTest", "priceLive"]) {
-      expect(src, `falta el campo ${campo}`).toContain(`name="${campo}"`);
+    expect(src).toContain('name="precio"');
+    for (const campo of ["priceTest", "priceLive"]) {
+      expect(src, `volvio el casillero ${campo}`).not.toContain(`name="${campo}"`);
     }
+    expect(leer("app/admin/precios/page.tsx")).not.toMatch(/_(test|live)_(mensual|anual)/);
   });
 
-  it("muestra lo que dice Stripe al lado de cada uno", () => {
-    const src = leer("components/admin-pack-drawer.tsx");
-    expect(src).toMatch(/pack\.avisoTest && <Aviso/);
-    expect(src).toMatch(/pack\.avisoLive && <Aviso/);
-  });
-
-  it("el aviso se resuelve en el SERVIDOR y baja como objeto plano", () => {
-    // Por la frontera servidor->cliente no cruzan funciones: pasar
-    // `verificarPrecio` en vez de su resultado es la trampa 6, que ya tiró un
-    // 500 en producción con los iconos de lucide.
+  it("muestra lo que cobra Stripe, resuelto en el SERVIDOR y como objeto plano", () => {
+    // Por la frontera servidor->cliente no cruzan funciones (trampa 6).
     const pagina = leer("app/admin/packs/page.tsx");
-    // Se exigen LOS DOS modos. Comprobar solo que el nombre aparezca lo cumple
-    // el `import`, aunque nadie lo llame: un control lo demostro.
-    expect(pagina).toMatch(/verificarPrecio\(p\.stripe_price_id_test, "test"\)/);
-    expect(pagina).toMatch(/verificarPrecio\(p\.stripe_price_id_live, "live"\)/);
-    expect(pagina).toMatch(/avisoTest: test \? leerVerificacion\(/);
-    expect(pagina).toMatch(/avisoLive: live \? leerVerificacion\(/);
+    expect(pagina).toMatch(/cobro: estadoDelCobro\(r, p\.price_cents\)/);
+    expect(leer("components/admin-pack-drawer.tsx")).toMatch(/<Aviso \{\.\.\.pack\.cobro\} \/>/);
     expect(leer("components/admin-pack-drawer.tsx")).not.toContain("verificar-precio");
+  });
+
+  it("crear, editar y publicar un pack dejan su precio en Stripe", () => {
+    const src = leer("src/features/admin/packs-actions.ts");
+    const llamadas = src.match(/await asegurarPrecioDePack\(supabase, (creado\.id|id)\)/g) ?? [];
+    expect(llamadas.length, "createPack, updatePack y togglePack").toBeGreaterThanOrEqual(3);
+    expect(leer("src/features/admin/precios-actions.ts")).toMatch(/await asegurarPrecioDePack\(supabase, id\)/);
+  });
+
+  it("los planes: Stripe ANTES de guardar, y solo el juego del modo que cobra", () => {
+    const src = leer("src/features/admin/precios-actions.ts");
+    const stripe = src.indexOf("asegurarPrecio({");
+    const guardar = src.indexOf('.eq("setting_key", "subscriptions.catalog");', src.indexOf("const nuevo"));
+    expect(stripe, "no crea los precios").toBeGreaterThan(-1);
+    expect(stripe, "guarda antes de tener el precio en Stripe").toBeLessThan(guardar);
+    expect(src).toMatch(/prices: \{ \.\.\.t\.prices, \[modo\]:/);
+  });
+
+  it("el precio viejo se marca con su plan antes de archivarse", () => {
+    // Sin la marca, una alumna con el precio viejo deja de reconocerse en el webhook.
+    const src = leer("src/lib/stripe/asegurar-precio.ts");
+    expect(src).toMatch(/prices\.update\(viejo\.id, \{ active: false, metadata: p\.metadata \}\)/);
+    expect(leer("app/api/stripe/webhooks/route.ts")).toMatch(/resolveTierFromPrice\(await getSubscriptionCatalog\(\), price\)/);
   });
 
   it("las dos pantallas guardan con el MISMO intérprete", () => {

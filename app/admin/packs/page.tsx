@@ -5,7 +5,7 @@ import { AutoDireccion } from "@/components/auto-direccion";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-precio";
+import { verificarPrecio, estadoDelCobro } from "@/src/lib/stripe/verificar-precio";
 import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
 import { esFaltaDeColumnaOferta, ofertaVigente } from "@/src/features/studio/ofertas";
@@ -130,7 +130,7 @@ export default async function AdminPacksPage({
   //    afirmaria a tsc que el dato ya viene de la base y no habria error: el
   //    aviso quedaria en undefined y simplemente no se dibujaria nunca. Un cast
   //    de mas es una comprobacion de menos.
-  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "avisoTest" | "avisoLive" | "planesQuePuedenComprar" | "faltaMigracionPlanes" | "oferta" | "faltaMigracionOferta">;
+  type PackCrudo = Omit<PackAdmin, "clases" | "compras" | "cobro" | "planesQuePuedenComprar" | "faltaMigracionPlanes" | "oferta" | "faltaMigracionOferta">;
 
   // Los avisos se resuelven ACA, en el servidor, y bajan como objeto plano.
   // Todos en paralelo: en serie serian dos viajes a Stripe por cada pack.
@@ -139,16 +139,14 @@ export default async function AdminPacksPage({
 
   const packs: PackAdmin[] = await Promise.all(
     ((packsData ?? []) as PackCrudo[]).map(async (p) => {
-      const [test, live] = await Promise.all([
-        p.stripe_price_id_test ? verificarPrecio(p.stripe_price_id_test, "test") : null,
-        p.stripe_price_id_live ? verificarPrecio(p.stripe_price_id_live, "live") : null,
-      ]);
+      // Solo el modo que cobra: el otro no le dice nada a Brunela.
+      const idDelModo = modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test;
+      const r = idDelModo ? await verificarPrecio(idDelModo, modoEsLive ? "live" : "test") : null;
       return {
         ...p,
         clases: clasesPorPack.get(p.id) ?? [],
         compras: comprasPorPack[p.id] ?? 0,
-        avisoTest: test ? leerVerificacion(test, p.price_cents, p.currency) : null,
-        avisoLive: live ? leerVerificacion(live, p.price_cents, p.currency) : null,
+        cobro: estadoDelCobro(r, p.price_cents),
         planesQuePuedenComprar: planesDe.get(p.id) ?? null,
         faltaMigracionPlanes,
         oferta: ofertaDe.get(p.id) ?? null,
@@ -263,7 +261,7 @@ export default async function AdminPacksPage({
               //    Con solo el de prueba, en produccion la alumna ve el pack y
               //    al comprarlo recibe un error.
               const tieneStripe = Boolean(modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test);
-              const aviso = modoEsLive ? p.avisoLive : p.avisoTest;
+              const aviso = p.cobro;
               return (
                 <li key={p.id} className={"pk-card" + (p.is_published ? "" : " es-borrador")}>
                   <div className="pk-portada">
@@ -291,11 +289,10 @@ export default async function AdminPacksPage({
                       {!tieneStripe ? (
                         <><AlertTriangle size={14} strokeWidth={2.2} aria-hidden="true" />
                           {p.is_published
-                            ? `Publicado sin identificador de ${modo}: no se le muestra a nadie`
-                            : `Falta el identificador de ${modo}`}
-                          <Link href="/admin/precios">Cargarlo</Link></>
+                            ? "Todavía no está en Stripe: guardalo y se crea solo"
+                            : "Se pone en Stripe solo al guardar o al publicar"}</>
                       ) : (
-                        <><CreditCard size={14} strokeWidth={2.2} aria-hidden="true" /> {(aviso?.texto ?? `Stripe (${modo}) cargado`).replace(/^[s✓⚠️]+/u, "")}</>
+                        <><CreditCard size={14} strokeWidth={2.2} aria-hidden="true" /> {aviso.texto}</>
                       )}
                     </p>
                     {p.clases.length === 0 && (

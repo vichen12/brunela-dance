@@ -438,7 +438,7 @@ describe("un pack sin price del modo activo no se le muestra a nadie", () => {
 
   it("el panel le dice a Brunela por qué no aparece", () => {
     const src = leer("app/admin/packs/page.tsx");
-    expect(src).toMatch(/no se le muestra a nadie/);
+    expect(src).toMatch(/Todavía no está en Stripe/);
     expect(src).toMatch(/modoEsLive \? p\.stripe_price_id_live : p\.stripe_price_id_test/);
   });
 });

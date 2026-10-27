@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { premiarReferente, quienPagoEnEvento } from "@/src/features/referidos/servidor";
 import { after, NextResponse } from "next/server";
 import { getStripeServerEnv } from "@/src/lib/env";
-import { getSubscriptionCatalog, resolveTierFromPriceId } from "@/src/lib/stripe/catalog";
+import { getSubscriptionCatalog, resolveTierFromPrice } from "@/src/lib/stripe/catalog";
 import { avisarAdminDeAlta, enviarBienvenida } from "@/src/features/correos/disparadores";
 import { alumnaParaBienvenida, type EventoParaBienvenida } from "@/src/features/correos/reglas";
 
@@ -12,14 +12,10 @@ function createServiceRoleClient() {
   return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-async function resolveMembershipTierFromPriceId(priceId: string | null) {
-  if (!priceId) {
-    return null;
-  }
-
-  const catalog = await getSubscriptionCatalog();
-  if (!catalog) return null;
-  return resolveTierFromPriceId(catalog, priceId);
+/** Por el catalogo y, si el codigo ya no esta ahi, por la marca del precio. */
+async function resolveMembershipTierFromPrice(price: Stripe.Price | null | undefined) {
+  if (!price) return null;
+  return resolveTierFromPrice(await getSubscriptionCatalog(), price);
 }
 
 async function persistWebhookAudit(event: Stripe.Event, processingError: string | null) {
@@ -68,7 +64,8 @@ async function syncSubscription(event: Stripe.Event): Promise<SyncOutcome> {
   const subscription = event.data.object as Stripe.Subscription;
   const supabase = createServiceRoleClient();
   const userId = subscription.metadata.user_id;
-  const priceId = subscription.items.data[0]?.price.id ?? null;
+  const price = subscription.items.data[0]?.price ?? null;
+  const priceId = price?.id ?? null;
 
   // These two used to share one message, which made them impossible to tell
   // apart from the Stripe dashboard. They have completely different fixes.
@@ -80,7 +77,7 @@ async function syncSubscription(event: Stripe.Event): Promise<SyncOutcome> {
     );
   }
 
-  const membershipTier = await resolveMembershipTierFromPriceId(priceId);
+  const membershipTier = await resolveMembershipTierFromPrice(price);
   if (!membershipTier) {
     throw new Error(
       `El precio ${priceId ?? "(ninguno)"} no esta mapeado a ningun plan, ni en test ni ` +

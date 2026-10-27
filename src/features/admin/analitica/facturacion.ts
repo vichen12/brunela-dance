@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { unstable_cache } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { getSubscriptionCatalog, resolveTierFromPriceId, stripeMode, type StripeMode } from "@/src/lib/stripe/catalog";
+import { getSubscriptionCatalog, resolveTierFromPrice, stripeMode, type StripeMode } from "@/src/lib/stripe/catalog";
 
 /**
  * Facturacion y KPIs del panel de analiticas, leidos de Stripe.
@@ -139,7 +139,7 @@ type Crudo = {
   packsNeto: number;
   packsCantidad: number;
   otrasMonedas: number;
-  porPrice: { priceId: string; activas: number; enPrueba: number; mrrActivas: number; mrrPrueba: number }[];
+  porPrice: { priceId: string; marca: string | null; activas: number; enPrueba: number; mrrActivas: number; mrrPrueba: number }[];
   canceladasEsteMes: number;
   avisaronQueSeVan: number;
 };
@@ -218,7 +218,7 @@ async function leerDeStripe(clave: string): Promise<Crudo> {
     if (s.cancel_at_period_end || s.cancel_at) avisaronQueSeVan++;
     const enPrueba = s.status === "trialing";
     for (const item of s.items.data) {
-      const p = porPrice.get(item.price.id) ?? { priceId: item.price.id, activas: 0, enPrueba: 0, mrrActivas: 0, mrrPrueba: 0 };
+      const p = porPrice.get(item.price.id) ?? { priceId: item.price.id, marca: item.price.metadata?.tier ?? null, activas: 0, enPrueba: 0, mrrActivas: 0, mrrPrueba: 0 };
       const mrr = item.price.currency === "eur" ? mensualizar(item.price, item.quantity ?? 1) : 0;
       if (enPrueba) { p.enPrueba++; p.mrrPrueba += mrr; } else { p.activas++; p.mrrActivas += mrr; }
       porPrice.set(item.price.id, p);
@@ -270,7 +270,9 @@ export async function getFacturacion(): Promise<Facturacion> {
   );
   let mrr = 0, mrrPrueba = 0;
   for (const p of crudo.porPrice) {
-    const tier = (catalogo && resolveTierFromPriceId(catalogo, p.priceId)) || "otro";
+    // Por la marca tambien: tras un cambio de precio, las suscripciones viejas
+    // siguen con un codigo que ya no esta en el catalogo.
+    const tier = resolveTierFromPrice(catalogo, { id: p.priceId, metadata: p.marca ? { tier: p.marca } : null }) || "otro";
     const fila = planes.get(tier)!;
     fila.activas += p.activas;
     fila.enPrueba += p.enPrueba;

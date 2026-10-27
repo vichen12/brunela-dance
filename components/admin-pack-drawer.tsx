@@ -52,8 +52,8 @@ export type PackAdmin = {
    *    frontera servidor->cliente no cruzan funciones, y eso ya reventó una vez
    *    en produccion con los iconos de lucide (trampa 6).
    */
-  avisoTest: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
-  avisoLive: { tono: "ok" | "aviso" | "gris"; texto: string } | null;
+  /** Que cobra Stripe hoy por este pack, del modo activo (estadoDelCobro). */
+  cobro: { tono: "ok" | "aviso" | "gris"; texto: string };
   /** null = lo compra cualquiera (por defecto). Lista = solo esos planes. */
   planesQuePuedenComprar: string[] | null;
   /** Falta 20261009_4_packs_por_plan.sql: el control se muestra apagado. */
@@ -367,11 +367,10 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               Precio y cobro
             </p>
             <p style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.55, marginBottom: 14 }}>
-              El importe es lo que se anuncia. El identificador es lo que cobra
-              Stripe. Abajo de cada uno te digo cuánto vale ahí de verdad.
+              Escribí el precio y guardá: Stripe se actualiza solo.
             </p>
 
-            <div className="adr-g3">
+            <div style={{ maxWidth: 240 }}>
               <F label={`Precio (${pack.currency.toUpperCase()})`}>
                 {/* pattern: solo un numero positivo con hasta dos decimales, con
                     punto o coma. "abc" o "-5" no llegan a la accion. Se queda
@@ -380,26 +379,9 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
                   pattern={PATRON_PRECIO} title="Un importe como 24,90 (sin signo menos)"
                   defaultValue={(pack.price_cents / 100).toString()} />
               </F>
-
-              <label style={{ display: "block" }}>
-                <Lbl>Identificador — prueba</Lbl>
-                <input style={inp} name="priceTest" defaultValue={pack.stripe_price_id_test ?? ""}
-                  placeholder="price_1AbC…" autoComplete="off" spellCheck={false} />
-                {pack.avisoTest && <Aviso {...pack.avisoTest} />}
-              </label>
-
-              <label style={{ display: "block" }}>
-                <Lbl>Identificador — producción</Lbl>
-                <input style={inp} name="priceLive" defaultValue={pack.stripe_price_id_live ?? ""}
-                  placeholder="price_1AbC…" autoComplete="off" spellCheck={false} />
-                {pack.avisoLive && <Aviso {...pack.avisoLive} />}
-              </label>
+              <Aviso {...pack.cobro} />
             </div>
 
-            <p style={{ fontSize: 12.5, color: "#8A6F68", lineHeight: 1.5, marginTop: 12 }}>
-              Un identificador de Stripe no se edita: se reemplaza. Para cambiar
-              el precio, en Stripe se crea uno nuevo y se pega acá.
-            </p>
             {/* La oferta es OTRO formulario (va abajo, despues de Guardar):
                 sin este enlace nadie la encontraba buscando "precio". */}
             <a href="#oferta" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 13, fontWeight: 800, color: "#B03A3E" }}>

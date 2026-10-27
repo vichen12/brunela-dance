@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { invalidarAjustes } from "@/src/lib/settings";
-import type { SubscriptionCatalog } from "@/src/lib/stripe/catalog";
+import { stripeMode, type SubscriptionCatalog } from "@/src/lib/stripe/catalog";
+import { asegurarPrecio, errorDeStripe } from "@/src/lib/stripe/asegurar-precio";
 import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
+import { asegurarPrecioDePack } from "@/src/features/admin/precio-de-pack-stripe";
 
 /**
  * Precios: los tres planes y los packs.
@@ -22,7 +24,18 @@ import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
  *   La comprobacion vive en la pantalla (src/lib/stripe/verificar-precio.ts) y
  *   es informativa. Lo que SI se valida aca es lo que puede romper el sistema
  *   solo: numeros que no son numeros, y precios negativos.
+ *
+ * DESDE EL 2026-10-27 LOS CODIGOS DE STRIPE LOS PONE EL SISTEMA
+ *   Brunela escribe el importe y guarda. Para cada precio, asegurarPrecio()
+ *   mira si el codigo actual ya cobra eso; si no, crea uno nuevo en Stripe y
+ *   archiva el viejo. Se escribe solo el juego del modo que cobra.
  */
+
+const NOMBRE_PLAN: Record<string, string> = {
+  corps_de_ballet: "Corps de Ballet",
+  solista: "Solista",
+  principal: "Principal",
+};
 
 /** Los importes se muestran en euros y se guardan en euros, como ya venia el catalogo. */
 function aNumero(fd: FormData, campo: string): number | null {
@@ -30,11 +43,6 @@ function aNumero(fd: FormData, campo: string): number | null {
   if (!crudo) return null;
   const n = Number(crudo);
   return Number.isFinite(n) && n >= 0 ? n : null;
-}
-
-function aTexto(fd: FormData, campo: string): string | null {
-  const v = ((fd.get(campo) as string) ?? "").trim();
-  return v.length > 0 ? v : null;
 }
 
 export async function guardarPreciosDePlanesAction(fd: FormData) {
@@ -61,26 +69,47 @@ export async function guardarPreciosDePlanesAction(fd: FormData) {
   //    cualquier cosa que se agregue mas adelante -- en silencio, porque un
   //    JSON al que le falta una clave no da ningun error hasta que algo la
   //    busca.
-  const tiers = catalogo.tiers.map((t) => {
-    const mensual = aNumero(fd, `${t.tier}_mensual`);
-    const anual = aNumero(fd, `${t.tier}_anual`);
-
-    return {
-      ...t,
-      amount_monthly: mensual ?? t.amount_monthly,
-      amount_yearly: anual ?? t.amount_yearly,
-      prices: {
-        test: {
-          monthly: aTexto(fd, `${t.tier}_test_mensual`),
-          yearly: aTexto(fd, `${t.tier}_test_anual`),
-        },
-        live: {
-          monthly: aTexto(fd, `${t.tier}_live_mensual`),
-          yearly: aTexto(fd, `${t.tier}_live_anual`),
-        },
-      },
-    };
-  });
+  //
+  // Stripe va ANTES de guardar: si falla, no se guarda nada y la web no
+  // anuncia un importe que Stripe no cobra.
+  const modo = stripeMode(process.env.STRIPE_SECRET_KEY);
+  const moneda = catalogo.currency ?? "eur";
+  let tiers: SubscriptionCatalog["tiers"];
+  try {
+    tiers = await Promise.all(
+      catalogo.tiers.map(async (t) => {
+        const mensual = aNumero(fd, `${t.tier}_mensual`) ?? t.amount_monthly;
+        const anual = aNumero(fd, `${t.tier}_anual`) ?? t.amount_yearly;
+        const actuales = t.prices?.[modo] ?? { monthly: null, yearly: null };
+        const [m, a] = await Promise.all([
+          asegurarPrecio({
+            actual: actuales.monthly,
+            centimos: Math.round(mensual * 100),
+            moneda,
+            intervalo: "month",
+            producto: `Plan ${NOMBRE_PLAN[t.tier] ?? t.tier}`,
+            metadata: { tier: t.tier },
+          }),
+          asegurarPrecio({
+            actual: actuales.yearly,
+            centimos: Math.round(anual * 100),
+            moneda,
+            intervalo: "year",
+            producto: `Plan ${NOMBRE_PLAN[t.tier] ?? t.tier}`,
+            metadata: { tier: t.tier },
+          }),
+        ]);
+        return {
+          ...t,
+          amount_monthly: mensual,
+          amount_yearly: anual,
+          prices: { ...t.prices, [modo]: { monthly: m.id, yearly: a.id } },
+        };
+      })
+    );
+  } catch (e) {
+    redirect(`/admin/precios?error=${encodeURIComponent(errorDeStripe(e))}` as never);
+  }
 
   const nuevo: SubscriptionCatalog = { ...catalogo, tiers };
 
@@ -102,6 +131,7 @@ export async function guardarPreciosDePlanesAction(fd: FormData) {
   revalidatePath("/admin/precios");
   revalidatePath("/dashboard/plan");
   revalidatePath("/"); // la landing muestra estos precios
+  redirect("/admin/precios?listo=planes" as never);
 }
 
 export async function guardarPrecioDePackAction(fd: FormData) {
@@ -115,15 +145,22 @@ export async function guardarPrecioDePackAction(fd: FormData) {
     redirect(`/admin/precios?error=${encodeURIComponent(precio.fallo)}` as never);
   }
 
-  const { error } = await supabase.from("packs").update(precio).eq("id", fd.get("id") as string);
+  const id = fd.get("id") as string;
+  const { error } = await supabase.from("packs").update(precio).eq("id", id);
 
   if (error) {
-    // El trigger packs_price_id_unico ya nombra al pack en conflicto.
     redirect(`/admin/precios?error=${encodeURIComponent(error.message)}` as never);
+  }
+
+  const cobro = await asegurarPrecioDePack(supabase, id);
+  if ("fallo" in cobro) {
+    revalidatePath("/admin/precios");
+    redirect(`/admin/precios?error=${encodeURIComponent(cobro.fallo)}` as never);
   }
 
   revalidatePath("/admin/precios");
   revalidatePath("/admin/packs");
   revalidatePath("/");
+  redirect("/admin/precios?listo=pack" as never);
 }
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
+import { asegurarPrecioDePack } from "@/src/features/admin/precio-de-pack-stripe";
 import {
   AVISO_FALTA_MIGRACION_PACKS_POR_PLAN,
   esFaltaDeColumnaPlanes,
@@ -20,6 +21,10 @@ import {
  *    Se carga en el panel del pack -- donde se crea, para no obligar a un ida y
  *    vuelta -- y se revisa en /admin/precios junto a los planes. Las dos
  *    acciones usan `leerCamposDePrecio`, asi que no pueden divergir.
+ *
+ * ⚠️ EL PRECIO EN STRIPE LO CREA EL SISTEMA (2026-10-27). Crear, editar y
+ *    publicar llaman a asegurarPrecioDePack(): Brunela escribe el importe y
+ *    nunca ve un codigo de Stripe.
  */
 
 /** Revalida todo lo que muestra packs. La landing entra porque es su vitrina. */
@@ -52,7 +57,7 @@ export async function createPackAction(fd: FormData) {
     fallar("El precio tiene que ser un número mayor que cero, por ejemplo 24,90.");
   }
 
-  const { error } = await supabase.from("packs").insert({
+  const { data: creado, error } = await supabase.from("packs").insert({
     slug,
     name_i18n: { es: nombre },
     description_i18n: { es: texto(fd, "descripcionEs") },
@@ -62,7 +67,7 @@ export async function createPackAction(fd: FormData) {
     is_published: false,
     show_on_landing: false,
     created_by: user.id,
-  });
+  }).select("id").single<{ id: string }>();
 
   if (error) {
     if (error.code === "23505") {
@@ -71,7 +76,9 @@ export async function createPackAction(fd: FormData) {
     fallar(error.message);
   }
 
+  const cobro = await asegurarPrecioDePack(supabase, creado.id);
   refrescarPacks();
+  if ("fallo" in cobro) fallar(cobro.fallo);
 }
 
 export async function updatePackAction(fd: FormData) {
@@ -113,7 +120,9 @@ export async function updatePackAction(fd: FormData) {
     // escribir aca.
     fallar(error.message);
   }
+  const cobro = await asegurarPrecioDePack(supabase, id);
   refrescarPacks();
+  if ("fallo" in cobro) fallar(cobro.fallo);
 }
 
 /**
@@ -153,11 +162,11 @@ export async function togglePackAction(fd: FormData) {
     const priceDelModo = modoEsLive ? pack.stripe_price_id_live : pack.stripe_price_id_test;
     const nombre = pack.name_i18n?.es ?? pack.slug;
 
+    // Sin precio en Stripe nadie podria pagarlo. Antes se frenaba y habia que
+    // ir a pegar un codigo; ahora se crea en el momento.
     if (!priceDelModo) {
-      fallar(
-        `"${nombre}" todavía no tiene identificador de Stripe de ${modoEsLive ? "producción" : "prueba"}, ` +
-          `así que nadie podría pagarlo. Cargalo en Precios y volvé a intentar.`
-      );
+      const cobro = await asegurarPrecioDePack(supabase, id);
+      if ("fallo" in cobro) fallar(`"${nombre}" no se publicó: ${cobro.fallo}`);
     }
 
     const { count } = await supabase

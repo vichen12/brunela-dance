@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { requireAdmin } from "@/src/features/auth/guards";
-import { Check, CreditCard, Crown, FlaskConical, Info, Package } from "lucide-react";
+import { Check, CircleCheck, FlaskConical, Info, Package, TriangleAlert } from "lucide-react";
 import { AdminCabecera } from "@/components/admin-ui";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import { getSubscriptionCatalog, stripeMode, type StripeMode } from "@/src/lib/stripe/catalog";
-import { verificarPrecio, leerVerificacion } from "@/src/lib/stripe/verificar-precio";
+import { getSubscriptionCatalog, stripeMode } from "@/src/lib/stripe/catalog";
+import { verificarPrecio, estadoDelCobro } from "@/src/lib/stripe/verificar-precio";
 import {
   guardarPreciosDePlanesAction,
   guardarPrecioDePackAction,
@@ -15,29 +16,19 @@ export const dynamic = "force-dynamic";
 /**
  * Precios: los tres planes y los packs, en un solo lugar.
  *
- * POR QUE ESTA PANTALLA EXISTE
- *   Los precios vivian en `subscriptions.catalog`, dentro de la lista de ajustes
- *   BLOQUEADOS de /admin/settings: se veian y no se editaban. La razon era
- *   buena -- eran doce price ids en un textarea de JSON crudo, y una coma de mas
- *   dejaba de cobrar.
+ * REHECHA EL 2026-10-27, A PEDIDO
+ *   "Que literalmente pueda modificar aca y que quede todo bien." Antes eran
+ *   dieciocho casilleros de codigos de Stripe (mensual y anual, prueba y
+ *   produccion, por plan) y para cambiar un precio habia que crearlo en Stripe
+ *   y pegar el codigo. Ahora se escribe el importe y se guarda: el codigo lo
+ *   crea el sistema (src/lib/stripe/asegurar-precio.ts).
  *
- *   Pero eso dejaba a Brunela sin poder cambiar un precio. Ahora los edita, con
- *   campos de verdad en vez de JSON, y con la salvaguarda de abajo.
+ *   Debajo de cada importe sigue la comprobacion contra Stripe, pero en una
+ *   frase ("Stripe cobra 16 €"), y solo del modo que cobra. El juego del otro
+ *   modo no se muestra: en produccion los codigos de prueba no le sirven a
+ *   nadie y verlos hacia pensar que algo estaba en prueba.
  *
- * ⚠️ LA SALVAGUARDA MUESTRA, NO BLOQUEA
- *   El importe que se anuncia y el price id de Stripe son dos datos separados
- *   que tienen que decir lo mismo, y NADA los ata. Se puede cambiar el precio en
- *   Stripe y olvidarse del panel: la landing anuncia 16 EUR y en el checkout
- *   aparecen 20.
- *
- *   Al cargar, esta pantalla le PREGUNTA a Stripe cuanto vale cada price id y lo
- *   muestra al lado. Si no coinciden, avisa. No impide guardar: hay un momento
- *   legitimo en el que no coinciden, que es mientras se esta migrando de precio.
- *
- * ⚠️ POR QUE TARDA UN POCO EN CARGAR
- *   Son hasta 12 consultas a Stripe para los planes mas 2 por pack. Van todas en
- *   paralelo, pero es red: contar con medio segundo. Es el precio de que el
- *   aviso sea real y no una suposicion.
+ *   Los codigos siguen visibles, de solo lectura, en "Detalles de Stripe".
  */
 
 type PackFila = {
@@ -51,42 +42,38 @@ type PackFila = {
   is_published: boolean;
 };
 
-const MODOS: { modo: StripeMode; label: string; ayuda: string }[] = [
-  { modo: "test", label: "Prueba", ayuda: "Para probar sin cobrar de verdad" },
-  { modo: "live", label: "Producción", ayuda: "El que cobra de verdad" },
-];
+const NOMBRE: Record<string, string> = {
+  corps_de_ballet: "Corps de Ballet",
+  solista: "Solista",
+  principal: "Principal",
+};
 
-/** El cartelito debajo de cada price id. */
-function Aviso({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
+function Estado({ tono, texto }: { tono: "ok" | "aviso" | "gris"; texto: string }) {
   return (
-    <p className={"pr-aviso pr-aviso--" + tono}>{texto}</p>
+    <p className={"pr-estado pr-estado--" + tono}>
+      {tono === "ok" ? <CircleCheck size={14} strokeWidth={2.4} aria-hidden="true" /> : tono === "aviso" ? <TriangleAlert size={14} strokeWidth={2.4} aria-hidden="true" /> : <Info size={14} strokeWidth={2.4} aria-hidden="true" />}
+      {texto}
+    </p>
   );
 }
 
-/**
- * Un price id con su comprobacion.
- *
- * `esperadoCentimos` es lo que Brunela anuncia; se compara contra lo que dice
- * Stripe. Va en centimos porque es la unidad de Stripe y evita redondeos.
- */
-async function CampoPrecio({
-  name, valor, modo, esperadoCentimos, moneda, etiqueta,
-}: {
-  name: string;
-  valor: string | null;
-  modo: StripeMode;
-  esperadoCentimos: number | null;
-  moneda: string | null;
-  etiqueta: string;
-}) {
-  const r = valor ? await verificarPrecio(valor, modo) : null;
-  const leido = r ? leerVerificacion(r, esperadoCentimos, moneda) : null;
-
+function Monto({ name, valor, etiqueta }: { name: string; valor: number; etiqueta: string }) {
   return (
-    <label className="pf-campo pr-campo">
-      <span className="pf-etq">{etiqueta}</span>
-      <input className="pr-inp pr-inp--id" name={name} defaultValue={valor ?? ""} placeholder="price_1AbC..." autoComplete="off" spellCheck={false} />
-      {leido && <Aviso tono={leido.tono} texto={leido.texto} />}
+    <label className="pr-campo">
+      <span className="pr-etq">{etiqueta}</span>
+      <span className="pr-monto">
+        <input
+          name={name}
+          // "24,90", no "24,9"; y "16", no "16,00".
+          defaultValue={valor.toLocaleString("es-ES", { useGrouping: false, minimumFractionDigits: Number.isInteger(valor) ? 0 : 2, maximumFractionDigits: 2 })}
+          inputMode="decimal"
+          required
+          pattern="\s*\d+([.,]\d{1,2})?\s*"
+          title="Un importe como 16 o 24,90"
+          autoComplete="off"
+        />
+        <span aria-hidden="true">€</span>
+      </span>
     </label>
   );
 }
@@ -98,7 +85,8 @@ export default async function AdminPreciosPage({
 }) {
   await requireAdmin();
   const params = (await searchParams) ?? {};
-  const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  const error = typeof params.error === "string" ? params.error : null;
+  const listo = typeof params.listo === "string" ? params.listo : null;
 
   const supabase = await createSupabaseServerClient();
   const [catalogo, { data: packsData }] = await Promise.all([
@@ -110,8 +98,28 @@ export default async function AdminPreciosPage({
   ]);
 
   const packs = (packsData ?? []) as PackFila[];
-  const modoActivo = stripeMode(process.env.STRIPE_SECRET_KEY);
-  const moneda = catalogo?.currency ?? "eur";
+  const modo = stripeMode(process.env.STRIPE_SECRET_KEY);
+  const consultar = (id: string | null | undefined) => (id ? verificarPrecio(id, modo) : Promise.resolve(null));
+
+  // Todas las consultas a Stripe en paralelo: es red, y son hasta 6 + 1 por pack.
+  const [planes, packsConEstado] = await Promise.all([
+    Promise.all(
+      (catalogo?.tiers ?? []).map(async (t) => {
+        const [m, a] = await Promise.all([consultar(t.prices?.[modo]?.monthly), consultar(t.prices?.[modo]?.yearly)]);
+        return {
+          t,
+          mensual: estadoDelCobro(m, Math.round(t.amount_monthly * 100), " por mes"),
+          anual: estadoDelCobro(a, Math.round(t.amount_yearly * 100), " por año"),
+        };
+      })
+    ),
+    Promise.all(
+      packs.map(async (p) => {
+        const id = modo === "live" ? p.stripe_price_id_live : p.stripe_price_id_test;
+        return { p, id, estado: estadoDelCobro(await consultar(id), p.price_cents) };
+      })
+    ),
+  ]);
 
   return (
     <main className="pr">
@@ -119,175 +127,87 @@ export default async function AdminPreciosPage({
 
       <AdminCabecera
         eyebrow="Precios"
-        titulo="Planes y packs"
-        lede={<>
-          Acá cambiás lo que se cobra. Cada precio tiene dos partes: el <strong>importe
-          que se muestra</strong> en la web, y el <strong>identificador de Stripe</strong>,
-          que es lo que cobra de verdad. Tienen que decir lo mismo — debajo de cada
-          identificador te digo cuánto vale en Stripe.
-        </>}
+        titulo="Lo que pagan tus alumnas"
+        lede="Cambiá el número y guardá. Stripe se actualiza solo: no hace falta entrar ahí ni copiar nada."
       />
 
       <section className="pr-cuerpo">
-
+        {listo && (
+          <div role="status" className="pr-banda pr-banda--ok">
+            <CircleCheck size={18} strokeWidth={2.4} aria-hidden="true" />
+            <span>Listo, guardado. La web y Stripe ya tienen {listo === "pack" ? "el precio nuevo del pack" : "los precios nuevos"}.</span>
+          </div>
+        )}
         {error && (
-          <div role="status" className="ad-aviso ad-aviso--error">{error}</div>
+          <div role="alert" className="pr-banda pr-banda--error">
+            <TriangleAlert size={18} strokeWidth={2.4} aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+        )}
+        {modo === "test" && (
+          <div className="pr-banda pr-banda--prueba">
+            <FlaskConical size={18} strokeWidth={2.4} aria-hidden="true" />
+            <span>Modo prueba: acá no se cobra de verdad.</span>
+          </div>
         )}
 
-        {/* Cual de los dos juegos esta cobrando ahora mismo. Sin esto, los dos
-            bloques se ven igual de importantes y no lo son. */}
-        <div className={"pr-modo " + (modoActivo === "live" ? "pr-modo--live" : "pr-modo--test")}>
-          <span className="pr-modo-ico" aria-hidden="true">
-            {modoActivo === "live" ? <CreditCard size={18} strokeWidth={2.2} /> : <FlaskConical size={18} strokeWidth={2.2} />}
-          </span>
-          <span>
-          {modoActivo === "live"
-            ? "El sistema está cobrando DE VERDAD. Los identificadores de «Producción» son los que se usan."
-            : "El sistema está en modo prueba. Se usan los identificadores de «Prueba»; los de «Producción» todavía no cobran nada."}
-          </span>
-        </div>
-
         {/* ── PLANES ─────────────────────────────────────────────────────── */}
-
         {!catalogo ? (
-          <div className="pr-caja">
-            <p className="pr-error">
-              No se encontró el catálogo de planes en la configuración. Avisale a Vincenzo.
-            </p>
-          </div>
+          <div className="pr-caja"><p className="pr-error">No se encontró el catálogo de planes. Avisale a Vincenzo.</p></div>
         ) : (
-          <form action={guardarPreciosDePlanesAction} className="pr-caja pr-planes">
-            <div className="pr-caja-cab">
-              <span className="pr-burbuja"><Crown size={19} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div>
-                <h2 className="pr-h2">Los tres planes</h2>
-                <p className="pr-sub">
-                  Los importes van en euros. Para el anual poné el total del año, no el mensual.
-                </p>
-              </div>
+          <form action={guardarPreciosDePlanesAction} className="pr-caja">
+            <h2 className="pr-h2">Planes</h2>
+            <p className="pr-sub">Suscripción con renovación automática. En el anual va el total del año.</p>
+
+            <div className="pr-planes">
+              {planes.map(({ t, mensual, anual }) => (
+                <div key={t.tier} className={"pr-plan pr-plan--" + t.tier}>
+                  <p className="pr-plan-nombre">{NOMBRE[t.tier] ?? t.tier}</p>
+                  <Monto name={`${t.tier}_mensual`} valor={t.amount_monthly} etiqueta="Por mes" />
+                  <Estado {...mensual} />
+                  <Monto name={`${t.tier}_anual`} valor={t.amount_yearly} etiqueta="Por año" />
+                  <Estado {...anual} />
+                </div>
+              ))}
             </div>
 
-            {catalogo.tiers.map((t) => (
-              <div key={t.tier} className={"pr-plan pr-plan--" + t.tier}>
-                <p className="pr-plan-nombre">
-                  {t.tier === "corps_de_ballet" ? "Corps de Ballet" : t.tier === "solista" ? "Solista" : "Principal"}
-                </p>
-
-                <div className="pr-grilla pr-importes">
-                  <label className="pf-campo">
-                    <span className="pf-etq">Precio por mes (€)</span>
-                    <input className="pr-inp pr-inp--importe" name={`${t.tier}_mensual`} defaultValue={t.amount_monthly} inputMode="decimal" />
-                  </label>
-                  <label className="pf-campo">
-                    <span className="pf-etq">Precio del año entero (€)</span>
-                    <input className="pr-inp pr-inp--importe" name={`${t.tier}_anual`} defaultValue={t.amount_yearly} inputMode="decimal" />
-                  </label>
-                </div>
-
-                {MODOS.map(({ modo, label, ayuda }) => (
-                  <div key={modo} className={"pr-modo-bloque" + (modo === modoActivo ? " es-en-uso" : "")}>
-                    <p className="pr-modo-titulo">
-                      {label}{" "}
-                      <span className="pr-modo-ayuda">— {ayuda}</span>
-                      {modo === modoActivo && (
-                        <span className="pr-en-uso">En uso</span>
-                      )}
-                    </p>
-                    <div className="pr-grilla">
-                      <CampoPrecio
-                        name={`${t.tier}_${modo}_mensual`}
-                        valor={t.prices?.[modo]?.monthly ?? null}
-                        modo={modo}
-                        esperadoCentimos={Math.round(t.amount_monthly * 100)}
-                        moneda={moneda}
-                        etiqueta="Identificador mensual"
-                      />
-                      <CampoPrecio
-                        name={`${t.tier}_${modo}_anual`}
-                        valor={t.prices?.[modo]?.yearly ?? null}
-                        modo={modo}
-                        esperadoCentimos={Math.round(t.amount_yearly * 100)}
-                        moneda={moneda}
-                        etiqueta="Identificador anual"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-
-            <div>
+            <div className="pr-pie">
               <BotonEnviar pendingLabel="Guardando…" className="pf-guardar">
-                <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar precios
+                <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Guardar planes
               </BotonEnviar>
             </div>
           </form>
         )}
 
         {/* ── PACKS ──────────────────────────────────────────────────────── */}
-
         <div className="pr-caja">
-          <div className="pr-caja-cab">
-            <span className="pr-burbuja pr-burbuja--melo"><Package size={19} strokeWidth={2.2} aria-hidden="true" /></span>
-            <div>
-              <h2 className="pr-h2">Packs de clases</h2>
-              <p className="pr-sub">
-                Se pagan una vez y el acceso queda para siempre. Qué clases trae cada
-                pack se arma en <strong>Packs</strong>; acá sólo el precio.
-              </p>
-            </div>
-          </div>
+          <h2 className="pr-h2">Packs de clases</h2>
+          <p className="pr-sub">
+            Pago único, acceso para siempre. Las clases de cada pack y las ofertas se arman en{" "}
+            <Link href="/admin/packs">Packs</Link>.
+          </p>
 
-          {packs.length === 0 ? (
+          {packsConEstado.length === 0 ? (
             <div className="pr-vacio">
-              <span className="pr-burbuja pr-burbuja--melo"><Package size={18} strokeWidth={2.2} aria-hidden="true" /></span>
-              <p>Todavía no hay ningún pack.</p>
+              <Package size={18} strokeWidth={2.2} aria-hidden="true" />
+              <p>Todavía no hay packs. Cuando crees uno en <Link href="/admin/packs">Packs</Link>, su precio aparece acá.</p>
             </div>
           ) : (
             <div className="pr-packs">
-              {packs.map((p) => (
-                <form
-                  key={p.id}
-                  action={guardarPrecioDePackAction}
-                  className="pr-pack"
-                >
+              {packsConEstado.map(({ p, estado }) => (
+                <form key={p.id} action={guardarPrecioDePackAction} className="pr-pack">
                   <input type="hidden" name="id" value={p.id} />
-
-                  <p className="pr-plan-nombre">
-                    {p.name_i18n?.es ?? p.slug}
-                    {!p.is_published && (
-                      <span className="pr-sin-publicar">Sin publicar</span>
-                    )}
-                  </p>
-
-                  <div className="pr-grilla pr-grilla--pack">
-                    <label className="pf-campo">
-                      <span className="pf-etq">Precio (€)</span>
-                      <input className="pr-inp pr-inp--importe" name="precio" defaultValue={(p.price_cents / 100).toString()} inputMode="decimal" />
-                    </label>
-                    <CampoPrecio
-                      name="priceTest"
-                      valor={p.stripe_price_id_test}
-                      modo="test"
-                      esperadoCentimos={p.price_cents}
-                      moneda={p.currency}
-                      etiqueta="Identificador — prueba"
-                    />
-                    <CampoPrecio
-                      name="priceLive"
-                      valor={p.stripe_price_id_live}
-                      modo="live"
-                      esperadoCentimos={p.price_cents}
-                      moneda={p.currency}
-                      etiqueta="Identificador — producción"
-                    />
+                  <div className="pr-pack-nombre">
+                    <p>{p.name_i18n?.es ?? p.slug}</p>
+                    {!p.is_published && <span className="pr-sin-publicar">Sin publicar</span>}
                   </div>
-
-                  <div className="pr-pack-pie">
-                    <BotonEnviar pendingLabel="Guardando…" className="pr-btn-sec">
-                      <Check size={15} strokeWidth={2.4} aria-hidden="true" /> Guardar este pack
-                    </BotonEnviar>
+                  <div className="pr-pack-precio">
+                    <Monto name="precio" valor={p.price_cents / 100} etiqueta="Precio" />
+                    <Estado {...estado} />
                   </div>
+                  <BotonEnviar pendingLabel="Guardando…" className="pr-btn-sec">
+                    <Check size={15} strokeWidth={2.4} aria-hidden="true" /> Guardar
+                  </BotonEnviar>
                 </form>
               ))}
             </div>
@@ -295,13 +215,33 @@ export default async function AdminPreciosPage({
         </div>
 
         <p className="pr-nota">
-          <span className="pr-burbuja pr-burbuja--chica"><Info size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+          <Info size={16} strokeWidth={2.2} aria-hidden="true" />
           <span>
-          <strong>Un identificador de Stripe no se edita: se reemplaza.</strong> Si querés
-          cambiar un precio, en Stripe se crea uno nuevo y se pega acá el nuevo
-          identificador. Quien ya está suscripta sigue pagando lo que contrató.
+            Quien ya está suscripta sigue pagando lo que contrató. El precio nuevo vale para
+            las que se suman desde que guardás.
           </span>
         </p>
+
+        {/* Solo lectura: por si algun dia hay que buscar algo en Stripe. */}
+        <details className="pr-detalles">
+          <summary>Detalles de Stripe</summary>
+          <p>Códigos que se están usando para cobrar ({modo === "live" ? "producción" : "prueba"}). Los pone el sistema; no hace falta tocarlos.</p>
+          <ul>
+            {(catalogo?.tiers ?? []).map((t) => (
+              <li key={t.tier}>
+                <span>{NOMBRE[t.tier] ?? t.tier}</span>
+                <code>{t.prices?.[modo]?.monthly ?? "—"}</code>
+                <code>{t.prices?.[modo]?.yearly ?? "—"}</code>
+              </li>
+            ))}
+            {packsConEstado.map(({ p, id }) => (
+              <li key={p.id}>
+                <span>{p.name_i18n?.es ?? p.slug}</span>
+                <code>{id ?? "—"}</code>
+              </li>
+            ))}
+          </ul>
+        </details>
       </section>
     </main>
   );
@@ -310,66 +250,71 @@ export default async function AdminPreciosPage({
 const CSS = `
 .pr { display: flex; flex-direction: column; }
 .pr .ad-mast { margin-bottom: 0; }
-.pr .ad-lede strong { color: var(--ink); }
 .pr-cuerpo { width: 100%; padding: 22px 0 40px; display: flex; flex-direction: column; gap: 18px; }
 
-.pr-modo { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; line-height: 1.5; }
-.pr-modo-ico { width: 38px; height: 38px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; background: #fff; }
-.pr-modo--live { background: var(--salvia); color: var(--salvia-deep); border: 1px solid #CFE3C9; }
-.pr-modo--test { background: #FFF4E8; color: var(--melocoton-deep); border: 1px solid #F6D9C6; }
+.pr-banda { display: flex; align-items: center; gap: 10px; padding: 13px 18px; border-radius: 18px; font-size: 14px; font-weight: 700; line-height: 1.45; }
+.pr-banda svg { flex-shrink: 0; }
+.pr-banda--ok { background: var(--salvia); color: var(--salvia-deep); border: 1px solid #CFE3C9; }
+.pr-banda--error { background: #FFF0EE; color: var(--pink-deep); border: 1px solid var(--pink-line); }
+.pr-banda--prueba { background: #FFF4E8; color: var(--melocoton-deep); border: 1px solid #F6D9C6; }
 
 .pr-caja { padding: clamp(20px, 3vw, 30px); border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
-.pr-planes { display: flex; flex-direction: column; gap: 16px; }
-.pr-caja-cab { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
-.pr-burbuja { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); }
-.pr-burbuja--melo { background: #FFF4E8; color: var(--melocoton-deep); }
-.pr-burbuja--chica { width: 32px; height: 32px; border-radius: 11px; background: #FFF0EA; color: #B4533A; }
-.pr-h2 { font-size: 19px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
-.pr-sub { margin-top: 3px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
-.pr-sub strong { color: var(--ink); }
+.pr-h2 { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.pr-sub { margin-top: 4px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+.pr-sub a, .pr-vacio a { color: var(--pink-deep); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .pr-error { font-size: 14px; font-weight: 700; color: var(--pink-deep); }
 
-.pr-plan { padding: 20px; border-radius: 24px; border: 1px solid var(--linea); }
-.pr-plan--corps_de_ballet { background: linear-gradient(150deg, #FFF6F2, #fff 60%); }
-.pr-plan--solista { background: linear-gradient(150deg, #FFEEDB, #fff 60%); }
-.pr-plan--principal { background: linear-gradient(150deg, #FFE5E3, #fff 60%); }
-.pr-plan-nombre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: 16px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }
-.pr-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.pr-grilla--pack { grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); }
-.pr-importes { margin-bottom: 14px; }
-.pr-inp { width: 100%; height: 46px; padding: 0 14px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
-.pr-inp:focus { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
-.pr-inp--importe { font-size: 16px; font-weight: 800; }
-.pr-inp--id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
-.pr-campo { min-width: 0; }
+.pr-planes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+.pr-plan { display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: 24px; border: 1px solid var(--linea); }
+.pr-plan--corps_de_ballet { background: linear-gradient(160deg, #FFF6F2, #fff 70%); }
+.pr-plan--solista { background: linear-gradient(160deg, #FFEEDB, #fff 70%); }
+.pr-plan--principal { background: linear-gradient(160deg, #FFE5E3, #fff 70%); }
+.pr-plan-nombre { margin-bottom: 4px; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; color: var(--ink); }
+.pr-plan .pr-campo + .pr-estado + .pr-campo { margin-top: 8px; }
 
-.pr-modo-bloque { padding: 14px; border-radius: 20px; background: rgba(255,255,255,.75); border: 1px dashed var(--linea-fuerte); }
-.pr-modo-bloque + .pr-modo-bloque { margin-top: 10px; }
-.pr-modo-bloque.es-en-uso { border-style: solid; border-color: var(--pink-line); background: #fff; }
-.pr-modo-titulo { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; font-size: 13.5px; font-weight: 800; color: var(--ink); }
-.pr-modo-ayuda { font-weight: 600; color: var(--muted); }
-.pr-en-uso { margin-left: 4px; padding: 2px 10px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 11.5px; font-weight: 800; }
+.pr-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pr-etq { font-size: 12.5px; font-weight: 800; letter-spacing: .02em; color: var(--muted); }
+.pr-monto { display: flex; align-items: center; height: 52px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; transition: border-color .2s, box-shadow .2s; }
+.pr-monto:focus-within { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(230,79,85,.1); }
+.pr-monto input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
+.pr-monto span { font-size: 18px; font-weight: 800; color: var(--muted); }
 
-.pr-aviso { display: flex; align-items: flex-start; gap: 7px; margin-top: 4px; padding: 8px 12px; border-radius: 14px; font-size: 12.5px; line-height: 1.45; font-weight: 700; }
-.pr-aviso svg { flex-shrink: 0; margin-top: 1px; }
-.pr-aviso--ok { background: var(--salvia); color: var(--salvia-deep); }
-.pr-aviso--aviso { background: #FFF4E8; color: var(--melocoton-deep); border: 1px solid #F6D9C6; }
-.pr-aviso--gris { background: var(--crema); color: var(--muted); border: 1px solid var(--linea); }
+.pr-estado { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; font-weight: 700; line-height: 1.4; }
+.pr-estado svg { flex-shrink: 0; margin-top: 1px; }
+.pr-estado--ok { color: var(--salvia-deep); }
+.pr-estado--aviso { color: var(--melocoton-deep); }
+.pr-estado--gris { color: var(--muted); }
 
-.pr-packs { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.pr-pack { padding: 18px 20px; border-radius: 24px; background: var(--crema); border: 1px solid var(--linea); }
-.pr-sin-publicar { padding: 2px 10px; border-radius: 99px; background: #FFF4E8; color: var(--melocoton-deep); font-size: 11.5px; font-weight: 800; letter-spacing: 0; }
-.pr-pack-pie { margin-top: 14px; }
-.pr-btn-sec { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 18px; border-radius: 99px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 800; transition: background .2s, border-color .2s, transform .3s var(--curva); }
+.pr-pie { margin-top: 20px; }
+
+.pr-packs { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.pr-pack { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px) auto; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 22px; background: var(--crema); border: 1px solid var(--linea); }
+.pr-pack-nombre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.pr-pack-nombre p { font-size: 16px; font-weight: 900; color: var(--ink); }
+.pr-pack-precio { display: flex; flex-direction: column; gap: 6px; }
+.pr-pack .pr-etq { display: none; }
+.pr-sin-publicar { padding: 2px 10px; border-radius: 99px; background: #FFF4E8; color: var(--melocoton-deep); font-size: 11.5px; font-weight: 800; }
+.pr-btn-sec { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 18px; border-radius: 99px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); cursor: pointer; font: inherit; font-size: 14px; font-weight: 800; transition: background .2s, border-color .2s, transform .3s var(--curva); }
 .pr-btn-sec:hover { background: var(--rubor); border-color: var(--pink-line); transform: translateY(-1px); }
 .pr-vacio { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 16px; border-radius: 20px; background: var(--crema); border: 1.5px dashed var(--linea-fuerte); font-size: 14px; color: var(--muted); }
+.pr-vacio svg { flex-shrink: 0; color: var(--melocoton-deep); }
 
-.pr-nota { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-radius: 20px; background: #FBF8FD; border: 1px solid #EFE3F4; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
-.pr-nota strong { color: var(--ink); }
+.pr-nota { display: flex; align-items: flex-start; gap: 10px; padding: 14px 18px; border-radius: 18px; background: #FBF8FD; border: 1px solid #EFE3F4; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.pr-nota svg { flex-shrink: 0; margin-top: 2px; }
 
-@media (max-width: 760px) {
-  .pr-grilla, .pr-grilla--pack { grid-template-columns: minmax(0, 1fr); }
-  .pr-plan, .pr-pack { padding: 16px; }
-  .pr-modo-bloque { padding: 12px; }
+.pr-detalles { padding: 0 4px; font-size: 13px; color: var(--muted); }
+.pr-detalles summary { cursor: pointer; font-weight: 800; width: fit-content; }
+.pr-detalles p { margin: 10px 0 8px; line-height: 1.5; }
+.pr-detalles ul { display: flex; flex-direction: column; gap: 6px; }
+.pr-detalles li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pr-detalles li span { min-width: 130px; font-weight: 700; color: var(--ink); }
+.pr-detalles code { padding: 2px 8px; border-radius: 8px; background: var(--crema); font-size: 11.5px; overflow-wrap: anywhere; }
+
+@media (max-width: 980px) {
+  .pr-planes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+  .pr-pack { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pr-pack .pr-btn-sec { justify-self: start; }
 }
 `;
