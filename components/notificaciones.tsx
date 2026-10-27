@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlarmClock, Bell, CalendarCheck, CalendarHeart, Check, Link2Off, Gift, Megaphone, MessageCircleHeart, X } from "lucide-react";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
-import { marcarSalasLeidas } from "@/components/chat-avisos";
+import { marcarSalasLeidas, useAvisosDeChat } from "@/components/chat-avisos";
 import { marcarChatsLeidosAction } from "@/src/features/studio/chat-lecturas-actions";
 
 /**
@@ -65,19 +65,28 @@ function haceCuanto(iso: string | null, tipo: Notificacion["tipo"]) {
 }
 
 export function Notificaciones({
-  items,
+  items: itemsServidor,
   variante = "flotante",
   titulo = "Notificaciones",
   vacio = "Estás al día. Acá vas a ver las novedades del estudio y las invitaciones de Brunela.",
   clave = CLAVE_ALUMNA,
+  chatComoAdmin = false,
 }: {
   items: Notificacion[];
+  /** Para armar en vivo los avisos de chat: a quien se le escribio y a donde lleva. */
+  chatComoAdmin?: boolean;
   /** "flotante": la campanita del area de alumna. "cabecera": dentro de la barra del admin. */
   variante?: "flotante" | "cabecera";
   titulo?: string;
   vacio?: string;
   clave?: string;
 }) {
+  // Los avisos de CHAT salen del almacen en vivo (components/chat-avisos.tsx),
+  // no de lo que calculo el servidor al cargar: el layout no se vuelve a
+  // renderizar al navegar, y un mensaje nuevo no llegaba a la campanita hasta
+  // recargar (2026-10-27). Mientras el almacen no arranca, los del servidor.
+  const chatVivo = useAvisosDeChat(chatComoAdmin);
+  const items = chatVivo ? [...chatVivo, ...itemsServidor.filter((i) => !(i.tipo === "mensaje" && i.id.startsWith("chat-")))] : itemsServidor;
   const [abierto, setAbierto] = useState(false);
   const [vistas, setVistas] = useState<Set<string>>(new Set());
   const [listo, setListo] = useState(false);

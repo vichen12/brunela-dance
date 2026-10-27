@@ -135,7 +135,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // Mensajes sin leer: campanita, numerito del menu y contador en vivo.
     getChatsSinLeer(user.id, false),
   ]);
-  const chatPorSala = Object.fromEntries(chats.salas.map((s) => [s.roomId, s.noLeidos]));
   const sinLeer = {
     dm: chats.salas.filter((s) => s.tipo === "dm").reduce((n, s) => n + s.noLeidos, 0),
     canal: chats.salas.filter((s) => s.tipo === "canal").reduce((n, s) => n + s.noLeidos, 0),
@@ -196,7 +195,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </div>
         <MobileDashboardNav isAdmin={isAdmin} verPrivadas={verPrivadas} sinLeer={sinLeer} />
-        <ChatAvisosVivo userId={user.id} porSala={chatPorSala} tipos={chats.tipos} />
+        <ChatAvisosVivo userId={user.id} esAdmin={false} salas={chats.salas} tipos={chats.tipos} info={chats.info} />
         {mostrarAvisoFin && (
           <AvisoFinGratis plan={acceso.plan ? PLAN_LABEL[acceso.plan] : null} nombre={profile?.full_name?.trim().split(/\s+/)[0] ?? ""} />
         )}

@@ -73,6 +73,7 @@ export function AdminHeader({
           variante="cabecera"
           titulo="Recordatorios"
           clave="brunela-admin-recordatorios-vistos"
+          chatComoAdmin
           vacio="Estás al día: ninguna clase en vivo sin enlace ni sin completar."
         />
         <Link href="/dashboard" className="ah-vista">

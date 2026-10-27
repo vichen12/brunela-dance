@@ -22,7 +22,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Lo que le escribieron: chats directos y canales.
     getChatsSinLeer(user.id, true),
   ]);
-  const chatPorSala = Object.fromEntries(chats.salas.map((s) => [s.roomId, s.noLeidos]));
   const sinLeer = {
     dm: chats.salas.filter((s) => s.tipo === "dm").reduce((n, s) => n + s.noLeidos, 0),
     canal: chats.salas.filter((s) => s.tipo === "canal").reduce((n, s) => n + s.noLeidos, 0),
@@ -45,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <AdminHeader inicial={(nombre[0] ?? "A").toUpperCase()} foto={foto} recordatorios={[...chatsComoNotificaciones(chats, true), ...recordatoriosComoNotificaciones(recordatorios)]} />
-        <ChatAvisosVivo userId={user.id} porSala={chatPorSala} tipos={chats.tipos} />
+        <ChatAvisosVivo userId={user.id} esAdmin={true} salas={chats.salas} tipos={chats.tipos} info={chats.info} />
         <div className="zona-app adm-contenido" style={{ flex: 1, padding: "32px 36px", overflowX: "hidden" }}>
           {children}
         </div>

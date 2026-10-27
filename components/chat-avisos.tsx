@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/client";
+import { chatsComoNotificaciones, type SalaSinLeer } from "@/src/features/studio/chat-aviso";
+import type { Notificacion } from "@/src/features/studio/notificaciones";
 
 /**
  * Mensajes sin leer EN VIVO: el numerito de "Mi chat", "Comunidad" y
@@ -18,9 +20,19 @@ import { createSupabaseBrowserClient } from "@/src/lib/supabase/client";
  */
 
 type Tipo = "dm" | "canal";
-type Estado = { listo: boolean; porSala: Record<string, number>; tipos: Record<string, Tipo>; abierta: string | null };
+type Info = { nombre: string; otraId: string | null };
+type Ultimo = NonNullable<SalaSinLeer["ultimo"]>;
+type Estado = {
+  listo: boolean;
+  porSala: Record<string, number>;
+  tipos: Record<string, Tipo>;
+  /** Nombre y otra persona de cada sala, y su ultimo mensaje sin leer: la campanita. */
+  info: Record<string, Info>;
+  ultimos: Record<string, Ultimo>;
+  abierta: string | null;
+};
 
-let estado: Estado = { listo: false, porSala: {}, tipos: {}, abierta: null };
+let estado: Estado = { listo: false, porSala: {}, tipos: {}, info: {}, ultimos: {}, abierta: null };
 const oyentes = new Set<() => void>();
 function cambiar(nuevo: Estado) {
   estado = nuevo;
@@ -72,12 +84,30 @@ export function marcarSalaLeida(roomId: string) {
  * Un solo canal de realtime por persona, sin filtro por sala: RLS decide que
  * mensajes le llegan, igual que en la sala.
  */
-export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; porSala: Record<string, number>; tipos: Record<string, Tipo> }) {
+export function ChatAvisosVivo({
+  userId,
+  esAdmin,
+  salas,
+  tipos,
+  info,
+}: {
+  userId: string;
+  esAdmin: boolean;
+  salas: SalaSinLeer[];
+  tipos: Record<string, Tipo>;
+  info: Record<string, Info>;
+}) {
   useEffect(() => {
-    cambiar({ listo: true, porSala: { ...porSala }, tipos: { ...tipos }, abierta: estado.abierta });
+    const porSala: Record<string, number> = {};
+    const ultimos: Record<string, Ultimo> = {};
+    for (const s of salas) {
+      porSala[s.roomId] = s.noLeidos;
+      if (s.ultimo) ultimos[s.roomId] = s.ultimo;
+    }
+    cambiar({ listo: true, porSala, tipos: { ...tipos }, info: { ...info }, ultimos, abierta: estado.abierta });
     // Solo al montar: despues manda lo que llega en vivo. Si el servidor
     // recalcula (navegacion con refresh), se vuelve a sembrar.
-  }, [porSala, tipos]);
+  }, [salas, tipos, info]);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -92,11 +122,12 @@ export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; por
       canal = supabase
         .channel(`chat-avisos-${userId}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, async (payload) => {
-          const m = payload.new as { room_id: string; user_id: string };
+          const m = payload.new as { id: string; room_id: string; user_id: string; content: string; author_name: string | null; created_at: string };
           if (!m.room_id || m.user_id === userId) return;
           const mirando = estado.abierta === m.room_id && document.visibilityState === "visible";
           if (mirando) return;
           let tipo = estado.tipos[m.room_id];
+          let datos: Info | undefined = estado.info[m.room_id];
           if (!tipo) {
             /**
              * 🔴 UNA SALA QUE NO ESTABA EN LA LISTA (2026-10-27).
@@ -111,9 +142,9 @@ export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; por
              */
             const { data: sala } = await supabase
               .from("chat_rooms")
-              .select("type, is_archived, participant_ids")
+              .select("type, name, is_archived, participant_ids")
               .eq("id", m.room_id)
-              .maybeSingle<{ type: string; is_archived: boolean; participant_ids: string[] | null }>();
+              .maybeSingle<{ type: string; name: string; is_archived: boolean; participant_ids: string[] | null }>();
             if (!sala) return;
             if (sala.type === "dm") {
               if (!(sala.participant_ids ?? []).includes(userId)) return;
@@ -123,10 +154,19 @@ export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; por
             } else {
               return;
             }
+            datos = { nombre: sala.name, otraId: tipo === "dm" ? (sala.participant_ids ?? []).find((p) => p !== userId) ?? null : null };
           }
+          const ultimo: Ultimo = {
+            id: m.id,
+            autor: m.author_name?.trim() || (esAdmin ? "Una alumna" : "Brunela"),
+            texto: m.content ?? "",
+            cuando: m.created_at,
+          };
           cambiar({
             ...estado,
             tipos: { ...estado.tipos, [m.room_id]: tipo },
+            info: datos ? { ...estado.info, [m.room_id]: datos } : estado.info,
+            ultimos: { ...estado.ultimos, [m.room_id]: ultimo },
             porSala: { ...estado.porSala, [m.room_id]: (estado.porSala[m.room_id] ?? 0) + 1 },
           });
         })
@@ -136,9 +176,28 @@ export function ChatAvisosVivo({ userId, porSala, tipos }: { userId: string; por
       cancelado = true;
       if (canal) supabase.removeChannel(canal);
     };
-  }, [userId]);
+  }, [userId, esAdmin]);
 
   return null;
+}
+
+/**
+ * Los avisos de chat de la campanita, al dia con lo que llega en vivo.
+ * null mientras el almacen no arranco: la campanita usa los del servidor.
+ */
+export function useAvisosDeChat(esAdmin: boolean): Notificacion[] | null {
+  const e = useSyncExternalStore(suscribir, () => estado, () => null);
+  return useMemo(() => {
+    if (!e?.listo) return null;
+    const salas: SalaSinLeer[] = [];
+    for (const [roomId, n] of Object.entries(e.porSala)) {
+      const info = e.info[roomId];
+      if (n <= 0 || !info) continue;
+      salas.push({ roomId, tipo: e.tipos[roomId] ?? "dm", nombre: info.nombre, otraId: info.otraId, noLeidos: n, ultimo: e.ultimos[roomId] ?? null });
+    }
+    salas.sort((a, b) => (b.ultimo?.cuando ?? "").localeCompare(a.ultimo?.cuando ?? ""));
+    return chatsComoNotificaciones({ salas }, esAdmin);
+  }, [e, esAdmin]);
 }
 
 function Globo({ n, className }: { n: number; className?: string }) {

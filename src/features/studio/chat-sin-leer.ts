@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
-import type { Notificacion } from "@/src/features/studio/notificaciones";
+import { chatsComoNotificaciones, type SalaSinLeer } from "@/src/features/studio/chat-aviso";
+
+export { chatsComoNotificaciones, type SalaSinLeer };
 
 /**
  * Que hay SIN LEER en los chats de quien mira: el chat directo y los canales.
@@ -26,15 +28,6 @@ import type { Notificacion } from "@/src/features/studio/notificaciones";
  * le devuelve todas las salas, asi que se recorta: sus DM y los canales activos.
  */
 
-export type SalaSinLeer = {
-  roomId: string;
-  tipo: "dm" | "canal";
-  nombre: string;
-  noLeidos: number;
-  /** En un DM: la otra persona. */
-  otraId: string | null;
-  ultimo: { id: string; autor: string; texto: string; cuando: string } | null;
-};
 
 export type ChatsSinLeer = {
   /** false = falta la migracion: los canales no tienen contador. */
@@ -42,6 +35,8 @@ export type ChatsSinLeer = {
   salas: SalaSinLeer[];
   /** Todas las salas que ve, sin leer o no: para el contador en vivo. */
   tipos: Record<string, "dm" | "canal">;
+  /** Nombre y otra persona de cada sala: para armar en vivo el aviso de la campanita. */
+  info: Record<string, { nombre: string; otraId: string | null }>;
 };
 
 const SEMANA = 7 * 24 * 3600 * 1000;
@@ -65,7 +60,10 @@ export const getChatsSinLeer = cache(async (userId: string, esAdmin: boolean): P
       : (s.type === "community" || s.type === "tier") && !s.is_archived
   );
   const tipos = Object.fromEntries(salas.map((s) => [s.id, s.type === "dm" ? "dm" : "canal"] as const));
-  if (!salas.length) return { conLecturas, salas: [], tipos };
+  const info = Object.fromEntries(
+    salas.map((s) => [s.id, { nombre: s.name, otraId: s.type === "dm" ? (s.participant_ids ?? []).find((p) => p !== userId) ?? null : null }])
+  );
+  if (!salas.length) return { conLecturas, salas: [], tipos, info };
 
   const desdeCanal = new Date(Date.now() - SEMANA).toISOString();
   const corte = (s: Sala) => leidoHasta.get(s.id) ?? (s.type === "dm" ? "2000-01-01T00:00:00Z" : desdeCanal);
@@ -113,43 +111,5 @@ export const getChatsSinLeer = cache(async (userId: string, esAdmin: boolean): P
     });
   }
   resultado.sort((a, b) => (b.ultimo?.cuando ?? "").localeCompare(a.ultimo?.cuando ?? ""));
-  return { conLecturas, salas: resultado, tipos };
+  return { conLecturas, salas: resultado, tipos, info };
 });
-
-/** El texto de un mensaje para la campanita: una linea, sin saltos. */
-function recorte(t: string, n = 90) {
-  const limpio = t.replace(/\s+/g, " ").trim();
-  return limpio.length > n ? limpio.slice(0, n - 1) + "…" : limpio;
-}
-
-/**
- * Las salas con mensajes nuevos, como items de la campanita.
- *
- * El id lleva el ULTIMO mensaje: la campanita guarda en el navegador cuales ya
- * se vieron, asi que un mensaje nuevo en la misma sala vuelve a avisar.
- */
-export function chatsComoNotificaciones(d: ChatsSinLeer, esAdmin: boolean): Notificacion[] {
-  return d.salas.map((s) => {
-    const varios = s.noLeidos > 1;
-    if (s.tipo === "dm") {
-      return {
-        id: `chat-${s.roomId}-${s.ultimo?.id ?? ""}`,
-        tipo: "mensaje" as const,
-        titulo: esAdmin
-          ? `${s.ultimo?.autor ?? "Una alumna"} te escribió${varios ? ` (${s.noLeidos} mensajes)` : ""}`
-          : `Brunela te escribió${varios ? ` (${s.noLeidos} mensajes)` : ""}`,
-        texto: recorte(s.ultimo?.texto ?? ""),
-        cuando: s.ultimo?.cuando ?? null,
-        href: esAdmin ? (s.otraId ? `/admin/mensajes?user=${s.otraId}` : "/admin/mensajes") : "/dashboard/chat",
-      };
-    }
-    return {
-      id: `chat-${s.roomId}-${s.ultimo?.id ?? ""}`,
-      tipo: "mensaje" as const,
-      titulo: varios ? `${s.noLeidos} mensajes nuevos en ${s.nombre}` : `Nuevo mensaje en ${s.nombre}`,
-      texto: `${s.ultimo?.autor ?? ""}: ${recorte(s.ultimo?.texto ?? "", 80)}`,
-      cuando: s.ultimo?.cuando ?? null,
-      href: esAdmin ? `/admin/comunidad?room=${s.roomId}` : `/dashboard/community?room=${s.roomId}`,
-    };
-  });
-}
