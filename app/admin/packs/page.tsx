@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CreditCard, Euro, Home, ListChecks, PlayCircle, Plus, Rocket, ShoppingBag, Star } from "lucide-react";
+import { AlertTriangle, CreditCard, Euro, Home, ListChecks, PlayCircle, Plus, Rocket, ShoppingBag, Star, Zap } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia, AdminNueva } from "@/components/admin-ui";
 import { AutoDireccion } from "@/components/auto-direccion";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -46,6 +46,14 @@ function Toggle({ id, campo, valor, activo, inactivo, icono }: {
 
 type VideoFila = { id: string; title_i18n: Record<string, string>; slug: string };
 
+/** "2026-10-30T23:59" (hora de Madrid) -> "30 oct, 23:59". */
+function finDeOferta(hastaLocal: string) {
+  const [f, h] = hastaLocal.split("T");
+  const [, mes, dia] = f.split("-").map(Number);
+  const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${dia} ${MESES[mes - 1]}, ${h}`;
+}
+
 export default async function AdminPacksPage({
   searchParams,
 }: {
@@ -54,6 +62,10 @@ export default async function AdminPacksPage({
   await requireAdmin();
   const params = (await searchParams) ?? {};
   const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  // Las acciones de oferta vuelven con ?success= (src/features/admin/ofertas-actions.ts).
+  // Sin mostrarlo, el panel se cerraba sin ningun "listo" y la tarjeta seguia
+  // con el precio normal: parecia que no se habia guardado.
+  const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
 
   const supabase = await createSupabaseServerClient();
 
@@ -197,6 +209,7 @@ export default async function AdminPacksPage({
         </>}
       />
 
+      <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
       {packs.length === 0 ? (
@@ -255,13 +268,17 @@ export default async function AdminPacksPage({
                 <li key={p.id} className={"pk-card" + (p.is_published ? "" : " es-borrador")}>
                   <div className="pk-portada">
                     {p.cover_image_url && <img src={p.cover_image_url} alt="" />}
-                    <span className="pk-precio-grande">{euros(p.price_cents)} <small>{p.currency.toUpperCase()}</small></span>
+                    <span className="pk-precio-grande">
+                      {p.oferta?.vigente && <s className="pk-precio-antes">{euros(p.price_cents)}</s>}
+                      {euros(p.oferta?.vigente ? p.oferta.precioCentimos : p.price_cents)} <small>{p.currency.toUpperCase()}</small>
+                    </span>
                     {p.is_featured && <span className="pk-dest"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacado</span>}
                   </div>
                   <div className="pk-cuerpo">
                     <div className="pk-linea">
                       <span className={"pk-estado" + (p.is_published ? " es-pub" : "")}><span className="pk-punto" aria-hidden="true" />{p.is_published ? "A la venta" : "Borrador"}</span>
                       {p.show_on_landing && <span className="pk-tag">En la portada</span>}
+                      {p.oferta?.vigente && <span className="pk-tag pk-tag--oferta"><Zap size={12} strokeWidth={2.4} aria-hidden="true" /> En oferta hasta el {finDeOferta(p.oferta.hastaLocal)}</span>}
                       {p.planesQuePuedenComprar && <span className="pk-tag pk-tag--solo">Solo {planesDeCompraEnTexto(p.planesQuePuedenComprar)}</span>}
                     </div>
                     <h2 className="pk-titulo">{p.name_i18n?.es ?? p.slug}</h2>
@@ -346,6 +363,8 @@ const CSS = `
   position: absolute; left: 12px; bottom: 12px; padding: 6px 14px; border-radius: 99px; background: rgba(255,255,255,0.94);
   font-weight: 900; font-size: 19px; letter-spacing: -0.02em; color: var(--ink);
 }
+.pk-precio-antes { margin-right: 7px; font-size: 13px; font-weight: 700; color: var(--muted); text-decoration-color: rgba(230,79,85,.8); text-decoration-thickness: 2px; }
+.pk-tag--oferta { display: inline-flex; align-items: center; gap: 4px; background: var(--pink) !important; color: #fff !important; }
 .pk-precio-grande small { font-size: 11.5px; font-weight: 800; color: var(--pink-deep); letter-spacing: 0; }
 .pk-dest { position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--melocoton-deep); padding: 5px 11px; border-radius: 99px; background: #fff; }
 .pk-cuerpo { display: flex; flex-direction: column; flex: 1; padding: 16px 20px 20px; }

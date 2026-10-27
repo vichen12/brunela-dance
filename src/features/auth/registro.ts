@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { COOKIE_REFERIDO, normalizarCodigo } from "@/src/features/referidos/reglas";
+import { cookies } from "next/headers";
 import { after } from "next/server";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
@@ -90,6 +92,13 @@ export async function signUpAction(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
 
+  // REFERIDOS: el codigo de la amiga vive en una cookie de ESTE navegador.
+  // Con "Confirm email" encendido, el enlace del correo se abre casi siempre
+  // en OTRO (llego por WhatsApp, confirma desde Gmail) y la cookie no esta:
+  // la invitacion se perdia sin que nadie se enterara. Viaja en la cuenta,
+  // igual que pending_pack, y el onboarding la lee de ahi si falta la cookie.
+  const refPendiente = normalizarCodigo((await cookies()).get(COOKIE_REFERIDO)?.value);
+
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -106,6 +115,7 @@ export async function signUpAction(formData: FormData) {
         pending_tier: parsed.data.plan ?? null,
         pending_interval: parsed.data.interval ?? null,
         pending_pack: parsed.data.pack ?? null,
+        pending_ref: refPendiente,
       },
     },
   });

@@ -6,7 +6,7 @@ import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { getProgresoDelUsuario, ultimaVista } from "@/src/features/studio/progress";
-import { resolveI18nText } from "@/src/features/studio/helpers";
+import { membershipTierLabel, resolveI18nText } from "@/src/features/studio/helpers";
 import { CATEGORIA_LABEL } from "@/src/features/studio/catalogo-clases";
 import { ClaseInminente } from "@/components/clase-inminente";
 import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notificaciones";
@@ -108,8 +108,46 @@ function formatDuracion(segundos: number) {
   return `${Math.round(segundos / 60)} min`;
 }
 
-export default async function DashboardPage() {
+/**
+ * La tarjeta de "ya entraste" despues de pagar. Si compro un pack (y no tiene
+ * plan), la lleva a SUS clases: a quien entra por un pack, el inicio le
+ * muestra accesos a cosas que el pack no incluye.
+ */
+async function Bienvenida({ userId, tier }: { userId: string; tier: string }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: compra } = await supabase
+    .from("pack_purchases")
+    .select("created_at, packs(slug, name_i18n)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ created_at: string; packs: { slug: string; name_i18n: Record<string, string> | null } | null }>();
+  const pack = tier === "none" ? compra?.packs ?? null : null;
+  return (
+    <div className="ini-bienvenida" role="status">
+      <span className="ini-bienvenida-ico" aria-hidden="true"><Sparkles size={20} strokeWidth={2.2} /></span>
+      <span className="ini-bienvenida-txt">
+        <strong>{pack ? `¡«${pack.name_i18n?.es ?? pack.slug}» ya es tuyo!` : "¡Ya estás adentro!"}</strong>
+        <small>
+          {pack
+            ? "Sus clases son tuyas para siempre. Empezá cuando quieras."
+            : tier !== "none"
+              ? `Tu plan ${membershipTierLabel(tier as never)} está activo. Bienvenida al estudio.`
+              : "Bienvenida al estudio."}
+        </small>
+      </span>
+      <Link className="ini-bienvenida-btn" href={(pack ? `/dashboard/packs/${pack.slug}` : "/dashboard/library") as never}>
+        {pack ? "Ver mis clases" : "Empezar"} <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" />
+      </Link>
+    </div>
+  );
+}
+
+export default async function DashboardPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { user } = await requireUser();
+  // Recien pagado (/registro/activando manda aca con ?bienvenida=1). Sin esto
+  // caia en el inicio de siempre y nada le decia que el pago habia entrado.
+  const bienvenida = (await searchParams)?.bienvenida === "1";
   const supabase = await createSupabaseServerClient();
 
   const profile = await getCurrentProfile(user.id);
@@ -300,6 +338,8 @@ export default async function DashboardPage() {
           </h1>
           <p className="ini-lede">Tu cuerpo te espera. Seguí donde lo dejaste.</p>
         </header>
+
+        {bienvenida && <Bienvenida userId={user.id} tier={tier} />}
 
         {/* Su proxima sesion privada (plan Principal), con "Unirse" desde 15 min antes. */}
         {privadaProxima && <TarjetaSesionPrivada s={privadaProxima} ahora={ahoraMs} verTodas />}
@@ -492,6 +532,12 @@ export default async function DashboardPage() {
 // iconos en burbujas y nada oscuro de fondo (la tarjeta del vivo era negra).
 
 const CSS_INICIO = `
+.ini-bienvenida { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 14px 0; padding: 16px 18px; border-radius: 22px; background: linear-gradient(110deg, #FFE9E4, #FFF6F2 70%); border: 1.5px solid var(--pink-line, #F6C9C4); }
+.ini-bienvenida-ico { flex-shrink: 0; width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; background: var(--pink); color: #fff; }
+.ini-bienvenida-txt { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ini-bienvenida-txt strong { font-size: 16px; color: var(--ink); }
+.ini-bienvenida-txt small { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.ini-bienvenida-btn { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 18px; border-radius: 99px; background: var(--pink); color: #fff; font-size: 14px; font-weight: 800; text-decoration: none; }
 .ini {
   max-width: 1040px; margin: 0 auto; padding: clamp(20px, 3vw, 36px) clamp(16px, 3vw, 32px);
   display: flex; flex-direction: column; gap: 18px;

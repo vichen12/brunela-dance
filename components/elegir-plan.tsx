@@ -163,6 +163,13 @@ const CSS = `
 .ep-pack-desc { font-size: 13px; color: var(--muted); line-height: 1.45; }
 .ep-pack-meta { font-size: 12.5px; font-weight: 700; color: var(--muted); }
 .ep-pack-precio { flex-shrink: 0; font-size: 22px; font-weight: 900; color: var(--ink); }
+/* En el celular el precio va abajo: con oferta (tachado + cuenta regresiva)
+   es ancho y dejaba la descripcion en una palabra por renglon. */
+@media (max-width: 560px) {
+  .ep-pack { flex-wrap: wrap; }
+  .ep-pack-body { flex-basis: calc(100% - 60px); }
+  .ep-pack-precio { flex-basis: 100%; padding-left: 60px; }
+}
 .ep-aviso-pack { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 16px; background: #FFF4E8; border: 1px solid #FFE2D3; color: #7A3E24; font-size: 13.5px; font-weight: 700; line-height: 1.5; }
 .ep-aviso-pack-ico { flex-shrink: 0; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: #fff; color: #C25E3A; }
 .ep-vacio { margin: 0; padding: 14px 16px; border-radius: 16px; background: var(--crema); color: var(--muted); font-size: 14px; }

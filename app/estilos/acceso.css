@@ -1362,6 +1362,10 @@ body:has(.auth-page) {
 .reg-plan-name { grid-column: 1; font-size: 18px; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
 .reg-plan-price { grid-column: 2; grid-row: 1 / 3; font-size: 22px; font-weight: 900; color: var(--pink-deep); }
 .reg-plan-price small { font-size: 13px; font-weight: 700; color: var(--muted); }
+/* Pack: una sola columna. El precio con oferta (tachado + cuenta regresiva)
+   es ancho y en dos columnas dejaba el nombre en tres renglones. */
+.reg-plan--pack { grid-template-columns: minmax(0, 1fr); }
+.reg-plan--pack .reg-plan-price { grid-column: 1; grid-row: auto; margin-top: 4px; }
 .reg-plan-change {
   grid-column: 1 / -1;
   justify-self: start;

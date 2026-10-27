@@ -71,7 +71,7 @@ export type PackAdmin = {
 function OfertaDelPack({ pack }: { pack: PackAdmin }) {
   const o = pack.oferta;
   return (
-    <section className="adr-caja" style={{ marginTop: 24 }}>
+    <section id="oferta" className="adr-caja" style={{ marginTop: 24, scrollMarginTop: 16 }}>
       <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 900, color: "#3B2A2C", margin: "0 0 6px" }}>
         <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 12, display: "grid", placeItems: "center", background: "#FFE2E2", color: "#E64F55" }}>
           <Zap size={17} strokeWidth={2.2} />
@@ -91,7 +91,7 @@ function OfertaDelPack({ pack }: { pack: PackAdmin }) {
           <label style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 120px" }}>
             <Lbl>Precio de oferta ({pack.currency.toUpperCase()})</Lbl>
             <input style={inp} name="ofertaPrecio" required inputMode="decimal" pattern={PATRON_PRECIO}
-              defaultValue={o ? String(o.precioCentimos / 100).replace(".", ",") : ""} placeholder="9,90" />
+              defaultValue={o ? (o.precioCentimos / 100).toFixed(o.precioCentimos % 100 === 0 ? 0 : 2).replace(".", ",") : ""} placeholder="9,90" />
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 190px" }}>
             <Lbl>Termina el (hora de España)</Lbl>
@@ -400,6 +400,11 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
               Un identificador de Stripe no se edita: se reemplaza. Para cambiar
               el precio, en Stripe se crea uno nuevo y se pega acá.
             </p>
+            {/* La oferta es OTRO formulario (va abajo, despues de Guardar):
+                sin este enlace nadie la encontraba buscando "precio". */}
+            <a href="#oferta" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 13, fontWeight: 800, color: "#B03A3E" }}>
+              <Zap size={14} strokeWidth={2.4} aria-hidden="true" /> ¿Lo querés poner en oferta unos días? Bajá a «Oferta por tiempo limitado»
+            </a>
           </div>
 
           <QuienLoCompra pack={pack} />

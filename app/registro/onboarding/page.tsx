@@ -70,7 +70,13 @@ export default async function OnboardingPage({ searchParams }: Props) {
   // REFERIDOS: toda cuenta nueva pasa por aca. Si llego con el enlace de una
   // amiga (cookie de components/guardar-referido.tsx), queda anotada. La regla
   // (solo cuentas nuevas, nunca a si misma, una vez) vive en servidor.ts.
-  await anotarReferidaSiCorresponde(createSupabaseAdminClient(), user.id, (await cookies()).get(COOKIE_REFERIDO)?.value);
+  // Si confirmo el correo en otro navegador no hay cookie: el codigo viene de
+  // la cuenta (pending_ref, lo guarda signUpAction).
+  await anotarReferidaSiCorresponde(
+    createSupabaseAdminClient(),
+    user.id,
+    (await cookies()).get(COOKIE_REFERIDO)?.value ?? (user.user_metadata as { pending_ref?: string | null } | undefined)?.pending_ref
+  );
 
   // El plan puede venir por URL (Google) o de la metadata del alta (correo).
   const meta = user.user_metadata as {

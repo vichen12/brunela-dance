@@ -135,6 +135,8 @@ const CSS = `
 @media (max-width: 680px) {
   .inv-pasos { grid-template-columns: minmax(0, 1fr); }
   .inv-enlace { flex-direction: column; }
+  /* En columna, flex:1 lo dejaba sin alto (base 0): quedaba aplastado. */
+  .inv-enlace input { flex: none; }
   .inv-lista li { flex-wrap: wrap; }
 }
 `;
