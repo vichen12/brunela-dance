@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Hls from "hls.js";
 
 export type PlayerAudioTrack = {
@@ -129,6 +129,8 @@ export function VideoPlayer({
   // Audio tracks reported by the stream itself (index + name).
   const [streamAudioTracks, setStreamAudioTracks] = useState<{ id: number; name: string; lang?: string }[]>([]);
   const [activeAudioId, setActiveAudioId] = useState<number>(-1);
+  const lastTapRef = useRef<{ side: number; at: number; pos: number } | null>(null);
+  const [skipHint, setSkipHint] = useState<{ side: number; key: number } | null>(null);
 
   const saveProgress = useCallback(
     (force = false) => {
@@ -157,7 +159,14 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video || !src) return;
 
+    // Una sola vez por fuente. En el iPhone (HLS nativo) `loadedmetadata`
+    // puede volver a dispararse despues de que la alumna adelanto, y cada vez
+    // la devolvia al punto guardado: arrastraba la barra, daba play y volvia
+    // al mismo lugar.
+    let resumed = false;
     function applyResume() {
+      if (resumed) return;
+      resumed = true;
       if (video && initialPositionSeconds > 0 && initialPositionSeconds < (durationSeconds || Infinity)) {
         video.currentTime = initialPositionSeconds;
       }
@@ -407,8 +416,73 @@ export function VideoPlayer({
       return rank(a.locale) - rank(b.locale);
     });
 
+  // Doble toque a los costados: -10 / +10 segundos, como en las apps de video.
+  // En el celular la barra es finita y arrastrarla con el dedo es impreciso.
+  function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse") return;
+    const video = videoRef.current;
+    if (!video || !ready) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = e.clientY - rect.top;
+    // Fuera de los tercios laterales, o sobre la barra de controles de abajo,
+    // el toque es de los controles nativos.
+    const side = x < 1 / 3 ? -1 : x > 2 / 3 ? 1 : 0;
+    if (side === 0 || y > rect.height - 56) {
+      lastTapRef.current = null;
+      return;
+    }
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && last.side === side && now - last.at < 320) {
+      // Los controles de Chrome en Android ya saltan 10 s con doble toque; el
+      // iPhone no. Si el nativo ya movio el video, no se suma otro salto.
+      // Se compara contra donde estaba en el PRIMER toque: el nativo puede
+      // haber saltado antes de que llegue este evento.
+      const antes = last.pos;
+      window.setTimeout(() => {
+        if (Math.abs(video.currentTime - antes) >= 5) return;
+        const total = Number.isFinite(video.duration) ? video.duration : durationSeconds || Infinity;
+        video.currentTime = Math.max(0, Math.min(total - 1, antes + side * 10));
+        setSkipHint({ side, key: now });
+      }, 120);
+      lastTapRef.current = null;
+      return;
+    }
+    lastTapRef.current = { side, at: now, pos: video.currentTime };
+  }
+
   return (
-    <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#1C1618", aspectRatio: "16/9" }}>
+    <div
+      onPointerUp={onPointerUp}
+      style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#1C1618", aspectRatio: "16/9", touchAction: "manipulation" }}
+    >
+      {skipHint && (
+        <div
+          key={skipHint.key}
+          aria-hidden
+          onAnimationEnd={() => setSkipHint(null)}
+          style={{
+            position: "absolute",
+            top: "50%",
+            [skipHint.side < 0 ? "left" : "right"]: "12%",
+            transform: "translateY(-50%)",
+            zIndex: 4,
+            pointerEvents: "none",
+            padding: "8px 14px",
+            borderRadius: 20,
+            background: "rgba(28,22,24,0.6)",
+            color: "#FDF8F6",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            animation: "vp-salto 650ms ease-out forwards"
+          }}
+        >
+          {skipHint.side < 0 ? "« 10 s" : "10 s »"}
+        </div>
+      )}
+      <style>{`@keyframes vp-salto { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }`}</style>
       <video
         ref={videoRef}
         poster={poster ?? undefined}

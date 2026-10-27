@@ -875,7 +875,9 @@ const CSS_BIBLIOTECA = `
 }
 .bib-pildoras {
   display: flex; gap: 8px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
-  padding: 4px 2px 8px; -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
+  /* El ultimo chip tiene que poder salir del degradado de la derecha: sin el
+     relleno final, quedaba siempre medio borrado aunque se llegara al final. */
+  padding: 4px 36px 8px 2px; -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
   mask-image: linear-gradient(to right, #000 92%, transparent);
 }
 .bib-pildoras::-webkit-scrollbar { display: none; }
@@ -1006,7 +1008,11 @@ const CSS_BIBLIOTECA = `
   .bib-filtros { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
   .bib-filtros::-webkit-scrollbar { display: none; }
   .bib-filtros .dsp { flex-shrink: 0; }
-  .bib-nav { flex-direction: column; align-items: stretch; }
+  /* nowrap: con wrap, en columna la linea toma el ancho de su contenido mas
+     ancho y la fila de categorias medía 1086 px en un celular de 390: las
+     ultimas quedaban fuera de la pantalla, sin forma de llegar (2026-10-27). */
+  .bib-nav { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+  .bib-pildoras { max-width: 100%; }
   .bib-seg { align-self: flex-start; }
   .bib-grilla { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
 }
