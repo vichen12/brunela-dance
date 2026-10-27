@@ -229,14 +229,14 @@ export default async function AdminMensajesPage({ searchParams }: {
     <main className="dmA">
       <style>{CSS_DM}</style>
       <AdminCabecera
-        eyebrow="Mensajes"
+        eyebrow="Chat"
         titulo="Chat con tus alumnas"
         lede="Conversaciones privadas, una por alumna. Buscala por nombre o correo, o filtrá por plan."
       />
     <div className="dm">
       <aside className="dm-lateral" aria-label="Alumnas">
         <div className="dm-lateral-cab">
-          <p className="dm-eyebrow">Mensajes directos</p>
+          <p className="dm-eyebrow">Chats privados</p>
           <p className="dm-lateral-titulo">Alumnas</p>
           {/* El total, no la pagina: `count` cuenta todas las que coinciden. */}
           <p className="dm-cuenta">{totalMiembros ?? members.length} {(totalMiembros ?? members.length) === 1 ? "alumna" : "alumnas"}{filtrando ? " encontradas" : ""}</p>

@@ -314,7 +314,7 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
           <div className="fa-tarjeta-cab">
             <span className="fa-burbuja"><MessageCircle size={18} strokeWidth={2.2} aria-hidden="true" /></span>
             <div>
-              <h2 className="fa-h2">Mensajes</h2>
+              <h2 className="fa-h2">Chat</h2>
               <p className="fa-sub">Le llega a su chat privado con vos.</p>
             </div>
             {salaId && <Link href={`/admin/mensajes?user=${id}` as never} className="fa-mini">Abrir chat</Link>}

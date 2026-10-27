@@ -17,7 +17,7 @@ const ROUTES: Record<string, string> = {
   "/admin/live":          "Sesiones en vivo",
   "/admin/calendario":    "Calendario",
   "/admin/sesiones-privadas": "Sesiones privadas",
-  "/admin/mensajes":      "Mensajes",
+  "/admin/mensajes":      "Chat",
   "/admin/comunidad":     "Comunidad",
   "/admin/chat":          "Moderación",
   "/admin/announcements": "Anuncios",

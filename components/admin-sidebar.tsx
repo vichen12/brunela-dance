@@ -76,7 +76,7 @@ const NAV: { label: string; items: NavItem[] }[] = [
       // Mensajes y Comunidad vivian mezclados en /dashboard/chat y
       // /dashboard/community (la admin veia ahi la bandeja y las herramientas).
       // /dashboard es ahora solo la vista de alumna; gestionar vive aca.
-      { href: "/admin/mensajes",      label: "Mensajes",         Icon: MessageCircleHeart },
+      { href: "/admin/mensajes",      label: "Chat",             Icon: MessageCircleHeart },
       { href: "/admin/comunidad",     label: "Comunidad",        Icon: Users },
       { href: "/admin/chat",          label: "Moderación",       Icon: Shield },
       { href: "/admin/announcements", label: "Anuncios",         Icon: Megaphone },
