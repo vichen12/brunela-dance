@@ -75,6 +75,9 @@ export function puertaActiva(ahora: number = Date.now()): boolean {
  *    como UTC y el contador llegaria a cero una hora antes en España, que es
  *    donde esta el estudio. Noviembre es CET (+01:00).
  *
+ * A las 12:00 del mediodia y no a medianoche: pedido del dueño (2026-11-02),
+ * para estar despierto cuando abre y poder publicarlo o grabarlo.
+ *
  * ⚠️ Y ES LA QUE ABRE EL SITIO: cuando el contador llega a cero, la puerta se
  *    levanta sola (ver puertaActiva). Si ese dia no esta listo, poner
  *    ACCESO_ANTICIPADO_ACTIVO=forzar en Vercel.
@@ -85,7 +88,7 @@ export function fechaDeApertura(): Date {
     const d = new Date(crudo);
     if (!Number.isNaN(d.getTime())) return d;
   }
-  return new Date("2026-11-15T00:00:00+01:00");
+  return new Date("2026-11-15T12:00:00+01:00");
 }
 
 /** El valor que lleva la cookie: un derivado de la contraseña, no la contraseña. */

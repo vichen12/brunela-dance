@@ -74,11 +74,14 @@ export async function GET(request: NextRequest) {
     }
 
     console.error("[auth/callback] exchangeCodeForSession error:", error.message);
-    // Surface the real reason instead of a generic message so failures are
-    // diagnosable from the sign-in screen.
-    return NextResponse.redirect(
-      `${origin}/sign-in?error=${encodeURIComponent(`No se pudo entrar con ese enlace (${error.message}). Si venía de un correo, pedí uno nuevo.`)}`
-    );
+    // "PKCE code verifier not found": el enlace se abrio en otro navegador que
+    // el que lo pidio (tipico: se pide en Safari y el correo lo abre la app de
+    // Gmail). El texto crudo en ingles no le decia nada a nadie.
+    const otroNavegador = /code verifier/i.test(error.message);
+    const motivo = otroNavegador
+      ? "Ese enlace se abrió en un navegador distinto al que lo pidió. Pedí uno nuevo y abrilo en el mismo navegador, o entrá con tu contraseña."
+      : `No se pudo entrar con ese enlace (${error.message}). Si venía de un correo, pedí uno nuevo.`;
+    return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(motivo)}`);
   }
 
   return NextResponse.redirect(

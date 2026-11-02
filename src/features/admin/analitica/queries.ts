@@ -57,6 +57,20 @@ export type Churn = {
   bajasEsteMes: number;
   avisaronQueSeVan: number;
   porcentaje: number | null;
+  /** Quienes se fueron (o avisaron que se van), la mas reciente primero. */
+  bajas: Baja[];
+};
+
+export type Baja = {
+  id: string;
+  nombre: string;
+  email: string;
+  plan: string;
+  /** Cuando cancelo o cuando se le termino. */
+  fecha: string;
+  esteMes: boolean;
+  /** Cancelo pero sigue con acceso hasta fin del periodo pagado. */
+  sigueHastaFinDePeriodo: boolean;
 };
 
 export type Conversion = {
@@ -213,12 +227,41 @@ export async function getAnalitica(): Promise<Analitica> {
   // mas las que se fueron durante el mes. Sin sumar las bajas, el porcentaje
   // sale inflado.
   const baseChurn = activas + bajasEsteMes;
+
+  // La lista de bajas: una fila por alumna, con su cancelacion mas reciente.
+  // Quien cancelo y despues volvio a pagar (otra suscripcion activa sin
+  // aviso de baja) ya no es una baja y no aparece.
+  const perfilPorId = new Map(P.map((p) => [p.id, p]));
+  const volvieron = new Set(
+    S.filter((s) => ESTADOS_CON_ACCESO.includes(s.status) && !s.cancel_at_period_end).map((s) => s.user_id)
+  );
+  const bajaPorAlumna = new Map<string, Baja>();
+  for (const s of S) {
+    const aviso = s.cancel_at_period_end && ESTADOS_CON_ACCESO.includes(s.status);
+    const fecha = s.canceled_at ?? s.ended_at ?? (aviso ? s.created_at : null);
+    if (!fecha || volvieron.has(s.user_id)) continue;
+    const perfil = perfilPorId.get(s.user_id);
+    if (!perfil) continue; // admin o cuenta borrada
+    const previa = bajaPorAlumna.get(s.user_id);
+    if (previa && previa.fecha >= fecha) continue;
+    bajaPorAlumna.set(s.user_id, {
+      id: perfil.id,
+      nombre: perfil.full_name ?? "Sin nombre",
+      email: perfil.email,
+      plan: PLAN_ETIQUETA[s.membership_tier ?? ""] ?? PLAN_ETIQUETA[perfil.membership_tier] ?? "",
+      fecha,
+      esteMes: new Date(fecha) >= inicioDeMes,
+      sigueHastaFinDePeriodo: Boolean(aviso),
+    });
+  }
+  const bajas = [...bajaPorAlumna.values()].sort((a, b) => b.fecha.localeCompare(a.fecha));
   const churn: Churn = {
     umbral: umbral(baseChurn, UMBRALES.churn, "alumnas con plan"),
     activas,
     bajasEsteMes,
     avisaronQueSeVan,
     porcentaje: baseChurn > 0 ? Math.round((bajasEsteMes / baseChurn) * 100) : null,
+    bajas,
   };
 
   // ── Conversion registro -> pago ────────────────────────────────────────────

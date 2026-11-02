@@ -17,12 +17,12 @@ archivo, desde `<!DOCTYPE html>` hasta `</html>`).
 
 | Variable | Dónde |
 |---|---|
-| `{{ .ConfirmationURL }}` | el botón y el enlace de respaldo de todas, menos reautenticación |
+| `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…` | el botón y el enlace de respaldo de todas, menos reautenticación. **No** `{{ .ConfirmationURL }}`: ese usa PKCE y falla si el correo se abre en otro navegador ("PKCE code verifier not found") |
 | `{{ .Email }}` | el texto de confirmar, recuperar, enlace mágico e invitación; "correo actual" en cambio de correo |
 | `{{ .NewEmail }}` | "correo nuevo" en cambio de correo |
 | `{{ .Token }}` | el código grande de reautenticación (y su preheader) |
 
-`{{ .SiteURL }}` no se usa: el pie enlaza fijo a `https://bruneladance.com`, para
+En el pie `{{ .SiteURL }}` no se usa: enlaza fijo a `https://bruneladance.com`, para
 que un Site URL de desarrollo (localhost) nunca termine en un correo real.
 
 ## Cómo cambiarlas

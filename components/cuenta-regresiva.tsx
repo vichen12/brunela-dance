@@ -164,7 +164,7 @@ const FORMATO_FECHA: Record<PublicLocale, string> = {
  * decide en el navegador (localStorage). El primer render sale en castellano,
  * igual que en el servidor, asi que no hay error de hidratacion.
  *
- * La zona horaria va fija en Madrid: la apertura es a medianoche de alli, y
+ * La zona horaria va fija en Madrid: la apertura es a la hora de alli, y
  * formatear en la zona de la visitante podria mostrar el dia anterior.
  */
 export function FechaDeApertura({ objetivoISO }: { objetivoISO: string }) {

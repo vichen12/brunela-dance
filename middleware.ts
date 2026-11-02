@@ -142,6 +142,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  /**
+   * Con la sesion abierta, "Ingresar" lleva directo al estudio.
+   *
+   * Antes /sign-in mostraba el formulario igual: quien abria la web en otra
+   * pestaña y tocaba "Ingresar" creia que se le habia cerrado la sesion y
+   * volvia a loguearse (lo reporto el dueño, 2026-11-02).
+   *
+   * Solo /sign-in pelado: olvide y reset de contraseña necesitan mostrarse con
+   * sesion. Y si trae ?error= se muestra, para no tapar un enlace que fallo.
+   */
+  if (pathname === "/sign-in" && session && !request.nextUrl.searchParams.has("error")) {
+    const pedido = request.nextUrl.searchParams.get("callbackUrl") ?? "";
+    // Solo rutas propias: "//x" y "/\x" el navegador los toma como otro dominio.
+    const seguro = /^\/(?![/\\])/.test(pedido) && !pedido.startsWith("/sign-in");
+    return NextResponse.redirect(new URL(seguro ? pedido : "/dashboard", request.url));
+  }
+
   return supabaseResponse;
 }
 

@@ -39,7 +39,7 @@ const TONOS = ["coral", "melo", "salvia", "lila"] as const;
 type Tono = (typeof TONOS)[number];
 
 function Tarjeta({
-  valor, etiqueta, ayuda, tono = "normal", color, icono, extra,
+  valor, etiqueta, ayuda, tono = "normal", color, icono, extra, href,
 }: {
   valor: string | number;
   etiqueta: string;
@@ -48,17 +48,23 @@ function Tarjeta({
   color: Tono;
   icono: React.ReactNode;
   extra?: React.ReactNode;
+  /** Con href la tarjeta entera es un enlace (por ejemplo, al detalle de abajo). */
+  href?: string;
 }) {
-  return (
-    <div className={`aa-tarjeta aa-tarjeta--${color}` + (tono === "alerta" ? " es-alerta" : "")}>
+  const clase = `aa-tarjeta aa-tarjeta--${color}` + (tono === "alerta" ? " es-alerta" : "") + (href ? " aa-tarjeta--link" : "");
+  const contenido = (
+    <>
       <span className="aa-tarjeta-ico" aria-hidden="true">{icono}</span>
       {extra && <span className="aa-tarjeta-extra">{extra}</span>}
       <p className="aa-tarjeta-num">{valor}</p>
       <p className="aa-tarjeta-etq">{etiqueta}</p>
       <p className="aa-tarjeta-ayuda">{ayuda}</p>
-    </div>
+    </>
   );
+  return href ? <a href={href} className={clase}>{contenido}</a> : <div className={clase}>{contenido}</div>;
 }
+
+const FECHA_CORTA = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" });
 
 /** Lo que se muestra en vez del numero cuando la muestra es demasiado chica. */
 function SinDatos({ umbral, explica }: { umbral: Umbral; explica?: string }) {
@@ -373,6 +379,8 @@ export default async function AnaliticasPage() {
               : "Todavía son muy pocas para sacar un porcentaje."
           }
           tono={a.churn.bajasEsteMes > 0 ? "alerta" : "normal"}
+          href="#bajas"
+          extra={a.churn.bajas.length > 0 && <span className="aa-var">Ver quiénes <ArrowDownRight size={13} strokeWidth={2.6} aria-hidden="true" /></span>}
         />
         <Tarjeta
           color="salvia"
@@ -408,6 +416,63 @@ export default async function AnaliticasPage() {
         para abrirla.
       */}
       <BloqueFacturacion f={facturacion} />
+
+      {/*
+        ── Bajas ──
+        La tarjeta de arriba decia CUANTAS; esto dice QUIENES, para poder
+        escribirles (pedido del dueño, 2026-11-02: "quiero mandarle una
+        bonificacion y no me aparece en ningun lado quien se dio de baja").
+        Cada fila abre la ficha, donde esta "Mandarle un mail para que vuelva";
+        el correo abre el programa de mail para escribirle algo propio.
+      */}
+      <div id="bajas" className="aa-ancla">
+        <Bloque
+          pregunta="¿Quiénes se dieron de baja?"
+          accion={{ href: "/admin/users?plan=sin-acceso", texto: "Invitarlas a volver" }}
+          icono={<UserMinus size={18} strokeWidth={2.2} />}
+          color="melo"
+        >
+          {a.churn.bajas.length === 0 ? (
+            <p className="aa-txt">Nadie se dio de baja todavía.</p>
+          ) : (
+            <>
+              <p className="aa-txt aa-txt--intro">
+                Tocá una alumna para ver su ficha y mandarle un mail para que vuelva, o
+                tocá su correo para escribirle algo tuyo (un mes de regalo, una oferta).
+              </p>
+              <div className="aa-filas">
+                {a.churn.bajas.slice(0, 30).map((b) => (
+                  <div key={b.id} className="aa-fila aa-fila--baja">
+                    <Link href={`/admin/users/${b.id}` as never} className="aa-baja-quien">
+                      <span className="aa-fila-ini" aria-hidden="true">{b.nombre[0]?.toUpperCase()}</span>
+                      <span className="aa-fila-txt">
+                        <span className="aa-fila-titulo aa-bloquecito">{b.nombre}</span>
+                        <span className="aa-fila-sub aa-bloquecito">
+                          {b.plan}{b.plan ? " · " : ""}{FECHA_CORTA.format(new Date(b.fecha))}
+                        </span>
+                      </span>
+                    </Link>
+                    {b.sigueHastaFinDePeriodo
+                      ? <span className="aa-chip aa-chip--melo">Avisó que no renueva</span>
+                      : b.esteMes && <span className="aa-chip aa-chip--coral">Este mes</span>}
+                    <a href={`mailto:${b.email}`} className="aa-baja-mail" title={`Escribirle a ${b.email}`}>
+                      {b.email}
+                    </a>
+                  </div>
+                ))}
+              </div>
+              {a.churn.bajas.length > 30 && <p className="aa-txt">Y {a.churn.bajas.length - 30} más.</p>}
+              {/* CCO y no Para: que ninguna vea el correo de las demas. */}
+              <a
+                href={`mailto:?bcc=${a.churn.bajas.map((b) => encodeURIComponent(b.email)).join(",")}`}
+                className="ad-btn aa-baja-todas"
+              >
+                Escribirles a todas (en copia oculta)
+              </a>
+            </>
+          )}
+        </Bloque>
+      </div>
 
       <div className="aa-dos">
         {/* ── Inactividad ────────────────────────────────────────────────── */}
@@ -564,6 +629,12 @@ const CSS = `
 .aa-tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .aa-tarjeta { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 20px 22px 22px; border-radius: var(--radio); border: 1px solid var(--linea); box-shadow: var(--sombra); transition: transform .35s var(--curva), box-shadow .35s var(--curva); }
 .aa-tarjeta:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
+.aa-tarjeta--link { color: inherit; text-decoration: none; cursor: pointer; }
+.aa-ancla { scroll-margin-top: 90px; }
+.aa-fila--baja { flex-wrap: wrap; }
+.aa-baja-quien { display: flex; align-items: center; gap: 12px; flex: 1 1 200px; min-width: 0; min-height: 44px; color: inherit; text-decoration: none; }
+.aa-baja-mail { min-height: 44px; display: inline-flex; align-items: center; color: var(--pink-deep); font-weight: 700; font-size: 13.5px; word-break: break-all; }
+.aa-baja-todas { margin-top: 14px; display: inline-flex; width: fit-content; }
 .aa-tarjeta::after { content: ""; position: absolute; width: 140px; height: 140px; right: -50px; top: -60px; border-radius: 50%; opacity: .7; pointer-events: none; }
 .aa-tarjeta--coral { background: linear-gradient(160deg, #FFE9E2, #FFF8F5 78%); }
 .aa-tarjeta--coral::after { background: radial-gradient(circle, rgba(242,198,198,.8), transparent 70%); }
