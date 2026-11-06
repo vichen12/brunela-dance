@@ -13,6 +13,10 @@ export const localeNames: Record<PublicLocale, string> = {
 
 export const publicMessages = {
   es: {
+    "nav.packs": "Packs",
+    "packs.emptyTitle": "Todavía no hay packs a la venta",
+    "packs.emptyLead": "Muy pronto vas a encontrar acá los packs de clases de Brunela.",
+    "packs.all": "Ver todos los packs",
     "nav.method": "Método",
     "nav.classes": "Clases",
     "nav.about": "Sobre mí",
@@ -337,6 +341,10 @@ export const publicMessages = {
     "portfolio.contact.socials": "Seguime en redes",
   },
   en: {
+    "nav.packs": "Packs",
+    "packs.emptyTitle": "No packs for sale yet",
+    "packs.emptyLead": "Brunela’s class packs will be here very soon.",
+    "packs.all": "See all packs",
     "nav.method": "Method",
     "nav.classes": "Classes",
     "nav.about": "About",
@@ -659,6 +667,10 @@ export const publicMessages = {
     "portfolio.contact.socials": "Follow me",
   },
   fr: {
+    "nav.packs": "Packs",
+    "packs.emptyTitle": "Pas encore de packs en vente",
+    "packs.emptyLead": "Les packs de cours de Brunela arrivent très bientôt ici.",
+    "packs.all": "Voir tous les packs",
     "nav.method": "Méthode",
     "nav.classes": "Cours",
     "nav.about": "A propos",
@@ -982,6 +994,10 @@ export const publicMessages = {
     "portfolio.contact.socials": "Suis-moi",
   },
   it: {
+    "nav.packs": "Pack",
+    "packs.emptyTitle": "Ancora nessun pack in vendita",
+    "packs.emptyLead": "Molto presto qui troverai i pack di lezioni di Brunela.",
+    "packs.all": "Vedi tutti i pack",
     "nav.method": "Metodo",
     "nav.classes": "Lezioni",
     "nav.about": "Chi sono",

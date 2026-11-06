@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Gem, Globe, Heart, Menu, PlayCircle, Sparkles, X } from "lucide-react";
+import { ChevronRight, Gem, Globe, Heart, Menu, Package, PlayCircle, Sparkles, X } from "lucide-react";
 import {
   LanguageSwitcher,
   usePublicI18n,
@@ -185,6 +185,8 @@ export function Navbar() {
                 </Link>
               );
             })}
+            {/* Fuera de `links`: es otra pagina, no una seccion de la landing. */}
+            <Link href={"/packs" as never} className={`nv-link${pathname?.startsWith("/packs") ? " es-activa" : ""}`}>{t("nav.packs")}</Link>
           </nav>
 
           <div className="nv-acciones">
@@ -259,6 +261,11 @@ export function Navbar() {
               <ChevronRight className="nv-hoja-flecha" size={18} strokeWidth={2.4} aria-hidden />
             </Link>
           ))}
+          <Link href={"/packs" as never} onClick={close} className="nv-hoja-link">
+            <span className="nv-hoja-ico" aria-hidden><Package size={19} strokeWidth={2.1} /></span>
+            <span className="nv-hoja-txt">{t("nav.packs")}</span>
+            <ChevronRight className="nv-hoja-flecha" size={18} strokeWidth={2.4} aria-hidden />
+          </Link>
         </nav>
 
         <div className="nv-hoja-acciones">

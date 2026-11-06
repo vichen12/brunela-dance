@@ -1,11 +1,15 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { leerCamposDePrecio } from "@/src/features/admin/precio-de-pack";
 import { asegurarPrecioDePack } from "@/src/features/admin/precio-de-pack-stripe";
+import { destinatariasDelAnuncio, mandarAnuncio } from "@/src/features/correos/anuncio";
+import { PREFIJO_ANUNCIO_DE_PACK } from "@/src/features/studio/novedades-reglas";
+import { getAppUrl } from "@/src/lib/env";
 import {
   AVISO_FALTA_MIGRACION_PACKS_POR_PLAN,
   esFaltaDeColumnaPlanes,
@@ -33,6 +37,9 @@ function refrescarPacks() {
   revalidatePath("/admin/precios");
   revalidatePath("/dashboard/plan");
   revalidatePath("/");
+  revalidatePath("/packs");
+  revalidatePath("/packs/[slug]", "page");
+  revalidatePath("/dashboard");
 }
 
 function texto(fd: FormData, campo: string): string {
@@ -79,6 +86,8 @@ export async function createPackAction(fd: FormData) {
   const cobro = await asegurarPrecioDePack(supabase, creado.id);
   refrescarPacks();
   if ("fallo" in cobro) fallar(cobro.fallo);
+  // Vuelve sin ?nueva=1: el alta se cierra y el aviso dice que sigue.
+  redirect(`/admin/packs?success=${encodeURIComponent(`"${nombre}" quedó creado. Ahora tocá «Editar y clases» para elegirle las clases.`)}` as never);
 }
 
 export async function updatePackAction(fd: FormData) {
@@ -186,6 +195,71 @@ export async function togglePackAction(fd: FormData) {
   const { error } = await supabase.from("packs").update({ [campo]: valor }).eq("id", id);
   if (error) fallar(error.message);
   refrescarPacks();
+}
+
+/**
+ * "Avisar a las alumnas": un anuncio con el nombre y el precio del pack, que
+ * sale por el mismo camino que los anuncios del panel (campanita y mail, con su
+ * registro de enviados y la baja de cada una).
+ *
+ * ⚠️ UNA SOLA VEZ POR PACK. Cada anuncio es nuevo para el registro de enviados:
+ *    apretar dos veces mandaria dos mails. Por eso se busca antes uno con ese
+ *    mismo titulo.
+ */
+export async function avisarLanzamientoDePackAction(fd: FormData) {
+  const { user } = await requireAdmin();
+  const supabase = createSupabaseAdminClient();
+
+  const { data: pack } = await supabase
+    .from("packs")
+    .select("slug, name_i18n, description_i18n, price_cents, currency, is_published")
+    .eq("id", texto(fd, "id"))
+    .maybeSingle<{ slug: string; name_i18n: Record<string, string> | null; description_i18n: Record<string, string> | null; price_cents: number; currency: string; is_published: boolean }>();
+  if (!pack) fallar("Ese pack ya no existe.");
+  if (!pack.is_published) fallar("Primero publicá el pack: el aviso lleva a comprarlo.");
+
+  const nombre = pack.name_i18n?.es ?? pack.slug;
+  const titulo = `${PREFIJO_ANUNCIO_DE_PACK}${nombre}`;
+  const { count } = await supabase.from("studio_announcements").select("id", { count: "exact", head: true }).eq("title", titulo);
+  if (count) fallar(`Ya avisaste de "${nombre}". El mail sale una sola vez por pack.`);
+
+  const euros = (pack.price_cents / 100).toLocaleString("es-ES", { minimumFractionDigits: pack.price_cents % 100 ? 2 : 0 });
+  const descripcion = pack.description_i18n?.es?.trim();
+  const contenido = [
+    `Ya está a la venta "${nombre}" por ${euros} ${pack.currency.toUpperCase()}, con un solo pago y tuyo para siempre.`,
+    descripcion,
+    `Miralo acá: ${getAppUrl().replace(/\/$/, "")}/packs/${pack.slug}`,
+  ].filter(Boolean).join("\n\n");
+
+  const { data: creado, error } = await supabase.from("studio_announcements").insert({
+    title: titulo,
+    content: contenido,
+    tier_target: "all",
+    is_active: true,
+    expires_at: null,
+    created_by: user.id,
+  }).select("id, title, content, tier_target").single<{ id: string; title: string; content: string; tier_target: string }>();
+  if (error || !creado) fallar(error?.message ?? "No se pudo crear el aviso.");
+
+  // La lista se arma ahora (para decir a cuantas) y el envio corre en after():
+  // Brunela no espera. Un fallo del mail no deshace el anuncio.
+  let mensaje = `Avisado: "${nombre}" ya está en las novedades.`;
+  try {
+    const destinatarias = await destinatariasDelAnuncio(supabase, creado, { incluirSinPlan: true });
+    if (destinatarias.length > 0) {
+      after(() => mandarAnuncio(supabase, creado, destinatarias).then(() => undefined));
+      mensaje += ` Le llega por mail a ${destinatarias.length === 1 ? "1 alumna" : `${destinatarias.length} alumnas`}.`;
+    } else {
+      mensaje += " Todavía no hay alumnas para mandarle el mail.";
+    }
+  } catch (e) {
+    console.error("[pack] no se pudo armar la lista:", e instanceof Error ? e.message : String(e));
+    mensaje += " El mail no salió: no se pudo armar la lista.";
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/admin/announcements");
+  redirect(`/admin/packs?success=${encodeURIComponent(mensaje)}` as never);
 }
 
 /**

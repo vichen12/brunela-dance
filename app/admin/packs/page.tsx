@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { AlertTriangle, CreditCard, Euro, Home, ListChecks, PlayCircle, Plus, Rocket, ShoppingBag, Star, Zap } from "lucide-react";
+import { AlertTriangle, CreditCard, Euro, Home, ListChecks, Mail, PlayCircle, Plus, Rocket, ShoppingBag, Star, Zap } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia, AdminNueva } from "@/components/admin-ui";
 import { AutoDireccion } from "@/components/auto-direccion";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { verificarPrecio, estadoDelCobro } from "@/src/lib/stripe/verificar-precio";
-import { createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
+import { avisarLanzamientoDePackAction, createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
+import { CopiarEnlacePack } from "@/components/copiar-enlace-pack";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
 import { esFaltaDeColumnaOferta, ofertaVigente } from "@/src/features/studio/ofertas";
 import { isoAMadrid } from "@/src/features/studio/sesiones-privadas-reglas";
@@ -189,7 +190,7 @@ export default async function AdminPacksPage({
       <BotonEnviar className="ad-btn ad-btn--lleno pk-crear" pendingLabel="Creando…">
         <Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear pack
       </BotonEnviar>
-      <p className="pk-nota">Nace sin publicar. Después le elegís las clases y le cargás el identificador de Stripe en <Link href="/admin/precios">Precios</Link>.</p>
+      <p className="pk-nota">Nace sin publicar. Después le elegís las clases; el cobro en Stripe se crea solo.</p>
     </form>
   );
 
@@ -234,11 +235,11 @@ export default async function AdminPacksPage({
             pasos={[
               { icono: <Plus size={18} strokeWidth={2.2} />, titulo: "Creá el pack", texto: "Nombre y precio. Nace sin publicar, así que nadie lo ve mientras lo armás." },
               { icono: <ListChecks size={18} strokeWidth={2} />, titulo: "Elegí las clases", texto: "Desde «Editar y clases». Quien lo compra las ve para siempre, aunque no tenga plan." },
-              { icono: <CreditCard size={18} strokeWidth={2} />, titulo: "Conectalo a Stripe y publicalo", texto: "En Precios pegás su identificador de Stripe. Sin eso no se puede publicar: la alumna no podría pagar." },
+              { icono: <CreditCard size={18} strokeWidth={2} />, titulo: "Publicalo", texto: "El cobro en Stripe se crea solo. Con al menos una clase adentro, ya lo podés publicar." },
             ]}
             cta={<AdminBoton href="/admin/packs?nueva=1#nueva" lleno><Plus size={16} strokeWidth={2.2} aria-hidden="true" /> Crear el primero</AdminBoton>}
           />
-          <AdminNueva abierto={abrirNueva} titulo="Crear un pack" sub="Nombre y precio. Las clases y Stripe van después.">
+          <AdminNueva abierto={abrirNueva} titulo="Crear un pack" sub="Nombre y precio. Las clases van después.">
             {formNuevo}
           </AdminNueva>
         </>
@@ -251,7 +252,7 @@ export default async function AdminPacksPage({
             { label: "Vendidos", value: vendidos, sub: "en total" },
           ]} />
 
-          <AdminNueva abierto={abrirNueva} titulo="Crear un pack" sub="Nombre y precio. Las clases y Stripe van después.">
+          <AdminNueva abierto={abrirNueva} titulo="Crear un pack" sub="Nombre y precio. Las clases van después.">
             {formNuevo}
           </AdminNueva>
 
@@ -304,6 +305,22 @@ export default async function AdminPacksPage({
                       <Toggle id={p.id} campo="is_published" valor={p.is_published} activo="A la venta" inactivo="Publicar" icono={<Rocket size={14} strokeWidth={2} aria-hidden="true" />} />
                       <Toggle id={p.id} campo="show_on_landing" valor={p.show_on_landing} activo="En portada" inactivo="Mostrar en portada" icono={<Home size={14} strokeWidth={2} aria-hidden="true" />} />
                     </div>
+                    {p.is_published && (
+                      <div className="pk-difundir">
+                        <p className="pk-difundir-etq">Para difundirlo (el enlace se ve sin cuenta):</p>
+                        <CopiarEnlacePack slug={p.slug} />
+                        <form action={avisarLanzamientoDePackAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <BotonEnviar
+                            className="ad-btn"
+                            pendingLabel="Avisando…"
+                            confirmar={`¿Avisarles a tus alumnas que salió "${p.name_i18n?.es ?? p.slug}"? Les llega un mail con el nombre y el precio. Sale una sola vez por pack.`}
+                          >
+                            <Mail size={14} strokeWidth={2.2} aria-hidden="true" /> Avisar a las alumnas
+                          </BotonEnviar>
+                        </form>
+                      </div>
+                    )}
                   </div>
                 </li>
               );
@@ -318,6 +335,8 @@ export default async function AdminPacksPage({
 
 const CSS = `
 .pk { display: flex; flex-direction: column; }
+.pk-difundir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--linea-fuerte, #E9CFC5); }
+.pk-difundir-etq { flex-basis: 100%; font-size: 12.5px; font-weight: 800; color: var(--muted); }
 .pk-nuevo { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 160px auto; gap: 14px 16px; align-items: end; padding-top: 18px; }
 .pk-campo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .pk-etq { font-size: 12.5px; font-weight: 800; color: var(--ink); }

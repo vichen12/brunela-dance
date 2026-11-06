@@ -217,6 +217,8 @@ const CSS = `
 .ecb-campo:focus-within { border-color: var(--pink, #E64F55); box-shadow: 0 0 0 4px rgba(230,79,85,.12); }
 .ecb-ico { flex-shrink: 0; color: var(--pink-deep, #B03A3E); display: inline-flex; }
 .ecb-campo input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); padding: 10px 0; }
+/* El recuadro es de .ecb-campo: sin esto, el foco global de los campos dibuja otro adentro. */
+.ecb-campo input:focus { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; }
 .ecb-campo input::placeholder { color: #B39189; }
 .ecb-limpiar { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--rubor, #FFF2EE); color: var(--pink-deep, #B03A3E); }
 .ecb-valor { position: absolute; left: 14px; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }

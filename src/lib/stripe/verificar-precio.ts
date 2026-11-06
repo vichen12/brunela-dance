@@ -28,6 +28,20 @@ import { stripeMode, type StripeMode } from "@/src/lib/stripe/catalog";
  *   el id en los dos mundos.
  */
 
+/**
+ * Cuanto se le espera a Stripe para ESTA lectura.
+ *
+ * 🔴 SIN ESTO, UN STRIPE QUE NO CONTESTA TRABA EL PANEL 4 MINUTOS.
+ *    La libreria espera 80 s y reintenta 2 veces. Esta verificacion corre al
+ *    dibujar /admin/packs y /admin/precios, y despues de guardar el boton sigue
+ *    en "Creando…" hasta que la pagina termina de dibujarse: el pack ya estaba
+ *    creado y Brunela miraba el boton girar (2026-11-06).
+ *
+ *    Esto es solo un aviso: si no llega a tiempo la pantalla dice "No pude
+ *    consultar Stripe ahora" y sigue. Por eso sin reintentos.
+ */
+const ESPERA_LECTURA = { timeout: 5_000, maxNetworkRetries: 0 };
+
 export type ResultadoVerificacion =
   | { estado: "ok"; importeCentimos: number; moneda: string; intervalo: string | null; apodo: string | null }
   | { estado: "archivado"; importeCentimos: number; moneda: string; intervalo: string | null; apodo: string | null }
@@ -65,7 +79,7 @@ async function existeEn(modo: StripeMode, priceId: string): Promise<boolean> {
   const clave = claveParaModo(modo);
   if (!clave) return false;
   try {
-    await new Stripe(clave).prices.retrieve(priceId);
+    await new Stripe(clave, ESPERA_LECTURA).prices.retrieve(priceId);
     return true;
   } catch {
     return false;
@@ -95,7 +109,7 @@ export async function verificarPrecio(
   }
 
   try {
-    const price = await new Stripe(clave).prices.retrieve(id);
+    const price = await new Stripe(clave, ESPERA_LECTURA).prices.retrieve(id);
 
     const datos = {
       // unit_amount viene null en precios escalonados o por uso. No es un error

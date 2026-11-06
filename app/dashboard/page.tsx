@@ -20,6 +20,8 @@ import { cargarMiAgenda } from "@/src/features/studio/agenda";
 import { proximosDeLaAgenda } from "@/src/features/studio/agenda-reglas";
 import { claveDia, horaMadrid, nombreDiaCorto } from "@/src/features/admin/calendario";
 import { portadaDeClase } from "@/src/lib/video/portada";
+import { Novedades } from "@/components/novedades";
+import { getNovedades } from "@/src/features/studio/novedades";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +58,7 @@ type LiveSession = {
   cover_image_url: string | null;
 };
 
-type Announcement = { id: string; title: string; content: string; tier_target: string };
+type Announcement = { id: string; title: string; content: string; tier_target: string; published_at: string | null };
 
 const TIER_ORDER: Record<MembershipTier, number> = {
   none: 0, corps_de_ballet: 1, solista: 2, principal: 3,
@@ -172,7 +174,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
 
   const now = new Date().toISOString();
 
-  let consultaAnuncios = supabase.from("studio_announcements").select("id, title, content, tier_target");
+  let consultaAnuncios = supabase.from("studio_announcements").select("id, title, content, tier_target, published_at");
   if (isAdmin) consultaAnuncios = consultaAnuncios.in("tier_target", anunciosDeSuPlan);
   // "Para hoy": las clases publicadas mas recientes a las que llega su plan.
   // A la alumna la recorta RLS; a la admin, la lista de planes de la clase.
@@ -281,6 +283,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
         .in("status", ["reserved", "waitlisted"]).limit(1).maybeSingle()
     : { data: null };
   const announcements = (announcementsData ?? []) as Announcement[];
+  // Un fallo aca no puede tirar el inicio: sin novedades, la seccion no aparece.
+  const novedades = await getNovedades(announcements).catch(() => []);
 
   // Solo las que todavia no pasaron y siguen publicadas. Se filtra y ordena en
   // TypeScript y no en la consulta a proposito: una alumna tiene un punado de
@@ -340,6 +344,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
         </header>
 
         {bienvenida && <Bienvenida userId={user.id} tier={tier} />}
+
+        <Novedades novedades={novedades} />
 
         {/* Su proxima sesion privada (plan Principal), con "Unirse" desde 15 min antes. */}
         {privadaProxima && <TarjetaSesionPrivada s={privadaProxima} ahora={ahoraMs} verTodas />}

@@ -80,7 +80,7 @@ export function PacksPublicos({ packs }: { packs: PackPublico[] }) {
                 </span>
               )}
 
-              <h4 className="lp-pack-nombre">{p.name_i18n?.es ?? p.slug}</h4>
+              <h4 className="lp-pack-nombre"><Link href={`/packs/${p.slug}` as never}>{p.name_i18n?.es ?? p.slug}</Link></h4>
 
               {p.description_i18n?.es && <p className="lp-pack-desc">{p.description_i18n.es}</p>}
 
@@ -117,7 +117,7 @@ export function PacksPublicos({ packs }: { packs: PackPublico[] }) {
                   no tiene ninguno, asi que no se la manda a pagar algo que el
                   checkout le va a rechazar. Primero el plan. */}
               {p.solo_para ? (
-                <Link href={"#planes" as never} className="lp-pack-accion">
+                <Link href={"/#planes" as never} className="lp-pack-accion">
                   <T id="packs.seePlans" />
                   <ArrowRight size={15} strokeWidth={2.4} aria-hidden />
                 </Link>

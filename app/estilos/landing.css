@@ -1027,3 +1027,31 @@
   .lp-foto:hover img { transform: none; }
   .lp .ultimo-card:hover { transform: none; }
 }
+
+/* ══ TIENDA DE PACKS (/packs y /packs/[slug]) ═══════════════════════════════
+   La pagina que se comparte: se ve entera sin cuenta. La barra flota arriba,
+   de ahi el padding. */
+.lp-tienda { min-height: 70vh; padding: clamp(110px, 12vw, 140px) var(--lp-gutter) clamp(56px, 7vw, 88px); }
+.lp-tienda .lp-packs { margin-top: 0; }
+/* Aca no corre LandingMovimiento: sin esto, las tarjetas quedarian invisibles. */
+.lp-js .lp-tienda [data-lp-revelar] { opacity: 1; transform: none; }
+.lp-pack-nombre a { color: inherit; text-decoration: none; }
+.lp-pack-nombre a:hover { text-decoration: underline; }
+.lp-tienda-vacia { display: grid; justify-items: center; text-align: center; gap: 10px; padding-top: 40px; }
+.lpk { width: min(860px, 100%); margin: 0 auto; }
+.lpk-volver { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 800; color: var(--pink-deep); text-decoration: none; }
+.lpk-cabeza { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; margin-top: 8px; }
+.lpk-cabeza:not(:has(.lpk-portada)) { grid-template-columns: minmax(0, 1fr); }
+.lpk-portada { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 24px; box-shadow: var(--lp-sombra-foto); }
+.lpk-datos { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.lpk-datos .lp-pack-accion { align-self: stretch; }
+.lpk-nombre { font-family: var(--font-suave), sans-serif; font-size: clamp(1.8rem, 1.4rem + 1.6vw, 2.6rem); font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); }
+.lpk-desc { font-size: 16px; line-height: 1.6; color: var(--muted); white-space: pre-line; }
+.lpk-subtitulo { margin: 38px 0 14px !important; font-size: 19px; font-weight: 900; color: var(--ink); }
+.lpk-clases { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lpk-clase { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 18px; background: #fff; border: 1px solid var(--linea); }
+.lpk-clase-img { flex: 0 0 96px; aspect-ratio: 16 / 10; display: grid; place-items: center; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #FFF1EC, #FFDADA); color: var(--pink-deep); }
+.lpk-clase-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lpk-clase-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 15px; color: var(--ink); }
+.lpk-clase-txt small { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 680px) { .lpk-cabeza { grid-template-columns: minmax(0, 1fr); } }

@@ -145,7 +145,9 @@ type Crudo = {
 };
 
 async function leerDeStripe(clave: string): Promise<Crudo> {
-  const stripe = new Stripe(clave);
+  // Con tope: sin el, un Stripe que no contesta traba Analiticas hasta 4
+  // minutos. Si falla, la pantalla ya sabe decir "ahora no pudimos leer Stripe".
+  const stripe = new Stripe(clave, { timeout: 10_000, maxNetworkRetries: 1 });
   const ahora = new Date();
   const meses = ultimosDoceMeses(ahora);
   const claveActual = meses[11].clave;

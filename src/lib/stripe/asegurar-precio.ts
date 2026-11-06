@@ -43,7 +43,9 @@ export type PedidoDePrecio = {
 };
 
 export async function asegurarPrecio(p: PedidoDePrecio): Promise<{ id: string; creado: boolean }> {
-  const stripe = new Stripe(getStripeServerEnv().STRIPE_SECRET_KEY);
+  // Con tope: lo llama el panel con Brunela esperando el boton. Un reintento
+  // alcanza y no duplica nada (la libreria le pone clave de idempotencia).
+  const stripe = new Stripe(getStripeServerEnv().STRIPE_SECRET_KEY, { timeout: 10_000, maxNetworkRetries: 1 });
   const moneda = p.moneda.toLowerCase();
 
   let viejo: Stripe.Price | null = null;

@@ -50,9 +50,15 @@ export function planesDelAnuncio(tierTarget: string): string[] {
   return Object.keys(RANGO).filter((p) => RANGO[p] >= minimo);
 }
 
-/** Quienes lo reciben. LANZA si una consulta falla: quien llama decide. */
-export async function destinatariasDelAnuncio(db: SupabaseClient, a: AnuncioParaMail): Promise<Destinataria[]> {
-  const planes = planesDelAnuncio(a.tier_target);
+/**
+ * Quienes lo reciben. LANZA si una consulta falla: quien llama decide.
+ *
+ * `incluirSinPlan`: tambien las cuentas sin plan. Lo usa el aviso de un pack, que
+ * se compra sin plan: son justamente quienes mas lo pueden querer (pedido
+ * 2026-11-06). Las bajas de correos se respetan igual.
+ */
+export async function destinatariasDelAnuncio(db: SupabaseClient, a: AnuncioParaMail, opciones: { incluirSinPlan?: boolean } = {}): Promise<Destinataria[]> {
+  const planes = [...planesDelAnuncio(a.tier_target), ...(opciones.incluirSinPlan ? ["none"] : [])];
   const out: Destinataria[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     const { data, error } = await db

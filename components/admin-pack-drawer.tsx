@@ -4,6 +4,8 @@ import { SelectorMultiple } from "@/components/selector-multiple";
 import { PLANES } from "@/src/features/studio/catalogo-clases";
 
 import { Desplegable } from "@/components/desplegable";
+import { ElegirConBuscador } from "@/components/elegir-con-buscador";
+import { SubirPortadaClase } from "@/components/subir-portada-clase";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -261,15 +263,18 @@ function ClasesDelPack({ pack, elegibles }: { pack: PackAdmin; elegibles: ClaseE
       {disponibles.length > 0 && (
         <form action={addVideoToPackAction} style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 14 }}>
           <input type="hidden" name="packId" value={pack.id} />
-          <div style={{ flex: "1 1 220px", minWidth: 0 }}><F label="Agregar una clase">
-            <Desplegable
-              style={inp}
+          {/* Sin <F>: si es un <label>, tocar una opcion de la lista vuelve a
+              activar el campo de adentro y la lista no se cierra. */}
+          <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+            <span style={{ ...etiquetaSuave, display: "block", marginBottom: 6 }}>Agregar una clase</span>
+            <ElegirConBuscador
               name="videoId"
-              defaultValue=""
-              placeholder="Elegí una clase…"
+              required
+              etiqueta="Agregar una clase"
+              placeholder="Escribí para buscar una clase…"
               opciones={disponibles.map((c) => ({ value: c.id, label: c.titulo }))}
             />
-          </F></div>
+          </div>
           <BotonEnviar pendingLabel="Agregando…" style={{ ...botonPrincipal, height: 46, padding: "0 20px" }}>
             <Plus size={15} strokeWidth={2.4} aria-hidden="true" /> Agregar
           </BotonEnviar>
@@ -402,9 +407,12 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
           </BloqueAvanzado>
 
           <BloqueAvanzado titulo="Portada y orden" cantidad={2}>
-            <F label="URL de portada">
-              <input style={inp} name="portada" type="url" defaultValue={pack.cover_image_url ?? ""} placeholder="https://…" />
-            </F>
+            <SubirPortadaClase
+              name="portada"
+              defaultValue={pack.cover_image_url ?? ""}
+              ayudaVacio="Elegí una foto horizontal. Es la que se ve en la tarjeta del pack. Después tocá «Guardar cambios»."
+              ayudaLista="Es la que se ve en la tarjeta del pack. Tocá «Guardar cambios» para dejarla puesta."
+            />
             <F label="Orden en la portada">
               <input style={inp} name="orden" type="number" defaultValue={pack.display_order} />
             </F>
