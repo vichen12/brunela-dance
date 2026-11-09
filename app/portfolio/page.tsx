@@ -55,6 +55,8 @@ export const metadata: Metadata = {
   title: "Portfolio · Brunela Dance Trainer",
   description:
     "Bailarina, coreógrafa y profesora de Argentina radicada en Barcelona. Trayectoria, formación y trabajo artístico de Brunela.",
+  alternates: { canonical: "/portfolio" },
+  openGraph: { title: "Portfolio · Brunela Dance Trainer", url: "/portfolio", images: ["/brand/og.png"] },
 };
 
 const WHATSAPP = "https://wa.me/34612491637";

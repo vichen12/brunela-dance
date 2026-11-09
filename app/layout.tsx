@@ -41,9 +41,23 @@ const serifFont = Bodoni_Moda({
   display: "swap",
 });
 
+/*
+ * Posicionamiento (2026-11-09). `metadataBase` resuelve las rutas relativas
+ * (imagen, canonical) contra el dominio de verdad: sin el, Google veria
+ * direcciones de vercel.app. La imagen es la que sale al pegar el enlace en
+ * WhatsApp o Instagram; cada pagina puede poner la suya.
+ */
 export const metadata: Metadata = {
-  title: "Brunela Dance Trainer",
+  metadataBase: new URL("https://bruneladance.com"),
+  title: "Brunela Dance Trainer · Clases de ballet online y preparación para bailarines",
   description: "Ballet y preparación integral para bailarines. Clases online, programas de entrenamiento y técnica para progresar en tu danza.",
+  openGraph: {
+    type: "website",
+    siteName: "Brunela Dance Trainer",
+    locale: "es_ES",
+    images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: "Brunela Dance Trainer" }],
+  },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: "/brand/isologo-icon.png",
     apple: "/brand/isologo-icon.png",

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -275,6 +276,29 @@ function InfinitePhotoCarousel() {
  */
 export const revalidate = 300;
 
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+/**
+ * La ficha para Google (datos estructurados): quien es el estudio, donde esta
+ * y donde encontrarlo. No se ve en la pagina; Google la usa para entender que
+ * es esto y mostrar resultados mas completos.
+ */
+const FICHA_GOOGLE = {
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  name: "Brunela Dance Trainer",
+  url: "https://bruneladance.com",
+  logo: "https://bruneladance.com/brand/isologo-icon.png",
+  image: "https://bruneladance.com/brand/og.png",
+  description: "Estudio online de ballet y preparación integral para bailarines: clases grabadas, planes de trabajo y clases en vivo.",
+  email: "info@bruneladance.com",
+  address: { "@type": "PostalAddress", addressLocality: "Barcelona", addressCountry: "ES" },
+  founder: { "@type": "Person", name: "Brunela", jobTitle: "Profesora de ballet, coreógrafa y bailarina" },
+  sameAs: ["https://www.instagram.com/brunela.dance", "https://www.tiktok.com/@brunela.dance"],
+};
+
 /**
  * Los precios salen de la base; el texto de venta sigue aca.
  *
@@ -393,6 +417,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FICHA_GOOGLE) }} />
       <Navbar />
       <LandingMovimiento />
 

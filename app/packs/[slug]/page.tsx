@@ -26,7 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: titulo,
     description: descripcion,
-    openGraph: { title: titulo, description: descripcion, images: pack.cover_image_url ? [pack.cover_image_url] : undefined },
+    alternates: { canonical: `/packs/${pack.slug}` },
+    openGraph: { title: titulo, description: descripcion, url: `/packs/${pack.slug}`, images: [pack.cover_image_url || "/brand/og.png"] },
   };
 }
 
@@ -41,9 +42,26 @@ export default async function PackPublicoPage({ params }: Props) {
   const pack = await buscar((await params).slug);
   if (!pack) notFound();
   const clases = await getClasesDelPack(pack.id);
+  // Ficha de producto para Google: nombre, precio y que se puede comprar.
+  const ficha = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: pack.name_i18n?.es ?? pack.slug,
+    description: pack.description_i18n?.es || undefined,
+    image: pack.cover_image_url || "https://bruneladance.com/brand/og.png",
+    brand: { "@type": "Brand", name: "Brunela Dance Trainer" },
+    offers: {
+      "@type": "Offer",
+      url: `https://bruneladance.com/packs/${pack.slug}`,
+      priceCurrency: pack.currency.toUpperCase(),
+      price: ((pack.oferta?.precioCentimos ?? pack.price_cents) / 100).toFixed(2),
+      availability: "https://schema.org/InStock",
+    },
+  };
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ficha).replace(/</g, "\\u003c") }} />
       <Navbar />
       <main className="sistema lp lp-tienda">
         <div className="lpk">
