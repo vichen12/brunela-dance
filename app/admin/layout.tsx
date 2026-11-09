@@ -6,21 +6,22 @@ import { fuenteSistema } from "@/src/lib/fuente-sistema";
 import { cargarRecordatoriosAdmin, recordatoriosComoNotificaciones } from "@/src/features/admin/recordatorios";
 import { getChatsSinLeer, chatsComoNotificaciones } from "@/src/features/studio/chat-sin-leer";
 import { ChatAvisosVivo } from "@/components/chat-avisos";
+import { medir } from "@/src/lib/medir";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile } = await requireAdmin();
+  const { user, profile } = await medir("panel: requireAdmin", requireAdmin());
   const nombre =
     profile?.full_name?.trim().split(/\s+/)[0] || user.email?.split("@")[0] || "admin";
   // La foto de perfil, para el avatar de la cabecera y del menu.
   const [{ data: fotoData }, recordatorios, chats] = await Promise.all([
-    (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle(),
+    medir("panel: foto", async () => (await createSupabaseServerClient()).from("profiles").select("avatar_url").eq("id", user.id).maybeSingle()),
     // Campanita de la cabecera: enlaces sin cargar, la clase de hoy y las que
     // faltan completar. Memoizado: /admin y /admin/live lo piden en el mismo render.
-    cargarRecordatoriosAdmin(),
+    medir("panel: recordatorios", cargarRecordatoriosAdmin()),
     // Lo que le escribieron: chats directos y canales.
-    getChatsSinLeer(user.id, true),
+    medir("panel: chats sin leer", getChatsSinLeer(user.id, true)),
   ]);
   const sinLeer = {
     dm: chats.salas.filter((s) => s.tipo === "dm").reduce((n, s) => n + s.noLeidos, 0),

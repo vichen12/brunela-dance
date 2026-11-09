@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { resolveI18nText } from "@/src/features/studio/helpers";
-import { portadaDeClase } from "@/src/lib/video/portada";
+import { portadaDeClase, portadaDePlan } from "@/src/lib/video/portada";
 import { ordenarNovedades, type Novedad } from "@/src/features/studio/novedades-reglas";
 
 /**
@@ -25,7 +25,7 @@ export async function getNovedades(anuncios: Anuncio[]): Promise<Novedad[]> {
       .eq("status", "published").not("published_at", "is", null)
       .order("published_at", { ascending: false }).limit(POR_TIPO),
     db.from("programs")
-      .select("slug, title_i18n, cover_image_url, duration_days, published_at, created_at")
+      .select("id, slug, title_i18n, cover_image_url, duration_days, published_at, created_at")
       .eq("status", "published")
       .order("created_at", { ascending: false }).limit(POR_TIPO),
     db.from("packs")
@@ -34,6 +34,23 @@ export async function getNovedades(anuncios: Anuncio[]): Promise<Novedad[]> {
       .order("created_at", { ascending: false }).limit(POR_TIPO),
   ]);
   for (const r of [clases, planes, packs]) if (r.error) console.error("[novedades]", r.error.message);
+
+  // Un plan sin foto propia muestra la de su primera clase, como en Planes de
+  // trabajo (pedido 2026-11-09: la tarjeta salia con un icono solo).
+  const sinFoto = ((planes.data ?? []) as { id: string; cover_image_url: string | null }[]).filter((p) => !p.cover_image_url).map((p) => p.id);
+  const fotoDePrimeraClase = new Map<string, string | null>();
+  if (sinFoto.length) {
+    const { data: dias } = await db.from("program_days")
+      .select("program_id, day_number, videos(thumbnail_url, stream_playback_id)")
+      .in("program_id", sinFoto).not("video_id", "is", null)
+      .order("day_number", { ascending: true });
+    type V = { thumbnail_url: string | null; stream_playback_id: string | null };
+    for (const d of (dias ?? []) as unknown as { program_id: string; videos: V | V[] | null }[]) {
+      if (fotoDePrimeraClase.has(d.program_id)) continue;
+      const v = Array.isArray(d.videos) ? d.videos[0] : d.videos;
+      if (v) fotoDePrimeraClase.set(d.program_id, portadaDeClase(v));
+    }
+  }
 
   const lista: Novedad[] = [
     ...((clases.data ?? []) as { slug: string; title_i18n: Record<string, string>; thumbnail_url: string | null; planes_permitidos: string[] | null; content_type: string | null; published_at: string }[]).map((v) => ({
@@ -46,13 +63,13 @@ export async function getNovedades(anuncios: Anuncio[]): Promise<Novedad[]> {
       fecha: v.published_at,
       gratis: (v.planes_permitidos ?? []).includes("none"),
     })),
-    ...((planes.data ?? []) as { slug: string; title_i18n: Record<string, string>; cover_image_url: string | null; duration_days: number | null; published_at: string | null; created_at: string }[]).map((p) => ({
+    ...((planes.data ?? []) as { id: string; slug: string; title_i18n: Record<string, string>; cover_image_url: string | null; duration_days: number | null; published_at: string | null; created_at: string }[]).map((p) => ({
       clave: "plan-" + p.slug,
       tipo: "plan" as const,
       titulo: resolveI18nText(p.title_i18n) || p.slug,
       detalle: p.duration_days ? `${p.duration_days} días` : null,
       href: `/dashboard/programs/${p.slug}`,
-      imagen: p.cover_image_url,
+      imagen: portadaDePlan(p.cover_image_url) ?? fotoDePrimeraClase.get(p.id) ?? null,
       fecha: p.published_at ?? p.created_at,
       gratis: false,
     })),

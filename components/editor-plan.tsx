@@ -293,16 +293,8 @@ export function EditorPlan({
                 <span className="epl-etq">Descripción en inglés <small>opcional</small></span>
                 <textarea name="descriptionEn" rows={2} defaultValue={plan?.description_i18n?.en ?? ""} />
               </label>
-              <label className="epl-campo">
-                <span className="epl-etq">Dirección <small>{esNuevo ? "se completa sola con el título" : "no se cambia: rompería los enlaces ya compartidos"}</small></span>
-                <div className="epl-direccion">
-                  <span>…/programs/</span>
-                  <input
-                    name="slug" required readOnly={!esNuevo} value={slug} placeholder="trabajo-de-pies-14-dias"
-                    onChange={(e) => { setSlug(e.target.value); setSlugTocado(true); }}
-                  />
-                </div>
-              </label>
+              {/* La direccion sale sola del titulo y no se muestra (2026-11-09). */}
+              <input type="hidden" name="slug" value={slug} />
             </div>
           </details>
         </aside>

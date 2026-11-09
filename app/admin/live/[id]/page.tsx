@@ -469,10 +469,6 @@ export default async function AdminLivePerfilPage({
                 <dt><KeyRound size={14} strokeWidth={2.3} aria-hidden="true" /> Código</dt>
                 <dd>{link?.passcode ? <b className="lp-codigo">{link.passcode}</b> : "Sin código"}</dd>
               </div>
-              <div>
-                <dt>Dirección</dt>
-                <dd>/{s.slug}</dd>
-              </div>
               {(s.booking_opens_at || s.booking_closes_at) && (
                 <div>
                   <dt>Reservas</dt>

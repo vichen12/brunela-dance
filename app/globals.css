@@ -4288,6 +4288,16 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .mn-item-ico { width: 44px; height: 28px; border-radius: 99px; display: grid; place-items: center; transition: background .25s, transform .35s var(--curva); }
 .mn-item.es-activo { color: var(--pink-deep); }
 .mn-item.es-activo .mn-item-ico { background: var(--rubor); transform: translateY(-1px); }
+/* Clases, al medio y subida: un circulo coral que asoma por arriba de la barra. */
+.mn-item--centro { position: relative; justify-content: flex-end; padding-bottom: 7px; color: var(--pink-deep); }
+.mn-item--centro .mn-item-ico {
+  position: absolute; top: -20px; left: 50%; width: 54px; height: 54px; margin-left: -27px; border-radius: 50%;
+  background: linear-gradient(145deg, var(--pink, #E64F55), var(--pink-mid, #EF6B6B)); color: #fff;
+  border: 4px solid #fff; box-shadow: 0 12px 24px -10px rgba(230, 79, 85, 0.85);
+}
+.mn-item--centro.es-activo .mn-item-ico { background: linear-gradient(145deg, var(--pink-deep, #B03A3E), var(--pink, #E64F55)); transform: translateY(-2px); }
+.mn-item--centro:active .mn-item-ico { transform: scale(.95); }
+@media (prefers-reduced-motion: reduce) { .mn-item--centro .mn-item-ico { transition: none; } }
 .mn-velo { position: fixed; inset: 0; z-index: 210; border: 0; cursor: pointer; background: rgba(90, 50, 45, 0.28); backdrop-filter: blur(4px); animation: mn-funde .25s ease both; }
 .mn-hoja {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 220;

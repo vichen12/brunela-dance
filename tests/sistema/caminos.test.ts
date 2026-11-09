@@ -313,42 +313,38 @@ describe("cuando algo revienta, se entiende", () => {
 // ── La direccion se genera sola, y SOLO al crear ────────────────────────────
 
 describe("la dirección se completa sola desde el nombre", () => {
-  /** Formularios de ALTA: tienen que autogenerar. */
-  const altas: [string, string][] = [
-    ["app/admin/packs/page.tsx", "nombreEs"],
-    ["app/admin/categories/page.tsx", "nameEs"],
-    ["components/admin-video-upload.tsx", "titleEs"],
-  ];
-
-  it.each(altas)("%s la genera desde %s", (archivo, campo) => {
-    expect(leer(archivo)).toContain(`<AutoDireccion desde="${campo}"`);
-  });
-
-  const compartidos = ["components/admin-live-drawer.tsx"];
-
   it("el editor de planes la genera SOLO al crear, y el servidor no la cambia al editar", () => {
     // components/editor-plan.tsx no usa AutoDireccion (los campos no son un
     // formulario con action): la deriva del titulo mientras nadie la toco, y
     // al editar arranca "tocada" y de solo lectura.
     const src = leer("components/editor-plan.tsx");
-    expect(src).toMatch(/useState\(Boolean\(plan\)\)/);
+    // Ya no se muestra (2026-11-09): viaja oculta, derivada del titulo.
     expect(src).toMatch(/if \(!slugTocado\) setSlug\(aDireccion\(/);
-    expect(src).toMatch(/readOnly=\{!esNuevo\}/);
+    expect(src).toMatch(/<input type="hidden" name="slug" value=\{slug\} \/>/);
     const accion = leer("src/features/admin/dias-de-plan-actions.ts");
     const update = accion.slice(accion.indexOf('.from("programs").update(datos)') - 200, accion.indexOf('.from("programs").update(datos)'));
     expect(update).toContain("La direccion NO se cambia al editar");
     expect(accion).not.toMatch(/const datos = \{[^}]*\bslug\b/);
   });
 
-  it.each(compartidos)("%s la genera SOLO al crear", (archivo) => {
-    const src = leer(archivo);
-    // 🔴 Estos formularios sirven para crear Y para editar. Si el centinela
-    //    quedara sin `activo`, corregir una tilde del titulo regeneraria la
-    //    direccion de algo ya publicado y romperia los enlaces compartidos --
-    //    sin ningun error: el enlace viejo simplemente deja de encontrar nada.
-    const m = src.match(/<AutoDireccion[^/]*\/>/);
-    expect(m, `${archivo} no monta AutoDireccion`).not.toBeNull();
-    expect(m![0], "falta activo={...}: regeneraria la dirección al editar").toMatch(/activo=\{/);
+  // Packs y sesiones en vivo (2026-11-09): Brunela no ve la direccion. La
+  // arma la accion desde el titulo, sin repetir, y al editar no se toca.
+  it.each([
+    ["src/features/admin/packs-actions.ts", "packs", "app/admin/packs/page.tsx"],
+    ["src/features/admin/live-actions.ts", "live_sessions", "components/admin-live-drawer.tsx"],
+    ["src/features/admin/category-actions.ts", "categories", "app/admin/categories/page.tsx"],
+    ["app/api/admin/videos/finalize/route.ts", "videos", "components/admin-video-upload.tsx"],
+  ])("%s arma la direccion sola y el formulario no la muestra", (accion, tabla, formulario) => {
+    expect(leer(accion)).toContain(`direccionLibre(supabase, "${tabla}"`);
+    // Brunela no ve un campo "Direccion" en ningun formulario de alta.
+    expect(leer(formulario)).not.toMatch(/name="slug"/);
+  });
+
+  it("editar un pack sin el campo no borra su direccion", () => {
+    expect(leer("src/features/admin/packs-actions.ts")).toContain('...(texto(fd, "slug") ? { slug: texto(fd, "slug") } : {})');
+    const live = leer("src/features/admin/live-actions.ts");
+    const update = live.slice(live.indexOf("export async function updateLiveSessionAction"));
+    expect(update.slice(0, update.indexOf(".eq(\"id\", id)"))).not.toMatch(/slug/);
   });
 
   it("ningún formulario de EDICIÓN la regenera", () => {

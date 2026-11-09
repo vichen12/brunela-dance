@@ -6,6 +6,44 @@ import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { avisoDelCorreo, enviarInvitacion } from "@/src/features/correos/disparadores";
 import { detectarProveedor, validarEnlace } from "@/src/features/studio/enlace-clase";
+import { madridAIso, ZONA_ESTUDIO } from "@/src/features/studio/sesiones-privadas-reglas";
+import { direccionLibre } from "@/src/lib/direccion-libre";
+import { esFaltaDeColumnaPlanesSesion, normalizarPlanes, planMinimo, type PlanPago } from "@/src/features/studio/planes-de-sesion";
+
+/**
+ * Los planes elegidos con las casillas (20261109). Sin ninguno no se guarda:
+ * una sesion que no ve nadie es un error de carga.
+ */
+function planesDelFormulario(fd: FormData): PlanPago[] {
+  return normalizarPlanes(fd.getAll("planesPermitidos"));
+}
+
+/**
+ * Guarda con la lista de planes y, si la migracion 20261109 todavia no corrio
+ * (la columna no existe), vuelve a intentar SIN ella: queda el plan minimo,
+ * que es como funcionaba hasta hoy. Asi el panel no se rompe en el medio.
+ */
+async function conPlanes<T extends { error: { code?: string; message?: string } | null }>(
+  planes: PlanPago[],
+  escribir: (extra: Record<string, unknown>) => PromiseLike<T>
+): Promise<T> {
+  const r = await escribir({ planes_permitidos: planes, membership_tier_required: planMinimo(planes) });
+  if (r.error && esFaltaDeColumnaPlanesSesion(r.error)) return escribir({ membership_tier_required: planMinimo(planes) });
+  return r;
+}
+
+/**
+ * "2026-11-08T07:44" del formulario -> instante, en HORA DE ESPAÑA.
+ *
+ * 🔴 ANTES ERA `new Date(valor)`, Y VERCEL CORRE EN UTC: la clase cargada a
+ *    las 7:44 quedaba a las 8:44 de Madrid (2026-11-09). El campo no trae zona,
+ *    asi que se la pone aca, igual que las sesiones privadas y las ofertas.
+ */
+function enMadrid(valor: FormDataEntryValue | null): string | null {
+  const [fecha, hora] = String(valor ?? "").split("T");
+  return madridAIso(fecha ?? "", (hora ?? "").slice(0, 5));
+}
+
 
 /**
  * Acciones de las sesiones en vivo.
@@ -43,31 +81,38 @@ export async function createLiveSessionAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
 
-  const slug = (fd.get("slug") as string).trim();
-  const startsAt = fd.get("startsAt") as string;
-  const endsAt = fd.get("endsAt") as string;
+  // La direccion sale del titulo: Brunela ya no la ve (2026-11-09).
+  const titulo = String(fd.get("titleEs") ?? "").trim();
+  if (!titulo) conMensaje("/admin/live", "error", "Poné un título a la sesión.");
+  const slug = await direccionLibre(supabase, "live_sessions", titulo);
+  const startsAt = enMadrid(fd.get("startsAt"));
+  const endsAt = enMadrid(fd.get("endsAt"));
   const status = (fd.get("status") as string) || "draft";
+  if (!startsAt || !endsAt) conMensaje("/admin/live", "error", "Revisá el inicio y el fin: falta la fecha o la hora.");
+  const planes = planesDelFormulario(fd);
+  if (planes.length === 0) conMensaje("/admin/live", "error", "Elegí al menos un plan que pueda ver la sesión.");
 
-  const { data: session, error } = await supabase
+  const { data: session, error } = await conPlanes(planes, (extra) => supabase
     .from("live_sessions")
     .insert({
+      ...extra,
       slug,
       title_i18n: { es: fd.get("titleEs"), en: fd.get("titleEn") || undefined },
       description_i18n: { es: fd.get("descriptionEs") || "", en: fd.get("descriptionEn") || "" },
       status,
-      membership_tier_required: (fd.get("membershipTierRequired") as string) || "corps_de_ballet",
-      starts_at: new Date(startsAt).toISOString(),
-      ends_at: new Date(endsAt).toISOString(),
-      session_timezone: (fd.get("sessionTimezone") as string) || "America/Buenos_Aires",
+      starts_at: startsAt,
+      ends_at: endsAt,
+      // Siempre España: el estudio esta en Barcelona (pedido 2026-11-09).
+      session_timezone: ZONA_ESTUDIO,
       capacity: parseInt(fd.get("capacity") as string) || 20,
       cover_image_url: (fd.get("coverImageUrl") as string) || null,
-      booking_opens_at: fd.get("bookingOpensAt") ? new Date(fd.get("bookingOpensAt") as string).toISOString() : null,
-      booking_closes_at: fd.get("bookingClosesAt") ? new Date(fd.get("bookingClosesAt") as string).toISOString() : null,
+      booking_opens_at: enMadrid(fd.get("bookingOpensAt")),
+      booking_closes_at: enMadrid(fd.get("bookingClosesAt")),
       created_by: user.id,
       published_at: status === "scheduled" ? new Date().toISOString() : null,
     })
     .select("id")
-    .single();
+    .single());
 
   if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
 
@@ -99,25 +144,29 @@ export async function updateLiveSessionAction(fd: FormData) {
 
   const id = fd.get("id") as string;
   const status = fd.get("status") as string;
+  const startsAt = enMadrid(fd.get("startsAt"));
+  const endsAt = enMadrid(fd.get("endsAt"));
+  if (!startsAt || !endsAt) conMensaje(volverA(fd), "error", "Revisá el inicio y el fin: falta la fecha o la hora.");
+  const planes = planesDelFormulario(fd);
+  if (planes.length === 0) conMensaje(volverA(fd), "error", "Elegí al menos un plan que pueda ver la sesión.");
 
-  const { error } = await supabase
+  const { error } = await conPlanes(planes, (extra) => supabase
     .from("live_sessions")
     .update({
-      slug: (fd.get("slug") as string).trim(),
+      ...extra,
       title_i18n: { es: fd.get("titleEs"), en: fd.get("titleEn") || undefined },
       description_i18n: { es: fd.get("descriptionEs") || "", en: fd.get("descriptionEn") || "" },
       status,
-      membership_tier_required: fd.get("membershipTierRequired") as string,
-      starts_at: new Date(fd.get("startsAt") as string).toISOString(),
-      ends_at: new Date(fd.get("endsAt") as string).toISOString(),
-      session_timezone: (fd.get("sessionTimezone") as string) || "America/Buenos_Aires",
+      starts_at: startsAt,
+      ends_at: endsAt,
+      session_timezone: ZONA_ESTUDIO,
       capacity: parseInt(fd.get("capacity") as string) || 20,
       cover_image_url: (fd.get("coverImageUrl") as string) || null,
-      booking_opens_at: fd.get("bookingOpensAt") ? new Date(fd.get("bookingOpensAt") as string).toISOString() : null,
-      booking_closes_at: fd.get("bookingClosesAt") ? new Date(fd.get("bookingClosesAt") as string).toISOString() : null,
+      booking_opens_at: enMadrid(fd.get("bookingOpensAt")),
+      booking_closes_at: enMadrid(fd.get("bookingClosesAt")),
       published_at: status === "scheduled" ? new Date().toISOString() : undefined,
     })
-    .eq("id", id);
+    .eq("id", id));
 
   if (error) conMensaje(volverA(fd), "error", error.message);
 

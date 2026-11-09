@@ -23,6 +23,8 @@ import { ProveedorIcono } from "@/components/proveedor-icono";
 import { ClaseInminente } from "@/components/clase-inminente";
 import { proveedorDe, textoUnirse } from "@/src/features/studio/enlace-clase";
 import { esInminente, getMisClasesCercanas } from "@/src/features/studio/notificaciones";
+import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { leerPlanesDeSesiones, planesDesde, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -86,6 +88,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     { data: linksData },
     { data: invitationsData },
     cercanas,
+    misPrivadas,
   ] = await Promise.all([
     supabase
       .from("live_sessions")
@@ -106,6 +109,8 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     supabase.from("live_session_invitations").select("live_session_id").eq("user_id", user.id),
     // Para el cartel "Tu clase empieza en X min" (memoizado: el layout ya lo pidio).
     getMisClasesCercanas(user.id),
+    // Sus sesiones privadas: tambien son clases en su agenda (pedido 2026-11-09).
+    getMisSesionesPrivadas(user.id),
   ]);
   const inminente = cercanas.find((c) => esInminente(c)) ?? null;
 
@@ -134,6 +139,8 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
       return true;
     }),
   ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const planesDe = await leerPlanesDeSesiones(createSupabaseAdminClient(), sessions.map((s) => s.id));
+  const textoPlanes = (s: LiveSessionRecord) => planesEnTexto(planesDe.get(s.id) ?? planesDesde(s.membership_tier_required));
   const invitadaA = new Set(
     ((invitationsData ?? []) as { live_session_id: string }[]).map((i) => i.live_session_id)
   );
@@ -150,6 +157,8 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const proximas = sessions.filter((s) => new Date(s.ends_at).getTime() >= ahora && s.status !== "canceled" && s.status !== "completed");
   const pasadas = sessions.filter((s) => !proximas.includes(s)).reverse();
   const reservasActivas = Array.from(bookings.values()).filter((b) => b.status !== "canceled").length;
+  const privadas = misPrivadas.sesiones.filter((p) => p.estado === "agendada");
+  const privadasProximas = privadas.filter((p) => new Date(p.starts_at).getTime() + p.duracion_minutos * 60_000 >= ahora);
   // La marca "Proxima clase" es de la primera de la agenda, filtre lo que filtre.
   const idProxima = proximas[0]?.id ?? null;
   const misReservas = proximas.filter((x) => { const b = bookings.get(x.id); return b?.status === "reserved" || b?.status === "waitlisted"; });
@@ -215,6 +224,11 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   // salia "Octubre De 2026".
   const nombreMesCrudo = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(anio, numMes - 1, 1)));
   const nombreMes = nombreMesCrudo.charAt(0).toUpperCase() + nombreMesCrudo.slice(1);
+  const privadasPorDia = new Map<string, typeof privadas>();
+  for (const p of privadas) {
+    const k = claveDia(p.starts_at, ZONA_ESTUDIO);
+    if (k.startsWith(mes)) privadasPorDia.set(k, [...(privadasPorDia.get(k) ?? []), p]);
+  }
   const delDia = dia ? (porDia.get(dia) ?? []) : [];
   const tituloDiaCrudo = dia ? new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(dia + "T12:00:00Z")) : "";
   const tituloDia = tituloDiaCrudo.charAt(0).toUpperCase() + tituloDiaCrudo.slice(1);
@@ -247,7 +261,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                 de Corps y parece un error del sistema. La marca explica por que
                 la esta viendo. */}
             {invitadaA.has(session.id) && <span className="sv-estado es-invitada">Invitada por Brunela</span>}
-            <span className="sv-plan">{membershipTierLabel(session.membership_tier_required)}</span>
+            <span className="sv-plan">{textoPlanes(session)}</span>
             {pasada && <span className="sv-plan">{liveSessionStatusLabel(session.status)}</span>}
           </div>
 
@@ -280,7 +294,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               )}
               {bloqueada ? (
                 <div className="sv-candado">
-                  <span className="sv-candado-txt"><Lock size={14} strokeWidth={2.4} aria-hidden="true" /> Disponible desde {membershipTierLabel(session.membership_tier_required)}</span>
+                  <span className="sv-candado-txt"><Lock size={14} strokeWidth={2.4} aria-hidden="true" /> Para {textoPlanes(session).replace(/^Solo /, "")}</span>
                   <Link href="/dashboard/plan" className="sv-candado-btn">Ver planes <ArrowRight size={14} strokeWidth={2.4} aria-hidden="true" /></Link>
                 </div>
               ) : isReserved ? (
@@ -335,9 +349,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
           />
         )}
 
-        {proximas.length > 0 && (
+        {proximas.length + privadasProximas.length > 0 && (
           <AdminCifras items={[
-            { label: "Próximas", value: proximas.length, sub: "clases en agenda" },
+            { label: "Próximas", value: proximas.length + privadasProximas.length, sub: privadasProximas.length ? `clases en agenda, ${privadasProximas.length === 1 ? "1 privada" : `${privadasProximas.length} privadas`}` : "clases en agenda" },
             { label: "Tus reservas", value: reservasActivas, sub: "activas o en espera" },
           ]} />
         )}
@@ -388,7 +402,7 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
           </section>
         )}
 
-        {sessions.length > 0 && (
+        {sessions.length + privadas.length > 0 && (
           <section className="cal" aria-label="Calendario de clases en vivo">
             <header className="cal-cab">
               <span className="cal-ico" aria-hidden="true"><CalendarDays size={18} strokeWidth={2} /></span>
@@ -404,15 +418,17 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               <span><i className="es-solista" /> Solista</span>
               <span><i className="es-principal" /> Principal</span>
               <span><i className="es-mia" /> Tu reserva</span>
+              {privadas.length > 0 && <span><i className="es-privada" /> Tu sesión privada</span>}
             </div>
             <div className="cal-grilla" role="grid">
               {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => <span key={d} className="cal-sem" role="columnheader">{d}</span>)}
               {celdas.map((k, i) => {
                 if (!k) return <span key={"v" + i} className="cal-celda es-vacia" aria-hidden="true" />;
                 const delK = porDia.get(k) ?? [];
-                const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length ? " tiene" : "") + (delK.some((x) => reservada(x.id)) ? " tiene-mia" : "");
+                const privK = privadasPorDia.get(k) ?? [];
+                const clases = "cal-celda" + (k === hoyKey ? " es-hoy" : "") + (k === dia ? " es-elegido" : "") + (k < hoyKey ? " es-pasado" : "") + (delK.length || privK.length ? " tiene" : "") + (delK.some((x) => reservada(x.id)) || privK.length ? " tiene-mia" : "");
                 const num = <span className="cal-num">{Number(k.slice(8))}</span>;
-                if (!delK.length) return <span key={k} className={clases} role="gridcell">{num}</span>;
+                if (!delK.length && !privK.length) return <span key={k} className={clases} role="gridcell">{num}</span>;
                 // La celda NO es un enlace: adentro hay varios, y un <a> dentro
                 // de otro <a> lo descarta el parser. El numero filtra por dia
                 // y se estira a toda la celda (::after); cada evento va encima,
@@ -423,6 +439,14 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                       {num}
                     </Link>
                     <span className="cal-eventos">
+                      {privK.map((p) => {
+                        const hora = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: ZONA_ESTUDIO }).format(new Date(p.starts_at));
+                        return (
+                          <Link key={p.id} href={"/dashboard/sesiones-privadas" as never} title={`${hora} · Sesión privada con Brunela`} className="cal-ev es-privada">
+                            <Lock size={11} strokeWidth={3} aria-hidden="true" className="cal-ev-tilde" /><b>{hora}</b> Sesión privada
+                          </Link>
+                        );
+                      })}
                       {delK.slice(0, 3).map((sesion) => {
                         const hora = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: sesion.session_timezone || ZONA_ESTUDIO }).format(new Date(sesion.starts_at));
                         return (
@@ -636,6 +660,8 @@ a.cal-mas:hover { text-decoration: underline; }
 /* Lo que reservaste se destaca: pastilla coral llena con tilde, y el dia
    entero en rubor con su numero en coral. */
 .cal-leyenda i.es-mia { background: var(--pink); }
+.cal-leyenda i.es-privada { background: #8E5A9B; }
+.cal-ev.es-privada { background: #F3E8F6 !important; color: #6B3D78 !important; border-color: #C9A6D3 !important; display: flex; align-items: center; gap: 4px; }
 .cal-ev.es-mia { background: var(--pink) !important; color: #fff !important; border-color: var(--pink-mid) !important; box-shadow: 0 6px 14px -8px rgba(230,79,85,.9); display: flex; align-items: center; gap: 4px; }
 .cal-ev-tilde { flex-shrink: 0; }
 .cal-celda.tiene-mia { background: linear-gradient(160deg, #FFEDE8, #FFF6F2); border-color: var(--pink-line); }
@@ -654,6 +680,7 @@ a.cal-mas:hover { text-decoration: underline; }
   .cal-celda { min-height: 58px; padding: 5px 3px; border-radius: 12px; align-items: center; }
   .cal-ev { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; font-size: 0; }
   .cal-ev.es-corps { background: #F2B9A5; } .cal-ev.es-solista { background: #F3C795; } .cal-ev.es-principal { background: var(--pink); }
+  .cal-ev.es-privada { width: 10px; height: 10px; padding: 0; font-size: 0; background: #8E5A9B !important; }
   .cal-ev.es-mia { width: 10px; height: 10px; background: var(--pink) !important; box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--pink); }
   .cal-ev-tilde { display: none; }
   .cal-eventos { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; pointer-events: none; }

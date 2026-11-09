@@ -6,10 +6,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { direccionLibre } from "@/src/lib/direccion-libre";
 
 const categorySchema = z.object({
   id: z.string().uuid().optional().or(z.literal("")),
-  slug: z.string().min(2),
   nameEs: z.string().min(1),
   nameEn: z.string().optional(),
   descriptionEs: z.string().optional(),
@@ -29,7 +29,6 @@ export async function upsertCategoryAction(formData: FormData) {
 
   const parsed = categorySchema.safeParse({
     id: formData.get("id"),
-    slug: formData.get("slug"),
     nameEs: formData.get("nameEs"),
     nameEn: formData.get("nameEn"),
     descriptionEs: formData.get("descriptionEs"),
@@ -44,7 +43,6 @@ export async function upsertCategoryAction(formData: FormData) {
   }
 
   const payload = {
-    slug: parsed.data.slug.trim(),
     name_i18n: {
       es: parsed.data.nameEs.trim(),
       ...(parsed.data.nameEn?.trim() ? { en: parsed.data.nameEn.trim() } : {}),
@@ -60,7 +58,8 @@ export async function upsertCategoryAction(formData: FormData) {
 
   const result = parsed.data.id
     ? await supabase.from("categories").update(payload).eq("id", parsed.data.id)
-    : await supabase.from("categories").insert(payload);
+    // La direccion sale del nombre al crear y no cambia al editar (2026-11-09).
+    : await supabase.from("categories").insert({ ...payload, slug: await direccionLibre(supabase, "categories", parsed.data.nameEs) });
 
   if (result.error) {
     redirectMsg("error", result.error.message);

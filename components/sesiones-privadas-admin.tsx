@@ -1,6 +1,9 @@
 import { CalendarPlus, Check, ChevronDown, Clock, Link2Off, Lock, Pencil, StickyNote, X } from "lucide-react";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { Desplegable } from "@/components/desplegable";
+import { CampoFecha } from "@/components/campo-fecha";
+import { CampoHora } from "@/components/campo-hora";
+import { ElegirConBuscador } from "@/components/elegir-con-buscador";
 import { ProveedorIcono } from "@/components/proveedor-icono";
 import { NOMBRE_PROVEEDOR } from "@/src/features/studio/enlace-clase";
 import {
@@ -26,14 +29,16 @@ const OPCIONES_DURACION = DURACIONES.map((m) => ({ value: String(m), label: m ==
 function Campos({ fecha, hora, duracion, enlace, nota, idBase }: { fecha?: string; hora?: string; duracion?: number; enlace?: string | null; nota?: string | null; idBase: string }) {
   return (
     <>
-      <label className="spa-campo">
+      {/* <div> y no <label>: adentro hay botones, y un label reenvia el clic
+          al primero (tocar un dia volvia a abrir el calendario). */}
+      <div className="spa-campo" id={idBase + "-fecha"}>
         <span>Día</span>
-        <input type="date" name="fecha" required defaultValue={fecha ?? ""} id={idBase + "-fecha"} />
-      </label>
-      <label className="spa-campo">
-        <span>Hora <small>(Madrid)</small></span>
-        <input type="time" name="hora" required step={300} defaultValue={hora ?? ""} />
-      </label>
+        <CampoFecha name="fecha" required defaultValue={fecha ?? ""} />
+      </div>
+      <div className="spa-campo">
+        <span>Hora <small>(España)</small></span>
+        <CampoHora name="hora" required defaultValue={hora ?? ""} />
+      </div>
       <label className="spa-campo">
         <span>Duración</span>
         <Desplegable name="duracion" defaultValue={String(duracion ?? DURACION_POR_DEFECTO)} opciones={OPCIONES_DURACION} />
@@ -72,10 +77,16 @@ export function FormAgendarPrivada({
       {alumnaId ? (
         <input type="hidden" name="alumnaId" value={alumnaId} />
       ) : (
-        <label className="spa-campo spa-campo--ancho">
+        <div className="spa-campo spa-campo--ancho">
           <span>Alumna</span>
-          <Desplegable name="alumnaId" required placeholder="Elegí a la alumna" opciones={(alumnas ?? []).map((a) => ({ value: a.id, label: a.nombre }))} />
-        </label>
+          <ElegirConBuscador
+            name="alumnaId"
+            required
+            etiqueta="Alumna"
+            placeholder="Escribí el nombre o el correo…"
+            opciones={(alumnas ?? []).map((a) => ({ value: a.id, label: a.nombre }))}
+          />
+        </div>
       )}
       <Campos fecha={fecha} idBase={"nueva-" + (alumnaId ?? "x")} />
       <div className="spa-pie">

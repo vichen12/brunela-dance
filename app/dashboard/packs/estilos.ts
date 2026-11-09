@@ -5,7 +5,7 @@ export const CSS_PACKS = `
 .pk-card { position: relative; display: flex; flex-direction: column; height: 100%; border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); text-decoration: none; color: inherit; overflow: hidden; transition: transform .35s var(--curva), box-shadow .35s, border-color .25s; }
 .pk-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-alta); border-color: var(--pink-line); }
 .pk-portada { position: relative; margin: 10px 10px 0; aspect-ratio: 16 / 10; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #FFE9DE, #FFDADA); }
-.pk-portada img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s var(--curva); }
+.pk-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform .7s var(--curva); }
 .pk-card:hover .pk-portada img { transform: scale(1.05); }
 .pk-cinta { position: absolute; top: 12px; left: 12px; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 800; background: #fff; color: var(--pink-deep); box-shadow: var(--sombra); }
 .pk-cinta.es-tuyo { background: var(--pink); color: #fff; }

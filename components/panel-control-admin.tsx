@@ -60,7 +60,8 @@ export type DatosPanel = {
    */
   ultimas: { id: string; nombre: string | null; correo?: string | null; tier: TierClave; cuando: string }[];
   clases: { id: string; titulo: string; estado: string; portada: string | null; minutos: number | null }[];
-  enVivo: { id: string; titulo: string; iso: string; zona: string; reservas: number }[];
+  /** Clases en vivo y sesiones privadas: `reservas` es null en una privada (es de una sola alumna). */
+  enVivo: { id: string; titulo: string; iso: string; zona: string; reservas: number | null; href: string }[];
   /** Enlaces sin cargar, la clase de hoy y las que faltan completar. */
   recordatorios?: RecordatoriosAdminDatos;
 };
@@ -159,7 +160,7 @@ export function PanelControlAdmin({
     { href: "/admin/announcements",        label: "Publicar un anuncio", sub: `${m.anuncios} ${m.anuncios === 1 ? "activo" : "activos"} ahora`, Icono: Megaphone },
     { href: "/admin/programs",             label: "Armar un plan",      sub: "Planes de trabajo por día", Icono: ListChecks },
     // Crear una alumna solo estaba en un bloque plegado de /admin/users.
-    { href: "/admin/users?nueva=1#nueva",  label: "Invitar alumna",     sub: "Le llega por mail", Icono: UserPlus },
+    { href: "/admin/invitar",  label: "Invitar alumna",     sub: "Le llega por mail", Icono: UserPlus },
     { href: "/admin/sesiones-privadas",    label: "Sesión privada",     sub: "Agendar uno a uno", Icono: Lock },
   ];
 
@@ -292,7 +293,7 @@ export function PanelControlAdmin({
                     const f = partesFecha(s.iso, s.zona);
                     return (
                       <motion.li key={s.id} whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
-                        <Link href={`/admin/live?q=${encodeURIComponent(s.titulo)}` as never} className="pc-vivo-fila">
+                        <Link href={s.href as never} className="pc-vivo-fila">
                           <span className="pc-vivo-fecha">
                             <span className="pc-vivo-dia">{f.dia}</span>
                             <span className="pc-vivo-mes">{f.mes}</span>
@@ -304,7 +305,7 @@ export function PanelControlAdmin({
                             </span>
                           </span>
                           <span className="pc-vivo-res">
-                            <strong>{s.reservas}</strong> {s.reservas === 1 ? "reserva" : "reservas"}
+                            {s.reservas === null ? "Privada" : <><strong>{s.reservas}</strong> {s.reservas === 1 ? "reserva" : "reservas"}</>}
                           </span>
                         </Link>
                       </motion.li>

@@ -4,6 +4,8 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { AdminBoton, AdminCabecera } from "@/components/admin-ui";
 import { CSS_SESION_PRIVADA, FilaSesionPrivada, TarjetaSesionPrivada } from "@/components/sesion-privada-tarjeta";
 import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { getPlanesConPrivadas } from "@/src/features/studio/sesiones-privadas-config";
+import { NOMBRE_PLAN, type PlanPago } from "@/src/features/studio/planes-de-sesion";
 import { CUPO_MENSUAL, claveMes, contarDelMes, estadoVisible, proximaDe } from "@/src/features/studio/sesiones-privadas-reglas";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +19,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function MisSesionesPrivadasPage() {
   const { user } = await requireUser();
-  const [profile, { sesiones }] = await Promise.all([getCurrentProfile(user.id), getMisSesionesPrivadas(user.id)]);
+  const [profile, { sesiones }, planesConPrivadas] = await Promise.all([getCurrentProfile(user.id), getMisSesionesPrivadas(user.id), getPlanesConPrivadas()]);
   const ahora = Date.now();
-  const esPrincipal = profile?.membership_tier === "principal";
+  // Su plan trae privadas (configurable en el panel; por defecto, Principal).
+  const miPlan = profile?.membership_tier ?? "none";
+  const esPrincipal = (planesConPrivadas as string[]).includes(miPlan);
+  const nombrePlan = NOMBRE_PLAN[miPlan as PlanPago] ?? "";
 
   const proxima = proximaDe(sesiones, ahora);
   const siguientes = sesiones.filter((s) => s.id !== proxima?.id && estadoVisible(s, ahora) === "agendada");
@@ -34,7 +39,7 @@ export default async function MisSesionesPrivadasPage() {
           eyebrow="Tu práctica"
           titulo="Sesiones privadas"
           lede={esPrincipal
-            ? <>Tu plan Principal trae {CUPO_MENSUAL} sesiones privadas por mes con Brunela, uno a uno. Este mes: <b>{delMes} de {CUPO_MENSUAL}</b>.</>
+            ? <>Tu plan {nombrePlan} trae {CUPO_MENSUAL} sesiones privadas por mes con Brunela, uno a uno. Este mes: <b>{delMes} de {CUPO_MENSUAL}</b>.</>
             : "Tus sesiones uno a uno con Brunela, por Meet o Zoom."}
           acciones={<AdminBoton href="/dashboard/chat"><MessageCircleHeart size={16} strokeWidth={2.2} aria-hidden="true" /> Escribirle a Brunela</AdminBoton>}
         />

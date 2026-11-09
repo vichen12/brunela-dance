@@ -4,9 +4,8 @@ import { Paginacion } from "@/components/paginacion";
 import { ArrowRight, Check, ChevronDown, Gift, Heart, MailCheck, Pencil, Send, Shield, UserPlus } from "lucide-react";
 import { mandarVolverAlEstudioAction } from "@/src/features/admin/volver-actions";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminNueva } from "@/components/admin-ui";
-import { NuevaAlumnaGratis } from "@/components/nueva-alumna-gratis";
 import { AccesoGratisControles, ChipGratis, ChipRenovacion, type EstadoGratis, type EstadoRenovacion } from "@/components/acceso-gratis-admin";
-import { AVISO_FALTA_MIGRACION, esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
+import { esFaltaDeMigracion } from "@/src/features/studio/acceso-gratis-reglas";
 import { AdminBuscador } from "@/components/admin-buscador";
 import { BuscadorDeClases } from "@/components/buscador-de-clases";
 import type { ClaseParaBuscar } from "@/src/features/admin/buscar-clases";
@@ -181,7 +180,6 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       renovacionDe.set(s.user_id, { hasta: s.current_period_ends_at, termina: !!s.cancel_at_period_end, prueba: s.status === "trialing" });
     }
   }
-  const nueva = params.nueva === "1";
 
   // "Invitarlas a volver por mail": solo en la vista "Sin plan" (sin acceso).
   // La lista es de TODAS las sin acceso, no de la pagina: se elige a quien
@@ -255,17 +253,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         eyebrow="Comunidad"
         titulo="Alumnas"
         lede="Quiénes están en el estudio, con qué plan y en qué nivel. Desde acá se ajustan los accesos, y cada una tiene su ficha completa."
-        acciones={<AdminBoton href="/admin/users?nueva=1#nueva" lleno><UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar alumna</AdminBoton>}
+        acciones={<AdminBoton href="/admin/invitar" lleno><UserPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Invitar alumna</AdminBoton>}
       />
 
       <AdminAviso mensaje={success} tono="ok" />
       <AdminAviso mensaje={error} tono="error" />
 
-      {/* Alta a mano, con meses gratis. Sin la migracion, el bloque explica
-          que falta en vez de ofrecer un formulario que no puede guardar. */}
-      <AdminNueva id="nueva" abierto={nueva} titulo="Invitar alumna" sub="Le llega un mail para entrar, con los meses gratis que le regales">
-        {gratisDisponible ? <NuevaAlumnaGratis /> : <div role="status" className="ad-aviso ad-aviso--error">{AVISO_FALTA_MIGRACION}</div>}
-      </AdminNueva>
+      {/* Invitar alumna tiene su propia pantalla: /admin/invitar (2026-11-09). */}
 
       {/* Las cifras filtran. "Sin plan" cuenta las que NO entran al estudio (sin
           pack ni regalo vigente, y sin las admin): son a quienes se puede

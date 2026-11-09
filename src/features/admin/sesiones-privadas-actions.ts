@@ -3,6 +3,9 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { medir } from "@/src/lib/medir";
+import { normalizarPlanes } from "@/src/features/studio/planes-de-sesion";
+import { CLAVE_PLANES_PRIVADAS } from "@/src/features/studio/sesiones-privadas-config";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { escribirleALaAlumna } from "@/src/features/admin/chat-directo";
@@ -58,6 +61,30 @@ function revalidar(alumnaId: string) {
   revalidatePath("/dashboard/chat");
 }
 
+/**
+ * Que planes traen sesiones privadas (por defecto, solo Principal). Es la
+ * lista de "Agendar" y el menu de la alumna; no es un permiso de la base.
+ */
+export async function guardarPlanesPrivadasAction(fd: FormData) {
+  const { user } = await requireAdmin();
+  const planes = normalizarPlanes(fd.getAll("planes"));
+  if (planes.length === 0) ir("/admin/sesiones-privadas#config", "error", "Elegí al menos un plan.");
+  const db = createSupabaseAdminClient();
+  const { error } = await db.from("site_settings").upsert({
+    setting_key: CLAVE_PLANES_PRIVADAS,
+    category: "sesiones_privadas",
+    value: { planes },
+    description: "Planes que traen sesiones privadas. src/features/studio/sesiones-privadas-config.ts",
+    is_public: false,
+    updated_by: user.id,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "setting_key" });
+  if (error) ir("/admin/sesiones-privadas#config", "error", error.message);
+  revalidatePath("/admin/sesiones-privadas");
+  revalidatePath("/dashboard", "layout");
+  ir("/admin/sesiones-privadas#config", "success", "Listo: guardé qué planes tienen sesiones privadas.");
+}
+
 export async function agendarSesionPrivadaAction(fd: FormData) {
   const { user } = await requireAdmin();
   const destino = volverA(fd);
@@ -80,7 +107,7 @@ export async function agendarSesionPrivadaAction(fd: FormData) {
   });
   if (error) ir(destino, "error", esFaltaDeTabla(error) ? AVISO_FALTA_MIGRACION_PRIVADAS : error.message);
 
-  const fallo = await escribirleALaAlumna(db, user.id, alumnaId, mensajeAgendada(v.ok.startsAt, !!v.ok.enlace));
+  const fallo = await medir("agendar privada: aviso por chat", escribirleALaAlumna(db, user.id, alumnaId, mensajeAgendada(v.ok.startsAt, !!v.ok.enlace)));
   revalidar(alumnaId);
   if (fallo) ir(destino, "error", "La sesión quedó agendada, pero no se le pudo avisar por el chat: " + fallo);
   ir(destino, "success", "Sesión agendada. Le avisamos por su chat privado.");

@@ -1,6 +1,12 @@
 "use client";
 import { Desplegable } from "@/components/desplegable";
-import { AutoDireccion } from "@/components/auto-direccion";
+import { SubirPortadaClase } from "@/components/subir-portada-clase";
+import { SelectorMultiple } from "@/components/selector-multiple";
+import { HorarioSesion } from "@/components/horario-sesion";
+import { CampoFechaHora } from "@/components/campo-fecha-hora";
+import { PLANES } from "@/src/features/studio/catalogo-clases";
+import { planesDesde, type PlanPago } from "@/src/features/studio/planes-de-sesion";
+import { isoAMadrid } from "@/src/features/studio/sesiones-privadas-reglas";
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
@@ -32,6 +38,8 @@ export type LiveSession = {
   description_i18n: Record<string, string>;
   status: "draft" | "scheduled" | "completed" | "canceled";
   membership_tier_required: "corps_de_ballet" | "solista" | "principal";
+  /** null sin la migracion 20261109: se usa la regla vieja (de ese plan para arriba). */
+  planes_permitidos?: PlanPago[] | null;
   starts_at: string;
   ends_at: string;
   session_timezone: string;
@@ -50,6 +58,8 @@ export type LiveSession = {
    formulario se monta en la pagina (crear) y en el panel lateral (editar). */
 const CSS = `
 .lvf { display: flex; flex-direction: column; gap: 14px; }
+.lvf-planes { display: flex; flex-direction: column; gap: 8px; grid-column: 1 / -1; }
+.lvf-etq { font-size: 12.5px; font-weight: 800; color: var(--ink, #3B2A2C); }
 .lvf-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 16px; }
 .lvf .pf-campo input, .lvf .pf-campo textarea { width: 100%; height: 48px; padding: 0 16px; border-radius: 16px; border: 1.5px solid var(--linea-fuerte); background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
 .lvf .pf-campo textarea { height: auto; min-height: 92px; padding: 12px 16px; resize: vertical; line-height: 1.55; }
@@ -134,9 +144,11 @@ export function CampoEnlace({
   );
 }
 
+/** Lo guardado, en hora de Madrid, para el campo: lo mismo que se cargo. */
 function toLocalDatetime(iso: string | null) {
   if (!iso) return "";
-  return iso.slice(0, 16);
+  const m = isoAMadrid(iso);
+  return `${m.fecha}T${m.hora}`;
 }
 
 /**
@@ -163,7 +175,6 @@ function CerrarAlGuardar({ onExito }: { onExito: () => void }) {
  */
 export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSession; onGuardado?: () => void; redirectTo?: string }) {
   const isNew = !session;
-  const tz = session?.session_timezone ?? "America/Buenos_Aires";
 
   return (
     <form action={isNew ? createLiveSessionAction : updateLiveSessionAction} className="lvf">
@@ -175,11 +186,11 @@ export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSe
       {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
 
       <div className="lvf-grilla">
-        <F label="Dirección">
-          <input name="slug" required defaultValue={session?.slug ?? ""} placeholder="clase-ballet-lunes" />
-          {/* Solo al CREAR. Al editar, regenerarla romperia los enlaces compartidos. */}
-          <AutoDireccion desde="titleEs" activo={isNew} />
+        {/* Sin campo "Direccion": la arma la accion desde el titulo (2026-11-09). */}
+        <F label="Título en español">
+          <input name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
         </F>
+
         <F label="Estado">
           <Desplegable
             name="status" defaultValue={session?.status ?? "draft"}
@@ -192,27 +203,23 @@ export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSe
           />
         </F>
 
-        <F label="Título en español">
-          <input name="titleEs" required defaultValue={session?.title_i18n?.es ?? ""} placeholder="Clase de Ballet — Lunes" />
-        </F>
+        {/* Dia + hora de inicio + hora de fin, con el calendario de la marca
+            (2026-11-09). Manda startsAt / endsAt como antes. */}
+        <HorarioSesion inicio={toLocalDatetime(session?.starts_at ?? null)} fin={toLocalDatetime(session?.ends_at ?? null)} />
 
-        <F label="Inicio (fecha y hora)">
-          <input name="startsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.starts_at ?? null)} />
-        </F>
-        <F label="Fin (fecha y hora)">
-          <input name="endsAt" type="datetime-local" required defaultValue={toLocalDatetime(session?.ends_at ?? null)} />
-        </F>
-
-        <F label="Plan que la puede ver">
-          <Desplegable
-            name="membershipTierRequired" defaultValue={session?.membership_tier_required ?? "corps_de_ballet"}
-            opciones={[
-              { value: "corps_de_ballet", label: "Corps de Ballet" },
-              { value: "solista", label: "Solista" },
-              { value: "principal", label: "Principal" },
-            ]}
+        {/* Casillas, plan por plan (pedido 2026-11-09). <div> y no <label>:
+            adentro hay botones. Sin la migracion 20261109 se guarda el plan
+            mas bajo marcado, como antes. */}
+        <div className="lvf-planes">
+          <span className="lvf-etq">Qué planes la pueden ver</span>
+          <SelectorMultiple
+            name="planesPermitidos"
+            opciones={PLANES}
+            inicial={session?.planes_permitidos?.length ? session.planes_permitidos : session ? planesDesde(session.membership_tier_required) : ["corps_de_ballet", "solista", "principal"]}
+            requerido
+            mensajeRequerido="Elegí al menos un plan."
           />
-        </F>
+        </div>
         <F label="Capacidad">
           <input name="capacity" type="number" min={1} required defaultValue={session?.capacity ?? 20} />
         </F>
@@ -231,7 +238,7 @@ export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSe
           Zoom" de mas abajo y el encabezado quedo huerfano. Brunela veia dos
           cosas casi homonimas y la primera no tenia nada. */}
 
-        <BloqueAvanzado titulo="Traducción al inglés" cantidad={2}>
+        <BloqueAvanzado titulo="Traducción al inglés (opcional)" cantidad={2}>
         <F label="Título en inglés">
           <input name="titleEn" defaultValue={session?.title_i18n?.en ?? ""} placeholder="Ballet Class — Monday" />
         </F>
@@ -240,32 +247,33 @@ export function LiveForm({ session, onGuardado, redirectTo }: { session?: LiveSe
         </F>
         </BloqueAvanzado>
 
-        <BloqueAvanzado titulo="Reservas" cantidad={2}>
+        <BloqueAvanzado titulo="Reservas (opcional)" cantidad={2}>
         <F label="Apertura de reservas">
-          <input name="bookingOpensAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_opens_at ?? null)} />
+          <CampoFechaHora name="bookingOpensAt" defaultValue={toLocalDatetime(session?.booking_opens_at ?? null)} />
         </F>
         <F label="Cierre de reservas">
-          <input name="bookingClosesAt" type="datetime-local" defaultValue={toLocalDatetime(session?.booking_closes_at ?? null)} />
+          <CampoFechaHora name="bookingClosesAt" defaultValue={toLocalDatetime(session?.booking_closes_at ?? null)} />
         </F>
         </BloqueAvanzado>
 
         {/* Los `name` siguen siendo zoomJoinUrl/zoomPasscode: los lee la
             action. Lo que cambio es que el enlace puede ser de Zoom o de Meet,
             y el proveedor se deduce de la URL al guardar. */}
-        <BloqueAvanzado titulo="Enlace (Zoom o Meet)" cantidad={2}>
+        <BloqueAvanzado titulo="Enlace de Zoom o Meet (opcional, lo podés cargar después)" cantidad={2}>
           <CampoEnlace inicial={session?.access_link?.join_url ?? ""} />
           <F label="Código de acceso">
             <input name="zoomPasscode" defaultValue={session?.access_link?.passcode ?? ""} placeholder="123456" />
           </F>
         </BloqueAvanzado>
 
-        <BloqueAvanzado titulo="Portada y zona horaria" cantidad={2}>
-        <F label="URL de portada">
-          <input name="coverImageUrl" type="url" defaultValue={session?.cover_image_url ?? ""} placeholder="https://..." />
-        </F>
-        <F label="Zona horaria">
-          <input name="sessionTimezone" defaultValue={tz} placeholder="America/Buenos_Aires" />
-        </F>
+        {/* Sin zona horaria: siempre es la de España (la pone la accion). */}
+        <BloqueAvanzado titulo="Foto de portada (opcional)" cantidad={1}>
+          <SubirPortadaClase
+            name="coverImageUrl"
+            defaultValue={session?.cover_image_url ?? ""}
+            ayudaVacio="Opcional. Una foto horizontal para la tarjeta de la sesión."
+            ayudaLista="Es la que ven las alumnas en la tarjeta de la sesión."
+          />
         </BloqueAvanzado>
 
       <div className="lvf-pie">
@@ -378,7 +386,6 @@ export function EditarSesion({
       <AdminDrawer
         abierto={abierto}
         titulo={session.title_i18n?.es ?? session.slug}
-        subtitulo={`/${session.slug}`}
         onCerrar={() => setAbierto(false)}
       >
         <LiveForm

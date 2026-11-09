@@ -375,7 +375,6 @@ export function AdminVideoUpload({ programas = [], materiales }: { programas?: P
           body: JSON.stringify({
             bunnyVideoId: ticket.videoId,
             audioLocales: audioFiles.map((a) => a.locale),
-            slug: fd.get("slug"),
             titleEs: fd.get("titleEs"),
             titleEn: fd.get("titleEn"),
             descriptionEs: fd.get("descriptionEs"),
@@ -627,10 +626,6 @@ export function AdminVideoUpload({ programas = [], materiales }: { programas?: P
           publicada no puede cambiar de direccion sin romper los enlaces que
           alguien haya guardado, y eso se ve mejor pudiendo leerla. */}
       <div style={{ marginTop: 14 }}>
-        <Field label="Dirección de la clase (se completa sola)">
-          <input style={inp} name="slug" required placeholder="ballet-centro-basico" disabled={busy} />
-          <AutoDireccion desde="titleEs" />
-        </Field>
       </div>
 
       {/* Foto de portada, opcional: si no se elige, sale sola del video. */}

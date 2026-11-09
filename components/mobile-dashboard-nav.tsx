@@ -33,8 +33,15 @@ const NAV = [
   { href: '/dashboard/invitar', label: 'Invitar amiga', exact: false, Icon: Gift },
 ];
 
-/** Los que quedan a un toque en la barra. El resto, en la hoja. */
-const PRIMARIOS = ['/dashboard', '/dashboard/library', '/dashboard/chat', '/dashboard/community'];
+/**
+ * Los que quedan a un toque en la barra, EN ESTE ORDEN. El resto, en "Mas".
+ * Clases va al medio y destacada (pedido 2026-11-09). Comunidad paso a "Mas":
+ * "Mi chat" y "Comunidad" juntos en la barra se leian como lo mismo.
+ */
+const PRIMARIOS = ['/dashboard', '/dashboard/live', '/dashboard/library', '/dashboard/chat'];
+const CENTRO = '/dashboard/library';
+/** Nombre corto para la barra: "Clases en vivo" no entra en una columna. */
+const CORTO: Record<string, string> = { '/dashboard/live': 'En vivo' };
 
 
 /** Que contador de mensajes sin leer lleva cada item del menu. */
@@ -64,7 +71,7 @@ export function MobileDashboardNav({ isAdmin, verPrivadas = false, sinLeer }: { 
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  const enBarra = NAV.filter((i) => PRIMARIOS.includes(i.href));
+  const enBarra = PRIMARIOS.map((h) => NAV.find((i) => i.href === h)!).filter(Boolean);
   const enHoja = NAV.filter((i) => verPrivadas || i.href !== '/dashboard/sesiones-privadas');
   // Si estas en una pantalla que no esta en la barra, "Menu" se marca activo:
   // asi la navegacion nunca aparece sin ningun item seleccionado.
@@ -107,13 +114,14 @@ export function MobileDashboardNav({ isAdmin, verPrivadas = false, sinLeer }: { 
         <div className="mn-fila">
           {enBarra.map((item) => {
             const on = active(item.href, item.exact);
+            const centro = item.href === CENTRO;
             return (
-              <Link key={item.href} href={item.href as never} className={'mn-item' + (on ? ' es-activo' : '')} aria-current={on ? 'page' : undefined}>
+              <Link key={item.href} href={item.href as never} className={'mn-item' + (centro ? ' mn-item--centro' : '') + (on ? ' es-activo' : '')} aria-current={on ? 'page' : undefined}>
                 <span className="mn-item-ico">
-                  <item.Icon size={19} strokeWidth={on ? 2.4 : 2} aria-hidden="true" />
+                  <item.Icon size={centro ? 22 : 19} strokeWidth={on || centro ? 2.4 : 2} aria-hidden="true" fill={centro ? 'currentColor' : 'none'} />
                   {CONTADOR_DE[item.href] && <ContadorChat tipo={CONTADOR_DE[item.href]} inicial={sinLeer?.[CONTADOR_DE[item.href]] ?? 0} className="chat-globo--ico" />}
                 </span>
-                {item.label}
+                {CORTO[item.href] ?? item.label}
               </Link>
             );
           })}

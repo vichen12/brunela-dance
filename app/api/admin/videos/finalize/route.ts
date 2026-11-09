@@ -1,3 +1,4 @@
+import { direccionLibre } from "@/src/lib/direccion-libre";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -50,7 +51,8 @@ const schema = z.object({
   portadaUrl: z.string().url().startsWith("https://").nullish(),
   /** Languages whose mp3 the browser already uploaded to Supabase Storage. */
   audioLocales: z.array(z.string()).default([]),
-  slug: z.string().min(2),
+  /** Ya no viene del formulario (2026-11-09): sale del titulo. */
+  slug: z.string().nullish(),
   titleEs: z.string().min(1),
   titleEn: z.string().optional(),
   descriptionEs: z.string().min(1),
@@ -114,26 +116,14 @@ export async function POST(request: Request) {
   const data = parsed.data;
   const supabase = createSupabaseAdminClient();
 
-  // A duplicate slug would 500 on insert after the file is already uploaded.
-  // Check first so we can clean up the orphaned Bunny asset instead.
-  const { data: existing } = await supabase
-    .from("videos")
-    .select("id")
-    .eq("slug", data.slug.trim())
-    .maybeSingle<{ id: string }>();
-
-  if (existing) {
-    await deleteBunnyVideo(data.bunnyVideoId);
-    return NextResponse.json(
-      { error: `Ya existe una clase con el slug "${data.slug.trim()}".` },
-      { status: 409 }
-    );
-  }
+  // La direccion sale del titulo y nunca choca con otra (src/lib/direccion-libre.ts):
+  // antes, una repetida frenaba la subida DESPUES de subir el video entero.
+  const slug = await direccionLibre(supabase, "videos", data.slug?.trim() || data.titleEs);
 
   const { BUNNY_STREAM_LIBRARY_ID } = getBunnyStreamEnv();
 
   const payload = {
-    slug: data.slug.trim(),
+    slug,
     title_i18n: buildI18n(data.titleEs.trim(), data.titleEn),
     description_i18n: buildI18n(data.descriptionEs.trim(), data.descriptionEn),
     // membership_tier_required NO se escribe aca: lo deriva el trigger

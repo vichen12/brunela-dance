@@ -10,6 +10,7 @@ import { asegurarPrecioDePack } from "@/src/features/admin/precio-de-pack-stripe
 import { destinatariasDelAnuncio, mandarAnuncio } from "@/src/features/correos/anuncio";
 import { PREFIJO_ANUNCIO_DE_PACK } from "@/src/features/studio/novedades-reglas";
 import { getAppUrl } from "@/src/lib/env";
+import { direccionLibre } from "@/src/lib/direccion-libre";
 import {
   AVISO_FALTA_MIGRACION_PACKS_POR_PLAN,
   esFaltaDeColumnaPlanes,
@@ -54,16 +55,16 @@ export async function createPackAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
 
-  const slug = texto(fd, "slug");
   const nombre = texto(fd, "nombreEs");
   const precio = Number(texto(fd, "precio").replace(",", "."));
 
-  if (!slug) fallar("El pack necesita una dirección (por ejemplo: pack-iniciacion).");
   if (!nombre) fallar("El pack necesita un nombre.");
   if (!Number.isFinite(precio) || precio <= 0) {
     fallar("El precio tiene que ser un número mayor que cero, por ejemplo 24,90.");
   }
 
+  // La direccion sale del nombre: Brunela ya no la ve (2026-11-09).
+  const slug = await direccionLibre(supabase, "packs", nombre);
   const { data: creado, error } = await supabase.from("packs").insert({
     slug,
     name_i18n: { es: nombre },
@@ -112,7 +113,9 @@ export async function updatePackAction(fd: FormData) {
   const { error } = await supabase
     .from("packs")
     .update({
-      slug: texto(fd, "slug"),
+      // Solo si el formulario la manda: el panel ya no la muestra, y sin esto
+      // guardar la dejaria vacia y romperia el enlace compartido.
+      ...(texto(fd, "slug") ? { slug: texto(fd, "slug") } : {}),
       name_i18n: { es: nombre, en: texto(fd, "nombreEn") || undefined },
       description_i18n: { es: texto(fd, "descripcionEs"), en: texto(fd, "descripcionEn") },
       cover_image_url: texto(fd, "portada") || null,

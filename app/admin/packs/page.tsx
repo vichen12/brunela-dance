@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { AlertTriangle, CreditCard, Euro, Home, ListChecks, Mail, PlayCircle, Plus, Rocket, ShoppingBag, Star, Zap } from "lucide-react";
 import { AdminAviso, AdminBoton, AdminCabecera, AdminCifras, AdminGuia, AdminNueva } from "@/components/admin-ui";
-import { AutoDireccion } from "@/components/auto-direccion";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { verificarPrecio, estadoDelCobro } from "@/src/lib/stripe/verificar-precio";
 import { avisarLanzamientoDePackAction, createPackAction, togglePackAction } from "@/src/features/admin/packs-actions";
 import { CopiarEnlacePack } from "@/components/copiar-enlace-pack";
+import { medir } from "@/src/lib/medir";
 import { EditarPack, type ClaseElegible, type PackAdmin } from "@/components/admin-pack-drawer";
 import { esFaltaDeColumnaOferta, ofertaVigente } from "@/src/features/studio/ofertas";
 import { isoAMadrid } from "@/src/features/studio/sesiones-privadas-reglas";
@@ -138,7 +138,7 @@ export default async function AdminPacksPage({
   // El modo activo sale de la clave, igual que en el checkout.
   const modoEsLive = /^(?:sk|rk)_live_/.test((process.env.STRIPE_SECRET_KEY ?? "").trim());
 
-  const packs: PackAdmin[] = await Promise.all(
+  const packs: PackAdmin[] = await medir("packs: verificar precios en Stripe", () => Promise.all(
     ((packsData ?? []) as PackCrudo[]).map(async (p) => {
       // Solo el modo que cobra: el otro no le dice nada a Brunela.
       const idDelModo = modoEsLive ? p.stripe_price_id_live : p.stripe_price_id_test;
@@ -154,7 +154,7 @@ export default async function AdminPacksPage({
         faltaMigracionOferta,
       };
     })
-  );
+  ));
 
   const abrirNueva = params.nueva === "1";
   const modo = modoEsLive ? "producción" : "prueba";
@@ -172,11 +172,6 @@ export default async function AdminPacksPage({
       <label className="pk-campo">
         <span className="pk-etq">Nombre del pack</span>
         <input name="nombreEs" required placeholder="Pack Iniciación" />
-      </label>
-      <AutoDireccion desde="nombreEs" />
-      <label className="pk-campo">
-        <span className="pk-etq">Dirección <small>se completa sola</small></span>
-        <input name="slug" required placeholder="pack-iniciacion" />
       </label>
       <label className="pk-campo">
         <span className="pk-etq">Precio</span>
@@ -337,7 +332,7 @@ const CSS = `
 .pk { display: flex; flex-direction: column; }
 .pk-difundir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--linea-fuerte, #E9CFC5); }
 .pk-difundir-etq { flex-basis: 100%; font-size: 12.5px; font-weight: 800; color: var(--muted); }
-.pk-nuevo { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 160px auto; gap: 14px 16px; align-items: end; padding-top: 18px; }
+.pk-nuevo { display: grid; grid-template-columns: minmax(0, 1.4fr) 160px auto; gap: 14px 16px; align-items: end; padding-top: 18px; }
 .pk-campo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .pk-etq { font-size: 12.5px; font-weight: 800; color: var(--ink); }
 .pk-etq small { margin-left: 6px; font-size: 11.5px; font-weight: 800; color: var(--muted); background: var(--rubor); padding: 2px 9px; border-radius: 99px; }

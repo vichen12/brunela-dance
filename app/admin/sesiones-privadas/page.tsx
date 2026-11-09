@@ -6,6 +6,12 @@ import { Paginacion } from "@/components/paginacion";
 import { CupoMes, FormAgendarPrivada, ListaPrivadasAdmin } from "@/components/sesiones-privadas-admin";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { SelectorMultiple } from "@/components/selector-multiple";
+import { BotonEnviar } from "@/components/boton-enviar";
+import { PLANES } from "@/src/features/studio/catalogo-clases";
+import { planesEnTexto } from "@/src/features/studio/planes-de-sesion";
+import { getPlanesConPrivadas } from "@/src/features/studio/sesiones-privadas-config";
+import { guardarPlanesPrivadasAction } from "@/src/features/admin/sesiones-privadas-actions";
 import {
   AVISO_FALTA_MIGRACION_PRIVADAS, COLUMNAS_PRIVADA, CUPO_MENSUAL, claveMes, contarDelMes, esFaltaDeTabla,
   fechaHoraCorta, finDe, inicioDelMes, proximaDe, type SesionPrivada,
@@ -40,11 +46,14 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(txt("fecha")) ? txt("fecha") : "";
   const abrirNueva = txt("nueva") === "1" || Boolean(fecha);
   const volverA = "/admin/sesiones-privadas";
+  // Que planes traen privadas: configurable abajo, por defecto solo Principal.
+  const planes = await getPlanesConPrivadas();
+  const textoPlanes = planesEnTexto(planes).replace(/^Solo /, "");
 
   let consulta = supabase
     .from("profiles")
     .select("id, full_name, email", { count: "exact" })
-    .eq("membership_tier", "principal");
+    .in("membership_tier", planes);
   if (q) {
     const t = q.replace(/[,()%]/g, " ");
     consulta = consulta.or(`full_name.ilike.%${t}%,email.ilike.%${t}%`);
@@ -54,7 +63,7 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
   const [{ data: alumnasData, count }, { data: todasPrincipal }, proximasRes] = await Promise.all([
     consulta.order("full_name", { ascending: true, nullsFirst: false }).range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1),
     // Para el desplegable de "Agendar": todas las de Principal, sin paginar.
-    supabase.from("profiles").select("id, full_name, email").eq("membership_tier", "principal").order("full_name").limit(500),
+    supabase.from("profiles").select("id, full_name, email").in("membership_tier", planes).order("full_name").limit(500),
     supabase.from("sesiones_privadas").select(COLUMNAS_PRIVADA)
       .eq("estado", "agendada").gte("starts_at", new Date(ahora - 4 * 3600 * 1000).toISOString())
       .order("starts_at", { ascending: true }).limit(30),
@@ -94,7 +103,7 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
       <AdminCabecera
         eyebrow="Comunidad"
         titulo="Sesiones privadas"
-        lede="El plan Principal trae 2 sesiones privadas por mes. Acá ves cuántas lleva cada alumna, cuál es la próxima, y las agendás en un minuto."
+        lede={`${planes.length === 1 ? `El plan ${textoPlanes} trae` : `Los planes ${textoPlanes} traen`} ${CUPO_MENSUAL} sesiones privadas por mes. Acá ves cuántas lleva cada alumna, cuál es la próxima, y las agendás en un minuto.`}
         acciones={
           <>
             {disponible && <AdminBoton href="/admin/sesiones-privadas?nueva=1#nueva" lleno><CalendarPlus size={16} strokeWidth={2.2} aria-hidden="true" /> Agendar</AdminBoton>}
@@ -109,7 +118,7 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
       {disponible && (
         <AdminNueva id="nueva" abierto={abrirNueva} titulo="Agendar una sesión privada" sub="Alumna, día, hora y, si ya lo tenés, el enlace">
           {opcionesAlumnas.length === 0 ? (
-            <p className="spp-txt">Todavía no hay alumnas en Principal. Para agendarle una a otra alumna, entrá a su ficha desde <Link href={"/admin/users" as never}>Alumnas</Link>.</p>
+            <p className="spp-txt">Todavía no hay alumnas en {textoPlanes}. Para agendarle una a otra alumna, entrá a su ficha desde <Link href={"/admin/users" as never}>Alumnas</Link>, o sumá más planes en «Qué planes tienen sesiones privadas», abajo.</p>
           ) : (
             <FormAgendarPrivada alumnas={opcionesAlumnas} volverA={volverA} fecha={fecha || undefined} />
           )}
@@ -123,13 +132,23 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
         </section>
       )}
 
+      {/* Que planes traen privadas (pedido 2026-11-09). Por defecto, Principal. */}
+      <section id="config" className="spp-bloque spp-config" aria-labelledby="spp-config-t">
+        <h2 id="spp-config-t" className="spp-h2">Qué planes tienen sesiones privadas</h2>
+        <form action={guardarPlanesPrivadasAction} className="spp-config-form">
+          <SelectorMultiple name="planes" opciones={PLANES} inicial={planes} requerido mensajeRequerido="Elegí al menos un plan." />
+          <BotonEnviar className="ad-btn ad-btn--lleno" pendingLabel="Guardando…">Guardar</BotonEnviar>
+        </form>
+        <p className="spp-txt">Las alumnas de estos planes ven «Sesiones privadas» en su menú y aparecen en la lista para agendar. A cualquier otra alumna le podés agendar una igual desde su ficha.</p>
+      </section>
+
       <section className="spp-bloque" aria-labelledby="spp-alumnas">
-        <h2 id="spp-alumnas" className="spp-h2">Alumnas de Principal <span className="spp-cuenta">{count ?? 0}</span></h2>
+        <h2 id="spp-alumnas" className="spp-h2">Alumnas de {textoPlanes} <span className="spp-cuenta">{count ?? 0}</span></h2>
         <AdminBuscador action="/admin/sesiones-privadas" q={q} placeholder="Buscar por nombre o correo" total={count ?? 0} mostrando={alumnas.length} />
 
         {alumnas.length === 0 ? (
           <div className="ad-vacio">
-            <p className="ad-vacio-titulo">{q ? "Nadie coincide." : "Todavía no hay alumnas en Principal."}</p>
+            <p className="ad-vacio-titulo">{q ? "Nadie coincide." : `Todavía no hay alumnas en ${textoPlanes}.`}</p>
             {q && <Link href={"/admin/sesiones-privadas" as never} className="ad-btn">Ver todas</Link>}
           </div>
         ) : (
@@ -175,6 +194,7 @@ export default async function AdminSesionesPrivadasPage({ searchParams }: { sear
 }
 
 const CSS = `
+.spp-config-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; }
 .spp { display: flex; flex-direction: column; gap: 6px; }
 .spp .ad-nueva { margin-bottom: 18px; }
 .spp-txt { font-size: 14px; color: var(--muted); }

@@ -22,7 +22,8 @@ import {
 
 const videoSchema = z.object({
   id: z.string().uuid().optional().or(z.literal("")),
-  slug: z.string().min(3),
+  // Ya no se muestra (2026-11-09): al editar se conserva la que habia.
+  slug: z.string().nullish(),
   titleEs: z.string().min(1),
   titleEn: z.string().optional(),
   descriptionEs: z.string().min(1),
@@ -70,7 +71,7 @@ const claseEnPlanSchema = z.object({
 
 const programSchema = z.object({
   id: z.string().uuid().optional().or(z.literal("")),
-  slug: z.string().min(3),
+  slug: z.string().nullish(),
   titleEs: z.string().min(1),
   titleEn: z.string().optional(),
   descriptionEs: z.string().min(1),
@@ -246,7 +247,7 @@ export async function upsertVideoAction(formData: FormData) {
   }
 
   const payload = {
-    slug: parsed.data.slug.trim(),
+    ...(parsed.data.slug?.trim() ? { slug: parsed.data.slug.trim() } : {}),
     title_i18n: buildI18n(parsed.data.titleEs.trim(), parsed.data.titleEn),
     description_i18n: buildI18n(parsed.data.descriptionEs.trim(), parsed.data.descriptionEn),
     // membership_tier_required NO se escribe aca: lo deriva el trigger
@@ -478,7 +479,7 @@ export async function upsertProgramAction(formData: FormData) {
   }
 
   const payload = {
-    slug: parsed.data.slug.trim(),
+    ...(parsed.data.slug?.trim() ? { slug: parsed.data.slug.trim() } : {}),
     title_i18n: buildI18n(parsed.data.titleEs.trim(), parsed.data.titleEn),
     description_i18n: buildI18n(parsed.data.descriptionEs.trim(), parsed.data.descriptionEn),
     membership_tier_required: parsed.data.membershipTierRequired,

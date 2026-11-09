@@ -169,8 +169,8 @@ describe("la base y el panel", () => {
   it("cada action llama a requireAdmin ANTES que nada (trampa 4)", () => {
     const src = leer("src/features/admin/sesiones-privadas-actions.ts");
     const encontradas = [...src.matchAll(/export async function (\w+)\([^)]*\)[^{]*\{\s*\n\s*(.+)/g)];
-    // Control: si el patron no encuentra las tres, la prueba no esta probando nada.
-    expect(encontradas.map((m) => m[1]).sort()).toEqual(["agendarSesionPrivadaAction", "cancelarSesionPrivadaAction", "editarSesionPrivadaAction"]);
+    // Control: si el patron no las encuentra a todas, la prueba no esta probando nada.
+    expect(encontradas.map((m) => m[1]).sort()).toEqual(["agendarSesionPrivadaAction", "cancelarSesionPrivadaAction", "editarSesionPrivadaAction", "guardarPlanesPrivadasAction"]);
     for (const m of encontradas) {
       expect(m[2], `${m[1]} no empieza por requireAdmin()`).toMatch(/requireAdmin\(\)/);
     }

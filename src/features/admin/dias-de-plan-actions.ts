@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { aDireccion } from "@/src/lib/slug";
+import { direccionLibre } from "@/src/lib/direccion-libre";
 import {
   AVISO_FALTA_MIGRACION_DESCANSO,
   MAX_DIAS_PLAN,
@@ -215,7 +216,8 @@ export async function guardarPlanCompletoAction(_prev: EstadoEditorPlan, formDat
     const { error } = await supabase.from("programs").update(datos).eq("id", programId);
     if (error) return { tipo: "error", mensaje: `No se guardó el plan: ${error.message}`, vez };
   } else {
-    const slug = aDireccion(p.slug);
+    // Del titulo y sin chocar con otra: Brunela no la ve (2026-11-09).
+    const slug = await direccionLibre(supabase, "programs", p.slug || p.titleEs);
     const { data, error } = await supabase
       .from("programs")
       .insert({ ...datos, slug, created_by: user.id })
@@ -223,7 +225,7 @@ export async function guardarPlanCompletoAction(_prev: EstadoEditorPlan, formDat
       .single<{ id: string }>();
     if (error || !data) {
       if (error?.code === "23505") {
-        return { tipo: "error", mensaje: `Ya hay un plan con la dirección «${slug}». Cambiale un poco el título o la dirección.`, vez };
+        return { tipo: "error", mensaje: "Ya hay otro plan con ese título. Cambiale un poco el título.", vez };
       }
       return { tipo: "error", mensaje: `No se creó el plan: ${error?.message ?? "error desconocido"}`, vez };
     }

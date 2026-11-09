@@ -50,11 +50,6 @@ function Campos({ cat }: { cat?: CategoryRecord }) {
         <input name="nameEn" defaultValue={cat?.name_i18n.en ?? ""} placeholder="Classical ballet" />
       </label>
       <label className="cat-campo">
-        <span className="cat-etq">Identificador <small>se completa solo</small></span>
-        <input name="slug" defaultValue={cat?.slug ?? ""} required placeholder="ballet-clasico" />
-        {!cat && <AutoDireccion desde="nameEs" />}
-      </label>
-      <label className="cat-campo">
         <span className="cat-etq">Quién la ve</span>
         <Desplegable name="membershipTierRequired" defaultValue={cat?.membership_tier_required ?? "none"} opciones={PLANES} />
       </label>
@@ -179,7 +174,6 @@ export default async function AdminCategoriesPage({ searchParams }: { searchPara
                     {!cat.is_active && <span className="cat-chip cat-chip--off">Inactiva</span>}
                   </div>
                   <h2 className="cat-nombre">{cat.name_i18n.es ?? cat.slug}</h2>
-                  <p className="cat-slug">/{cat.slug}</p>
                   {cat.description_i18n.es && <p className="cat-desc">{cat.description_i18n.es}</p>}
                 </div>
 

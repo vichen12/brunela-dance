@@ -187,7 +187,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           <span className="cf-precios-ico"><Euro size={18} strokeWidth={2} aria-hidden="true" /></span>
           <span className="cf-fila-txt">
             <span className="cf-fila-titulo">Planes y precios</span>
-            <span className="cf-fila-sub">Los importes y los identificadores de cobro se cambian en Precios.</span>
+            <span className="cf-fila-sub">Los precios de los planes y los packs se cambian en Precios.</span>
           </span>
           <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
         </Link>

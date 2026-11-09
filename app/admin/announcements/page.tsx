@@ -1,4 +1,11 @@
 import { Desplegable } from "@/components/desplegable";
+import { CampoFechaHora } from "@/components/campo-fecha-hora";
+import { madridAIso } from "@/src/features/studio/sesiones-privadas-reglas";
+
+function venceEnMadrid(valor: FormDataEntryValue | null): string | null {
+  const [fecha, hora] = String(valor ?? "").split("T");
+  return fecha ? madridAIso(fecha, (hora ?? "00:00").slice(0, 5)) : null;
+}
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
@@ -40,7 +47,8 @@ async function createAnnouncementAction(fd: FormData) {
     content: (fd.get("content") as string).trim(),
     tier_target: (fd.get("tierTarget") as string) || "all",
     is_active: true,
-    expires_at: fd.get("expiresAt") ? new Date(fd.get("expiresAt") as string).toISOString() : null,
+    // En hora de España: `new Date()` en el servidor (UTC) lo corria una hora.
+    expires_at: venceEnMadrid(fd.get("expiresAt")),
     created_by: user.id,
   }).select("id, title, content, tier_target").single<{ id: string; title: string; content: string; tier_target: string }>();
 
@@ -189,14 +197,15 @@ export default async function AdminAnnouncementsPage({
               className="an-inp an-inp--area"
               name="content"
               required
-              placeholder="El mensaje que van a ver las alumnas en su dashboard..."
+              placeholder="El mensaje que van a ver las alumnas al entrar al estudio…"
             />
           </label>
           <div className="an-pie">
-            <label className="pf-campo an-vence">
-              <span className="pf-etq">Vence el <small>opcional</small></span>
-              <input className="an-inp" name="expiresAt" type="datetime-local" />
-            </label>
+            {/* <div> y no <label>: adentro hay botones (calendario y hora). */}
+            <div className="pf-campo an-vence">
+              <span className="pf-etq">Vence el <small>opcional, hora de España</small></span>
+              <CampoFechaHora name="expiresAt" />
+            </div>
             <label className="an-mail">
               <input type="checkbox" name="porMail" value="si" defaultChecked />
               <span>Mandarlo también por mail <small>a las alumnas de ese plan que no se dieron de baja</small></span>

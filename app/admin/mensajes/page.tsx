@@ -267,7 +267,7 @@ export default async function AdminMensajesPage({ searchParams }: {
                 const active = m.id === activeUserId;
                 const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
                 return (
-                  <Link key={"c" + m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+                  <Link key={"c" + m.id} href={conFiltros({ user: m.id }) as never} className={"dm-persona dm-t-" + m.membership_tier + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
                     <span className="dm-ini">{name[0]?.toUpperCase()}</span>
                     <span className="dm-persona-txt">
                       <span className="dm-persona-nombre">{name}</span>
@@ -275,7 +275,7 @@ export default async function AdminMensajesPage({ searchParams }: {
                     </span>
                     {salaDeAlumna.get(m.id) && (noLeidosDeSala.get(salaDeAlumna.get(m.id)!) ?? 0) > 0
                       ? <ContadorSala roomId={salaDeAlumna.get(m.id)!} inicial={noLeidosDeSala.get(salaDeAlumna.get(m.id)!) ?? 0} />
-                      : m.deElla && <span className="dm-nuevo dm-nuevo--suave" title="La última palabra es de ella">Sin responder</span>}
+                      : m.deElla && <span className="dm-pendiente" title="La última palabra es de ella"><i aria-hidden="true" />Sin responder</span>}
                   </Link>
                 );
               })}
@@ -292,7 +292,7 @@ export default async function AdminMensajesPage({ searchParams }: {
             const active = m.id === activeUserId;
             const name = m.full_name?.split(" ")[0] ?? m.email.split("@")[0];
             return (
-              <Link key={m.id} href={conFiltros({ user: m.id, pmiembros: paginaMiembros > 0 ? String(paginaMiembros) : "" }) as never} className={"dm-persona" + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
+              <Link key={m.id} href={conFiltros({ user: m.id, pmiembros: paginaMiembros > 0 ? String(paginaMiembros) : "" }) as never} className={"dm-persona dm-t-" + m.membership_tier + (active ? " es-activa" : "")} aria-current={active ? "page" : undefined}>
                 <span className="dm-ini">{name[0]?.toUpperCase()}</span>
                 <span className="dm-persona-txt">
                   <span className="dm-persona-nombre">{name}</span>
@@ -435,6 +435,34 @@ const CSS_DM = `
   .dm-chat { height: 72vh; min-height: 460px; }
 }
 @media (max-width: 640px) { .dm-cab { padding: 12px 16px; } .dm-perfil { padding: 8px 12px; } }
+
+/* ── Lista de alumnas, rediseño 2026-11-09 ── */
+.dm-planes { gap: 6px; padding: 4px; border-radius: 16px; background: rgba(255,255,255,.7); border: 1px solid var(--linea); }
+.dm-plan { border: 0; background: transparent; padding: 6px 11px; }
+.dm-plan.es-activo { box-shadow: 0 6px 14px -8px rgba(230,79,85,.9); }
+.dm-seccion { margin: 16px 10px 6px; font-size: 11px; letter-spacing: .08em; color: var(--muted); opacity: .8; }
+.dm-lista { gap: 2px; }
+.dm-persona { position: relative; padding: 9px 10px; border-radius: 16px; outline: none; }
+.dm-persona:hover { background: rgba(255,255,255,.75); }
+.dm-persona:focus-visible { box-shadow: 0 0 0 2px var(--pink-line, #F2C6C6); }
+.dm-persona.es-activa { background: #fff; box-shadow: 0 10px 24px -18px rgba(120,50,40,.55); }
+.dm-persona.es-activa::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--pink); }
+.dm-ini { width: 38px; height: 38px; font-size: 15px; }
+.dm-persona-plan { margin-top: 2px; padding: 1px 8px; font-size: 11px; }
+.dm-persona-cuando { font-size: 11.5px; }
+/* Color por plan: circulo y etiqueta. */
+.dm-t-principal .dm-ini { background: #FDE3E2; color: #B03A3E; }
+.dm-t-principal .dm-persona-plan { background: #FDE3E2; color: #B03A3E; }
+.dm-t-solista .dm-ini { background: #FFEBD9; color: #B4602F; }
+.dm-t-solista .dm-persona-plan { background: #FFEBD9; color: #B4602F; }
+.dm-t-corps_de_ballet .dm-ini { background: #E6F0E6; color: #4F7A55; }
+.dm-t-corps_de_ballet .dm-persona-plan { background: #E6F0E6; color: #4F7A55; }
+.dm-t-none .dm-ini { background: #F1ECEA; color: #8A6F68; }
+.dm-t-none .dm-persona-plan { background: #F1ECEA; color: #8A6F68; }
+.dm-persona.es-activa .dm-ini { background: var(--pink); color: #fff; }
+/* "Sin responder": un punto y el texto, sin caja. */
+.dm-pendiente { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--pink-deep); white-space: nowrap; }
+.dm-pendiente i { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 3px rgba(230,79,85,.15); }
 @media (prefers-reduced-motion: reduce) { .dm-vacio-ico { animation: none; } }
 `;
 

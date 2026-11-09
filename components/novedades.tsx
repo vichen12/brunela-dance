@@ -49,8 +49,9 @@ const CSS = `
 .nvd-card { flex: 0 0 240px; scroll-snap-align: start; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid var(--linea, #F6E7E1); box-shadow: 0 10px 24px -20px rgba(120,50,40,.5); color: inherit; text-decoration: none; transition: transform .25s ease, box-shadow .25s ease; }
 .nvd-card--link { cursor: pointer; }
 .nvd-card--link:hover { transform: translateY(-3px); box-shadow: 0 16px 30px -20px rgba(120,50,40,.6); }
-.nvd-img { display: grid; place-items: center; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #FFF1EC, #FFDADA); color: var(--pink-deep, #B03A3E); overflow: hidden; }
-.nvd-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nvd-img { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #FFF1EC, #FFDADA); color: var(--pink-deep, #B03A3E); overflow: hidden; }
+/* Absoluta: con height 100% dentro de la grilla, una foto vertical mostraba solo su parte de arriba. */
+.nvd-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .nvd-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 14px 15px; min-width: 0; }
 .nvd-etq { padding: 3px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 800; background: var(--rubor, #FFF2EE); color: var(--pink-deep, #B03A3E); }
 .nvd-etq--pack { background: #FFF4E8; color: var(--melocoton-deep, #C25E3A); }

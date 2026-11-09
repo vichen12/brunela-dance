@@ -24,7 +24,7 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
     alumnas, corps, solista, principal, sinPlan,
     totales, publicadas, borradores,
     sesiones, reservas, altasDelMes, anuncios,
-    { data: ultimas }, { data: clases }, { data: enVivo },
+    { data: ultimas }, { data: clases }, { data: enVivo }, privadas,
   ] = await Promise.all([
     contar(perfiles()),
     contar(perfiles().eq("membership_tier", "corps_de_ballet")),
@@ -35,6 +35,7 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
     contar(db.from("videos").select("*", { count: "exact", head: true }).eq("status", "published")),
     contar(db.from("videos").select("*", { count: "exact", head: true }).eq("status", "draft")),
     contar(db.from("live_sessions").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("starts_at", ahora)),
+    // (las privadas se suman abajo, con las de la agenda)
     contar(db.from("live_session_bookings").select("*", { count: "exact", head: true }).eq("status", "reserved")),
     contar(perfiles().gte("created_at", inicioDeMes)),
     contar(db.from("studio_announcements").select("*", { count: "exact", head: true })
@@ -50,6 +51,14 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
       .eq("status", "scheduled").gte("starts_at", ahora)
       .eq("live_session_bookings.status", "reserved")
       .order("starts_at", { ascending: true }).limit(3),
+    // Las privadas tambien son clases en agenda (pedido 2026-11-09): sin esto
+    // el panel decia "No hay ninguna sesion" con una privada a la tarde.
+    // Tolerante: sin la migracion de privadas, simplemente no hay.
+    db.from("sesiones_privadas")
+      .select("id, starts_at, profiles(full_name, email)")
+      .eq("estado", "agendada").gte("starts_at", ahora)
+      .order("starts_at", { ascending: true }).limit(3)
+      .then(({ data, error }) => (error ? [] : data ?? [])),
   ]);
 
   return {
@@ -75,14 +84,29 @@ export async function cargarPanelEstudio(): Promise<Omit<DatosPanel, "nombre" | 
         portada: portadaDeClase(v),
         minutos: v.duration_seconds ? Math.round(v.duration_seconds / 60) : null,
       })),
-    enVivo: ((enVivo ?? []) as { id: string; title_i18n: Record<string, string>; starts_at: string; session_timezone: string; live_session_bookings: { count: number }[] | null }[])
-      .map((s) => ({
-        id: s.id,
-        titulo: resolveI18nText(s.title_i18n) || "Clase en vivo",
-        iso: s.starts_at,
-        zona: s.session_timezone,
-        reservas: s.live_session_bookings?.[0]?.count ?? 0,
-      })),
+    enVivo: [
+      ...((enVivo ?? []) as { id: string; title_i18n: Record<string, string>; starts_at: string; session_timezone: string; live_session_bookings: { count: number }[] | null }[])
+        .map((s) => ({
+          id: s.id,
+          titulo: resolveI18nText(s.title_i18n) || "Clase en vivo",
+          iso: s.starts_at,
+          zona: s.session_timezone,
+          reservas: s.live_session_bookings?.[0]?.count ?? 0 as number | null,
+          href: `/admin/live?q=${encodeURIComponent(resolveI18nText(s.title_i18n) || "")}`,
+        })),
+      ...(privadas as unknown as { id: string; starts_at: string; profiles: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null }[])
+        .map((p) => {
+          const perfil = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+          return {
+            id: p.id,
+            titulo: `Sesión privada con ${perfil?.full_name?.trim() || perfil?.email?.split("@")[0] || "una alumna"}`,
+            iso: p.starts_at,
+            zona: "Europe/Madrid",
+            reservas: null as number | null,
+            href: "/admin/sesiones-privadas",
+          };
+        }),
+    ].sort((a, b) => a.iso.localeCompare(b.iso)).slice(0, 4),
   };
 }
 

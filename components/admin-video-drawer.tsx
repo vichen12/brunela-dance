@@ -265,14 +265,6 @@ function VideoForm({
         <ClaseEnPlanes videoId={video.id} planes={planes} ubicaciones={ubicaciones} />
       </BloqueSoloParaVos>
 
-      <div style={{ marginTop: 14 }}>
-        <F label="Dirección">
-          {/* Solo lectura: cambiar el slug de una clase publicada rompe
-              cualquier enlace que alguien haya guardado o compartido. Se muestra
-              porque es la direccion de esa clase y a Brunela le sirve verla. */}
-          <input style={{ ...inp, background: "#FFFAF6", color: "#8A6F68", borderStyle: "dashed" }} defaultValue={video.slug} name="slug" readOnly />
-        </F>
-      </div>
 
       <div className="adr-caja" style={{ marginTop: 14 }}>
         <Lbl>Pistas de audio por idioma</Lbl>

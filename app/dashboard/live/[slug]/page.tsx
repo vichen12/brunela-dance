@@ -1,3 +1,4 @@
+import { leerPlanesDeSesiones, planesDesde, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -92,6 +93,9 @@ export default async function DashboardLiveSesionPage({
   }
   // Un borrador no tiene perfil, tampoco para la admin desde esta vista.
   if (!sesion || sesion.status === "draft") notFound();
+  // Para que planes es (20261109): aparte y tolerante, sin la migracion vale el minimo.
+  const planes = (await leerPlanesDeSesiones(createSupabaseAdminClient(), [sesion.id])).get(sesion.id) ?? planesDesde(sesion.membership_tier_required);
+  const paraQuien = planesEnTexto(planes);
 
   const [{ data: reserva }, { data: invitacion }, { count: ocupadasCount }, perfil] = await Promise.all([
     supabase
@@ -198,14 +202,14 @@ export default async function DashboardLiveSesionPage({
             <span className="sp-portada-vacia" aria-hidden="true"><Video size={46} strokeWidth={1.6} /></span>
           )}
           {bloqueada && (
-            <span className="sp-portada-candado"><Lock size={14} strokeWidth={2.6} aria-hidden="true" /> Disponible desde {membershipTierLabel(sesion.membership_tier_required)}</span>
+            <span className="sp-portada-candado"><Lock size={14} strokeWidth={2.6} aria-hidden="true" /> Para {paraQuien.replace(/^Solo /, "")}</span>
           )}
         </div>
 
         <div className="sp-grilla">
           <div className="sp-main">
             <div className="sp-chips">
-              <span className="sp-chip es-plan">{membershipTierLabel(sesion.membership_tier_required)}</span>
+              <span className="sp-chip es-plan">{paraQuien}</span>
               {invitacion && <span className="sp-chip es-invitada"><Sparkles size={12} strokeWidth={2.6} aria-hidden="true" /> Invitada por Brunela</span>}
               {sesion.status === "completed" && <span className="sp-chip">Clase ya dada</span>}
             </div>
@@ -273,8 +277,8 @@ export default async function DashboardLiveSesionPage({
 
             {bloqueada ? (
               <>
-                <p className="sp-lugar-tit"><Lock size={16} strokeWidth={2.4} aria-hidden="true" /> Disponible desde {membershipTierLabel(sesion.membership_tier_required)}</p>
-                <p className="sp-lugar-txt">Esta clase es del plan {membershipTierLabel(sesion.membership_tier_required)}. Con ese plan podés reservarla y ver su material.</p>
+                <p className="sp-lugar-tit"><Lock size={16} strokeWidth={2.4} aria-hidden="true" /> No está incluida en tu plan</p>
+                <p className="sp-lugar-txt">Esta clase es para: {paraQuien.replace(/^Solo /, "")}. Con uno de esos planes podés reservarla y ver su material.</p>
                 <Link href="/dashboard/plan" className="sp-btn sp-btn--lleno">Ver planes <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" /></Link>
               </>
             ) : pasada ? (

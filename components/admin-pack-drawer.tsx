@@ -6,6 +6,7 @@ import { PLANES } from "@/src/features/studio/catalogo-clases";
 import { Desplegable } from "@/components/desplegable";
 import { ElegirConBuscador } from "@/components/elegir-con-buscador";
 import { SubirPortadaClase } from "@/components/subir-portada-clase";
+import { CampoFechaHora } from "@/components/campo-fecha-hora";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -95,10 +96,11 @@ function OfertaDelPack({ pack }: { pack: PackAdmin }) {
             <input style={inp} name="ofertaPrecio" required inputMode="decimal" pattern={PATRON_PRECIO}
               defaultValue={o ? (o.precioCentimos / 100).toFixed(o.precioCentimos % 100 === 0 ? 0 : 2).replace(".", ",") : ""} placeholder="9,90" />
           </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 190px" }}>
+          {/* <div> y no <label>: adentro hay botones (calendario y hora). */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: "1 1 240px" }}>
             <Lbl>Termina el (hora de España)</Lbl>
-            <input style={inp} name="ofertaHasta" type="datetime-local" required defaultValue={o?.hastaLocal ?? ""} />
-          </label>
+            <CampoFechaHora name="ofertaHasta" required defaultValue={o?.hastaLocal ?? ""} />
+          </div>
           <BotonEnviar pendingLabel="Guardando…" style={botonPrincipal}>
             <Zap size={15} strokeWidth={2.4} aria-hidden="true" /> {o ? "Guardar oferta" : "Poner en oferta"}
           </BotonEnviar>
@@ -336,21 +338,15 @@ export function EditarPack({ pack, elegibles }: { pack: PackAdmin; elegibles: Cl
       <AdminDrawer
         abierto={abierto}
         titulo={pack.name_i18n?.es ?? pack.slug}
-        subtitulo={`/${pack.slug}`}
         onCerrar={() => setAbierto(false)}
       >
         <form action={updatePackAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <CerrarAlGuardar onExito={() => setAbierto(false)} />
           <input type="hidden" name="id" value={pack.id} />
 
-          <div className="adr-g2">
-            <F label="Nombre">
-              <input style={inp} name="nombreEs" required defaultValue={pack.name_i18n?.es ?? ""} />
-            </F>
-            <F label="Dirección">
-              <input style={inp} name="slug" required defaultValue={pack.slug} />
-            </F>
-          </div>
+          <F label="Nombre">
+            <input style={inp} name="nombreEs" required defaultValue={pack.name_i18n?.es ?? ""} />
+          </F>
 
           <F label="Descripción">
             <textarea style={{ ...inp, minHeight: 72, resize: "vertical" }} name="descripcionEs"

@@ -257,10 +257,7 @@ function UploadForm({ bunnyReady, programas, materiales }: { bunnyReady: boolean
   if (!bunnyReady) {
     return (
       <div style={{ marginTop: 16, fontSize: 13.5, color: "#8A4A2E", background: "#FFF4E8", border: "1px solid #FFE2D3", borderRadius: 20, padding: "16px 18px", lineHeight: 1.6 }}>
-        Para subir videos falta configurar <strong>Bunny Stream</strong> en las variables de entorno:
-        <code style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-          BUNNY_STREAM_API_KEY · BUNNY_STREAM_LIBRARY_ID · BUNNY_STREAM_CDN_HOSTNAME
-        </code>
+        Ahora no se pueden subir videos: falta conectar el servicio de video del estudio. Avisale a quien te arma la web y se arregla sin perder nada.
       </div>
     );
   }

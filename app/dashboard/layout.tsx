@@ -16,6 +16,7 @@ import { aplicarBajaSiVencio, getAccesoGratis } from "@/src/features/studio/acce
 import { PLAN_LABEL, diasRestantes, estaVencido, fechaLarga } from "@/src/features/studio/acceso-gratis-reglas";
 import type { Notificacion } from "@/src/features/studio/notificaciones";
 import { getMisSesionesPrivadas } from "@/src/features/studio/sesiones-privadas";
+import { getPlanesConPrivadas } from "@/src/features/studio/sesiones-privadas-config";
 import { destinoDelEstudio, tieneAccesoAlEstudio } from "@/src/features/acceso/reglas";
 import { tienePackComprado } from "@/src/features/acceso/servidor";
 
@@ -129,7 +130,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isAdmin = profile?.is_admin ?? false;
   // "Sesiones privadas" en el menu: solo para Principal (que las trae en el
   // plan) o para quien ya tiene alguna. A las demas no les sirve de nada.
-  const verPrivadas = privadas.disponible && (profile?.membership_tier === "principal" || privadas.sesiones.length > 0);
+  // Los planes con privadas se configuran en el panel (por defecto, Principal).
+  const planesConPrivadas = await getPlanesConPrivadas();
+  const verPrivadas = privadas.disponible && ((planesConPrivadas as string[]).includes(profile?.membership_tier ?? "none") || privadas.sesiones.length > 0);
   const [notificaciones, chats] = await Promise.all([
     getNotificaciones(user.id, profile?.membership_tier ?? "none", isAdmin),
     // Mensajes sin leer: campanita, numerito del menu y contador en vivo.

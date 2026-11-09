@@ -109,6 +109,8 @@ no es el que devuelve `ls`:
                                                solo SELECT de lo propio para
                                                authenticated. Necesita is_admin().
                                                No redefine nada
+45. 20261109_planes_de_sesiones_en_vivo.sql  <-- DESPUES de 20260805_invitaciones_a_sesiones (redefine
+                                               sus 3 reglas de acceso); casillas de planes en vivo
 ```
 
 > **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin

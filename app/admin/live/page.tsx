@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { leerPlanesDeSesiones, planesDesde, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
 import { redirect } from "next/navigation";
@@ -202,8 +203,12 @@ export default async function AdminLivePage({
     return acc;
   }, {});
 
+  // Los planes de cada sesion (20261109), aparte y tolerante: sin la migracion
+  // el mapa viene vacio y vale la regla vieja.
+  const planesDe = await leerPlanesDeSesiones(supabase, ((sessionsData ?? []) as { id: string }[]).map((s) => s.id));
   const sessions = ((sessionsData ?? []) as Omit<LiveSession, "bookings_count" | "access_link" | "invitations">[]).map((s) => ({
     ...s,
+    planes_permitidos: planesDe.get(s.id) ?? null,
     bookings_count: bookingsBySession[s.id] ?? 0,
     access_link: accessLinksBySession[s.id] ?? null,
     invitations: invitationsBySession[s.id] ?? [],
@@ -226,7 +231,21 @@ export default async function AdminLivePage({
     return "/admin/live" + (t ? "?" + t : "") + "#sesiones";
   };
 
-  const recordatorios = await cargarRecordatoriosAdmin();
+  const [recordatorios, privadasRes] = await Promise.all([
+    cargarRecordatoriosAdmin(),
+    // Las privadas tambien son clases en agenda (pedido 2026-11-09). Tolerante:
+    // sin la migracion de privadas no hay ninguna y la pagina sigue igual.
+    supabase.from("sesiones_privadas")
+      .select("id, starts_at, duracion_minutos, profiles(full_name, email)")
+      .eq("estado", "agendada").gte("starts_at", ahoraIso)
+      .order("starts_at", { ascending: true }).limit(20),
+  ]);
+  const privadas = (privadasRes.error ? [] : (privadasRes.data ?? []) as unknown as { id: string; starts_at: string; duracion_minutos: number; profiles: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null }[])
+    .map((p) => {
+      const perfil = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+      return { id: p.id, iso: p.starts_at, minutos: p.duracion_minutos, alumna: perfil?.full_name?.trim() || perfil?.email?.split("@")[0] || "Alumna" };
+    });
+  const fechaPrivada = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" });
 
   return (
     <main className="lv">
@@ -249,8 +268,24 @@ export default async function AdminLivePage({
       <AdminCifras items={[
         { value: total,     label: "Sesiones totales", sub: "en el sistema" },
         { value: scheduled, label: "Publicadas",        sub: "visibles a alumnas" },
-        { value: upcoming,  label: "Próximas",          sub: "pendientes de dar" },
+        { value: upcoming + privadas.length, label: "Próximas", sub: privadas.length ? `${privadas.length} ${privadas.length === 1 ? "es privada" : "son privadas"}` : "pendientes de dar" },
       ]} />
+
+      {privadas.length > 0 && (
+        <section className="lv-seccion lv-privadas" aria-label="Sesiones privadas próximas">
+          <h2 className="lv-h2">Sesiones privadas <span>{privadas.length}</span></h2>
+          <ul className="lv-priv-lista">
+            {privadas.map((p) => (
+              <li key={p.id}>
+                <Link href="/admin/sesiones-privadas" className="lv-priv">
+                  <strong>{p.alumna}</strong>
+                  <span>{fechaPrivada.format(new Date(p.iso))} · {p.minutos} min</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Create new session */}
       <AdminNueva abierto={params.nueva === "1"} titulo="Nueva sesión en vivo" sub="Fecha, cupo, plan y enlace de Zoom o Meet">
@@ -320,7 +355,7 @@ export default async function AdminLivePage({
                           {session.title_i18n.es ?? session.slug}
                         </Link>
                         <span className={"lv-chip " + st.clase}>{st.label}</span>
-                        <span className={"lv-chip " + tier.clase}>{tier.label}</span>
+                        <span className={"lv-chip " + tier.clase}>{planesEnTexto(session.planes_permitidos ?? planesDesde(session.membership_tier_required))}</span>
                       </div>
                       <div className="lv-meta">
                         <span className={"lv-hora" + (isPast ? " es-pasada" : "")}>
@@ -454,6 +489,13 @@ const CSS = `
 .lv { display: flex; flex-direction: column; }
 .lv .ad-nueva { margin-bottom: 26px; }
 .lv-seccion { display: flex; flex-direction: column; }
+.lv-privadas { margin-bottom: 26px; }
+.lv-priv-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.lv-priv { display: flex; flex-direction: column; gap: 3px; min-height: 44px; padding: 12px 16px; border-radius: 18px; background: #F8F1FA; border: 1px solid #E4D1EA; color: #5B3366; text-decoration: none; transition: transform .2s; }
+.lv-priv:hover { transform: translateY(-2px); }
+.lv-priv strong { font-size: 15px; font-weight: 800; }
+.lv-priv span { font-size: 13px; text-transform: none; }
+.lv-priv span::first-letter { text-transform: uppercase; }
 .lv-h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: var(--ink); }
 .lv-h2 span { padding: 3px 11px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; letter-spacing: 0; }
 

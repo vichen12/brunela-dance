@@ -112,6 +112,27 @@ function Bloque({
   );
 }
 
+/**
+ * Una lista que no crece sin fin: las primeras 5 a la vista y el resto se
+ * despliega ahi mismo (2026-11-09: con 17 clases sin uso, el bloque se estiraba
+ * y la columna de al lado quedaba vacia).
+ */
+const A_LA_VISTA = 5;
+function ListaCorta({ filas, que }: { filas: React.ReactNode[]; que: string }) {
+  const resto = filas.length - A_LA_VISTA;
+  return (
+    <div className="aa-filas">
+      {filas.slice(0, A_LA_VISTA)}
+      {resto > 0 && (
+        <details className="aa-mas">
+          <summary>{resto === 1 ? `Ver la otra ${que}` : `Ver las otras ${resto}`}</summary>
+          <div className="aa-filas">{filas.slice(A_LA_VISTA)}</div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function Barras({ filas }: { filas: { etiqueta: string; cantidad: number }[] }) {
   const total = filas.reduce((s, f) => s + f.cantidad, 0) || 1;
   return (
@@ -485,8 +506,7 @@ export default async function AnaliticasPage() {
               sin entrar. Es la mejor señal que puede dar este bloque.
             </p>
           ) : (
-            <div className="aa-filas">
-              {a.inactividad.alumnas.slice(0, 12).map((al) => (
+            <ListaCorta que="alumna" filas={a.inactividad.alumnas.map((al) => (
                 <Link key={al.id} href={`/admin/users/${al.id}` as never} className="aa-fila aa-fila--link">
                   <span className="aa-fila-ini" aria-hidden="true">{al.nombre[0]?.toUpperCase()}</span>
                   <div className="aa-fila-txt">
@@ -497,13 +517,7 @@ export default async function AnaliticasPage() {
                     {al.diasSinEntrar === null ? "Nunca entró" : `${al.diasSinEntrar} días`}
                   </span>
                 </Link>
-              ))}
-              {a.inactividad.alumnas.length > 12 && (
-                <p className="aa-txt">
-                  Y {a.inactividad.alumnas.length - 12} más.
-                </p>
-              )}
-            </div>
+              ))} />
           )}
         </Bloque>
 
@@ -530,8 +544,7 @@ export default async function AnaliticasPage() {
                 {a.sinUso.clases.length} de {a.sinUso.totalPublicadas} clases publicadas
                 no las empezó ninguna alumna todavía.
               </p>
-              <div className="aa-filas">
-                {a.sinUso.clases.slice(0, 10).map((c) => (
+              <ListaCorta que="clase" filas={a.sinUso.clases.map((c) => (
                   <div key={c.id} className="aa-fila">
                     <span className="aa-fila-ini aa-fila-ini--melo" aria-hidden="true"><PlayCircle size={16} strokeWidth={2.2} /></span>
                     <p className="aa-fila-titulo aa-fila-txt">{c.titulo}</p>
@@ -539,8 +552,7 @@ export default async function AnaliticasPage() {
                       {c.publicadaHace !== null ? `publicada hace ${c.publicadaHace} días` : "sin fecha"}
                     </span>
                   </div>
-                ))}
-              </div>
+                ))} />
             </>
           )}
         </Bloque>
@@ -653,6 +665,12 @@ const CSS = `
 .aa-tarjeta-etq { margin-top: 6px; font-size: 14px; font-weight: 800; color: var(--ink); }
 .aa-tarjeta-ayuda { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
 
+.aa-mas > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: 99px; background: var(--rubor); color: var(--pink-deep); font-size: 13px; font-weight: 800; }
+.aa-mas > summary::-webkit-details-marker { display: none; }
+.aa-mas > summary::after { content: "▾"; font-size: 11px; }
+.aa-mas[open] > summary::after { content: "▴"; }
+.aa-mas > summary:hover { background: #FFE4DC; }
+.aa-mas > .aa-filas { margin-top: 8px; }
 .aa-dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .aa-bloque { padding: clamp(20px, 2.6vw, 28px); border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); min-width: 0; }
 .aa-bloque-cab { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
