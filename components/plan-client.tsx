@@ -1,5 +1,6 @@
 'use client';
 import { AlertCircle, CalendarClock, Check, CreditCard, Lock, RotateCcw, Settings, XCircle } from 'lucide-react';
+import { CambiarPlan } from '@/components/cambiar-plan';
 import { PrecioConOferta } from '@/components/precio-con-oferta';
 import type { OfertaPack } from '@/src/features/studio/ofertas';
 import { AdminCabecera } from '@/components/admin-ui';
@@ -127,6 +128,8 @@ export function PlanClient({
   const [interval, setInterval] = useState<Interval>('monthly');
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Cambio de plan con la suscripcion que ya tiene: confirmacion con lo que se cobra hoy.
+  const [cambiarA, setCambiarA] = useState<{ tier: CatalogTier['tier']; nombre: string; precioTexto: string } | null>(null);
 
   const renewDate = renewsAt
     ? new Date(renewsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -277,6 +280,7 @@ export function PlanClient({
   return (
     <div className="mp">
       <style>{CSS}</style>
+      {cambiarA && <CambiarPlan tier={cambiarA.tier} interval={interval} nombre={cambiarA.nombre} precioTexto={cambiarA.precioTexto} onCerrar={() => setCambiarA(null)} />}
 
       {/* Cabecera: la misma del resto del sistema. */}
       <div className="mp-cabeza">
@@ -469,9 +473,12 @@ export function PlanClient({
                     ) : (
                       <button
                         // Con un plan pago activo, cambiar es MODIFICAR esa
-                        // suscripcion desde el portal, nunca un checkout nuevo
-                        // (que cobraria dos planes; el servidor tambien lo frena).
-                        onClick={() => (hasActiveSub ? openPortal() : startCheckout(entry.tier))}
+                        // suscripcion (cobrando la diferencia), nunca un checkout
+                        // nuevo que cobraria dos planes. Antes iba al portal de
+                        // Stripe, que no tenia planes para elegir (2026-11-09).
+                        onClick={() => (hasActiveSub
+                          ? setCambiarA({ tier: entry.tier, nombre: meta.name, precioTexto: `${amount} € por ${interval === 'yearly' ? 'año' : 'mes'}` })
+                          : startCheckout(entry.tier))}
                         disabled={loadingTier === entry.tier || loadingTier === 'portal'}
                         className="mp-boton"
                       >

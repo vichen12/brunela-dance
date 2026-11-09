@@ -106,6 +106,7 @@ describe("nadie puede pagar menos manipulando la request", () => {
       "app/api/stripe/checkout/route.ts",
       "app/api/stripe/checkout-pack/route.ts",
       "app/api/stripe/portal/route.ts",
+      "app/api/stripe/cambiar-plan/route.ts",
       "app/api/stripe/webhooks/route.ts",
       CREAR,
       PARAMETROS,
@@ -506,5 +507,28 @@ describe("el aviso avisa y no bloquea", () => {
     // una clase de bienvenida solo para quien recien empieza.
     expect(src).not.toMatch(/disabled=\{.*falta/);
     expect(src).toMatch(/AVISA, NO BLOQUEA/);
+  });
+});
+
+describe("cambiar de plan (2026-11-09)", () => {
+  const src = leer("app/api/stripe/cambiar-plan/route.ts");
+  it("exige sesion y solo toca la suscripcion de quien pide", () => {
+    expect(src).toMatch(/auth\.getUser\(\)/);
+    expect(src).toMatch(/\.eq\("user_id", user\.id\)/);
+  });
+  it("cobra la diferencia en el momento y NO cambia el plan si el pago falla", () => {
+    expect(src).toMatch(/proration_behavior: "always_invoice"/);
+    expect(src).toMatch(/payment_behavior: "pending_if_incomplete"/);
+  });
+  it("el precio sale del catalogo del servidor, no del navegador", () => {
+    expect(src).toMatch(/resolvePriceId\(catalog, tier, interval/);
+    expect(src).not.toMatch(/body\??\.price/);
+  });
+  it("cobra lo mismo que mostro: usa la fecha del presupuesto", () => {
+    expect(src).toMatch(/proration_date: fecha/);
+  });
+  it("con plan activo, el boton abre la confirmacion y no el portal", () => {
+    const cliente = leer("components/plan-client.tsx");
+    expect(cliente).toMatch(/hasActiveSub\s*\?\s*setCambiarA\(/);
   });
 });
