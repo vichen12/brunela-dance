@@ -130,7 +130,7 @@ const ESTUDIO: { texto: K; Icono: typeof Star }[] = [
 const REDES = [
   { href: "https://www.instagram.com/brunela.dance", label: "Instagram", sub: "@brunela.dance · 30K+", Icono: FaInstagram },
   { href: "https://www.tiktok.com/@brunela.dance", label: "TikTok", sub: "@brunela.dance", Icono: FaTiktok },
-  { href: "https://www.youtube.com/@bruneladance", label: "YouTube", sub: "@bruneladance", Icono: FaYoutube },
+  { href: "https://www.youtube.com/@brunela.dancetrainer", label: "YouTube", sub: "@brunela.dancetrainer", Icono: FaYoutube },
   { href: "https://www.facebook.com/brunela.dance", label: "Facebook", sub: "brunela.dance", Icono: FaFacebookF },
 ];
 

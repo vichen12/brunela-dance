@@ -296,7 +296,7 @@ const FICHA_GOOGLE = {
   email: "info@bruneladance.com",
   address: { "@type": "PostalAddress", addressLocality: "Barcelona", addressCountry: "ES" },
   founder: { "@type": "Person", name: "Brunela", jobTitle: "Profesora de ballet, coreógrafa y bailarina" },
-  sameAs: ["https://www.instagram.com/brunela.dance", "https://www.tiktok.com/@brunela.dance"],
+  sameAs: ["https://www.instagram.com/brunela.dance", "https://www.tiktok.com/@brunela.dance", "https://www.youtube.com/@brunela.dancetrainer"],
 };
 
 /**
