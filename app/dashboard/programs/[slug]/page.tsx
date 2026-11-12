@@ -441,10 +441,11 @@ async function PlanBloqueado({ slug }: { slug: string }) {
 
   const { data: plan } = await admin
     .from("programs")
-    .select("title_i18n, description_i18n, membership_tier_required, duration_days, cover_image_url")
+    .select("id, title_i18n, description_i18n, membership_tier_required, duration_days, cover_image_url")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle<{
+      id: string;
       title_i18n: Record<string, string>;
       description_i18n: Record<string, string>;
       membership_tier_required: MembershipTier;
@@ -467,7 +468,7 @@ async function PlanBloqueado({ slug }: { slug: string }) {
         <section className="pd-hero pd-hero--cerrado">
           <div
             className="pd-portada pd-portada--cerrada"
-            style={{ backgroundImage: portadaDePlanVitrina(plan.cover_image_url) ? `url(${portadaDePlanVitrina(plan.cover_image_url)})` : undefined }}
+            style={{ backgroundImage: `url("${portadaDePlanVitrina(plan.cover_image_url, plan.id)}")` }}
           >
             <span className="pd-candado"><Lock size={22} strokeWidth={2} aria-hidden="true" /></span>
           </div>

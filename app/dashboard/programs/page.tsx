@@ -326,7 +326,8 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
               // La duracion del plan, con sus descansos: un plan de 14 dias con 6
               // clases dura 14, no 6 (ver completarConDescansos).
               const totalDays = Math.max(program.duration_days || 0, daysByProgram.get(program.id) ?? 0);
-              const portada = cerrado ? portadaDePlanVitrina(program.cover_image_url) : (portadaDePlan(program.cover_image_url) || (datosPlanes.portadas.get(program.id) ?? null));
+              const portada = cerrado ? null : (portadaDePlan(program.cover_image_url) || (datosPlanes.portadas.get(program.id) ?? null));
+              const fondoVitrina = cerrado ? `url("${portadaDePlanVitrina(program.cover_image_url, program.id)}")` : undefined;
               const completedDays = progress?.completedDays ?? 0;
               const progressPercent = safePercent(
                 totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : progress?.maxPercent ?? 0
@@ -343,6 +344,7 @@ export default async function DashboardProgramsPage({ searchParams }: { searchPa
                   >
                     <div className="sp-portada">
                       {portada && <img src={portada} alt="" />}
+                      {fondoVitrina && <span className="sp-portada-fondo" style={{ backgroundImage: fondoVitrina }} aria-hidden="true" />}
                       <span className="sp-dias"><strong>{totalDays || program.duration_days}</strong> días{(clasesPorPrograma.get(program.id) ?? 0) > 0 && <> · <strong>{clasesPorPrograma.get(program.id)}</strong> {clasesPorPrograma.get(program.id) === 1 ? "clase" : "clases"}</>}</span>
                       {program.is_featured && !cerrado && (
                         <span className="sp-dest"><Star size={12} strokeWidth={2.4} fill="currentColor" aria-hidden="true" /> Destacado</span>
@@ -504,6 +506,8 @@ const CSS = `
 .sp-grilla > li:nth-child(3n+3) .sp-portada { background: linear-gradient(135deg, #FFF4E8 0%, #FFE9DE 70%, #FFDADA 130%); }
 .sp-portada img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s var(--curva), filter .4s; }
 .sp-card:hover .sp-portada img { transform: scale(1.05); }
+.sp-portada-fondo { position: absolute; inset: 0; background-size: cover; background-position: center; filter: saturate(.55) brightness(1.04); transition: transform .9s var(--curva), filter .4s; }
+.sp-card:hover .sp-portada-fondo { transform: scale(1.05); filter: saturate(.8) brightness(1.02); }
 
 /* Cerrado: velo crema en vez de gris. Se ve que existe, se ve que espera. */
 .sp-card.es-cerrado .sp-portada img { filter: saturate(.55) brightness(1.04); }

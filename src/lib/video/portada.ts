@@ -58,10 +58,17 @@ export function portadaDePlan(cover: string | null | undefined): string | null {
 }
 
 /**
- * Para quien NO tiene el plan (vitrina con candado y pagina de venta): solo una
- * foto subida. Un cuadro de Bunny llevaria el id del video en la URL, y la
- * vitrina no expone ids de video.
+ * Para quien NO tiene el plan (vitrina con candado y pagina de venta).
+ *
+ * Un cuadro de Bunny llevaria el id del video en la URL, y la vitrina no expone
+ * ids de video. Por eso: la foto subida tal cual, y si no hay, la que sirve
+ * /api/planes/<id>/portada, que busca el cuadro en el servidor y devuelve solo
+ * la imagen. Antes devolvia null y, como ningun plan tenia foto subida, la
+ * vitrina eran tarjetas vacias (2026-11-12).
+ *
+ * Puede no haber ninguna foto (plan sin clases): mostrarla como FONDO CSS, no
+ * como <img>, para que un 404 deje el degradado y no una imagen rota.
  */
-export function portadaDePlanVitrina(cover: string | null | undefined): string | null {
-  return cover && !esUrlDeBunny(cover) ? cover : null;
+export function portadaDePlanVitrina(cover: string | null | undefined, programId: string): string {
+  return cover && !esUrlDeBunny(cover) ? cover : `/api/planes/${programId}/portada`;
 }
