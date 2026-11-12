@@ -111,6 +111,9 @@ no es el que devuelve `ls`:
                                                No redefine nada
 45. 20261109_planes_de_sesiones_en_vivo.sql  <-- DESPUES de 20260805_invitaciones_a_sesiones (redefine
                                                sus 3 reglas de acceso); casillas de planes en vivo
+46. 20261112_aviso_admin_registrado.sql    <-- DESPUES de la 42 (vuelve a cambiar el CHECK
+                                               de tipo de correos_enviados: lista de la
+                                               42 + 'aviso_admin'). No redefine nada
 ```
 
 > **La 40 (volver al estudio) se puede correr sola, despues de la 38.** Sin

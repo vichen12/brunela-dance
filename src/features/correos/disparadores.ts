@@ -462,7 +462,19 @@ export async function avisarAdminDeAlta(
       responderA: p.email,
       claveIdempotencia: `aviso-admin:${o.id ?? alumnaId}`,
     });
-    if (!r.ok) console.error("[correo] aviso a la admin:", r.error);
+    if (!r.ok) {
+      console.error("[correo] aviso a la admin:", r.error);
+      return;
+    }
+    // Que quede ASENTADO, como los de las alumnas (2026-11-12): antes no habia
+    // forma de saber si este aviso habia salido. Sin la migracion
+    // 20261112_aviso_admin_registrado.sql el CHECK lo rechaza; el correo ya
+    // salio, asi que solo se avisa en el log.
+    const { error: errReg } = await db.from("correos_enviados").upsert(
+      { clave: `aviso-admin:${o.id ?? alumnaId}`, alumna_id: alumnaId, tipo: "aviso_admin", para: AVISOS_ADMIN, resend_id: r.id },
+      { onConflict: "clave", ignoreDuplicates: true }
+    );
+    if (errReg) console.warn("[correo] aviso a la admin enviado pero sin asentar:", errReg.message);
   } catch (e) {
     console.error("[correo] aviso a la admin:", e instanceof Error ? e.message : String(e));
   }
