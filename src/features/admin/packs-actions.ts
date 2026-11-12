@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -81,7 +82,7 @@ export async function createPackAction(fd: FormData) {
     if (error.code === "23505") {
       fallar(`Ya existe un pack con la dirección "${slug}". Elegí otra.`);
     }
-    fallar(error.message);
+    fallar(legible(error));
   }
 
   const cobro = await asegurarPrecioDePack(supabase, creado.id);
@@ -130,7 +131,7 @@ export async function updatePackAction(fd: FormData) {
     // El trigger packs_price_id_unico levanta un 23505 cuyo mensaje YA nombra al
     // otro pack. Se pasa tal cual: es mejor que cualquier cosa que pudieramos
     // escribir aca.
-    fallar(error.message);
+    fallar(legible(error));
   }
   const cobro = await asegurarPrecioDePack(supabase, id);
   refrescarPacks();
@@ -196,7 +197,7 @@ export async function togglePackAction(fd: FormData) {
   }
 
   const { error } = await supabase.from("packs").update({ [campo]: valor }).eq("id", id);
-  if (error) fallar(error.message);
+  if (error) fallar(legible(error));
   refrescarPacks();
 }
 
@@ -289,7 +290,7 @@ export async function deletePackAction(fd: FormData) {
   }
 
   const { error } = await supabase.from("packs").delete().eq("id", id);
-  if (error) fallar(error.message);
+  if (error) fallar(legible(error));
   refrescarPacks();
 }
 
@@ -306,7 +307,7 @@ export async function addVideoToPackAction(fd: FormData) {
     .insert({ pack_id: packId, video_id: videoId, display_order: Number(texto(fd, "orden")) || 0 });
 
   // 23505 = ya estaba en el pack. No es un fallo: el estado deseado ya esta.
-  if (error && error.code !== "23505") fallar(error.message);
+  if (error && error.code !== "23505") fallar(legible(error));
   refrescarPacks();
 }
 
@@ -323,6 +324,6 @@ export async function removeVideoFromPackAction(fd: FormData) {
     .eq("pack_id", texto(fd, "packId"))
     .eq("video_id", texto(fd, "videoId"));
 
-  if (error) fallar(error.message);
+  if (error) fallar(legible(error));
   refrescarPacks();
 }

@@ -316,9 +316,9 @@ describe("guardas", () => {
     expect(cron.indexOf("correosDelCron(")).toBeGreaterThan(cron.indexOf("if (request.headers.get"));
   });
 
-  it("vercel.json: un solo cron, diario", () => {
+  it("vercel.json: un solo cron, diario (05:00 UTC: los recordatorios llegan antes de las clases de la mañana)", () => {
     const v = JSON.parse(leer("vercel.json"));
-    expect(v.crons).toEqual([{ path: "/api/cron/keepalive", schedule: "0 7 * * *" }]);
+    expect(v.crons).toEqual([{ path: "/api/cron/keepalive", schedule: "0 5 * * *" }]);
   });
 
   it("toda invitacion manda su correo despues de insertar", () => {

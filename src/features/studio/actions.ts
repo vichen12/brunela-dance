@@ -5,6 +5,52 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/src/features/auth/guards";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+
+/**
+ * El error de la base al reservar, en castellano (2026-11-12). Antes a la
+ * alumna le llegaba tal cual: "Booking window is closed".
+ */
+function errorDeReserva(error: { message?: string } | null): string {
+  const m = error?.message ?? "";
+  console.error("[reservas]", m);
+  if (/window has not opened/i.test(m)) return "Las reservas para esta clase todavía no abrieron.";
+  if (/window is closed/i.test(m)) return "Las reservas para esta clase ya cerraron.";
+  if (/is full/i.test(m)) return "La clase ya no tiene lugares.";
+  if (/tier does not allow/i.test(m)) return "Esta clase no está incluida en tu plan.";
+  if (/only scheduled/i.test(m)) return "Esta clase ya no se puede reservar.";
+  return "No pudimos hacer la reserva. Probá de nuevo en un momento.";
+}
+
+/**
+ * Si se libero un lugar, pasa a la primera de la lista de espera a reservada.
+ * Antes la lista de espera no avanzaba nunca. Con service_role porque la
+ * regla de la base no deja que una alumna cambie la reserva de otra; la
+ * misma regla igual revisa el cupo, el plan y la ventana. Nunca lanza.
+ */
+async function avanzarListaDeEspera(sesionId: string) {
+  try {
+    const db = createSupabaseAdminClient();
+    const { data: primera } = await db
+      .from("live_session_bookings")
+      .select("id")
+      .eq("live_session_id", sesionId)
+      .eq("status", "waitlisted")
+      .order("reserved_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    if (!primera) return;
+    const { data } = await db
+      .from("live_session_bookings")
+      .update({ status: "reserved" })
+      .eq("id", primera.id)
+      .select("status")
+      .maybeSingle<{ status: string }>();
+    if (data?.status === "reserved") console.log(`[reservas] lista de espera avanzo en ${sesionId}`);
+  } catch (e) {
+    console.error("[reservas] lista de espera:", e instanceof Error ? e.message : e);
+  }
+}
 
 const progressSchema = z.object({
   slug: z.string().min(1),
@@ -111,14 +157,20 @@ export async function reserveLiveSessionAction(formData: FormData) {
     .maybeSingle<{ id: string }>();
 
   if (existingError) {
-    redirectWithMessage(parsed.data.redirectTo, "error", existingError.message);
+    redirectWithMessage(parsed.data.redirectTo, "error", errorDeReserva(existingError));
   }
 
+  // Volver a reservar despues de cancelar: la regla de la base no deja que la
+  // alumna pase SU reserva de cancelada a reservada (solo cancelar), asi que
+  // siempre fallaba (2026-11-12). La sesion ya se comprobo arriba y el filtro
+  // por user_id asegura que es la de ella; la base sigue revisando plan, cupo
+  // y ventana de reservas.
   const bookingResult = existing?.id
-    ? await supabase
+    ? await createSupabaseAdminClient()
         .from("live_session_bookings")
         .update({ status: "reserved", canceled_at: null })
         .eq("id", existing.id)
+        .eq("user_id", user.id)
         .select("status")
         .single<{ status: "reserved" | "waitlisted" }>()
     : await supabase
@@ -128,13 +180,13 @@ export async function reserveLiveSessionAction(formData: FormData) {
         .single<{ status: "reserved" | "waitlisted" }>();
 
   if (bookingResult.error) {
-    redirectWithMessage(parsed.data.redirectTo, "error", bookingResult.error.message);
+    redirectWithMessage(parsed.data.redirectTo, "error", errorDeReserva(bookingResult.error));
   }
 
   refreshStudioRoutes();
   const message =
     bookingResult.data.status === "waitlisted"
-      ? "La clase se lleno y quedaste en lista de espera."
+      ? "La clase se llenó y quedaste en lista de espera. Si se libera un lugar, pasás a tener el tuyo."
       : "Reserva confirmada.";
 
   redirectWithMessage(parsed.data.redirectTo, "success", message);
@@ -159,9 +211,10 @@ export async function cancelLiveSessionBookingAction(formData: FormData) {
     .eq("user_id", user.id);
 
   if (error) {
-    redirectWithMessage(parsed.data.redirectTo, "error", error.message);
+    redirectWithMessage(parsed.data.redirectTo, "error", errorDeReserva(error));
   }
 
+  await avanzarListaDeEspera(parsed.data.sessionId);
   refreshStudioRoutes();
   redirectWithMessage(parsed.data.redirectTo, "success", "Reserva cancelada.");
 }

@@ -164,21 +164,10 @@ export function BrunelaFooter() {
             <img className="footer-wm-nombre footer-wm-img" src="/brand/brunela-dance-trainer-wordmark.png" alt="" draggable={false} />
           </div>
 
-          {/* Disciplinas y lugar en una sola linea: son dos datos cortos y en
-              dos renglones separados competian con la marca de arriba. */}
-          {/* Las disciplinas vienen de i18n separadas por guiones; se muestran
-              con puntos medios, como el lugar. El texto traducido no cambia. */}
+          {/* Solo el lugar (pedido de Brunela, 2026-11-11): la lista de
+              disciplinas (Ballet · PBT · PCT...) no le gustaba. */}
           <p className="footer-services">
-            {[...t("footer.services").split(" - "), t("footer.place")].map((parte, i) => (
-              <span key={i} className="footer-servicio">
-                {i > 0 && (
-                  <span className="footer-sep" aria-hidden>
-                    ·
-                  </span>
-                )}
-                {parte}
-              </span>
-            ))}
+            <span className="footer-servicio">{t("footer.place")}</span>
           </p>
 
           <nav className="footer-nav" aria-label="Footer navigation">

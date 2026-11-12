@@ -291,7 +291,7 @@ const FICHA_GOOGLE = {
   name: "Brunela Dance Trainer",
   url: "https://bruneladance.com",
   logo: "https://bruneladance.com/brand/isologo-icon.png",
-  image: "https://bruneladance.com/brand/og.png",
+  image: "https://bruneladance.com/brand/compartir.png",
   description: "Estudio online de ballet y preparación integral para bailarines: clases grabadas, planes de trabajo y clases en vivo.",
   email: "info@bruneladance.com",
   address: { "@type": "PostalAddress", addressLocality: "Barcelona", addressCountry: "ES" },

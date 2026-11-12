@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/src/features/auth/guards";
+import { leerPlanesDeSesiones, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { resolveI18nText } from "@/src/features/studio/helpers";
@@ -88,6 +89,8 @@ export async function cargarCalendarioAdmin(desdeIso: string, hastaIso: string):
   }
   const alumnaIds = [...new Set(filasPrivadas.map((p) => p.alumna_id))];
 
+  // Los planes ELEGIDOS de cada sesion (tolerante a la migracion 20261109).
+  const planesDe = await leerPlanesDeSesiones(admin, ids);
   // Dos consultas y no un embed: no dependemos de como quede la FK.
   const [{ data: reservas }, { data: perfiles }] = await Promise.all([
     ids.length
@@ -121,7 +124,7 @@ export async function cargarCalendarioAdmin(desdeIso: string, hastaIso: string):
         titulo: resolveI18nText(s.title_i18n) || s.slug,
         href: `/admin/live/${s.id}`,
         detalle: textoCupo(n, s.capacity, enEspera.get(s.id) ?? 0),
-        planes: textoPlanesVivo(s.membership_tier_required),
+        planes: planesDe.get(s.id)?.length ? planesEnTexto(planesDe.get(s.id)!) : textoPlanesVivo(s.membership_tier_required),
         estado: ESTADO_VIVO[s.status] ?? null,
         alerta: !!s.capacity && n >= s.capacity && s.status === "scheduled",
       };

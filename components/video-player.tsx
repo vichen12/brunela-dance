@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import { ControlesReproductor } from "@/components/reproductor-controles";
 
 export type PlayerAudioTrack = {
   locale: string;
@@ -19,6 +20,8 @@ type Props = {
   durationSeconds: number;
   /** Where to resume from (seconds). */
   initialPositionSeconds?: number;
+  /** Lo mas lejos que llego antes: el porcentaje no baja si vuelve a empezar. */
+  maxPrevioSeconds?: number;
   /** Preferred starting locale (e.g. the user's preferred_locale). */
   preferredLocale?: string;
   /**
@@ -35,6 +38,12 @@ type Props = {
    * medido con reloj de pared. No es diferencia de posicion: si adelanta diez
    * minutos con la barra, la posicion salta y esto suma cero.
    */
+  /**
+   * Idiomas extra como mp3 aparte y subtitulos .vtt (src/lib/audio/idiomas.ts),
+   * con enlaces firmados. Opcionales: sin ellos, el reproductor es el de siempre.
+   */
+  audiosExternos?: { locale: string; url: string }[];
+  subtitulosExternos?: { locale: string; url: string }[];
   onActivity?: (event: {
     type: "video_start" | "video_heartbeat" | "video_complete";
     positionSeconds: number;
@@ -108,13 +117,24 @@ export function VideoPlayer({
   audioTracks,
   durationSeconds,
   initialPositionSeconds = 0,
+  maxPrevioSeconds = 0,
   preferredLocale = "es",
   onProgress,
-  onActivity
+  onActivity,
+  audiosExternos = [],
+  subtitulosExternos = []
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const contenedorRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  // El idioma que ELIGIO la alumna. Al recuperarse de un corte el reproductor
+  // vuelve a leer las pistas, y antes le ponia otra vez el idioma por defecto.
+  const audioElegidoRef = useRef<string | null>(null);
+  // Cuando fue la ultima recuperacion: despues de un rato sano el contador
+  // vuelve a cero (antes, tres cortes en toda la clase y no andaba mas).
+  const ultimaRecuperacionRef = useRef(0);
   const lastSavedRef = useRef(0);
+  const maxVistoRef = useRef(maxPrevioSeconds);
   const recoveriesRef = useRef(0);
 
   // Contabilidad del tiempo reproducido. playingSinceRef guarda el instante en
@@ -129,12 +149,20 @@ export function VideoPlayer({
   // Audio tracks reported by the stream itself (index + name).
   const [streamAudioTracks, setStreamAudioTracks] = useState<{ id: number; name: string; lang?: string }[]>([]);
   const [activeAudioId, setActiveAudioId] = useState<number>(-1);
-  const lastTapRef = useRef<{ side: number; at: number; pos: number } | null>(null);
-  const [skipHint, setSkipHint] = useState<{ side: number; key: number } | null>(null);
+  // Subtitulos: cada .vtt se baja una vez y se le da al <video> como pista
+  // propia (una direccion "blob:" del mismo sitio, asi no hace falta permiso
+  // de otro dominio, que en el iPhone rompia la reproduccion).
+  const [pistasTexto, setPistasTexto] = useState<{ locale: string; src: string }[]>([]);
+  const [subtituloActivo, setSubtituloActivo] = useState<string | null>(null);
+  // Audio en otro idioma (mp3 aparte). null = el del video (español).
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioExterno, setAudioExterno] = useState<string | null>(null);
 
   const saveProgress = useCallback(
-    (force = false) => {
-      const video = videoRef.current;
+    (force = false, elemento?: HTMLVideoElement | null) => {
+      // `elemento`: al desmontar, videoRef.current ya es null y el ultimo
+      // guardado (el mas importante) no se hacia nunca.
+      const video = elemento ?? videoRef.current;
       if (!video || !Number.isFinite(video.currentTime)) return;
       const position = Math.floor(video.currentTime);
       // Cada 30 segundos de avance, no cada 10 (fase C del plan de
@@ -148,7 +176,10 @@ export function VideoPlayer({
       if (!force && Math.abs(position - lastSavedRef.current) < 30) return;
       lastSavedRef.current = position;
       const total = durationSeconds || video.duration || 0;
-      const percent = total > 0 ? Math.min(100, Math.round((position / total) * 100)) : 0;
+      // Sobre lo mas lejos que llego, no sobre donde esta: antes, volver a
+      // mirar el principio de una clase terminada le bajaba el progreso.
+      maxVistoRef.current = Math.max(maxVistoRef.current, position);
+      const percent = total > 0 ? Math.min(100, Math.round((maxVistoRef.current / total) * 100)) : 0;
       onProgress(position, percent);
     },
     [durationSeconds, onProgress]
@@ -167,10 +198,18 @@ export function VideoPlayer({
     function applyResume() {
       if (resumed) return;
       resumed = true;
-      if (video && initialPositionSeconds > 0 && initialPositionSeconds < (durationSeconds || Infinity)) {
+      // Si la habia terminado (o le faltaba casi nada), arranca de cero: antes
+      // volvia a abrirla en el ultimo segundo y parecia que no andaba.
+      const total = durationSeconds || Infinity;
+      if (video && initialPositionSeconds > 0 && initialPositionSeconds < total * 0.95 && total - initialPositionSeconds > 20) {
         video.currentTime = initialPositionSeconds;
       }
     }
+
+    const alAvanzar = () => {
+      if (recoveriesRef.current > 0 && Date.now() - ultimaRecuperacionRef.current > 30_000) recoveriesRef.current = 0;
+    };
+    video.addEventListener("timeupdate", alAvanzar);
 
     if (Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true });
@@ -191,7 +230,8 @@ export function VideoPlayer({
         }));
         setStreamAudioTracks(tracks);
         // Default to the preferred locale if present.
-        const preferred = tracks.find((t) => normalizeLocale(t.lang) === preferredLocale);
+        const quiere = audioElegidoRef.current ?? preferredLocale;
+        const preferred = tracks.find((t) => normalizeLocale(t.lang) === quiere);
         if (preferred) {
           hls.audioTrack = preferred.id;
           setActiveAudioId(preferred.id);
@@ -210,6 +250,7 @@ export function VideoPlayer({
         // the stall we are fixing.
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR && recoveriesRef.current < MAX_RECOVERIES) {
           recoveriesRef.current += 1;
+          ultimaRecuperacionRef.current = Date.now();
           const resumeAt = video.currentTime;
           const wasPlaying = !video.paused;
           hls.once(Hls.Events.MANIFEST_PARSED, () => {
@@ -220,10 +261,19 @@ export function VideoPlayer({
           return;
         }
 
-        setError("No se pudo cargar el video.");
+        // Un error de decodificacion se puede salvar sin recargar nada.
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && recoveriesRef.current < MAX_RECOVERIES) {
+          recoveriesRef.current += 1;
+          ultimaRecuperacionRef.current = Date.now();
+          hls.recoverMediaError();
+          return;
+        }
+
+        setError("No se pudo cargar el video. Recargá la página para seguir donde estabas.");
       });
 
       return () => {
+        video.removeEventListener("timeupdate", alAvanzar);
         hls.destroy();
         hlsRef.current = null;
       };
@@ -251,7 +301,8 @@ export function VideoPlayer({
         }));
         setStreamAudioTracks(tracks);
 
-        const preferred = tracks.find((t) => normalizeLocale(t.lang) === preferredLocale);
+        const quiere = audioElegidoRef.current ?? preferredLocale;
+        const preferred = tracks.find((t) => normalizeLocale(t.lang) === quiere);
         const target = preferred ?? tracks.find((_, id) => list[id].enabled) ?? tracks[0];
         for (let i = 0; i < list.length; i += 1) list[i].enabled = i === target.id;
         setActiveAudioId(target.id);
@@ -259,10 +310,11 @@ export function VideoPlayer({
 
       const onNativeError = () => {
         if (recoveriesRef.current >= MAX_RECOVERIES) {
-          setError("No se pudo cargar el video.");
+          setError("No se pudo cargar el video. Recargá la página para seguir donde estabas.");
           return;
         }
         recoveriesRef.current += 1;
+        ultimaRecuperacionRef.current = Date.now();
         const resumeAt = video.currentTime;
         const wasPlaying = !video.paused;
 
@@ -280,11 +332,13 @@ export function VideoPlayer({
       video.addEventListener("loadedmetadata", onLoaded);
       video.addEventListener("error", onNativeError);
       return () => {
+        video.removeEventListener("timeupdate", alAvanzar);
         video.removeEventListener("loadedmetadata", onLoaded);
         video.removeEventListener("error", onNativeError);
       };
     }
 
+    video.removeEventListener("timeupdate", alAvanzar);
     setError("Tu navegador no soporta este formato de video.");
   }, [src, initialPositionSeconds, durationSeconds, preferredLocale]);
 
@@ -292,17 +346,24 @@ export function VideoPlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const onPause = () => saveProgress(true);
-    const onTimeUpdate = () => saveProgress(false);
-    const onBeforeUnload = () => saveProgress(true);
+    const onPause = () => saveProgress(true, video);
+    const onTimeUpdate = () => saveProgress(false, video);
+    const onBeforeUnload = () => saveProgress(true, video);
+    // En el celular `beforeunload` casi nunca llega: se guarda tambien al
+    // cambiar de app o de pestaña.
+    const onOculta = () => { if (document.visibilityState === "hidden") saveProgress(true, video); };
     video.addEventListener("pause", onPause);
     video.addEventListener("timeupdate", onTimeUpdate);
     window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", onBeforeUnload);
+    document.addEventListener("visibilitychange", onOculta);
     return () => {
       video.removeEventListener("pause", onPause);
       video.removeEventListener("timeupdate", onTimeUpdate);
       window.removeEventListener("beforeunload", onBeforeUnload);
-      saveProgress(true);
+      window.removeEventListener("pagehide", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onOculta);
+      saveProgress(true, video);
     };
   }, [saveProgress]);
 
@@ -380,6 +441,25 @@ export function VideoPlayer({
   }, [onActivity]);
 
   function switchAudio(id: number) {
+    // Audios aparte: -1 = español (el del video), -2, -3... = cada mp3.
+    if (audiosExternos.length > 0) {
+      const locale = id === -1 ? null : audiosExternos[-id - 2]?.locale ?? null;
+      audioElegidoRef.current = locale ?? "es";
+      setAudioExterno(locale);
+      // Se arranca DENTRO del toque: el iPhone no deja sonar un audio que no
+      // empezo por un gesto de la alumna.
+      const a = audioRef.current;
+      const v = videoRef.current;
+      if (locale && a && v) {
+        const url = audiosExternos.find((x) => x.locale === locale)?.url;
+        if (url && a.src !== url) a.src = url;
+        a.currentTime = v.currentTime;
+        if (!v.paused) void a.play().catch(() => {});
+      }
+      return;
+    }
+    const elegida = streamAudioTracks.find((t) => t.id === id);
+    if (elegida) audioElegidoRef.current = normalizeLocale(elegida.lang);
     const hls = hlsRef.current;
     if (hls) {
       hls.audioTrack = id; // switches in-stream, no reload
@@ -397,7 +477,9 @@ export function VideoPlayer({
 
   // Map stream tracks to the admin-provided labels when possible, then order
   // them the same way every time regardless of how the stream lists them.
-  const selectorTracks = streamAudioTracks
+  const selectorTracks = audiosExternos.length > 0
+    ? [{ id: -1, locale: "es", label: "ES", name: "Espanol" }, ...audiosExternos.map((a, i) => ({ id: -i - 2, locale: a.locale, label: LOCALE_LABELS[a.locale] ?? a.locale.toUpperCase(), name: LOCALE_NAMES[a.locale] ?? a.locale }))]
+    : streamAudioTracks
     .map((t) => {
       const locale = normalizeLocale(t.lang);
       const meta = audioTracks.find((a) => a.locale === locale);
@@ -416,132 +498,188 @@ export function VideoPlayer({
       return rank(a.locale) - rank(b.locale);
     });
 
-  // Doble toque a los costados: -10 / +10 segundos, como en las apps de video.
-  // En el celular la barra es finita y arrastrarla con el dedo es impreciso.
-  function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
-    if (e.pointerType === "mouse") return;
-    const video = videoRef.current;
-    if (!video || !ready) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = e.clientY - rect.top;
-    // Fuera de los tercios laterales, o sobre la barra de controles de abajo,
-    // el toque es de los controles nativos.
-    const side = x < 1 / 3 ? -1 : x > 2 / 3 ? 1 : 0;
-    if (side === 0 || y > rect.height - 56) {
-      lastTapRef.current = null;
-      return;
-    }
-    const now = Date.now();
-    const last = lastTapRef.current;
-    if (last && last.side === side && now - last.at < 320) {
-      // Los controles de Chrome en Android ya saltan 10 s con doble toque; el
-      // iPhone no. Si el nativo ya movio el video, no se suma otro salto.
-      // Se compara contra donde estaba en el PRIMER toque: el nativo puede
-      // haber saltado antes de que llegue este evento.
-      const antes = last.pos;
-      window.setTimeout(() => {
-        if (Math.abs(video.currentTime - antes) >= 5) return;
-        const total = Number.isFinite(video.duration) ? video.duration : durationSeconds || Infinity;
-        video.currentTime = Math.max(0, Math.min(total - 1, antes + side * 10));
-        setSkipHint({ side, key: now });
-      }, 120);
-      lastTapRef.current = null;
-      return;
-    }
-    lastTapRef.current = { side, at: now, pos: video.currentTime };
+  function alternarSubtitulos() {
+    const idiomas = pistasTexto.map((t) => t.locale);
+    if (!idiomas.length) return;
+    // Primero el de su idioma (o el del audio que eligio), despues los demas.
+    const quiere = audioElegidoRef.current ?? preferredLocale;
+    const orden = [...idiomas].sort((a, b) => Number(b === quiere) - Number(a === quiere));
+    const siguiente = subtituloActivo === null ? orden[0] : orden[orden.indexOf(subtituloActivo) + 1] ?? null;
+    setSubtituloActivo(siguiente);
   }
+
+  // Aplica el subtitulo elegido a las pistas del <video>.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const aplicar = () => {
+      for (const t of Array.from(v.textTracks)) {
+        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
+        t.mode = subtituloActivo && t.language === subtituloActivo ? "showing" : "disabled";
+        // Un poco mas arriba del borde: abajo de todo los tapaba la barra.
+        for (const c of Array.from(t.cues ?? [])) { const cue = c as VTTCue; if (cue.line === "auto") cue.line = -4; }
+      }
+    };
+    aplicar();
+    // Las frases llegan despues de activar la pista: se acomodan cuando cargan.
+    const pistas = Array.from(v.querySelectorAll("track"));
+    pistas.forEach((el) => el.addEventListener("load", aplicar));
+    v.textTracks.addEventListener?.("addtrack", aplicar);
+    return () => {
+      pistas.forEach((el) => el.removeEventListener("load", aplicar));
+      v.textTracks.removeEventListener?.("addtrack", aplicar);
+    };
+  }, [subtituloActivo, pistasTexto]);
+
+  // Baja los .vtt una sola vez.
+  const clavesSubtitulos = subtitulosExternos.map((x) => x.locale).join(",");
+  useEffect(() => {
+    let vivo = true;
+    const creadas: string[] = [];
+    void Promise.all(subtitulosExternos.map(async (x) => {
+      try {
+        const r = await fetch(x.url);
+        if (!r.ok) return null;
+        const src = URL.createObjectURL(new Blob([await r.text()], { type: "text/vtt" }));
+        creadas.push(src);
+        return { locale: x.locale, src };
+      } catch { return null; }
+    })).then((lista) => { if (vivo) setPistasTexto(lista.filter((x): x is { locale: string; src: string } => !!x)); });
+    return () => { vivo = false; creadas.forEach((u) => URL.revokeObjectURL(u)); };
+    // Los enlaces firmados cambian en cada visita; los idiomas, no.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clavesSubtitulos]);
+
+  // ── Audio en otro idioma, sincronizado con el video ─────────────────────
+  // El video sigue mandando (barra, saltos, pausa); el mp3 lo sigue. Si se
+  // corre mas de un tercio de segundo, se lo vuelve a poner en su lugar.
+  useEffect(() => {
+    const v = videoRef.current;
+    const a = audioRef.current;
+    if (!v || !a) return;
+    if (!audioExterno) {
+      a.pause();
+      v.muted = false;
+      return;
+    }
+    const url = audiosExternos.find((x) => x.locale === audioExterno)?.url;
+    if (!url) return;
+    if (a.src !== url) a.src = url;
+    v.muted = true;
+
+    const alinear = () => { if (Math.abs(a.currentTime - v.currentTime) > 0.35) a.currentTime = v.currentTime; };
+    const sonar = () => { alinear(); a.playbackRate = v.playbackRate; void a.play().catch(() => {}); };
+    const callar = () => a.pause();
+    const alSaltar = () => { a.currentTime = v.currentTime; };
+    const alSeguir = () => { if (!v.paused) sonar(); };
+    const alVelocidad = () => { a.playbackRate = v.playbackRate; };
+
+    v.addEventListener("play", sonar);
+    v.addEventListener("playing", alSeguir);
+    v.addEventListener("pause", callar);
+    v.addEventListener("waiting", callar);
+    v.addEventListener("seeking", alSaltar);
+    v.addEventListener("seeked", alSeguir);
+    v.addEventListener("ratechange", alVelocidad);
+    const vigilar = window.setInterval(() => {
+      if (v.paused) return;
+      if (a.paused && v.readyState >= 3) sonar();
+      else alinear();
+    }, 1000);
+    alinear();
+    if (!v.paused) sonar();
+
+    return () => {
+      window.clearInterval(vigilar);
+      v.removeEventListener("play", sonar);
+      v.removeEventListener("playing", alSeguir);
+      v.removeEventListener("pause", callar);
+      v.removeEventListener("waiting", callar);
+      v.removeEventListener("seeking", alSaltar);
+      v.removeEventListener("seeked", alSeguir);
+      v.removeEventListener("ratechange", alVelocidad);
+    };
+  }, [audioExterno, audiosExternos]);
+
+  const selectorAudio = selectorTracks.length > 1 ? (
+    <div role="group" aria-label="Idioma del audio" style={{ display: "flex", gap: 6 }}>
+      {selectorTracks.map((t) => {
+        const isActive = audiosExternos.length > 0 ? t.locale === (audioExterno ?? "es") : t.id === activeAudioId;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => switchAudio(t.id)}
+            title={`Audio en ${t.name}`}
+            aria-label={`Audio en ${t.name}`}
+            aria-pressed={isActive}
+            style={{
+              minWidth: 44,
+              height: 34,
+              padding: "0 13px",
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              fontWeight: 800,
+              cursor: "pointer",
+              background: isActive ? "#E64F55" : "rgba(28,22,24,0.6)",
+              color: isActive ? "#FDF8F6" : "rgba(253,248,246,0.8)",
+              border: `1px solid ${isActive ? "#E64F55" : "rgba(253,248,246,0.3)"}`,
+              borderRadius: 20,
+              backdropFilter: "blur(4px)"
+            }}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
 
   return (
     <div
-      onPointerUp={onPointerUp}
-      style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#1C1618", aspectRatio: "16/9", touchAction: "manipulation" }}
+      ref={contenedorRef}
+      style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#1C1618", aspectRatio: "16/9" }}
     >
-      {skipHint && (
-        <div
-          key={skipHint.key}
-          aria-hidden
-          onAnimationEnd={() => setSkipHint(null)}
-          style={{
-            position: "absolute",
-            top: "50%",
-            [skipHint.side < 0 ? "left" : "right"]: "12%",
-            transform: "translateY(-50%)",
-            zIndex: 4,
-            pointerEvents: "none",
-            padding: "8px 14px",
-            borderRadius: 20,
-            background: "rgba(28,22,24,0.6)",
-            color: "#FDF8F6",
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            animation: "vp-salto 650ms ease-out forwards"
-          }}
-        >
-          {skipHint.side < 0 ? "« 10 s" : "10 s »"}
-        </div>
-      )}
-      <style>{`@keyframes vp-salto { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }`}</style>
       <video
         ref={videoRef}
         poster={poster ?? undefined}
-        controls
         playsInline
-        // Sin "Descargar" en el menu de los controles ni "Guardar video como"
-        // con el clic derecho. El video ya llega en pedacitos HLS con enlaces
-        // firmados que vencen, asi que no hay un archivo para bajar; esto saca
-        // ademas los atajos del navegador. Grabar la pantalla no se puede
-        // impedir desde una web: para eso estan las condiciones (uso personal).
+        preload="metadata"
+        // Sin controles del navegador: los dibuja ControlesReproductor (ver
+        // por que en ese archivo). Sin "Descargar" ni "Guardar video como":
+        // el video llega en pedacitos con enlaces firmados que vencen.
         controlsList="nodownload noremoteplayback"
+        disablePictureInPicture={false}
         onContextMenu={(e) => e.preventDefault()}
-        style={{ width: "100%", height: "100%", objectFit: "contain", background: "#1C1618" }}
-      />
+        style={{ width: "100%", height: "100%", objectFit: "contain", background: "#1C1618", display: "block" }}
+      >
+        {pistasTexto.map((t) => (
+          <track key={t.locale} kind="subtitles" srcLang={t.locale} label={LOCALE_NAMES[t.locale] ?? t.locale} src={t.src} />
+        ))}
+      </video>
+      {audiosExternos.length > 0 && <audio ref={audioRef} preload="auto" hidden />}
 
-      {/* Audio-track selector — only when the stream has >1 audio rendition */}
-      {selectorTracks.length > 1 && (
-        <div
-          role="group"
-          aria-label="Idioma del audio"
-          style={{ position: "absolute", top: 14, right: 14, display: "flex", gap: 6, zIndex: 5 }}
-        >
-          {selectorTracks.map((t) => {
-            const isActive = t.id === activeAudioId;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => switchAudio(t.id)}
-                title={`Audio en ${t.name}`}
-                aria-label={`Audio en ${t.name}`}
-                aria-pressed={isActive}
-                style={{
-                  padding: "5px 13px",
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  background: isActive ? "#B8857F" : "rgba(28,22,24,0.6)",
-                  color: isActive ? "#FDF8F6" : "rgba(253,248,246,0.65)",
-                  border: `1px solid ${isActive ? "#B8857F" : "rgba(253,248,246,0.25)"}`,
-                  borderRadius: 20,
-                  backdropFilter: "blur(4px)"
-                }}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+      {!error && (
+        <ControlesReproductor
+          videoRef={videoRef}
+          contenedorRef={contenedorRef}
+          listo={ready}
+          duracionRespaldo={durationSeconds}
+          selectorAudio={selectorAudio}
+          haySubtitulos={pistasTexto.length > 0}
+          subtituloActivo={subtituloActivo}
+          onSubtitulos={alternarSubtitulos}
+          audioRef={audioExterno ? audioRef : undefined}
+        />
       )}
 
       {!ready && !error && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(253,248,246,0.7)", fontSize: 12, letterSpacing: "0.1em" }}>
-          Cargando video…
+        <div style={{ position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(253,248,246,0.75)", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>
+          Cargando la clase…
         </div>
       )}
       {error && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#F0A0A0", fontSize: 12, padding: 24, textAlign: "center" }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#FDF8F6", fontSize: 14, fontWeight: 700, padding: 24, textAlign: "center" }}>
           {error}
         </div>
       )}

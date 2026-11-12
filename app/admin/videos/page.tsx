@@ -1,3 +1,4 @@
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { deleteVideoAction, requeueMuxJobAction, upsertVideoAction } from "@/src/features/admin/actions";
 import { leerMateriales } from "@/src/features/studio/materiales";
 import { Archive, BarChart3, Check, Clapperboard, Clock, Eye, EyeOff, Languages, Play, Plus, Rocket, Search, Star, Tag, Users, X } from "lucide-react";
@@ -96,7 +97,7 @@ async function quickStatusAction(fd: FormData) {
     .update({ status, published_at: publishedAtAlGuardar(antes ?? null, status) })
     .eq("id", id);
   revalidatePath("/admin/videos");
-  if (error) redirect(`/admin/videos?error=${encodeURIComponent(error.message)}` as never);
+  if (error) redirect(`/admin/videos?error=${encodeURIComponent(legible(error))}` as never);
 
   let extra = "";
   if (antes && pasaAPublicada(antes.status, status)) {
@@ -527,11 +528,11 @@ export default async function AdminVideosPage({ searchParams }: { searchParams?:
       <AdminBuscador
         action="/admin/videos"
         q={q}
-        placeholder="Buscar por título, categoría o dirección"
+        placeholder="Buscar por título o categoría"
         total={totalVideos ?? coinciden}
         mostrando={coinciden}
         filtrado={Boolean(editar)}
-        entrada={<BuscadorDeClases q={q} placeholder="Buscar por título, categoría o dirección" clases={clasesParaBuscar} />}
+        entrada={<BuscadorDeClases q={q} placeholder="Buscar por título o categoría" clases={clasesParaBuscar} />}
         filtros={[
           { name: "estado", valor: fEstado, etiqueta: "Estado", opciones: ESTADOS },
           { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES },

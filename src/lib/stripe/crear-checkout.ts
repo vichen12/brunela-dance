@@ -67,6 +67,17 @@ async function clienteDeStripe(stripe: Stripe, admin: SupabaseClient, user: Quie
 
   let customerId = existingSub?.provider_customer_id ?? undefined;
   if (!customerId) {
+    // ¿Ya tiene un cliente en Stripe aunque nunca se haya suscripto? Pasa con
+    // quien invito a una amiga antes de pagar: su mes gratis la espera en ESE
+    // cliente, y creando otro el regalo se perdia (2026-11-12). Si la busqueda
+    // falla se sigue como siempre.
+    try {
+      const hallados = await stripe.customers.search({ query: `metadata['user_id']:'${user.id}'`, limit: 5 });
+      const conSaldo = hallados.data.find((c) => (c.balance ?? 0) < 0) ?? hallados.data[0];
+      if (conSaldo) customerId = conSaldo.id;
+    } catch { /* la busqueda no esta disponible: se crea uno nuevo */ }
+  }
+  if (!customerId) {
     const customer = await stripe.customers.create({
       email: user.email ?? undefined,
       metadata: { user_id: user.id },
@@ -87,7 +98,7 @@ export async function crearCheckoutDeSuscripcion(a: {
   destinos?: (appUrl: string) => Destinos;
 }): Promise<ResultadoCheckout> {
   if (!hasStripeServerEnv()) {
-    return { ok: false, status: 503, error: "Stripe no esta configurado." };
+    return { ok: false, status: 503, error: "Los pagos no están disponibles ahora." };
   }
 
   // 🔴 NUNCA UNA SEGUNDA SUSCRIPCION (2026-10-25). Una alumna que ya pagaba veia
@@ -111,16 +122,14 @@ export async function crearCheckoutDeSuscripcion(a: {
 
   const catalog = await getSubscriptionCatalog();
   if (!catalog) {
-    return { ok: false, status: 500, error: "Catalogo de precios no configurado." };
+    return { ok: false, status: 500, error: "Los planes no están disponibles ahora. Probá de nuevo en un momento." };
   }
 
   if (!catalogHasPerModePrices(catalog)) {
     return {
       ok: false,
       status: 500,
-      error:
-        "El catalogo todavia guarda un solo juego de price ids. Corre la migracion " +
-        "20260730_stripe_price_ids_per_mode.sql.",
+      error: "Ese plan todavía no se puede contratar. Escribinos y lo resolvemos.",
     };
   }
 
@@ -132,29 +141,36 @@ export async function crearCheckoutDeSuscripcion(a: {
   const priceId = resolvePriceId(catalog, a.tier, a.interval, mode);
 
   if (!priceId) {
-    return {
-      ok: false,
-      status: 500,
-      error:
-        `Falta el precio de Stripe del modo ${mode} para este plan. Cargalo en ` +
-        `site_settings -> subscriptions.catalog, en prices.${mode}.` +
-        (mode === "test"
-          ? " (La clave configurada es de prueba; si esperabas produccion, revisa STRIPE_SECRET_KEY.)"
-          : " (La clave configurada es de PRODUCCION.)"),
-    };
+    // El detalle va al registro, no a la pantalla de la alumna.
+    console.error(`[checkout] falta el precio de Stripe del modo ${mode} para ${a.tier}/${a.interval}`);
+    return { ok: false, status: 500, error: "Ese plan todavía no se puede contratar. Escribinos y lo resolvemos." };
   }
 
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { timeout: 20_000, maxNetworkRetries: 1 });
   const appUrl = getAppUrl();
   const admin = createSupabaseAdminClient();
   const customerId = await clienteDeStripe(stripe, admin, a.user);
+
+  // 🔴 LA PRUEBA GRATIS ES UNA SOLA VEZ (2026-11-12). Antes se regalaba en CADA
+  //    checkout: suscribirse, cancelar el dia 6 y volver a suscribirse daba
+  //    siete dias mas, para siempre, sin pagar nunca. Quien ya tuvo una
+  //    suscripcion (cualquiera, en cualquier estado) paga desde el primer dia.
+  //    Si no se puede comprobar, no se regala: es el camino que cobra.
+  const { count: anteriores, error: errorAnteriores } = await admin
+    .from("subscriptions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", a.user.id);
+  if (errorAnteriores) {
+    return { ok: false, status: 503, error: "No pudimos comprobar tu plan actual. Probá de nuevo en un momento." };
+  }
+  const yaTuvoPrueba = (anteriores ?? 0) > 0;
 
   const session = await stripe.checkout.sessions.create(
     parametrosCheckoutSuscripcion({
       userId: a.user.id,
       tier: a.tier,
       priceId,
-      trialDays: catalog.trial_days ?? 7,
+      trialDays: yaTuvoPrueba ? 0 : catalog.trial_days ?? 7,
       customerId,
       destinos: (a.destinos ?? destinosSuscripcionPorDefecto)(appUrl),
     })
@@ -187,7 +203,7 @@ export async function crearCheckoutDePack(a: {
   destinos?: (appUrl: string) => Destinos;
 }): Promise<ResultadoCheckout> {
   if (!hasStripeServerEnv()) {
-    return { ok: false, status: 503, error: "Stripe no esta configurado." };
+    return { ok: false, status: 503, error: "Los pagos no están disponibles ahora." };
   }
 
   const admin = createSupabaseAdminClient();
@@ -261,16 +277,11 @@ export async function crearCheckoutDePack(a: {
   const priceId = mode === "live" ? pack.stripe_price_id_live : pack.stripe_price_id_test;
 
   if (!priceId) {
-    return {
-      ok: false,
-      status: 500,
-      error:
-        `Al pack "${pack.name_i18n?.es ?? pack.slug}" le falta el identificador de Stripe ` +
-        `del modo ${mode === "live" ? "produccion" : "prueba"}. Se carga en /admin/precios.`,
-    };
+    console.error(`[checkout] al pack ${pack.slug} le falta el precio de Stripe del modo ${mode}`);
+    return { ok: false, status: 500, error: "Este pack todavía no se puede comprar. Escribinos y lo resolvemos." };
   }
 
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { timeout: 20_000, maxNetworkRetries: 1 });
   const appUrl = getAppUrl();
   const customerId = await clienteDeStripe(stripe, admin, a.user);
 
@@ -290,10 +301,16 @@ export async function crearCheckoutDePack(a: {
   let cupon: string | null = null;
   if (oferta) {
     const finSeg = Math.floor(Date.parse(oferta.hasta) / 1000);
-    const idCupon = `oferta-${pack.id.slice(0, 8)}-${oferta.precioCentimos}-${finSeg}`;
+    // El precio normal va en el id (2026-11-12): el cupon descuenta una
+    // DIFERENCIA fija, y si Brunela cambiaba el precio del pack con la oferta
+    // andando se reusaba el cupon viejo y se cobraba otro importe que el de
+    // la pantalla.
+    const idCupon = `oferta-${pack.id.slice(0, 8)}-${pack.price_cents}-${oferta.precioCentimos}-${finSeg}`;
     try {
       cupon = (await stripe.coupons.retrieve(idCupon)).id;
-    } catch {
+    } catch (e) {
+      // Solo "no existe" significa que hay que crearlo. Un corte de red no.
+      if ((e as { code?: string })?.code !== "resource_missing") throw e;
       cupon = (await stripe.coupons.create({
         id: idCupon,
         amount_off: pack.price_cents - oferta.precioCentimos,
@@ -308,6 +325,9 @@ export async function crearCheckoutDePack(a: {
   const session = await stripe.checkout.sessions.create(
     parametrosCheckoutPack({
       cupon,
+      // Con oferta, el pago abierto se cierra cuando la oferta termina (Stripe
+      // pide media hora como minimo): no se paga el precio rebajado al dia siguiente.
+      venceEn: oferta ? Math.max(Math.floor(Date.now() / 1000) + 31 * 60, Math.min(Math.floor(Date.parse(oferta.hasta) / 1000), Math.floor(Date.now() / 1000) + 23 * 3600)) : null,
       userId: a.user.id,
       pack: { id: pack.id, slug: pack.slug },
       priceId,

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarDays, Gift, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X } from 'lucide-react';
+import { CalendarDays, Gift, CalendarHeart, FileText, House, ListOrdered, Lock, Menu, MessageCircleHeart, Package, Play, Settings2, Sparkles, Users, X, UserRound, LogOut } from 'lucide-react';
+import { signOutAction } from '@/src/features/auth/actions';
 import { ContadorChat } from '@/components/chat-avisos';
 
 /**
@@ -105,6 +106,19 @@ export function MobileDashboardNav({ isAdmin, verPrivadas = false, sinLeer }: { 
                   Panel de admin
                 </Link>
               )}
+              {/* Perfil y salir: en el telefono no habia forma de llegar a
+                  ninguno de los dos (2026-11-12); en la compu estan abajo del
+                  menu lateral. */}
+              <Link href={'/dashboard/perfil' as never} className={'mn-op' + (pathname.startsWith('/dashboard/perfil') ? ' es-activo' : '')}>
+                <span className="mn-op-ico"><UserRound size={18} strokeWidth={2} aria-hidden="true" /></span>
+                Mi perfil
+              </Link>
+              <form action={signOutAction} style={{ display: 'contents' }}>
+                <button type="submit" className="mn-op mn-op--salir">
+                  <span className="mn-op-ico"><LogOut size={18} strokeWidth={2} aria-hidden="true" /></span>
+                  Cerrar sesión
+                </button>
+              </form>
             </div>
           </div>
         </>

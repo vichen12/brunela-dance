@@ -1,5 +1,6 @@
 "use server";
 
+import { mensajeDeCuenta } from "@/src/features/auth/mensaje-de-cuenta";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { COOKIE_REFERIDO, normalizarCodigo } from "@/src/features/referidos/reglas";
@@ -56,8 +57,11 @@ const esquemaAlta = z.object({
 });
 
 /** Vuelve al formulario sin perder lo que ya eligio ni lo que ya escribio. */
-function volverAlRegistro(mensaje: string, plan?: string, interval?: string, email?: string): never {
+function volverAlRegistro(mensaje: string, plan?: string, interval?: string, email?: string, pack?: string): never {
   const q = new URLSearchParams({ error: mensaje });
+  // El pack elegido vuelve con el error: antes se perdia y la alumna se
+  // registraba sin el pack que venia a comprar (2026-11-12).
+  if (pack) q.set("pack", pack);
   if (plan) q.set("plan", plan);
   if (interval) q.set("interval", interval);
   if (email) q.set("email", email);
@@ -87,7 +91,7 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    volverAlRegistro(parsed.error.issues[0]?.message ?? "Revisá los datos.", plan, interval, emailCrudo);
+    volverAlRegistro(parsed.error.issues[0]?.message ?? "Revisá los datos.", plan, interval, emailCrudo, pack);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -125,10 +129,11 @@ export async function signUpAction(formData: FormData) {
     volverAlRegistro(
       yaExiste
         ? "Ya hay una cuenta con ese correo. Iniciá sesión."
-        : error.message,
+        : mensajeDeCuenta(error),
       plan,
       interval,
-      emailCrudo
+      emailCrudo,
+      pack
     );
   }
 
@@ -171,7 +176,7 @@ export async function reenviarConfirmacionAction(formData: FormData) {
 
   if (error) {
     const esperar = /seconds|rate|security purposes/i.test(error.message);
-    volver(`error=${encodeURIComponent(esperar ? "Esperá un minuto antes de pedirlo de nuevo." : error.message)}`);
+    volver(`error=${encodeURIComponent(esperar ? "Esperá un minuto antes de pedirlo de nuevo." : mensajeDeCuenta(error))}`);
   }
   volver("enviado=1");
 }
@@ -227,7 +232,7 @@ export async function completarOnboardingAction(formData: FormData) {
     .eq("id", user.id);
 
   if (error) {
-    const q = new URLSearchParams({ error: error.message });
+    const q = new URLSearchParams({ error: mensajeDeCuenta(error, "No se pudo guardar. Probá de nuevo.") });
     if (plan) q.set("plan", plan);
     redirect(`/registro/onboarding?${q.toString()}` as never);
   }

@@ -1,3 +1,4 @@
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { Desplegable } from "@/components/desplegable";
 import Link from "next/link";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -114,7 +115,7 @@ async function saveDmAccessAction(formData: FormData) {
     { onConflict: "setting_key" }
   );
 
-  if (error) redirect(`/admin/chat?tab=dm&error=${encodeURIComponent(error.message)}` as never);
+  if (error) redirect(`/admin/chat?tab=dm&error=${encodeURIComponent(legible(error))}` as never);
 
   revalidatePath("/admin/chat");
   revalidatePath("/dashboard/chat");
@@ -136,8 +137,8 @@ export default async function AdminChatPage({ searchParams }: {
   const params = (await searchParams) ?? {};
   const tabPedida = typeof params.tab === "string" ? params.tab : "dm";
   const tab = ["dm", "bans", "mutes"].includes(tabPedida) ? tabPedida : "dm";
-  const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
-  const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  const success = typeof params.success === "string" ? params.success : null;
+  const error = typeof params.error === "string" ? params.error : null;
   // Consultas independientes en paralelo: encadenadas eran un viaje tras otro
   // a Supabase (medido antes: 1728 ms de espera pura en esta pantalla).
   const [
@@ -280,11 +281,11 @@ export default async function AdminChatPage({ searchParams }: {
                       {ban.reason && <p className="ch-mod-motivo">Motivo: {ban.reason}</p>}
                       <div className="ch-mod-fechas">
                         <span>
-                          Baneado: {new Date(ban.created_at).toLocaleDateString("es-AR")}
+                          Baneado: {new Date(ban.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
                         </span>
                         {ban.expires_at && (
                           <span className="ch-mod-expira">
-                            Expira: {new Date(ban.expires_at).toLocaleDateString("es-AR")}
+                            Expira: {new Date(ban.expires_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
                           </span>
                         )}
                       </div>
@@ -323,11 +324,11 @@ export default async function AdminChatPage({ searchParams }: {
                       {mute.reason && <p className="ch-mod-motivo">Motivo: {mute.reason}</p>}
                       <div className="ch-mod-fechas">
                         <span>
-                          Muteado: {new Date(mute.created_at).toLocaleDateString("es-AR")}
+                          Muteado: {new Date(mute.created_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
                         </span>
                         {mute.expires_at && (
                           <span className="ch-mod-expira">
-                            Expira: {new Date(mute.expires_at).toLocaleDateString("es-AR")}
+                            Expira: {new Date(mute.expires_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}
                           </span>
                         )}
                       </div>

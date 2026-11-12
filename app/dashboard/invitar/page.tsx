@@ -1,4 +1,4 @@
-import { Gift, Heart, MessageCircle, Send, Sparkles, UserPlus } from "lucide-react";
+import { Gift, MessageCircle, Send } from "lucide-react";
 import { requireUser } from "@/src/features/auth/guards";
 import { getCurrentProfile } from "@/src/features/auth/profile";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -48,8 +48,18 @@ export default async function InvitarPage() {
         <p className="inv-aviso">El programa de invitaciones todavía no está activo. Volvé a mirar en unos días.</p>
       ) : (
         <>
+          {/* Primero como funciona y despues el enlace (2026-11-11: "me da un
+              link y no se como usarlo"). */}
+          <ol className="inv-pasos">
+            <li><span>1</span><strong>Mandale tu enlace a una amiga</strong><small>por WhatsApp, Instagram o como quieras. Es el que está acá abajo.</small></li>
+            <li><span>2</span><strong>Ella entra desde ese enlace</strong><small>y se crea su cuenta. Queda anotada como invitada tuya, sola.</small></li>
+            <li><span>3</span><strong>Cuando paga su primer mes</strong><small>a vos se te descuenta un mes entero de tu próximo cobro. No tenés que pedir nada.</small></li>
+          </ol>
+
           <section className="inv-caja">
-            <p className="inv-caja-titulo">Tu enlace</p>
+            <p className="inv-caja-titulo">Tu enlace para invitar</p>
+            <p className="inv-ayuda">Es tuyo y de nadie más: quien entre desde acá queda como invitada tuya. Copialo o mandalo directo.</p>
+            {profile?.is_admin && <p className="inv-ayuda inv-ayuda--admin">Así lo ve cada alumna, con su propio enlace. Vos no tenés que hacer nada: ellas lo comparten y el mes gratis se les descuenta solo. Las invitaciones las ves en el panel, en «Referidos».</p>}
             <CopiarEnlace enlace={enlace} />
             <div className="inv-compartir">
               <a className="inv-btn inv-btn--wa" href={`https://wa.me/?text=${encodeURIComponent(mensajeWhatsApp)}`} target="_blank" rel="noreferrer">
@@ -61,11 +71,6 @@ export default async function InvitarPage() {
             </div>
           </section>
 
-          <ol className="inv-pasos">
-            <li><span><UserPlus size={18} strokeWidth={2} aria-hidden="true" /></span><strong>Tu amiga entra con tu enlace</strong><small>y se crea su cuenta.</small></li>
-            <li><span><Sparkles size={18} strokeWidth={2} aria-hidden="true" /></span><strong>Empieza su plan</strong><small>con su prueba gratis, como todas.</small></li>
-            <li><span><Heart size={18} strokeWidth={0} fill="currentColor" aria-hidden="true" /></span><strong>Cuando paga su primer mes</strong><small>a vos se te descuenta un mes entero de tu próximo cobro.</small></li>
-          </ol>
 
           <section className="inv-caja">
             <p className="inv-caja-titulo">
@@ -120,7 +125,10 @@ const CSS = `
 .inv-btn--wa { background: var(--rubor); border-color: var(--pink-line); color: var(--pink-deep); }
 .inv-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .inv-pasos li { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: 22px; background: #fff; border: 1px solid var(--linea); }
-.inv-pasos li span { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; background: var(--rubor); color: var(--pink); margin-bottom: 6px; }
+.inv-pasos li span { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+.inv-ayuda { margin: -6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.inv-ayuda--admin { margin: 0; padding: 12px 14px; border-radius: 16px; background: #FFF8EF; border: 1px solid #F6E2CC; color: #6B4A2E; }
+@media (max-width: 640px) { .inv-pasos { grid-template-columns: 1fr !important; } }
 .inv-pasos strong { font-size: 14.5px; color: var(--ink); }
 .inv-pasos small { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .inv-vacio { margin: 0; font-size: 14px; color: var(--muted); }

@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
 import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
@@ -42,7 +43,7 @@ async function escribirValor(clave: string, valor: Record<string, unknown>) {
     .from("site_settings")
     .update({ value: valor, updated_at: new Date().toISOString() })
     .eq("setting_key", clave);
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
 
   // Los ajustes se leen cacheados (unstable_cache, 5 min). Sin esto, Brunela
   // cambia algo y no lo ve reflejado hasta que vence el cache.

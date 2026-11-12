@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Packs de clases · Brunela Dance Trainer",
   description: "Clases de ballet con un solo pago, tuyas para siempre. Sin suscripción ni renovación.",
   alternates: { canonical: "/packs" },
-  openGraph: { title: "Packs de clases · Brunela Dance Trainer", description: "Clases de ballet con un solo pago, tuyas para siempre.", url: "/packs", images: ["/brand/og.png"] },
+  openGraph: { title: "Packs de clases · Brunela Dance Trainer", description: "Clases de ballet con un solo pago, tuyas para siempre.", url: "/packs", images: ["/brand/compartir.png"] },
 };
 
 export default async function PacksPage() {

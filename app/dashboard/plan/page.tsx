@@ -138,6 +138,7 @@ export default async function PlanPage() {
       cancelaAlFinal={!!subscription?.cancel_at_period_end}
       catalog={catalog}
       packs={packs}
+      yaTuvoPrueba={!!subscription}
     />
   );
 }

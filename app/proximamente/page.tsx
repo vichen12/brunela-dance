@@ -1,3 +1,4 @@
+import { rutaPropia } from "@/src/lib/ruta-propia";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -64,7 +65,7 @@ export default async function ProximamentePage({
    */
   const cabeceras = await headers();
   const pedida = cabeceras.get("x-destino-original") ?? "";
-  const destino = /^\/(?!\/)[^\s]*$/.test(pedida) ? pedida : "/sign-in";
+  const destino = rutaPropia(pedida, "/sign-in");
 
   return (
     <main className="pa-page sistema">

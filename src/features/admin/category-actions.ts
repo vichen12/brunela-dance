@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { invalidarCategorias } from "@/src/lib/categorias";
 import { redirect } from "next/navigation";
@@ -35,7 +36,9 @@ export async function upsertCategoryAction(formData: FormData) {
     membershipTierRequired: formData.get("membershipTierRequired"),
     coverImageUrl: formData.get("coverImageUrl"),
     sortOrder: formData.get("sortOrder"),
-    isActive: formData.get("isActive") === "on",
+    // Al CREAR no hay casilla "Activa" (esta solo al editar): sin esto la
+    // categoria nueva nacia apagada y Brunela no la veia en ningun lado.
+    isActive: formData.get("id") ? formData.get("isActive") === "on" : true,
   });
 
   if (!parsed.success) {
@@ -62,7 +65,7 @@ export async function upsertCategoryAction(formData: FormData) {
     : await supabase.from("categories").insert({ ...payload, slug: await direccionLibre(supabase, "categories", parsed.data.nameEs) });
 
   if (result.error) {
-    redirectMsg("error", result.error.message);
+    redirectMsg("error", legible(result.error));
   }
 
   // Sin esto, Brunela crea una categoria y no la ve hasta que expire el cache.
@@ -80,7 +83,7 @@ export async function deleteCategoryAction(formData: FormData) {
   const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
-    redirectMsg("error", error.message);
+    redirectMsg("error", legible(error));
   }
 
   // Sin esto, Brunela crea una categoria y no la ve hasta que expire el cache.

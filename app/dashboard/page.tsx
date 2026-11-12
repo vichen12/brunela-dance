@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { leerPlanesDeSesiones, planesDesde, type PlanPago } from "@/src/features/studio/planes-de-sesion";
 import { ArrowRight, BookOpen, CalendarDays, CalendarHeart, Check, Clock, FileText, Flame, ListOrdered, Mail, Megaphone, Play, Sparkles, Timer } from "lucide-react";
 import { HoraSesion } from "@/components/hora-sesion";
 import { Saludo } from "@/components/saludo";
@@ -22,6 +23,30 @@ import { claveDia, horaMadrid, nombreDiaCorto } from "@/src/features/admin/calen
 import { portadaDeClase } from "@/src/lib/video/portada";
 import { Novedades } from "@/components/novedades";
 import { getNovedades } from "@/src/features/studio/novedades";
+import { PREFIJO_ANUNCIO_DE_PACK } from "@/src/features/studio/novedades-reglas";
+
+/** "Hoy", "Ayer" o "10 de noviembre", en hora de España. */
+function fechaDeAnuncio(iso: string) {
+  const dia = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(d);
+  const hoy = dia(new Date());
+  const suyo = dia(new Date(iso));
+  if (suyo === hoy) return "Hoy";
+  if (suyo === dia(new Date(Date.now() - 86_400_000))) return "Ayer";
+  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" }).format(new Date(iso));
+}
+
+/** El texto del anuncio, con los enlaces que traiga convertidos en enlaces de verdad. */
+function TextoConEnlaces({ texto }: { texto: string }) {
+  return (
+    <>
+      {texto.split(/(https?:\/\/[^\s]+)/g).map((parte, i) =>
+        /^https?:\/\//.test(parte)
+          ? <a key={i} href={parte} target="_blank" rel="noreferrer">{parte.replace(/^https?:\/\//, "")}</a>
+          : <span key={i}>{parte}</span>
+      )}
+    </>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -92,17 +117,17 @@ const QUICK_LINKS = [
 
 /** "Jueves, 8 de octubre": solo la primera letra en mayuscula. */
 function formatDate() {
-  const t = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const t = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Madrid" });
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + "h";
+  return new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }) + "h";
 }
 
 /** "Sabado 25 de mayo", para la tarjeta de la proxima clase en vivo. */
 function formatLiveDate(iso: string) {
-  const t = new Date(iso).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const t = new Date(iso).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Madrid" });
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
@@ -273,7 +298,18 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const resumeElapsed = Math.floor((Number(resume?.completion_percent ?? 0) / 100) * (resume?.videos?.duration_seconds ?? 0));
   const resumeMin = Math.floor(resumeElapsed / 60);
   const resumeSec = resumeElapsed % 60;
-  const canAccessLive = liveData ? TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required] : false;
+  // Por los planes ELEGIDOS de la sesion y por invitacion (2026-11-12). Antes
+  // miraba solo el plan minimo: a una invitada, o a una alumna de un plan
+  // elegido "salteado", le ofrecia "Actualizar plan" en vez de "Reservar".
+  const planesDelVivo = liveData
+    ? ((await leerPlanesDeSesiones(supabase, [liveData.id])).get(liveData.id) ?? planesDesde(liveData.membership_tier_required))
+    : [];
+  const invitadaAlVivo = !!liveData && ((invitacionesData ?? []) as { live_session_id: string }[]).some((i) => i.live_session_id === liveData.id);
+  const canAccessLive = !!liveData && (
+    invitadaAlVivo ||
+    !!profile?.is_admin ||
+    (planesDelVivo.length > 0 ? planesDelVivo.includes(tier as PlanPago) : TIER_ORDER[tier] >= TIER_ORDER[liveData.membership_tier_required])
+  );
   // Si ya reservo, la tarjeta no puede seguir diciendo "Reservar lugar": se
   // vio con datos de prueba, una alumna con su lugar tomado invitada a
   // reservarlo de nuevo. La policy devuelve solo las reservas propias.
@@ -284,7 +320,11 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
     : { data: null };
   const announcements = (announcementsData ?? []) as Announcement[];
   // Un fallo aca no puede tirar el inicio: sin novedades, la seccion no aparece.
-  const novedades = await getNovedades(announcements).catch(() => []);
+  // Los anuncios van en su propia seccion, NO mezclados con las novedades
+  // (pedido 2026-11-11). El aviso de un pack no se repite: el pack ya sale en
+  // Novedades como "Pack nuevo".
+  const novedades = await getNovedades([]).catch(() => []);
+  const anunciosDeBrunela = announcements.filter((a) => !(a.title ?? "").startsWith(PREFIJO_ANUNCIO_DE_PACK));
 
   // Solo las que todavia no pasaron y siguen publicadas. Se filtra y ordena en
   // TypeScript y no en la consulta a proposito: una alumna tiene un punado de
@@ -344,6 +384,24 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
         </header>
 
         {bienvenida && <Bienvenida userId={user.id} tier={tier} />}
+
+        {anunciosDeBrunela.length > 0 && (
+          <section className="ini-anuncios" aria-labelledby="ini-anuncios-t">
+            <h2 id="ini-anuncios-t" className="ini-h2 ini-anuncios-h2">
+              <Megaphone size={18} strokeWidth={2.2} aria-hidden="true" /> Anuncios de Brunela
+            </h2>
+            {anunciosDeBrunela.map((a) => (
+              <article key={a.id} className="ini-aviso ini-aviso--anuncio">
+                <span className="ini-burbuja ini-burbuja--blanca" aria-hidden="true"><Megaphone size={18} strokeWidth={2.2} /></span>
+                <div style={{ minWidth: 0 }}>
+                  <p className="ini-aviso-titulo">{a.title || "Novedad del estudio"}</p>
+                  <p className="ini-aviso-txt ini-anuncio-txt"><TextoConEnlaces texto={a.content} /></p>
+                  {a.published_at && <p className="ini-aviso-nota">{fechaDeAnuncio(a.published_at)}</p>}
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
 
         <Novedades novedades={novedades} />
 
@@ -569,7 +627,12 @@ const CSS_INICIO = `
   transition: transform .35s var(--curva), box-shadow .35s var(--curva);
 }
 .ini-aviso--invita:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
-.ini-aviso--anuncio { background: #FFF8EF; border-color: #F6E2CC; }
+.ini-aviso--anuncio { background: #FFF8EF; border-color: #F6E2CC; align-items: flex-start; }
+.ini-anuncios { display: flex; flex-direction: column; gap: 10px; margin: 0 0 26px; }
+.ini-anuncios-h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ini-anuncios-h2 svg { color: var(--melocoton-deep); }
+.ini-anuncio-txt { white-space: pre-line; overflow-wrap: anywhere; }
+.ini-anuncio-txt a { color: var(--pink-deep); font-weight: 800; }
 .ini-aviso--anuncio .ini-burbuja--blanca { color: var(--melocoton-deep); }
 .ini-aviso-titulo { font-size: 14px; font-weight: 800; color: var(--pink-deep); margin-bottom: 2px; }
 .ini-aviso--anuncio .ini-aviso-titulo { color: var(--melocoton-deep); }

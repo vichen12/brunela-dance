@@ -114,13 +114,15 @@ function toUrlSafeBase64(digest: Buffer): string {
  */
 function signVideoDirectory(
   bunnyVideoId: string,
-  ttlSeconds: number
+  ttlSeconds: number,
+  /** Un archivo puntual ("thumbnail.jpg"): el permiso vale SOLO para ese archivo. */
+  soloArchivo = ""
 ): { token: string; tokenPath: string; expires: number } | null {
   const securityKey = getBunnyTokenAuthKey();
   if (!securityKey) return null;
 
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const tokenPath = `/${bunnyVideoId}/`;
+  const tokenPath = `/${bunnyVideoId}/${soloArchivo}`;
   const hashable = `${securityKey}${tokenPath}${expires}`;
   const token = toUrlSafeBase64(createHash("md5").update(hashable, "utf8").digest());
 
@@ -128,8 +130,8 @@ function signVideoDirectory(
 }
 
 /** The `?token=...&token_path=...&expires=...` query, or null when unsigned. */
-function directoryQuery(bunnyVideoId: string, ttlSeconds: number) {
-  const signed = signVideoDirectory(bunnyVideoId, ttlSeconds);
+function directoryQuery(bunnyVideoId: string, ttlSeconds: number, soloArchivo = "") {
+  const signed = signVideoDirectory(bunnyVideoId, ttlSeconds, soloArchivo);
   if (!signed) return null;
   return {
     query:
@@ -156,7 +158,19 @@ export function bunnySignedUrls(
 ): SignedBunnyUrls {
   const { BUNNY_STREAM_CDN_HOSTNAME } = getBunnyStreamEnv();
   const base = `https://${BUNNY_STREAM_CDN_HOSTNAME}/${bunnyVideoId}`;
-  const signed = directoryQuery(bunnyVideoId, ttlSeconds);
+  /*
+   * 🔴 LA FOTO SE FIRMA SOLA, NUNCA CON EL PERMISO DE LA CARPETA (2026-11-12).
+   *
+   *    Antes llevaba `token_path=/<guid>/`, que abre TODO lo de ese video. La
+   *    foto se muestra a quien no pago la clase (vitrina de la biblioteca,
+   *    Novedades, y la pagina publica de packs, sin cuenta): copiando su
+   *    direccion y cambiando thumbnail.jpg por playlist.m3u8 se veia la clase
+   *    entera. Comprobado contra Bunny: con el permiso de carpeta el video
+   *    respondia 200; con el permiso de la foto, 403.
+   *
+   *    El video NO sale de aca: va por /api/video, que mira el acceso.
+   */
+  const signed = directoryQuery(bunnyVideoId, ttlSeconds, "thumbnail.jpg");
 
   return {
     hls: bunnyManifestUrl(bunnyVideoId),

@@ -95,6 +95,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
       .select(
         "id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, booking_opens_at, booking_closes_at, capacity, cover_image_url"
       )
+      // Lo mismo que ve una alumna. La admin, por RLS, veia tambien BORRADORES
+      // y canceladas, con boton de reservar (2026-11-12).
+      .in("status", ["scheduled", "completed"])
       .order("starts_at", { ascending: true }),
     supabase
       .from("live_session_bookings")
@@ -156,18 +159,31 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
   const ahora = Date.now();
   const proximas = sessions.filter((s) => new Date(s.ends_at).getTime() >= ahora && s.status !== "canceled" && s.status !== "completed");
   const pasadas = sessions.filter((s) => !proximas.includes(s)).reverse();
-  const reservasActivas = Array.from(bookings.values()).filter((b) => b.status !== "canceled").length;
   const privadas = misPrivadas.sesiones.filter((p) => p.estado === "agendada");
   const privadasProximas = privadas.filter((p) => new Date(p.starts_at).getTime() + p.duracion_minutos * 60_000 >= ahora);
   // La marca "Proxima clase" es de la primera de la agenda, filtre lo que filtre.
   const idProxima = proximas[0]?.id ?? null;
   const misReservas = proximas.filter((x) => { const b = bookings.get(x.id); return b?.status === "reserved" || b?.status === "waitlisted"; });
+  // Solo las que vienen: antes contaba tambien las clases que ya pasaron.
+  const reservasActivas = misReservas.length;
+
+  /** ¿Se puede reservar AHORA? La invitacion saltea la ventana, como en la base. */
+  const ventana = (s: LiveSessionRecord): string | null => {
+    if (invitadaA.has(s.id)) return null;
+    if (s.booking_opens_at && Date.parse(s.booking_opens_at) > ahora) {
+      const f = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }).format(new Date(s.booking_opens_at));
+      return `Las reservas abren el ${f}`;
+    }
+    if (s.booking_closes_at && Date.parse(s.booking_closes_at) < ahora) return "Las reservas ya cerraron";
+    return null;
+  };
 
   const normal = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const reservada = (id: string) => { const b = bookings.get(id); return b?.status === "reserved" || b?.status === "waitlisted"; };
   const filtradas = proximas.filter((sesion) => {
     if (q && !normal(resolveI18nText(sesion.title_i18n) + " " + resolveI18nText(sesion.description_i18n)).includes(normal(q))) return false;
-    if (fPlan && sesion.membership_tier_required !== fPlan) return false;
+    // Por los planes elegidos de la sesion, no por el minimo (2026-11-12).
+    if (fPlan && !(planesDe.get(sesion.id) ?? planesDesde(sesion.membership_tier_required)).includes(fPlan as never)) return false;
     if (fCuando) {
       const limite = ahora + (fCuando === "semana" ? 7 : 31) * 86400000;
       if (new Date(sesion.starts_at).getTime() > limite) return false;
@@ -230,6 +246,9 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
     if (k.startsWith(mes)) privadasPorDia.set(k, [...(privadasPorDia.get(k) ?? []), p]);
   }
   const delDia = dia ? (porDia.get(dia) ?? []) : [];
+  // Sus sesiones privadas de ese dia: antes un dia con solo una privada decia
+  // "Ese dia no hay clases" (2026-11-12).
+  const privadasDelDia = dia ? privadas.filter((p) => claveDia(p.starts_at, ZONA_ESTUDIO) === dia) : [];
   const tituloDiaCrudo = dia ? new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(dia + "T12:00:00Z")) : "";
   const tituloDia = tituloDiaCrudo.charAt(0).toUpperCase() + tituloDiaCrudo.slice(1);
   const CLASE_TIER: Record<string, string> = { corps_de_ballet: "es-corps", solista: "es-solista", principal: "es-principal" };
@@ -305,6 +324,8 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
                     Cancelar reserva
                   </BotonEnviar>
                 </form>
+              ) : ventana(session) ? (
+                <span className="sv-candado-txt"><Clock size={14} strokeWidth={2.4} aria-hidden="true" /> {ventana(session)}</span>
               ) : (
                 <form action={reserveLiveSessionAction}>
                   <input name="sessionId" type="hidden" value={session.id} />
@@ -476,8 +497,15 @@ export default async function DashboardLivePage({ searchParams }: { searchParams
               <h2 className="cal-dia-titulo">{tituloDia}</h2>
               <Link href={urlCal(mes) as never} className="ad-btn"><X size={15} strokeWidth={2.2} aria-hidden="true" /> Ver toda la agenda</Link>
             </div>
+            {privadasDelDia.map((p) => (
+              <Link key={p.id} href={"/dashboard/sesiones-privadas" as never} className="cal-privada">
+                <Lock size={15} strokeWidth={2.4} aria-hidden="true" />
+                <span><b><HoraSesion iso={p.starts_at} zonaEstudio={ZONA_ESTUDIO} /></b> · Tu sesión privada con Brunela ({p.duracion_minutos} min)</span>
+                <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" />
+              </Link>
+            ))}
             {delDia.length === 0 ? (
-              <p className="cal-dia-vacio">Ese día no hay clases.</p>
+              privadasDelDia.length === 0 && <p className="cal-dia-vacio">Ese día no hay clases.</p>
             ) : (
               <ul className="sv-lista">{delDia.map((sesion) => tarjeta(sesion, sesion.id === idProxima, !proximas.includes(sesion)))}</ul>
             )}
@@ -673,6 +701,9 @@ a.cal-mas:hover { text-decoration: underline; }
 .cal-dia { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 20px; }
 .cal-dia-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .cal-dia-titulo { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.cal-privada { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 14px 16px; min-height: 52px; border-radius: 18px; background: var(--melocoton, #FFF0E6); color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 700; }
+.cal-privada span { flex: 1; }
+.cal-privada svg { color: var(--pink-deep); flex-shrink: 0; }
 .cal-dia-vacio { padding: 24px; border-radius: 22px; background: var(--crema); color: var(--muted); text-align: center; }
 @media (max-width: 760px) {
   .cal { padding: 16px 12px 12px; border-radius: 24px; }

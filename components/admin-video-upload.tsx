@@ -410,7 +410,7 @@ export function AdminVideoUpload({ programas = [], materiales }: { programas?: P
         setMessage(
           finalizeJson.warning ??
             (audioFiles.length > 0
-              ? `Clase subida. Los ${audioFiles.length} idiomas extra quedaron en cola de procesamiento.`
+              ? `Clase subida, con ${audioFiles.length === 1 ? "1 idioma extra" : `${audioFiles.length} idiomas extra`}. Los subtítulos los podés agregar desde la ficha de la clase.`
               : "Clase subida y guardada. Se está procesando.")
         );
         form.reset();
@@ -640,8 +640,7 @@ export function AdminVideoUpload({ programas = [], materiales }: { programas?: P
           <span>
             <span className="avu-archivo-tit">Archivo de video <small className="avu-req">obligatorio</small></span>
             <span className="avu-archivo-sub">
-              Va del navegador directo a Bunny, sin pasar por el servidor. El audio de este archivo es el
-              idioma original (Espanol).
+              El audio de este archivo es el idioma original, en español.
             </span>
           </span>
         </div>
@@ -658,9 +657,9 @@ export function AdminVideoUpload({ programas = [], materiales }: { programas?: P
           <span>
             <span className="avu-archivo-tit">Idiomas adicionales <small className="avu-opc">opcional</small></span>
             <span className="avu-archivo-sub">
-              Un mp3 por idioma, a {AUDIO_BITRATE_KBPS} kbps (hasta {maxAudioMinutes()} minutos, maximo{" "}
-              {Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB). Se unen al video automaticamente; puede tardar
-              una o dos horas. Mientras tanto la clase se ve normal en Espanol.
+              Un mp3 por idioma, de la misma duración que el video (hasta {maxAudioMinutes()} minutos,
+              máximo {Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB). Quedan listos apenas se sube la clase.
+              También los podés agregar o cambiar después, desde la ficha de la clase.
             </span>
           </span>
         </div>

@@ -1,10 +1,12 @@
 "use server";
 
+import { mensajeDeCuenta } from "@/src/features/auth/mensaje-de-cuenta";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { getAppUrl, hasSupabaseAuthEnv } from "@/src/lib/env";
 import { cookies } from "next/headers";
+import { rutaPropia } from "@/src/lib/ruta-propia";
 import { COOKIE_CAMBIO_CLAVE, puedeCambiarClave, sesionRecienDeEnlace } from "@/src/features/auth/permiso-cambio-clave";
 
 const signInSchema = z.object({
@@ -23,9 +25,7 @@ const newPasswordSchema = z.object({
 });
 
 function safeRedirectUrl(raw: string | null | undefined): string {
-  if (!raw) return "/dashboard";
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  return "/dashboard";
+  return rutaPropia(raw, "/dashboard");
 }
 
 export async function signInAction(formData: FormData) {
@@ -61,7 +61,7 @@ export async function signInAction(formData: FormData) {
         ? "Todavía no confirmaste tu correo. Buscá el mail de confirmación (mirá también en Spam)."
         : /too many|rate limit/i.test(error.message)
           ? "Demasiados intentos seguidos. Esperá un minuto y probá de nuevo."
-          : error.message;
+          : mensajeDeCuenta(error);
     redirect(`/sign-in?error=${encodeURIComponent(mensaje)}${callbackParam}`);
   }
 
@@ -74,7 +74,9 @@ export async function signOutAction() {
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  // Solo ESTE dispositivo. Sin `scope`, Supabase cierra la sesion en todos:
+  // salir en la compu la sacaba tambien del telefono a mitad de una clase.
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/sign-in");
 }
 
@@ -97,7 +99,7 @@ export async function requestPasswordResetAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/sign-in/forgot-password?error=${encodeURIComponent(error.message)}`);
+    redirect(`/sign-in/forgot-password?error=${encodeURIComponent(mensajeDeCuenta(error))}`);
   }
 
   redirect(
@@ -140,7 +142,7 @@ export async function updatePasswordAction(formData: FormData) {
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
 
   if (error) {
-    redirect(`/sign-in/reset-password?error=${encodeURIComponent(error.message)}`);
+    redirect(`/sign-in/reset-password?error=${encodeURIComponent(mensajeDeCuenta(error))}`);
   }
 
   // El permiso sirve una vez.

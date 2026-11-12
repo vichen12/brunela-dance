@@ -22,7 +22,7 @@ export const ESTADOS_QUE_DAN_ACCESO = ["active", "trialing", "past_due"] as cons
 
 /** El aviso que se muestra donde la funcion no puede andar todavia. */
 export const AVISO_FALTA_MIGRACION =
-  "Falta aplicar la migración 20261009_acceso_gratis.sql en Supabase. Hasta entonces, el acceso gratis no se puede usar.";
+  "El acceso gratis todavía no está activado. Avisale a quien te arma la web y se arregla sin perder nada.";
 
 /** 42703 = columna inexistente: la migracion no esta aplicada. */
 export function esFaltaDeMigracion(error: { code?: string } | null | undefined) {

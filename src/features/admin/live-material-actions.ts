@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -42,7 +43,7 @@ async function cambiarMaterial(
     .select("metadata")
     .eq("id", sessionId)
     .maybeSingle<{ metadata: Record<string, unknown> | null }>();
-  if (error) return error.message;
+  if (error) return legible(error);
   if (!data) return "Esa sesión no existe.";
 
   const actual = data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata) ? data.metadata : {};

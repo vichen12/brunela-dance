@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -87,11 +88,11 @@ export async function guardarDiaDePlanAction(formData: FormData) {
           { program_id: d.programId, day_number: d.dayNumber, video_id: d.videoId! },
           { onConflict: "program_id,day_number" }
         );
-      if (viejo.error) volver("error", viejo.error.message);
+      if (viejo.error) volver("error", legible(viejo.error));
     } else if (error.code === "23503") {
       volver("error", "Esa clase ya no existe. Recargá la página y elegila de nuevo.");
     } else {
-      volver("error", error.message);
+      volver("error", legible(error));
     }
   }
 
@@ -214,7 +215,7 @@ export async function guardarPlanCompletoAction(_prev: EstadoEditorPlan, formDat
   if (programId) {
     // La direccion NO se cambia al editar: romperia los enlaces compartidos.
     const { error } = await supabase.from("programs").update(datos).eq("id", programId);
-    if (error) return { tipo: "error", mensaje: `No se guardó el plan: ${error.message}`, vez };
+    if (error) return { tipo: "error", mensaje: legible(error, "guardar el plan"), vez };
   } else {
     // Del titulo y sin chocar con otra: Brunela no la ve (2026-11-09).
     const slug = await direccionLibre(supabase, "programs", p.slug || p.titleEs);
@@ -303,7 +304,7 @@ export async function borrarPlanAction(formData: FormData) {
 
   const { error } = await supabase.from("programs").delete().eq("id", id);
   if (error) {
-    redirect(`/admin/programs/${id}?error=${encodeURIComponent(error.message)}` as never);
+    redirect(`/admin/programs/${id}?error=${encodeURIComponent(legible(error))}` as never);
   }
   revalidatePath("/admin");
   revalidatePath("/admin/programs");
@@ -347,11 +348,11 @@ export async function ponerClaseEnDiaDePlanAction(formData: FormData) {
   if (error) {
     if (esFaltaDeColumnaDescanso(error)) {
       const r = await supabase.from("program_days").upsert(fila, { onConflict: "program_id,day_number" });
-      if (r.error) aVideos(r.error.message);
+      if (r.error) aVideos(legible(r.error));
     } else if (error.code === "23514") {
       aVideos(`El día ${d.dayNumber} de ese plan no se pudo cambiar. Abrí el plan en Planes de trabajo y cambialo ahí.`);
     } else {
-      aVideos(error.message);
+      aVideos(legible(error));
     }
   }
 

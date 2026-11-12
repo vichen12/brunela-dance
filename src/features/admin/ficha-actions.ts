@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -51,7 +52,7 @@ export async function enviarMensajeDesdeFichaAction(fd: FormData) {
     author_name: yo?.full_name ?? "Brunela",
     author_is_admin: true,
   });
-  if (error) volver(alumnaId, "error=" + encodeURIComponent(error.message) + "#mensajes");
+  if (error) volver(alumnaId, "error=" + encodeURIComponent(legible(error)) + "#mensajes");
 
   revalidatePath(`/admin/users/${alumnaId}`);
   revalidatePath("/dashboard/chat");
@@ -69,7 +70,7 @@ export async function invitarDesdeFichaAction(fd: FormData) {
   const db = createSupabaseAdminClient();
   const { error } = await db.from("live_session_invitations").insert({ live_session_id: sesionId, user_id: alumnaId, invited_by: user.id });
   // 23505: ya estaba invitada. Es el estado que se queria, no un fallo.
-  if (error && error.code !== "23505") volver(alumnaId, "error=" + encodeURIComponent(error.message) + "#vivo");
+  if (error && error.code !== "23505") volver(alumnaId, "error=" + encodeURIComponent(legible(error)) + "#vivo");
 
   // El correo va DESPUES de guardar y no puede deshacer nada: si falla, la
   // invitacion queda igual y el cartel lo dice. Si ya estaba invitada (23505),
@@ -91,7 +92,7 @@ export async function quitarInvitacionDesdeFichaAction(fd: FormData) {
   const db = createSupabaseAdminClient();
   // La reserva que ya hizo NO se toca (misma regla que en /admin/live).
   const { error } = await db.from("live_session_invitations").delete().eq("live_session_id", sesionId).eq("user_id", alumnaId);
-  if (error) volver(alumnaId, "error=" + encodeURIComponent(error.message) + "#vivo");
+  if (error) volver(alumnaId, "error=" + encodeURIComponent(legible(error)) + "#vivo");
 
   revalidatePath(`/admin/users/${alumnaId}`);
   revalidatePath("/dashboard/live");

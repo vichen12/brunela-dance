@@ -37,10 +37,28 @@ export async function requireUser() {
   const user = await getSessionSnapshot();
 
   if (!user) {
-    redirect("/sign-in");
+    // CON ?error= (2026-11-12). Aca solo llega quien trae una sesion guardada
+    // que ya no vale (se cerro desde otro dispositivo, se borro la cuenta): a
+    // quien no trae ninguna la frena antes el middleware. Y el middleware, al
+    // ver esa sesion guardada en /sign-in, la mandaba de vuelta al estudio:
+    // una vuelta sin fin y el navegador mostrando "demasiadas redirecciones".
+    // Con ?error= el middleware deja ver el formulario.
+    redirect(`/sign-in?error=${encodeURIComponent("Tu sesión se cerró. Entrá de nuevo.")}` as never);
   }
 
   return { user };
+}
+
+/**
+ * Lo mismo para una ruta de API: devuelve null en vez de redirigir.
+ *
+ * requireUser() en una API contesta con una redireccion a la pagina de
+ * ingreso; el `fetch` del navegador la sigue, recibe esa pagina con un 200 y
+ * cree que todo salio bien ("Foto actualizada" sin haber guardado nada).
+ */
+export async function usuarioDeApi() {
+  if (!hasSupabaseAuthEnv()) return null;
+  return getSessionSnapshot();
 }
 
 /**

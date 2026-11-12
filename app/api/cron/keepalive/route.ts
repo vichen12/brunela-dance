@@ -92,7 +92,15 @@ export async function GET(request: Request) {
      * Sin la migracion devuelve `omitido` y no falla: el codigo se despliega
      * antes de que la duena la corra.
      */
-    const accesoGratis = await aplicarBajasVencidas(supabase);
+    // Si esto falla, los correos del dia salen igual (antes un fallo aca los
+    // cortaba a todos). El fallo se ve en la respuesta y en el registro.
+    let accesoGratis: Awaited<ReturnType<typeof aplicarBajasVencidas>> | { error: string };
+    try {
+      accesoGratis = await aplicarBajasVencidas(supabase);
+    } catch (e) {
+      console.error("[cron] bajas del acceso gratis:", e instanceof Error ? e.message : e);
+      accesoGratis = { error: e instanceof Error ? e.message : "fallo" };
+    }
 
     /**
      * TERCER PASO: los correos del dia (src/features/correos/disparadores.ts).
@@ -105,6 +113,8 @@ export async function GET(request: Request) {
      * NUNCA LANZA -- un correo que falla no puede marcar el keepalive como
      * caido -- y sin 20261009_3_correos_enviados.sql no manda nada.
      */
+    // 05:00 UTC = 06:00 en Madrid (07:00 en verano): antes corria a las 07:00
+    // UTC y el recordatorio de una clase de las 7 u 8 de la mañana llegaba tarde.
     const correos = await correosDelCron(supabase);
 
     return NextResponse.json({

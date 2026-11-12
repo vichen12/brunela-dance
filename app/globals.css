@@ -4313,6 +4313,8 @@ aside nav a:focus-visible, aside a:focus-visible { outline: none; background: va
 .mn-op-ico { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--rubor); color: var(--pink-deep); }
 .mn-op.es-activo { border-color: var(--pink-line); background: var(--rubor); }
 .mn-op.es-activo .mn-op-ico { background: var(--pink); color: #fff; }
+.mn-op--salir { width: 100%; font-family: inherit; cursor: pointer; text-align: left; color: var(--muted); }
+.mn-op--salir .mn-op-ico { background: #F4EEEC; color: var(--muted); }
 .mn-op--admin { grid-column: 1 / -1; background: var(--melocoton); border-color: transparent; }
 .mn-op--admin .mn-op-ico { background: #fff; color: var(--melocoton-deep); }
 @keyframes mn-sube { from { transform: translateY(100%); } to { transform: none; } }

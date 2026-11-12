@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/src/lib/supabase/client';
 import { marcarSalaLeida, salaAbierta } from '@/components/chat-avisos';
 import { banearUsuarioAction } from '@/src/features/admin/chat-moderation';
+import { SelectorEmojis } from '@/components/selector-emojis';
 
 export type ChatMessage = {
   id: string;
@@ -65,8 +66,45 @@ function initial(name: string) {
   return name.trim()[0]?.toUpperCase() ?? '?';
 }
 
+// Todo en hora de ESPAÑA (2026-11-12). Sin zona fija, el servidor (UTC)
+// dibujaba una hora y el navegador otra: React veia dos versiones distintas
+// de la misma pantalla y cerca de la medianoche los mensajes caian en el dia
+// equivocado. El estudio esta en Barcelona y todo el sistema usa esa hora.
+const ZONA = 'Europe/Madrid';
+const diaMadrid = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA });
+
 function timeLabel(iso: string) {
-  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: ZONA });
+}
+
+/** "2026-11-11" en hora de España: para separar la charla por dias. */
+function claveDeDia(iso: string) {
+  return diaMadrid.format(new Date(iso));
+}
+
+/** "Hoy", "Ayer" o "Martes 10 de noviembre". */
+function rotuloDeDia(iso: string) {
+  const suyo = claveDeDia(iso);
+  const ahora = Date.now();
+  if (suyo === diaMadrid.format(new Date(ahora))) return 'Hoy';
+  if (suyo === diaMadrid.format(new Date(ahora - 86_400_000))) return 'Ayer';
+  const d = new Date(iso);
+  const otroAnio = suyo.slice(0, 4) !== diaMadrid.format(new Date(ahora)).slice(0, 4);
+  const t = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: ZONA, ...(otroAnio ? { year: 'numeric' } : {}) });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Solo emojis (hasta 3): se muestran grandes y sin globo, como en cualquier chat. */
+function soloEmojis(texto: string) {
+  const t = texto.trim();
+  if (!t || t.length > 24) return false;
+  try {
+    const sin = t.replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\s]/gu, '');
+    const cuantos = (t.match(/\p{Extended_Pictographic}/gu) ?? []).length;
+    return sin.length === 0 && cuantos >= 1 && cuantos <= 3;
+  } catch {
+    return false;
+  }
 }
 
 function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
@@ -96,8 +134,10 @@ function Avatar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
 
 function MessageBubble({
   msg, isMe, isAdmin, canModerate, onDelete, onMute, onBan, interlocutor,
-  enviando = false, fallido = false, onReintentar,
+  enviando = false, fallido = false, onReintentar, continua = false,
 }: {
+  /** Sigue a otro mensaje de la misma persona, pegado: sin nombre ni avatar repetidos. */
+  continua?: boolean;
   /** Optimista: todavia no confirmado por el servidor. */
   enviando?: boolean;
   /** El insert fallo. Se queda a la vista, marcado. */
@@ -119,11 +159,14 @@ function MessageBubble({
     : msg.profiles?.is_admin ??
       (interlocutor && msg.user_id === interlocutor.id ? interlocutor.isAdmin : false);
   const verPerfil = canModerate && !senderIsAdmin && msg.user_id ? `/admin/users/${msg.user_id}` : null;
+  const grande = soloEmojis(msg.content);
 
   if (isMe) return (
-    <div className="crm-fila crm-fila--mia" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+    <div className="crm-fila crm-fila--mia" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14, marginTop: continua ? -8 : 0 }}>
       <div style={{ maxWidth: '72%' }}>
-        <div style={{
+        {grande && !fallido ? (
+          <div style={{ fontSize: 40, lineHeight: 1.15, textAlign: 'right', opacity: enviando ? 0.62 : 1 }}>{msg.content}</div>
+        ) : <div style={{
           // --pink-mid y no --pink: esto es texto de LECTURA SOSTENIDA a 13.5px
           // en peso normal, no una etiqueta que se mira de reojo. Blanco sobre
           // --pink da 3.78:1 y sobre --pink-mid da 4.83:1, que cumple AA. A
@@ -139,7 +182,7 @@ function MessageBubble({
           // esta ahi, solo todavia no confirmado.
           opacity: enviando ? 0.62 : 1,
           transition: 'opacity 160ms ease',
-        }}>{msg.content}</div>
+        }}>{msg.content}</div>}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
           fontSize: 11.5, fontWeight: 600, color: fallido ? '#991b1b' : 'var(--muted)', marginTop: 5, paddingRight: 4,
@@ -180,13 +223,15 @@ function MessageBubble({
   return (
     <div
       className="crm-fila"
-      style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-end' }}
+      style={{ display: 'flex', gap: 10, marginBottom: 14, marginTop: continua ? -8 : 0, alignItems: 'flex-end' }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
       {/* La admin llega al perfil de la alumna desde el chat: nombre y avatar
           llevan a su ficha, donde puede escribirle, invitarla o cambiarle el plan. */}
-      {verPerfil ? (
+      {continua ? (
+        <span style={{ width: 34, flexShrink: 0 }} aria-hidden="true" />
+      ) : verPerfil ? (
         <Link href={verPerfil as never} title={`Ver el perfil de ${name}`} aria-label={`Ver el perfil de ${name}`} className="crm-perfil">
           <Avatar name={name} isAdmin={senderIsAdmin} />
         </Link>
@@ -194,7 +239,7 @@ function MessageBubble({
         <Avatar name={name} isAdmin={senderIsAdmin} />
       )}
       <div style={{ maxWidth: '72%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5, paddingLeft: 4 }}>
+        <div style={{ display: continua ? 'none' : 'flex', alignItems: 'center', gap: 7, marginBottom: 5, paddingLeft: 4 }}>
           {verPerfil ? (
             <Link href={verPerfil as never} className="crm-perfil-nombre" style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', textDecoration: 'none' }}>
               {name}
@@ -210,13 +255,15 @@ function MessageBubble({
             </span>
           )}
         </div>
-        <div style={{
+        {grande ? (
+          <div style={{ fontSize: 40, lineHeight: 1.15 }}>{msg.content}</div>
+        ) : <div style={{
           background: senderIsAdmin ? 'linear-gradient(160deg, #FFEDE8, #FFF6F2)' : '#FFF8F5',
           border: '1px solid var(--linea)',
           borderRadius: '8px 22px 22px 22px',
           padding: '12px 18px', fontSize: 14, color: 'var(--ink)', lineHeight: 1.55,
           whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
-        }}>{msg.content}</div>
+        }}>{msg.content}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, paddingLeft: 4, minHeight: 22 }}>
           <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>{timeLabel(msg.created_at)}</span>
           {canModerate && hover && msg.user_id && (
@@ -481,6 +528,16 @@ export function ChatRoom({
     }
   }, [cargandoViejos, messages, roomId, supabase]);
 
+  // El emoji entra donde esta el cursor, y el foco vuelve al campo.
+  const campo = useRef<HTMLInputElement>(null);
+  const insertarEmoji = useCallback((emoji: string) => {
+    const el = campo.current;
+    const desde = el?.selectionStart ?? input.length;
+    const hasta = el?.selectionEnd ?? input.length;
+    setInput(input.slice(0, desde) + emoji + input.slice(hasta));
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(desde + emoji.length, desde + emoji.length); });
+  }, [input]);
+
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
@@ -669,19 +726,34 @@ export function ChatRoom({
           </div>
         )}
 
-        {messages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            msg={m}
-            isMe={m.user_id === userId}
-            isAdmin={isAdmin}
-            canModerate={canModerate}
-            onDelete={deleteMessage}
-            onMute={(uid, name) => { setModo('mute'); setMuteTarget({ id: uid, name }); }}
-            onBan={(uid, name) => { setModo('ban'); setMuteTarget({ id: uid, name }); }}
-            interlocutor={interlocutor}
-          />
-        ))}
+        {messages.map((m, i) => {
+          const anterior = messages[i - 1];
+          const otroDia = !anterior || claveDeDia(anterior.created_at) !== claveDeDia(m.created_at);
+          // Pegado al anterior: misma persona, mismo dia y a menos de 5 minutos.
+          const continua = !otroDia && anterior.user_id === m.user_id
+            && Math.abs(+new Date(m.created_at) - +new Date(anterior.created_at)) < 5 * 60_000;
+          return (
+            <div key={m.id}>
+              {otroDia && <div className="crm-dia"><span>{rotuloDeDia(m.created_at)}</span></div>}
+              <MessageBubble
+                msg={m}
+                isMe={m.user_id === userId}
+                isAdmin={isAdmin}
+                canModerate={canModerate}
+                continua={continua}
+                // 🔴 Estos tres no se pasaban (2026-11-11): un mensaje que
+                //    fallaba se veia con el doble tilde de "enviado".
+                enviando={m.id.startsWith('tmp-') && !fallidos.has(m.id)}
+                fallido={fallidos.has(m.id)}
+                onReintentar={() => reintentar(m.id)}
+                onDelete={deleteMessage}
+                onMute={(uid, name) => { setModo('mute'); setMuteTarget({ id: uid, name }); }}
+                onBan={(uid, name) => { setModo('ban'); setMuteTarget({ id: uid, name }); }}
+                interlocutor={interlocutor}
+              />
+            </div>
+          );
+        })}
         <div ref={endRef} />
       </div>
 
@@ -713,10 +785,12 @@ export function ChatRoom({
       {/* Input */}
       <div className="cr-composer" style={{
         padding: '12px clamp(12px,3vw,20px)', borderTop: '1px solid var(--linea)', flexShrink: 0,
-        display: 'flex', gap: 10, alignItems: 'center', background: 'rgba(255,255,255,0.94)',
+        display: 'flex', gap: 8, alignItems: 'center', background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(8px)',
       }}>
+        <SelectorEmojis onElegir={insertarEmoji} />
         <input
+          ref={campo}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send()}
@@ -853,6 +927,9 @@ const CSS_CHAT = `
 @keyframes crm-entra { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
 .crm-fila { animation: crm-entra .45s var(--curva, ease) both; }
 .crm-fila--mia { transform-origin: right bottom; }
+.crm-dia { display: flex; align-items: center; gap: 12px; margin: 6px 0 16px; }
+.crm-dia::before, .crm-dia::after { content: ""; flex: 1; height: 1px; background: var(--linea, #F6E7E1); }
+.crm-dia span { padding: 4px 12px; border-radius: 99px; background: var(--crema, #FFFAF6); border: 1px solid var(--linea, #F6E7E1); font-size: 11.5px; font-weight: 800; color: var(--muted, #8A6F68); }
 .crm-perfil { border-radius: 50%; transition: transform .3s var(--curva, ease), box-shadow .3s; }
 .crm-perfil:hover { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pink-line); }
 .crm-perfil-nombre:hover { color: var(--pink-deep) !important; text-decoration: underline !important; text-underline-offset: 3px; }

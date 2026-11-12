@@ -1,4 +1,5 @@
 "use server";
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { bunnyThumbnailUrl } from "@/src/lib/video/bunny";
 
 import { revalidatePath } from "next/cache";
@@ -295,7 +296,7 @@ export async function upsertVideoAction(formData: FormData) {
     : await supabase.from("videos").insert({ ...payload, created_by: user.id }).select("id").maybeSingle<{ id: string }>();
 
   if (result.error) {
-    redirectWithMessage("/admin/videos", "error", result.error.message);
+    redirectWithMessage("/admin/videos", "error", legible(result.error));
   }
 
   // Pasa a publicada por primera vez -> aviso por mail, en after(). Volver a
@@ -351,7 +352,7 @@ export async function agregarClaseAPlanAction(formData: FormData) {
   );
 
   if (error) {
-    redirectWithMessage("/admin/videos", "error", error.message);
+    redirectWithMessage("/admin/videos", "error", legible(error));
   }
 
   refreshAdminRoutes();
@@ -368,7 +369,7 @@ export async function quitarClaseDePlanAction(formData: FormData) {
   const { error } = await supabase.from("program_days").delete().eq("id", id);
 
   if (error) {
-    redirectWithMessage("/admin/videos", "error", error.message);
+    redirectWithMessage("/admin/videos", "error", legible(error));
   }
 
   refreshAdminRoutes();
@@ -391,7 +392,7 @@ export async function deleteVideoAction(formData: FormData) {
   const { error } = await supabase.from("videos").delete().eq("id", id);
 
   if (error) {
-    redirectWithMessage("/admin/videos", "error", error.message);
+    redirectWithMessage("/admin/videos", "error", legible(error));
   }
 
   if (existing?.bunny_video_id && hasBunnyStreamEnv()) {
@@ -437,7 +438,7 @@ export async function requeueMuxJobAction(formData: FormData) {
     .select("id");
 
   if (error) {
-    redirectWithMessage("/admin/videos", "error", error.message);
+    redirectWithMessage("/admin/videos", "error", legible(error));
   }
 
   if (!data || data.length === 0) {
@@ -496,7 +497,7 @@ export async function upsertProgramAction(formData: FormData) {
     : await supabase.from("programs").insert({ ...payload, created_by: user.id });
 
   if (result.error) {
-    redirectWithMessage("/admin/programs", "error", result.error.message);
+    redirectWithMessage("/admin/programs", "error", legible(result.error));
   }
 
   refreshAdminRoutes();
@@ -511,7 +512,7 @@ export async function deleteProgramAction(formData: FormData) {
   const { error } = await supabase.from("programs").delete().eq("id", id);
 
   if (error) {
-    redirectWithMessage("/admin/programs", "error", error.message);
+    redirectWithMessage("/admin/programs", "error", legible(error));
   }
 
   refreshAdminRoutes();
@@ -553,7 +554,7 @@ export async function upsertProgramDayAction(formData: FormData) {
   );
 
   if (error) {
-    redirectWithMessage("/admin/programs", "error", error.message);
+    redirectWithMessage("/admin/programs", "error", legible(error));
   }
 
   refreshAdminRoutes();
@@ -568,7 +569,7 @@ export async function deleteProgramDayAction(formData: FormData) {
   const { error } = await supabase.from("program_days").delete().eq("id", id);
 
   if (error) {
-    redirectWithMessage("/admin/programs", "error", error.message);
+    redirectWithMessage("/admin/programs", "error", legible(error));
   }
 
   refreshAdminRoutes();
@@ -622,7 +623,7 @@ export async function updateProfileAdminAction(formData: FormData) {
     .eq("id", parsed.data.profileId);
 
   if (error) {
-    redirectWithMessage("/admin/users", "error", error.message);
+    redirectWithMessage("/admin/users", "error", legible(error));
   }
 
   refreshAdminRoutes();

@@ -91,8 +91,8 @@ export default async function AdminLivePage({
   await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
-  const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
-  const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  const success = typeof params.success === "string" ? params.success : null;
+  const error = typeof params.error === "string" ? params.error : null;
 
   // Las tres son independientes: encadenadas costaban tres viajes seguidos a
   // Supabase (~250 ms cada uno). En paralelo cuestan uno.
@@ -115,7 +115,14 @@ export default async function AdminLivePage({
     .from("live_sessions")
     .select("id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at", { count: "exact" });
   if (fEstado) consultaSesiones = consultaSesiones.eq("status", fEstado);
-  if (fPlan) consultaSesiones = consultaSesiones.eq("membership_tier_required", fPlan);
+  // Por los planes ELEGIDOS de la sesion (2026-11-12), no por el minimo: una
+  // clase "Corps y Principal" no aparecia al filtrar por Principal. Las que no
+  // tienen la lista usan la regla de siempre: el minimo y los de arriba.
+  if (fPlan) {
+    const hasta = ["corps_de_ballet", "solista", "principal"];
+    const minimos = hasta.slice(0, hasta.indexOf(fPlan) + 1).concat("none");
+    consultaSesiones = consultaSesiones.or(`planes_permitidos.cs.{${fPlan}},and(planes_permitidos.is.null,membership_tier_required.in.(${minimos.join(",")}))`);
+  }
   if (fCuando === "") consultaSesiones = consultaSesiones.gte("ends_at", ahoraIso);
   if (fCuando === "pasadas") consultaSesiones = consultaSesiones.lt("ends_at", ahoraIso);
   if (q) {
@@ -298,7 +305,7 @@ export default async function AdminLivePage({
         <AdminBuscador
           action="/admin/live"
           q={q}
-          placeholder="Buscar por título o dirección…"
+          placeholder="Buscar por título…"
           filtros={[
             { name: "cuando", valor: fCuando, etiqueta: "Cuándo", opciones: CUANDO_LIVE },
             { name: "plan", valor: fPlan, etiqueta: "Plan", opciones: PLANES_LIVE },
@@ -414,7 +421,7 @@ export default async function AdminLivePage({
                         <form action={updateStatusAction}>
                           <input type="hidden" name="id" value={session.id} />
                           <input type="hidden" name="status" value="canceled" />
-                          <BotonEnviar className="lv-accion lv-accion--cancelar">Cancelar</BotonEnviar>
+                          <BotonEnviar className="lv-accion lv-accion--cancelar" pendingLabel="Cancelando…" confirmar="¿Cancelar esta sesión? Las alumnas que reservaron dejan de verla en su agenda.">Cancelar</BotonEnviar>
                         </form>
                       )}
                     </div>

@@ -203,7 +203,7 @@ export async function registroVolverDisponible(db: SupabaseClient): Promise<bool
   }
 }
 
-export const AVISO_FALTA_MIGRACION_VOLVER = `Para mandar este mail falta correr la migración ${MIGRACION_VOLVER} en Supabase.`;
+export const AVISO_FALTA_MIGRACION_VOLVER = "Este mail todavía no está activado. Avisale a quien te arma la web y se arregla sin perder nada.";
 
 export type NovedadesDelEstudio = { clasesNuevas: number; novedades: NovedadParaVolver[] };
 

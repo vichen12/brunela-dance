@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -68,7 +69,7 @@ export async function guardarEnlaceSesionAction(fd: FormData) {
     },
     { onConflict: "live_session_id" }
   );
-  if (error) volver(sessionId, "error", error.message);
+  if (error) volver(sessionId, "error", legible(error));
 
   await revalidarTodo(sessionId);
   volver(sessionId, "success", `Enlace de ${NOMBRE_PROVEEDOR[provider] === "Enlace" ? "la clase" : NOMBRE_PROVEEDOR[provider]} guardado. Las inscriptas ya lo ven.`);
@@ -85,7 +86,7 @@ export async function quitarEnlaceSesionAction(fd: FormData) {
     .from("live_session_access_links")
     .delete()
     .eq("live_session_id", sessionId);
-  if (error) volver(sessionId, "error", error.message);
+  if (error) volver(sessionId, "error", legible(error));
 
   await revalidarTodo(sessionId);
   volver(sessionId, "success", "Enlace quitado. Las inscriptas ya no lo ven.");

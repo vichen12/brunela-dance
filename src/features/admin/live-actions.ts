@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -77,6 +78,19 @@ function conMensaje(ruta: string, tipo: "success" | "error", msg: string): never
   redirect(`${ruta}?${tipo}=${encodeURIComponent(msg)}` as never);
 }
 
+/**
+ * Horarios que no tienen sentido, frenados ANTES de llegar a la base
+ * (2026-11-12). La base los rechaza igual, pero con un error crudo en ingles.
+ */
+function horarioInvalido(fd: FormData, inicio: string, fin: string): string | null {
+  if (Date.parse(fin) <= Date.parse(inicio)) return "La clase tiene que terminar después de empezar. Revisá la hora de fin.";
+  const abre = enMadrid(fd.get("bookingOpensAt"));
+  const cierra = enMadrid(fd.get("bookingClosesAt"));
+  if (abre && cierra && Date.parse(cierra) <= Date.parse(abre)) return "Las reservas tienen que cerrar después de abrir. Revisá esas dos fechas.";
+  if (cierra && Date.parse(cierra) > Date.parse(fin)) return "Las reservas no pueden cerrar después de que termina la clase.";
+  return null;
+}
+
 export async function createLiveSessionAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
@@ -89,6 +103,8 @@ export async function createLiveSessionAction(fd: FormData) {
   const endsAt = enMadrid(fd.get("endsAt"));
   const status = (fd.get("status") as string) || "draft";
   if (!startsAt || !endsAt) conMensaje("/admin/live", "error", "Revisá el inicio y el fin: falta la fecha o la hora.");
+  const malHorario = horarioInvalido(fd, startsAt!, endsAt!);
+  if (malHorario) conMensaje("/admin/live", "error", malHorario);
   const planes = planesDelFormulario(fd);
   if (planes.length === 0) conMensaje("/admin/live", "error", "Elegí al menos un plan que pueda ver la sesión.");
 
@@ -114,7 +130,7 @@ export async function createLiveSessionAction(fd: FormData) {
     .select("id")
     .single());
 
-  if (error) redirect(`/admin/live?error=${encodeURIComponent(error.message)}` as never);
+  if (error) redirect(`/admin/live?error=${encodeURIComponent(legible(error))}` as never);
 
   // El enlace puede ser de Zoom, de Meet o de otro lado: el proveedor sale de
   // la URL (src/features/studio/enlace-clase.ts). Antes se guardaba "zoom" fijo.
@@ -147,6 +163,8 @@ export async function updateLiveSessionAction(fd: FormData) {
   const startsAt = enMadrid(fd.get("startsAt"));
   const endsAt = enMadrid(fd.get("endsAt"));
   if (!startsAt || !endsAt) conMensaje(volverA(fd), "error", "Revisá el inicio y el fin: falta la fecha o la hora.");
+  const malHorario = horarioInvalido(fd, startsAt!, endsAt!);
+  if (malHorario) conMensaje(volverA(fd), "error", malHorario);
   const planes = planesDelFormulario(fd);
   if (planes.length === 0) conMensaje(volverA(fd), "error", "Elegí al menos un plan que pueda ver la sesión.");
 
@@ -168,7 +186,7 @@ export async function updateLiveSessionAction(fd: FormData) {
     })
     .eq("id", id));
 
-  if (error) conMensaje(volverA(fd), "error", error.message);
+  if (error) conMensaje(volverA(fd), "error", legible(error));
 
   const joinUrl = String(fd.get("zoomJoinUrl") ?? "").trim();
   if (joinUrl) {
@@ -239,7 +257,7 @@ async function resolverAlumna(
     .or(`email.ilike.${texto},full_name.ilike.${texto}`)
     .limit(5);
 
-  if (error) return { fallo: error.message };
+  if (error) return { fallo: legible(error) };
 
   if (!data || data.length === 0) {
     return { fallo: `No hay ninguna alumna con el correo o el nombre "${texto}".` };
@@ -283,7 +301,7 @@ export async function inviteToLiveSessionAction(fd: FormData) {
   // 23505 es el unique (live_session_id, user_id). Ya estaba invitada: no es un
   // fallo, es el estado que se queria.
   if (error && error.code !== "23505") {
-    conMensaje(volverA(fd), "error", error.message);
+    conMensaje(volverA(fd), "error", legible(error));
   }
 
   // Correo a la alumna, DESPUES de guardar. La clave
@@ -315,7 +333,7 @@ export async function uninviteFromLiveSessionAction(fd: FormData) {
     .eq("user_id", userId);
 
   if (error) {
-    conMensaje(volverA(fd), "error", error.message);
+    conMensaje(volverA(fd), "error", legible(error));
   }
 
   // ⚠️ La reserva que la alumna ya hizo NO se toca. Sacarle la invitacion le
@@ -334,8 +352,10 @@ export async function updateStatusAction(fd: FormData) {
   const status = fd.get("status") as string;
   const update: Record<string, unknown> = { status };
   if (status === "scheduled") update.published_at = new Date().toISOString();
-  await supabase.from("live_sessions").update(update).eq("id", id);
+  const { error } = await supabase.from("live_sessions").update(update).eq("id", id);
+  // Antes el error se ignoraba y decia "Estado actualizado" igual.
+  if (error) conMensaje(volverA(fd), "error", legible(error, "cambiar el estado de la sesión"));
   revalidatePath("/admin/live", "layout");
   revalidatePath("/dashboard/live");
-  conMensaje(volverA(fd), "success", "Estado actualizado");
+  conMensaje(volverA(fd), "success", status === "canceled" ? "Sesión cancelada" : "Estado actualizado");
 }

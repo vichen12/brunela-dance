@@ -1,4 +1,5 @@
 "use client";
+import { IdiomasDeClase } from "@/components/idiomas-de-clase";
 import { SubirPortadaClase } from "@/components/subir-portada-clase";
 
 import { Desplegable } from "@/components/desplegable";
@@ -127,8 +128,6 @@ function VideoForm({
   materiales?: Opcion[];
   onGuardado: () => void;
 }) {
-  // Read-only: audio_tracks is owned by the mux worker, not by this form.
-  const muxedLocales = (video.audio_tracks ?? []).map((t) => t.locale);
 
   return (
     <form action={upsertVideoAction}>
@@ -267,23 +266,10 @@ function VideoForm({
 
 
       <div className="adr-caja" style={{ marginTop: 14 }}>
-        <Lbl>Pistas de audio por idioma</Lbl>
-        <div style={{ fontSize: 13, color: "#8A6F68", lineHeight: 1.65 }}>
-          {muxedLocales.length > 0 ? (
-            <>
-              Idiomas ya integrados en el video:{" "}
-              <strong style={{ color: "#3B2A2C" }}>
-                {["es", ...muxedLocales].join(", ").toUpperCase()}
-              </strong>
-            </>
-          ) : (
-            <>Solo espanol. Los idiomas extra se cargan al subir la clase, como un mp3 por idioma.</>
-          )}
-          <div style={{ marginTop: 6, fontSize: 12.5, color: "#B39189" }}>
-            Esto no se edita a mano: el worker de muxeo lo escribe cuando verifica que el
-            idioma quedo dentro del video.
-          </div>
-        </div>
+        <Lbl>Idiomas y subtítulos</Lbl>
+        {/* Antes este cuadro dependia de un programa aparte que nunca se
+            instalo, asi que ninguna clase tuvo otro idioma (2026-11-12). */}
+        <IdiomasDeClase bunnyVideoId={video.bunny_video_id} />
       </div>
 
 
@@ -362,7 +348,6 @@ export function EditarClase({
       <AdminDrawer
         abierto={abierto}
         titulo={video.title_i18n?.es ?? video.slug}
-        subtitulo={`/${video.slug}`}
         onCerrar={() => setAbierto(false)}
       >
         <VideoForm

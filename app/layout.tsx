@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Brunela Dance Trainer",
     locale: "es_ES",
-    images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: "Brunela Dance Trainer" }],
+    images: [{ url: "/brand/compartir.png", width: 1200, height: 630, alt: "Brunela Dance Trainer" }],
   },
   twitter: { card: "summary_large_image" },
   icons: {

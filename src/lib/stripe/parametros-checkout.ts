@@ -50,6 +50,12 @@ export const TEXTO_LEGAL_SUSCRIPCION =
   "Tenés 7 días de prueba gratis: si cancelás antes, no se cobra nada. " +
   "Pedís acceso inmediato al contenido digital y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.";
 
+/** Para quien ya uso su prueba gratis: se cobra hoy, y el texto no promete otra cosa. */
+export const TEXTO_LEGAL_SUSCRIPCION_SIN_PRUEBA =
+  "Al confirmar aceptás las Condiciones de contratación (bruneladance.com/legal/condiciones). " +
+  "Ya usaste tu prueba gratis: el primer cobro se hace hoy. " +
+  "Pedís acceso inmediato al contenido digital y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.";
+
 export const TEXTO_LEGAL_PACK =
   "Al pagar aceptás las Condiciones de contratación (bruneladance.com/legal/condiciones). " +
   "Pedís acceso inmediato a las clases del pack y reconocés que, una vez empezado, perdés el derecho de desistimiento de 14 días.";
@@ -67,7 +73,8 @@ export function parametrosCheckoutSuscripcion(a: {
     customer: a.customerId,
     line_items: [{ price: a.priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: a.trialDays,
+      // Stripe no acepta 0: sin prueba, el dato no se manda.
+      ...(a.trialDays > 0 ? { trial_period_days: a.trialDays } : {}),
       // 🔴 De aca lo lee el webhook (customer.subscription.*). Sin esto, el
       //    pago entra y la alumna no recibe el plan: trampa 1 con otro disfraz.
       metadata: { user_id: a.userId, tier: a.tier },
@@ -76,7 +83,7 @@ export function parametrosCheckoutSuscripcion(a: {
     success_url: a.destinos.successUrl,
     cancel_url: a.destinos.cancelUrl,
     allow_promotion_codes: true,
-    custom_text: { submit: { message: TEXTO_LEGAL_SUSCRIPCION } },
+    custom_text: { submit: { message: a.trialDays > 0 ? TEXTO_LEGAL_SUSCRIPCION : TEXTO_LEGAL_SUSCRIPCION_SIN_PRUEBA } },
   };
 }
 
@@ -92,9 +99,12 @@ export function parametrosCheckoutPack(a: {
    * con "agregar codigo promocional": con oferta, no hay campo de codigo.
    */
   cupon?: string | null;
+  /** Hasta cuando se puede pagar (segundos). null = lo que Stripe ponga. */
+  venceEn?: number | null;
 }): Stripe.Checkout.SessionCreateParams {
   return {
     mode: "payment",
+    ...(a.venceEn ? { expires_at: a.venceEn } : {}),
     ...(a.cupon ? { discounts: [{ coupon: a.cupon }] } : { allow_promotion_codes: true }),
     customer: a.customerId,
     line_items: [{ price: a.priceId, quantity: 1 }],

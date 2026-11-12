@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -119,7 +120,7 @@ export async function guardarPreciosDePlanesAction(fd: FormData) {
     .eq("setting_key", "subscriptions.catalog");
 
   if (error) {
-    redirect(`/admin/precios?error=${encodeURIComponent(error.message)}` as never);
+    redirect(`/admin/precios?error=${encodeURIComponent(legible(error))}` as never);
   }
 
   // El catalogo esta memoizado por request Y cacheado entre requests: sin esto,
@@ -149,7 +150,7 @@ export async function guardarPrecioDePackAction(fd: FormData) {
   const { error } = await supabase.from("packs").update(precio).eq("id", id);
 
   if (error) {
-    redirect(`/admin/precios?error=${encodeURIComponent(error.message)}` as never);
+    redirect(`/admin/precios?error=${encodeURIComponent(legible(error))}` as never);
   }
 
   const cobro = await asegurarPrecioDePack(supabase, id);

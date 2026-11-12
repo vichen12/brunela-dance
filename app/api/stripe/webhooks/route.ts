@@ -1,3 +1,4 @@
+import { fetchConReintento } from "@/src/lib/supabase/reintento";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { premiarReferente, quienPagoEnEvento } from "@/src/features/referidos/servidor";
@@ -9,7 +10,7 @@ import { alumnaParaBienvenida, type EventoParaBienvenida } from "@/src/features/
 
 function createServiceRoleClient() {
   const env = getStripeServerEnv();
-  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { global: { fetch: fetchConReintento } });
 }
 
 /** Por el catalogo y, si el codigo ya no esta ahi, por la marca del precio. */
@@ -182,7 +183,10 @@ async function syncSubscription(event: Stripe.Event): Promise<SyncOutcome> {
  *    estado deseado ya esta.
  */
 async function registrarCompraDePack(event: Stripe.Event): Promise<SyncOutcome> {
-  if (event.type !== "checkout.session.completed") {
+  // async_payment_succeeded: medios de pago que confirman despues (una
+  // transferencia). "completed" llega con 'unpaid' y se ignora; este es el que
+  // avisa que la plata entro. Sin el, esa alumna pagaba y no recibia el pack.
+  if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") {
     return { applied: false, reason: `evento ${event.type} no es una compra de pack` };
   }
 

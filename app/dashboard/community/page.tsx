@@ -133,7 +133,7 @@ export default async function CommunityPage({ searchParams }: {
       <style>{CSS}</style>
 
       {/* ── Canales ── */}
-      <aside className="chat-col-sidebar cm-lateral" aria-label="Canales">
+      <aside className="cm-lateral" aria-label="Canales">
         <div className="cm-lateral-cab">
           <div>
             <p className="cm-eyebrow">Comunidad</p>
@@ -199,7 +199,7 @@ export default async function CommunityPage({ searchParams }: {
           <div className="cm-chat-vacio">
             <span className="cm-chat-vacio-ico"><Users size={28} strokeWidth={1.6} aria-hidden="true" /></span>
             <p className="cm-chat-vacio-titulo">Elegí un canal</p>
-            <p>A la izquierda están los canales de tu plan.</p>
+            <p>Arriba o a la izquierda están los canales de tu plan.</p>
           </div>
         )}
       </div>
@@ -247,5 +247,21 @@ const CSS = `
 .cm-burbuja.es-brunela strong { color: var(--pink-deep); }
 .cm-burbuja.es-mia { align-self: flex-end; border-radius: 20px 20px 6px 20px; border-color: transparent; background: var(--pink-mid); color: #fff; box-shadow: 0 12px 22px -16px rgba(217,52,56,.9); }
 @media (max-width: 640px) { .cm-chat-cab { padding: 12px 16px; } }
+/* Celular: los canales pasan a una fila deslizable arriba del chat. Antes se
+   escondian y no habia forma de cambiar de canal (2026-11-12). */
+@media (max-width: 767px) {
+  .cm { flex-direction: column; height: calc(100dvh - 96px); }
+  .cm-lateral { width: auto; flex-shrink: 0; border-right: 0; border-bottom: 1px solid var(--linea); }
+  .cm-chat { min-height: 0; }
+  .cm-lateral-cab { display: none; }
+  .cm-salas { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 10px 80px 10px 12px; gap: 8px; scrollbar-width: none; }
+  .cm-salas::-webkit-scrollbar { display: none; }
+  .cm-sala { flex-shrink: 0; background: #fff; border: 1px solid var(--linea); }
+  .cm-sala.es-activa { border-color: var(--pink-line); }
+  .cm-sala-link { padding: 6px 12px 6px 6px; min-height: 44px; }
+  .cm-sala-ico { width: 32px; height: 32px; border-radius: 11px; }
+  .cm-sala-sub { display: none; }
+  .cm-sala-nombre { max-width: 160px; }
+}
 @media (prefers-reduced-motion: reduce) { .cm-burbuja, .cm-chat-vacio-ico { animation: none; } }
 `;

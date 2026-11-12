@@ -36,13 +36,15 @@ type Props = {
   /** Abre la lista con el foco puesto (al tocar "Cambiar" en un dia). */
   autoFocus?: boolean;
   placeholder?: string;
+  /** Que se elige, para el texto de "no hay": "clase" por defecto (antes decia "clase" tambien buscando alumnas). */
+  queEs?: { singular: string; plural: string; femenino?: boolean };
   etiqueta?: string;
   /** Valor inicial (p. ej. al editar un dia que ya tiene clase). */
   defaultValue?: string;
   onChange?: (valor: string) => void;
 };
 
-export function ElegirConBuscador({ opciones, fijas = [], name, required, placeholder = "Buscá por título…", etiqueta, defaultValue = "", onChange, autoFocus }: Props) {
+export function ElegirConBuscador({ opciones, fijas = [], name, required, placeholder = "Buscá por título…", etiqueta, defaultValue = "", onChange, autoFocus, queEs = { singular: "clase", plural: "clases", femenino: true } }: Props) {
   const id = useId();
   const inicial = [...fijas, ...opciones].find((o) => o.value === defaultValue);
   const [valor, setValor] = useState(inicial ? defaultValue : "");
@@ -199,7 +201,7 @@ export function ElegirConBuscador({ opciones, fijas = [], name, required, placeh
           })}
           {visibles.length === fijas.length && (
             <li className="ecb-nada" role="presentation">
-              {opciones.length === 0 ? "Todavía no hay clases." : <>Ninguna clase coincide con «{texto}».</>}
+              {opciones.length === 0 ? `Todavía no hay ${queEs.plural}.` : <>{queEs.femenino ? "Ninguna" : "Ningún"} {queEs.singular} coincide con «{texto}».</>}
             </li>
           )}
         </ul>

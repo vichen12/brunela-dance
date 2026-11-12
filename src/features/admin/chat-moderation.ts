@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -78,7 +79,7 @@ export async function banearUsuarioAction(input: {
     { onConflict: "user_id" }
   );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: legible(error) };
 
   revalidatePath("/dashboard/community");
   revalidatePath("/admin/chat");

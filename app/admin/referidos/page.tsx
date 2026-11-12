@@ -37,16 +37,21 @@ export default async function AdminReferidosPage() {
       <AdminCabecera
         eyebrow="Comunidad"
         titulo="Referidos"
-        lede="Cada alumna tiene su enlace en «Invitá a una amiga». Cuando una amiga que entró con ese enlace paga por primera vez, la que la invitó gana un mes gratis: se le descuenta solo de su próximo cobro."
+        lede="Las alumnas invitan amigas y ganan un mes gratis. Funciona solo: vos no tenés que hacer nada, acá ves cómo va."
       />
+      <ol className="arf-pasos">
+        <li><span>1</span><p><strong>Cada alumna tiene su enlace</strong> en su menú, en «Invitá a una amiga», y se lo manda a quien quiera.</p></li>
+        <li><span>2</span><p><strong>La amiga entra desde ese enlace</strong> y se crea su cuenta. Queda anotada acá abajo.</p></li>
+        <li><span>3</span><p><strong>Cuando la amiga paga su primer mes</strong>, a la que la invitó se le descuenta un mes entero de su próximo cobro, sin que nadie haga nada.</p></li>
+      </ol>
       {falta ? (
-        <p className="arf-aviso">Para activar los referidos falta correr la migración 20261026_4_referidos.sql en Supabase.</p>
+        <p className="arf-aviso">Los referidos todavía no están activados. Avisale a quien te arma la web y se arregla sin perder nada.</p>
       ) : (
         <>
           <AdminCifras items={[
             { label: "Amigas que se sumaron", value: filas.length, sub: "con un enlace de invitación" },
             { label: "Meses gratis dados", value: otorgados.length, sub: "ya pagaron su primer mes" },
-            { label: "Descontado", value: `${euros.toLocaleString("es-ES")} €`, sub: "en créditos de Stripe" },
+            { label: "Descontado", value: `${euros.toLocaleString("es-ES")} €`, sub: "en meses regalados" },
           ]} />
           {filas.length === 0 ? (
             <p className="arf-vacio">Todavía no se sumó nadie con un enlace de invitación.</p>
@@ -76,6 +81,11 @@ export default async function AdminReferidosPage() {
 
 const CSS = `
 .arf { display: flex; flex-direction: column; gap: 14px; }
+.arf-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.arf-pasos li { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 20px; background: #fff; border: 1px solid var(--linea); }
+.arf-pasos span { width: 32px; height: 32px; flex-shrink: 0; border-radius: 11px; display: grid; place-items: center; background: var(--rubor); color: var(--pink-deep); font-weight: 900; }
+.arf-pasos p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.arf-pasos strong { color: var(--ink); }
 .arf-aviso { margin: 0; padding: 16px 18px; border-radius: 18px; background: #FFF4E8; color: var(--melocoton-deep); font-weight: 700; }
 .arf-vacio { margin: 0; padding: 22px; border-radius: 22px; border: 1.5px dashed var(--linea-fuerte); background: var(--crema); color: var(--muted); text-align: center; }
 .arf-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

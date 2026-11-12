@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -62,7 +63,7 @@ export async function upsertDocumentAction(formData: FormData) {
     ? await supabase.from("documents").update(payload).eq("id", parsed.data.id)
     : await supabase.from("documents").insert(payload);
 
-  if (result.error) redirectMsg("error", result.error.message);
+  if (result.error) redirectMsg("error", legible(result.error));
 
   revalidatePath("/admin/documents");
   revalidatePath("/dashboard/documents");
@@ -74,7 +75,7 @@ export async function deleteDocumentAction(formData: FormData) {
   const supabase = await createSupabaseAdminClient();
   const id = String(formData.get("id") ?? "");
   const { error } = await supabase.from("documents").delete().eq("id", id);
-  if (error) redirectMsg("error", error.message);
+  if (error) redirectMsg("error", legible(error));
   revalidatePath("/admin/documents");
   redirectMsg("success", "Documento eliminado.");
 }

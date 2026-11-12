@@ -71,7 +71,10 @@ export function Notificaciones({
   vacio = "Estás al día. Acá vas a ver las novedades del estudio y las invitaciones de Brunela.",
   clave = CLAVE_ALUMNA,
   chatComoAdmin = false,
+  refrescarAnuncios = false,
 }: {
+  /** Area de alumna: vuelve a pedir los anuncios al volver a la pestaña (ver /api/notificaciones). */
+  refrescarAnuncios?: boolean;
   items: Notificacion[];
   /** Para armar en vivo los avisos de chat: a quien se le escribio y a donde lleva. */
   chatComoAdmin?: boolean;
@@ -86,7 +89,33 @@ export function Notificaciones({
   // renderizar al navegar, y un mensaje nuevo no llegaba a la campanita hasta
   // recargar (2026-10-27). Mientras el almacen no arranca, los del servidor.
   const chatVivo = useAvisosDeChat(chatComoAdmin);
-  const items = chatVivo ? [...chatVivo, ...itemsServidor.filter((i) => !(i.tipo === "mensaje" && i.id.startsWith("chat-")))] : itemsServidor;
+
+  // Los ANUNCIOS se vuelven a pedir al volver a la pestaña y cada 5 minutos
+  // (2026-11-11): el layout no se redibuja al navegar, y un anuncio publicado
+  // con la alumna ya adentro no aparecia hasta recargar. null = los del servidor.
+  const [anunciosVivos, setAnunciosVivos] = useState<Notificacion[] | null>(null);
+  useEffect(() => {
+    if (!refrescarAnuncios) return;
+    let ultima = Date.now();
+    let vivo = true;
+    const pedir = async () => {
+      if (document.visibilityState !== "visible" || Date.now() - ultima < 60_000) return;
+      ultima = Date.now();
+      try {
+        const r = await fetch("/api/notificaciones", { cache: "no-store" });
+        if (!r.ok) return;
+        const d = (await r.json()) as { anuncios?: Notificacion[] };
+        if (vivo && Array.isArray(d.anuncios)) setAnunciosVivos(d.anuncios);
+      } catch { /* sin conexion: quedan los que habia */ }
+    };
+    document.addEventListener("visibilitychange", pedir);
+    window.addEventListener("focus", pedir);
+    const cada = window.setInterval(pedir, 5 * 60_000);
+    return () => { vivo = false; document.removeEventListener("visibilitychange", pedir); window.removeEventListener("focus", pedir); window.clearInterval(cada); };
+  }, [refrescarAnuncios]);
+
+  const delServidor = anunciosVivos ? [...itemsServidor.filter((i) => i.tipo !== "anuncio"), ...anunciosVivos] : itemsServidor;
+  const items = chatVivo ? [...chatVivo, ...delServidor.filter((i) => !(i.tipo === "mensaje" && i.id.startsWith("chat-")))] : delServidor;
   const [abierto, setAbierto] = useState(false);
   const [vistas, setVistas] = useState<Set<string>>(new Set());
   const [listo, setListo] = useState(false);
@@ -104,6 +133,27 @@ export function Notificaciones({
   }, [abierto]);
 
   const nuevas = listo ? items.filter((i) => !vistas.has(i.id)).length : 0;
+
+  // Abrir la campanita ES verla (2026-11-11: "si entro, que se salga"). Al
+  // cerrarla, lo que mostro queda leido y el numerito se apaga solo; antes
+  // habia que tocar "Marcar como leidas". Mientras esta abierta los puntitos
+  // siguen, para que se note que es lo nuevo.
+  //
+  // Los avisos de CHAT no entran aca: esos se leen al abrir la conversacion,
+  // y apagarlos por mirar la campanita esconderia un mensaje sin leer.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const estabaAbierto = useRef(false);
+  useEffect(() => {
+    if (estabaAbierto.current && !abierto) {
+      setVistas((previas) => {
+        const s = new Set([...previas, ...itemsRef.current.filter((i) => !(i.tipo === "mensaje" && i.id.startsWith("chat-"))).map((i) => i.id)]);
+        try { localStorage.setItem(clave, JSON.stringify([...s].slice(-200))); } catch { /* sin almacenamiento: no pasa nada */ }
+        return s;
+      });
+    }
+    estabaAbierto.current = abierto;
+  }, [abierto, clave]);
 
   function marcarTodas() {
     const s = new Set([...vistas, ...items.map((i) => i.id)]);

@@ -15,6 +15,8 @@ import { Paginacion, hrefConPagina } from "@/components/paginacion";
 import { esFaltaDeColumnaPlanes, normalizarPlanesDeCompra, planesDeCompraEnTexto } from "@/src/features/studio/packs-reglas";
 
 export const dynamic = "force-dynamic";
+// Avisar un pack nuevo manda mails en after(): con margen para terminarlos.
+export const maxDuration = 60;
 
 /**
  * Packs de clases.
@@ -62,11 +64,11 @@ export default async function AdminPacksPage({
 }) {
   await requireAdmin();
   const params = (await searchParams) ?? {};
-  const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  const error = typeof params.error === "string" ? params.error : null;
   // Las acciones de oferta vuelven con ?success= (src/features/admin/ofertas-actions.ts).
   // Sin mostrarlo, el panel se cerraba sin ningun "listo" y la tarjeta seguia
   // con el precio normal: parecia que no se habia guardado.
-  const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
+  const success = typeof params.success === "string" ? params.success : null;
 
   const supabase = await createSupabaseServerClient();
 

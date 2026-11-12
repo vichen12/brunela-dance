@@ -1,3 +1,4 @@
+import { rutaPropia } from "@/src/lib/ruta-propia";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   COOKIE_ACCESO,
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
    *    de Brunela termina mandando gente afuera. Solo se aceptan rutas internas
    *    que empiecen con una sola barra.
    */
-  const seguro = /^\/(?!\/)[^\s]*$/.test(destino) ? destino : "/";
+  const seguro = rutaPropia(destino, "/");
 
   const respuesta = NextResponse.redirect(new URL(seguro, request.url), { status: 303 });
 

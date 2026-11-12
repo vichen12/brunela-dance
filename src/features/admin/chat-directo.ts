@@ -1,3 +1,4 @@
+import { legible } from "@/src/features/admin/mensaje-legible";
 import type { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
 
 /**
@@ -60,7 +61,7 @@ export async function escribirleALaAlumna(db: Db, adminId: string, alumnaId: str
       author_name: yo?.full_name ?? "Brunela",
       author_is_admin: true,
     });
-    return error ? error.message : null;
+    return error ? legible(error) : null;
   } catch (e) {
     return (e as Error).message;
   }

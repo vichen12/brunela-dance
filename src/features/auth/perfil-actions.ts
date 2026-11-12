@@ -1,5 +1,6 @@
 "use server";
 
+import { mensajeDeCuenta } from "@/src/features/auth/mensaje-de-cuenta";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/src/features/auth/guards";
@@ -23,7 +24,7 @@ export async function guardarMiPerfilAction(fd: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("profiles").update({ full_name: nombre }).eq("id", user.id);
-  if (error) redirect(`${volver}?error=${encodeURIComponent(error.message)}` as never);
+  if (error) redirect(`${volver}?error=${encodeURIComponent(mensajeDeCuenta(error, "No se pudo guardar. Probá de nuevo."))}` as never);
 
   // El nombre sale en los menus de los dos layouts.
   revalidatePath("/", "layout");

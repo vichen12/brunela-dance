@@ -284,10 +284,10 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
       <AdminBuscador
         action="/admin/programs"
         q={q}
-        placeholder="Buscar por título o dirección"
+        placeholder="Buscar por título"
         // Sugerencias mientras se escribe, como en Clases. Se busca entre TODOS
         // los planes (son pocos), no solo los de esta pagina.
-        entrada={<BuscadorDeClases de="plan" q={q} placeholder="Buscar por título o dirección" clases={planesParaBuscar} />}
+        entrada={<BuscadorDeClases de="plan" q={q} placeholder="Buscar por título" clases={planesParaBuscar} />}
         filtros={[
           { name: "estado", valor: fEstadoProg, etiqueta: "Estado", opciones: ESTADOS_PROG },
           { name: "plan", valor: fPlanProg, etiqueta: "Lo ve", opciones: OPC_PLAN },

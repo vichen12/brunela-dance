@@ -19,6 +19,24 @@ import { getCurrentProfile } from "@/src/features/auth/profile";
 import { bunnySignedUrls, bunnyVideoIdFromUrl, hasBunnyStreamEnv } from "@/src/lib/video/bunny";
 import { VideoPlayerPanel } from "@/components/video-player-panel";
 import { portadaDeClase } from "@/src/lib/video/portada";
+import { leerIdiomasDeClase } from "@/src/lib/audio/idiomas";
+import { createSupabaseAdminClient } from "@/src/lib/supabase/admin";
+import { normalizarPlanes, planesDesde, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
+import { Lock } from "lucide-react";
+
+const CSS_AJENA = `
+.fca { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: center; margin-top: 18px; padding: 22px; border-radius: 28px; background: #fff; border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.fca-foto { position: relative; aspect-ratio: 16/9; border-radius: 20px; overflow: hidden; background: var(--rubor); display: grid; place-items: center; color: var(--pink); }
+.fca-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.85); }
+.fca-candado { position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.92); color: var(--pink-deep); }
+.fca-txt { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.fca-eti { margin: 0; padding: 4px 12px; border-radius: 99px; background: #FFF4E8; color: #7A3E24; font-size: 12px; font-weight: 800; }
+.fca-tit { margin: 0; font-family: var(--font-display, serif); font-size: clamp(26px, 3.4vw, 36px); line-height: 1.1; color: var(--ink); font-weight: 500; }
+.fca-sub { margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+.fca-sub strong { color: var(--ink); }
+.fca-btn { margin-top: 4px; height: 48px; padding: 0 22px; display: inline-flex; align-items: center; gap: 8px; border-radius: 99px; background: var(--pink); color: #fff; font-weight: 800; text-decoration: none; box-shadow: 0 14px 26px -14px rgba(230,79,85,.85); }
+@media (max-width: 760px) { .fca { grid-template-columns: 1fr; gap: 18px; padding: 16px; } }
+`;
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -83,7 +101,43 @@ export default async function VideoDetailPage({ params, searchParams }: { params
     .eq("slug", slug)
     .maybeSingle<VideoRecord>();
 
-  if (videoError || !video) notFound();
+  if (videoError || !video) {
+    // ¿Existe pero no es de su plan? Antes era "pagina no encontrada" para
+    // cualquier link a una clase de otro plan (Novedades, un link que le
+    // pasaron). Ahora se le dice que plan la trae (2026-11-12).
+    // service_role y solo titulo, planes y portada: nunca con que reproducirla.
+    const { data: ajena } = await createSupabaseAdminClient()
+      .from("videos")
+      .select("title_i18n, planes_permitidos, membership_tier_required, thumbnail_url, stream_playback_id")
+      .eq("slug", slug).eq("status", "published")
+      .maybeSingle<{ title_i18n: Record<string, string>; planes_permitidos: string[] | null; membership_tier_required: string; thumbnail_url: string | null; stream_playback_id: string | null }>();
+    if (!ajena) notFound();
+    const planes = normalizarPlanes(ajena.planes_permitidos?.length ? ajena.planes_permitidos : planesDesde(ajena.membership_tier_required));
+    const portada = portadaDeClase({ thumbnail_url: ajena.thumbnail_url, stream_playback_id: null });
+    return (
+      <main className="fc-fondo">
+        <style>{CSS_FICHA + CSS_AJENA}</style>
+        <div className="fc">
+          <nav className="fc-migas" aria-label="Estás en">
+            <Link href={"/dashboard/library" as never} className="fc-volver"><ArrowLeft size={15} strokeWidth={2.4} aria-hidden="true" /> Biblioteca</Link>
+          </nav>
+          <section className="fca">
+            <div className="fca-foto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {portada ? <img src={portada} alt="" /> : <Lock size={34} strokeWidth={2} aria-hidden="true" />}
+              <span className="fca-candado"><Lock size={18} strokeWidth={2.4} aria-hidden="true" /></span>
+            </div>
+            <div className="fca-txt">
+              <p className="fca-eti">Clase de otro plan</p>
+              <h1 className="fca-tit">{resolveI18nText(ajena.title_i18n)}</h1>
+              <p className="fca-sub">Esta clase está en {planes.length === 1 ? "el plan" : "los planes"} <strong>{planesEnTexto(planes).replace(/^Solo /, "")}</strong>. Si querés verla, podés cambiar tu plan cuando quieras.</p>
+              <Link href={"/dashboard/plan" as never} className="fca-btn">Ver planes <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" /></Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   const progressQ = supabase
     .from("user_progress")
@@ -135,6 +189,8 @@ export default async function VideoDetailPage({ params, searchParams }: { params
   const posterSrc = portadaDeClase(video) ?? signed?.thumbnail ?? null;
   const resumeFrom = progress?.last_position_seconds ?? 0;
   const playerAudioTracks = (video.audio_tracks ?? []).map((t) => ({ locale: t.locale, label: t.label }));
+  // Idiomas extra y subtitulos subidos aparte (opcionales; nunca lanza).
+  const idiomas = playbackSrc ? await leerIdiomasDeClase(bunnyId) : { audios: [], subtitulos: [] };
 
   const planes = (relatedPrograms ?? [])
     .map((item) => {
@@ -176,11 +232,14 @@ export default async function VideoDetailPage({ params, searchParams }: { params
                 audioTracks={playerAudioTracks}
                 durationSeconds={video.duration_seconds}
                 initialPositionSeconds={resumeFrom}
+                maxPrevioSeconds={progress?.max_position_seconds ?? 0}
                 preferredLocale={profile?.preferred_locale ?? "es"}
                 videoId={video.id}
                 videoSlug={video.slug}
                 programId={programId || null}
                 programDayNumber={programDayNumber}
+                audiosExternos={idiomas.audios}
+                subtitulosExternos={idiomas.subtitulos}
               />
             ) : (
               <div className="fc-preparando" style={posterSrc ? undefined : { background: thumbBg }}>

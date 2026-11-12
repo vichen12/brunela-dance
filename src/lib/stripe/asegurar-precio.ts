@@ -52,9 +52,15 @@ export async function asegurarPrecio(p: PedidoDePrecio): Promise<{ id: string; c
   if (p.actual) {
     try {
       viejo = await stripe.prices.retrieve(p.actual);
-    } catch {
+    } catch (e) {
       // No existe en este modo (codigo mal pegado, o de prueba en produccion):
       // se crea uno bueno y listo.
+      //
+      // 🔴 SOLO si Stripe dice "no existe" (2026-11-12). Antes cualquier error
+      //    caia aca: con un corte de red se creaba un producto y un precio
+      //    nuevos y el bueno quedaba huerfano, sin archivar y sin marca; las
+      //    alumnas que pagaban con el viejo dejaban de reconocerse.
+      if ((e as { code?: string })?.code !== "resource_missing") throw e;
       viejo = null;
     }
   }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getPlanesConPrivadas } from "@/src/features/studio/sesiones-privadas-config";
+import type { PlanPago } from "@/src/features/studio/planes-de-sesion";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Heart, BookOpen, CalendarPlus, Lock, CalendarCheck, CalendarDays, Check, CreditCard, Gift, Mail, MessageCircle, Package, PlayCircle, Send, Sparkles, Target, UserPlus, X } from "lucide-react";
 import { AccesoGratisControles, ChipGratis, type EstadoGratis } from "@/components/acceso-gratis-admin";
@@ -39,7 +41,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function fecha(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" });
 }
 
 /**
@@ -94,7 +96,10 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
   // y canceladas recientes, hasta 6.
   const privadasProximas = privadas.filter((s) => s.estado === "agendada" && finDe(s) > ahoraMs).reverse();
   const privadasPasadas = privadas.filter((s) => !(s.estado === "agendada" && finDe(s) > ahoraMs)).slice(0, 6);
-  const esPrincipal = tierData?.membership_tier === "principal";
+  // Que planes traen privadas lo configura Brunela (2026-11-10); antes aca
+  // decia "Principal" fijo aunque hubiera sumado otro plan.
+  const planesConPrivadas = await getPlanesConPrivadas();
+  const esPrincipal = planesConPrivadas.includes(tierData?.membership_tier as PlanPago);
   const privadasDelMes = contarDelMes(privadas, claveMes(ahoraMs));
   const salaId = salas?.[0]?.id ?? null;
   const { data: mensajesData } = salaId
@@ -396,13 +401,13 @@ export default async function FichaAlumnaPage({ params, searchParams }: Props) {
         </section>
       </div>
 
-      {/* Sesiones privadas 1 a 1 (el plan Principal trae 2 por mes) */}
+      {/* Sesiones privadas 1 a 1 (los planes configurados traen un cupo por mes) */}
       <section id="privadas" className="fa-tarjeta fa-ancla">
         <div className="fa-tarjeta-cab">
           <span className="fa-burbuja fa-burbuja--melo"><Lock size={18} strokeWidth={2.2} aria-hidden="true" /></span>
           <div>
             <h2 className="fa-h2">Sesiones privadas</h2>
-            <p className="fa-sub">{esPrincipal ? "Su plan Principal trae 2 por mes." : "Uno a uno, por Meet o Zoom."}</p>
+            <p className="fa-sub">{esPrincipal ? `Su plan trae ${CUPO_MENSUAL} por mes.` : "Uno a uno, por Meet o Zoom."}</p>
           </div>
           {privadasDisponible && esPrincipal && <span className="fa-mini-cupo"><CupoMes hechas={privadasDelMes} cupo={CUPO_MENSUAL} /></span>}
         </div>

@@ -111,7 +111,10 @@ export function PlanClient({
   packs = [],
   planGratis = null,
   aviso = null,
+  yaTuvoPrueba = false,
 }: {
+  /** Ya tuvo una suscripcion: la prueba gratis es una sola vez y el boton no la promete. */
+  yaTuvoPrueba?: boolean;
   currentTier: Tier;
   /** El plan que esta usando GRATIS (acceso regalado por la admin), o null. */
   planGratis?: Tier | null;
@@ -214,7 +217,7 @@ export function PlanClient({
   useEffect(() => {
     // ⚠️ `!catalog` NO frena el camino del pack: un pack no sale del catalogo de
     //    suscripciones. Por eso la comprobacion del pack va antes.
-    if (autoIntentado || hasActiveSub) return;
+    if (autoIntentado) return;
 
     const q = new URLSearchParams(window.location.search);
     if (q.get('iniciar') !== '1') return;
@@ -229,7 +232,9 @@ export function PlanClient({
       return;
     }
 
-    if (!catalog) return;
+    // Un pack lo compra tambien quien ya tiene plan (antes este corte estaba
+    // arriba y a esa alumna el pack elegido se le perdia). Un plan, no.
+    if (!catalog || hasActiveSub) return;
 
     const pedido = q.get('plan');
     const valido = orderedTiers.find((t) => t.tier === pedido);
@@ -486,7 +491,7 @@ export function PlanClient({
                           ? 'Redirigiendo…'
                           : hasActiveSub ? 'Cambiar a este plan'
                           : planGratis === entry.tier ? `Seguir con ${meta.name}`
-                          : isUpgrade ? 'Empezar 7 días gratis' : 'Cambiar a este plan'}
+                          : isUpgrade ? (yaTuvoPrueba ? 'Elegir este plan' : 'Empezar 7 días gratis') : 'Cambiar a este plan'}
                       </button>
                     )}
                   </div>

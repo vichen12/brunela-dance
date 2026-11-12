@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -72,12 +73,12 @@ export async function guardarCamposDePortadaAction(formData: FormData) {
     const { error } = await supabase
       .from("landing_texts")
       .upsert(pendientes, { onConflict: "key" });
-    if (error) volver("error", error.message);
+    if (error) volver("error", legible(error));
   }
 
   if (aBorrar.length > 0) {
     const { error } = await supabase.from("landing_texts").delete().in("key", aBorrar);
-    if (error) volver("error", error.message);
+    if (error) volver("error", legible(error));
   }
 
   refrescar();
@@ -125,7 +126,7 @@ export async function crearPreguntaAction(formData: FormData) {
     is_published: false,
     ...traducciones,
   });
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
 
   refrescar();
   volver("success", "Pregunta creada. Publicala cuando esté lista.");
@@ -164,7 +165,7 @@ export async function editarPreguntaAction(formData: FormData) {
     .from("landing_faq")
     .update(traducciones)
     .eq("id", id);
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
 
   refrescar();
   volver("success", "Listo, se guardó la pregunta.");
@@ -192,7 +193,7 @@ export async function publicarPreguntaAction(formData: FormData) {
       "error",
       error.message.includes("landing_faq_publicada_tiene_contenido")
         ? "Esa pregunta está vacía: escribile la pregunta y la respuesta antes de publicarla."
-        : error.message
+        : legible(error)
     );
   }
 
@@ -208,7 +209,7 @@ export async function borrarPreguntaAction(formData: FormData) {
 
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("landing_faq").delete().eq("id", id);
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
 
   refrescar();
   volver("success", "Pregunta borrada.");
@@ -258,7 +259,7 @@ export async function moverPreguntaAction(formData: FormData) {
       { id: a.id, display_order: b.display_order },
       { id: b.id, display_order: a.display_order },
     ]);
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
 
   refrescar();
   volver("success", "Listo, se movió.");

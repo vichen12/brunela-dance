@@ -61,7 +61,7 @@ function mmss(segundos: number) {
 function fechaCorta(iso: string | null) {
   if (!iso) return null;
   return new Date(iso)
-    .toLocaleDateString("es-ES", { day: "numeric", month: "long" })
+    .toLocaleDateString("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" })
     .replace(" de ", " ");
 }
 
@@ -274,7 +274,7 @@ export default async function DashboardLibraryPage({ searchParams }: { searchPar
   // ⚠️ El checkout de packs vuelve aca con ?success=. Antes nadie lo leia: la
   //    alumna pagaba y aterrizaba en la biblioteca SIN NINGUNA confirmacion,
   //    con un parametro en la URL que no dibujaba nada.
-  const avisoCompra = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
+  const avisoCompra = typeof params.success === "string" ? params.success : null;
   const activeCategory = typeof params.category === "string" ? params.category : "all";
   const busqueda = (typeof params.q === "string" ? params.q : "").trim();
 

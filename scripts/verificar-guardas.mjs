@@ -228,7 +228,7 @@ const avisos = [];
     const rel = relative(RAIZ, p).replace(/\\/g, "/");
     if (RUTAS_CON_OTRA_AUTH.has(rel)) continue;
     const src = readFileSync(p, "utf8");
-    if (!/requireAdmin|requireUser|auth\.getUser\s*\(/.test(src)) {
+    if (!/requireAdmin|requireUser|usuarioDeApi|auth\.getUser\s*\(/.test(src)) {
       fallos.push(`${rel} no comprueba quien llama`);
     }
     // Una ruta bajo /api/admin tiene que exigir admin, no solo sesion.

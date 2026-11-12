@@ -191,7 +191,7 @@ export const publicMessages = {
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
-    "footer.place": "Barcelona y online",
+    "footer.place": "Barcelona y Online",
     "footer.nav.home": "Inicio",
     "footer.nav.classes": "Clases",
     "footer.nav.studio": "Estudio",
@@ -518,7 +518,7 @@ export const publicMessages = {
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Ballet - PBT - PCT - Pilates - Stretching",
-    "footer.place": "Barcelona and online",
+    "footer.place": "Barcelona and Online",
     "footer.nav.home": "Home",
     "footer.nav.classes": "Classes",
     "footer.nav.studio": "Studio",
@@ -1172,7 +1172,7 @@ export const publicMessages = {
 
     "footer.subtitle": "Dance Trainer",
     "footer.services": "Balletto - PBT - PCT - Pilates - Stretching",
-    "footer.place": "Barcellona e online",
+    "footer.place": "Barcellona e Online",
     "footer.nav.home": "Home",
     "footer.nav.classes": "Lezioni",
     "footer.nav.studio": "Studio",

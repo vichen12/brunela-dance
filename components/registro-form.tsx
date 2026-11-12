@@ -1,6 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
+
+/**
+ * El boton lee el estado del formulario (2026-11-12). Antes un useState se
+ * prendia al enviar y nunca se apagaba: si el alta volvia con un error, el
+ * boton quedaba en "Creando tu cuenta..." y no se podia reintentar.
+ */
+function BotonCrear() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="auth-submit" disabled={pending}>
+      {pending ? "Creando tu cuenta…" : "Crear cuenta"}
+    </button>
+  );
+}
 import { signUpAction } from "@/src/features/auth/registro";
 
 type Props = {
@@ -13,11 +28,10 @@ type Props = {
 };
 
 export function RegistroForm({ error, plan, interval, pack, email }: Props) {
-  const [enviando, setEnviando] = useState(false);
   const [verClave, setVerClave] = useState(false);
 
   return (
-    <form action={signUpAction} onSubmit={() => setEnviando(true)} className="auth-form">
+    <form action={signUpAction} className="auth-form">
       {/* El plan y el intervalo elegidos en la landing viajan escondidos hasta
           signUpAction, que los guarda en user_metadata. */}
       {plan && <input type="hidden" name="plan" value={plan} />}
@@ -80,9 +94,7 @@ export function RegistroForm({ error, plan, interval, pack, email }: Props) {
         </span>
       </label>
 
-      <button type="submit" className="auth-submit" disabled={enviando}>
-        {enviando ? "Creando tu cuenta…" : "Crear cuenta"}
-      </button>
+      <BotonCrear />
 
       {/* Mismas clases que sign-in-form.tsx: las dos pantallas tienen que
           verse como la misma puerta. El CSS antes estaba duplicado en los dos

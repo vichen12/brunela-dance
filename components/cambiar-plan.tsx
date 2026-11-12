@@ -64,6 +64,7 @@ export function CambiarPlan({
       if (!r.ok) { setEstado('error'); setMensaje(data.error ?? 'No pudimos cambiar el plan.'); return; }
       // El banco pide verificar el pago: el plan cambia cuando se pague.
       if (data.estado === 'pendiente' && data.url) { window.location.href = data.url; return; }
+      if (data.estado === 'pendiente') { setEstado('error'); setMensaje('Tu banco todavía no aprobó el cobro, así que tu plan sigue como estaba. Revisá tu tarjeta en «Gestionar» y probá de nuevo.'); return; }
       setEstado('hecho');
       // El plan nuevo lo escribe el aviso de Stripe (webhook), que llega en segundos.
       window.setTimeout(() => window.location.reload(), 2500);

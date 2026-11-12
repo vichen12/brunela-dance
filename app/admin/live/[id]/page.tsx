@@ -12,6 +12,7 @@ import {
   subirMaterialDeSesionAction,
 } from "@/src/features/admin/live-material-actions";
 import { idsMaterial } from "@/src/features/studio/material-sesion";
+import { leerPlanesDeSesiones, planesDesde, planMinimo, planesEnTexto } from "@/src/features/studio/planes-de-sesion";
 import { CampoEnlace, EditarSesion, Invitaciones, type LiveSession } from "@/components/admin-live-drawer";
 import { guardarEnlaceSesionAction, quitarEnlaceSesionAction } from "@/src/features/admin/live-enlace-actions";
 import { NOMBRE_PROVEEDOR, proveedorDe } from "@/src/features/studio/enlace-clase";
@@ -131,7 +132,13 @@ export default async function AdminLivePerfilPage({
   const link = (linkData as { join_url: string; passcode: string | null; provider: string | null } | null) ?? null;
   const proveedor = link ? proveedorDe(link.provider, link.join_url) : null;
 
-  const session: LiveSession = { ...s, bookings_count: ocupadas, access_link: link, invitations };
+  // Los planes se leen APARTE (tolerante a la migracion 20261109). Antes esta
+  // pantalla no los leia y el formulario arrancaba con "del minimo para
+  // arriba": guardar cualquier cambio le reescribia a la sesion los planes
+  // elegidos (2026-11-12).
+  const planesGuardados = (await leerPlanesDeSesiones(supabase, [s.id])).get(s.id);
+  const planes = planesGuardados?.length ? planesGuardados : planesDesde(s.membership_tier_required);
+  const session: LiveSession = { ...s, planes_permitidos: planes, bookings_count: ocupadas, access_link: link, invitations };
 
   // Material: ids del metadata, resueltos contra la tabla. Uno que ya no existe
   // (borrado desde Documentos) se muestra como tal para poder quitarlo.
@@ -255,7 +262,7 @@ export default async function AdminLivePerfilPage({
         <div className="lp-hero-txt">
           <div className="lp-chips">
             <span className={"lp-chip " + st.clase}>{st.label}</span>
-            <span className={"lp-plan " + (PLAN_CLASE[s.membership_tier_required] ?? "")}>{PLAN[s.membership_tier_required]}</span>
+            <span className={"lp-plan " + (PLAN_CLASE[planMinimo(planes)] ?? "")}>{planesEnTexto(planes)}</span>
             {pasada && s.status === "scheduled" && <span className="lp-chip es-hecha">Ya pasó · falta completarla</span>}
           </div>
           <h1 className="lp-titulo">{titulo}</h1>

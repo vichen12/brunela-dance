@@ -1,3 +1,4 @@
+import { legible } from "@/src/features/admin/mensaje-legible";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { stripeMode } from "@/src/lib/stripe/catalog";
 import { asegurarPrecio } from "@/src/lib/stripe/asegurar-precio";
@@ -48,7 +49,7 @@ export async function asegurarPrecioDePack(
     });
     if (id !== pack[columna]) {
       const { error } = await supabase.from("packs").update({ [columna]: id }).eq("id", pack.id);
-      if (error) return { fallo: error.message };
+      if (error) return { fallo: legible(error) };
     }
     return { ok: true };
   } catch (e) {

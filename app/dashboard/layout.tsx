@@ -194,7 +194,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <div className="dashboard-content zona-app" style={{ flex: 1, minWidth: 0, overflowX: "hidden", position: "relative" }}>
           {/* Campanita: invitaciones y anuncios, arriba a la derecha. */}
-          <div className="nt-barra"><Notificaciones items={[...chatsComoNotificaciones(chats, false), ...recordatoriosGratis, ...notificaciones]} /></div>
+          <div className="nt-barra"><Notificaciones refrescarAnuncios items={[...chatsComoNotificaciones(chats, false), ...recordatoriosGratis, ...notificaciones]} /></div>
           {children}
         </div>
         <MobileDashboardNav isAdmin={isAdmin} verPrivadas={verPrivadas} sinLeer={sinLeer} />

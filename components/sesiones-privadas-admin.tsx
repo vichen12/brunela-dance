@@ -79,7 +79,7 @@ export function FormAgendarPrivada({
       ) : (
         <div className="spa-campo spa-campo--ancho">
           <span>Alumna</span>
-          <ElegirConBuscador
+          <ElegirConBuscador queEs={{ singular: "alumna", plural: "alumnas", femenino: true }}
             name="alumnaId"
             required
             etiqueta="Alumna"

@@ -1,10 +1,15 @@
 import { Desplegable } from "@/components/desplegable";
 import { CampoFechaHora } from "@/components/campo-fecha-hora";
 import { madridAIso } from "@/src/features/studio/sesiones-privadas-reglas";
+import { legible } from "@/src/features/admin/mensaje-legible";
 
 function venceEnMadrid(valor: FormDataEntryValue | null): string | null {
   const [fecha, hora] = String(valor ?? "").split("T");
-  return fecha ? madridAIso(fecha, (hora ?? "00:00").slice(0, 5)) : null;
+  // Sin hora (el campo manda 00:00) = hasta el FINAL de ese dia (2026-11-12).
+  // Antes "Vence el 15" vencia a las 00:00 del 15: con la fecha de hoy el
+  // anuncio nacia vencido, nadie lo veia, y el mail salia igual.
+  const h = (hora ?? "").slice(0, 5);
+  return fecha ? madridAIso(fecha, !h || h === "00:00" ? "23:59" : h) : null;
 }
 import { revalidatePath } from "next/cache";
 import { BotonEnviar } from "@/components/boton-enviar";
@@ -19,6 +24,9 @@ import { Bell, Heart, Megaphone, Send } from "lucide-react";
 import { Paginacion, hrefConPagina } from "@/components/paginacion";
 
 export const dynamic = "force-dynamic";
+// El mail sale en after(): sin este margen Vercel corta a los 10-15 s y con
+// muchas alumnas parte del envio quedaba sin hacer.
+export const maxDuration = 60;
 
 /** Anuncios por pagina del historial. */
 const POR_PAGINA = 10;
@@ -42,17 +50,22 @@ async function createAnnouncementAction(fd: FormData) {
   const { user } = await requireAdmin();
   const supabase = createSupabaseAdminClient();
 
+  const vence = venceEnMadrid(fd.get("expiresAt"));
+  if (vence && Date.parse(vence) <= Date.now()) {
+    redirect(`/admin/announcements?error=${encodeURIComponent("Esa fecha de vencimiento ya pasó. Elegí una fecha futura o dejala vacía.")}` as never);
+  }
+
   const { data: creado, error } = await supabase.from("studio_announcements").insert({
     title: (fd.get("title") as string).trim(),
     content: (fd.get("content") as string).trim(),
     tier_target: (fd.get("tierTarget") as string) || "all",
     is_active: true,
     // En hora de España: `new Date()` en el servidor (UTC) lo corria una hora.
-    expires_at: venceEnMadrid(fd.get("expiresAt")),
+    expires_at: vence,
     created_by: user.id,
   }).select("id, title, content, tier_target").single<{ id: string; title: string; content: string; tier_target: string }>();
 
-  if (error || !creado) redirect(`/admin/announcements?error=${encodeURIComponent(error?.message ?? "No se pudo publicar")}` as never);
+  if (error || !creado) redirect(`/admin/announcements?error=${encodeURIComponent(legible(error, "publicar el anuncio"))}` as never);
 
   // Tambien por mail (pedido 2026-10-26), si no destildo la casilla. La lista
   // se arma ahora (para decir a cuantas) y el envio corre en after(): Brunela
@@ -126,8 +139,8 @@ export default async function AdminAnnouncementsPage({
   await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const params = (await searchParams) ?? {};
-  const success = typeof params.success === "string" ? decodeURIComponent(params.success) : null;
-  const error = typeof params.error === "string" ? decodeURIComponent(params.error) : null;
+  const success = typeof params.success === "string" ? params.success : null;
+  const error = typeof params.error === "string" ? params.error : null;
 
   const { data } = await supabase
     .from("studio_announcements")
@@ -234,7 +247,7 @@ export default async function AdminAnnouncementsPage({
           <ul className="an-lista">
             {enPagina.map((a) => {
               const tierClase = TIER_STYLE[a.tier_target] ?? TIER_STYLE.all;
-              const pubDate = new Date(a.published_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+              const pubDate = new Date(a.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" });
               const isExpired = a.expires_at ? new Date(a.expires_at) < new Date() : false;
 
               return (
@@ -258,7 +271,7 @@ export default async function AdminAnnouncementsPage({
                     <p className="an-contenido">{a.content}</p>
                     <p className="an-fecha">
                       Publicado: {pubDate}
-                      {a.expires_at && ` · Vence: ${new Date(a.expires_at).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}`}
+                      {a.expires_at && ` · Vence: ${new Date(a.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" })}`}
                     </p>
                   </div>
 

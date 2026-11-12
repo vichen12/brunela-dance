@@ -115,7 +115,12 @@ export async function POST(request: Request) {
     }
 
     // Si habia pedido la baja, cambiar de plan es querer seguir.
+    //
+    // La espera es a proposito: Stripe fecha los avisos por SEGUNDO, y dos
+    // cambios en el mismo segundo pueden llegar en cualquier orden; el del
+    // plan viejo podia pisar al nuevo.
     if (actualizada.cancel_at_period_end) {
+      await new Promise((r) => setTimeout(r, 1200));
       await stripe.subscriptions.update(s.id, { cancel_at_period_end: false });
     }
     return NextResponse.json({ estado: "listo" });

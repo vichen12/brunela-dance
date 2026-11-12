@@ -1,5 +1,6 @@
 "use server";
 
+import { mensajeDeCuenta } from "@/src/features/auth/mensaje-de-cuenta";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/src/features/auth/guards";
@@ -65,7 +66,7 @@ export async function guardarMisCorreosAction(fd: FormData) {
       `${volver}?error=${encodeURIComponent("Se guardó lo de clases nuevas, pero los demás avisos todavía no se pueden apagar. Avisale a Brunela.")}#correos` as never
     );
   }
-  if (error) redirect(`${volver}?error=${encodeURIComponent(error.message)}#correos` as never);
+  if (error) redirect(`${volver}?error=${encodeURIComponent(mensajeDeCuenta(error, "No se pudo guardar. Probá de nuevo."))}#correos` as never);
 
   revalidatePath(volver);
   redirect(`${volver}?success=${encodeURIComponent("Listo, tus preferencias de correo quedaron guardadas.")}#correos` as never);

@@ -1,3 +1,5 @@
+import { mensajeDeCuenta } from "@/src/features/auth/mensaje-de-cuenta";
+import { rutaPropia } from "@/src/lib/ruta-propia";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasSupabaseAuthEnv } from "@/src/lib/env";
@@ -7,7 +9,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const errorParam = searchParams.get("error");
   const rawNext = searchParams.get("next") ?? "/dashboard";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const next = rutaPropia(rawNext, "/dashboard");
 
   if (!hasSupabaseAuthEnv()) {
     return NextResponse.redirect(
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
     const otroNavegador = /code verifier/i.test(error.message);
     const motivo = otroNavegador
       ? "Ese enlace se abrió en un navegador distinto al que lo pidió. Pedí uno nuevo y abrilo en el mismo navegador, o entrá con tu contraseña."
-      : `No se pudo entrar con ese enlace (${error.message}). Si venía de un correo, pedí uno nuevo.`;
+      : mensajeDeCuenta(error, "No se pudo entrar con ese enlace. Si venía de un correo, pedí uno nuevo.");
     return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(motivo)}`);
   }
 

@@ -50,9 +50,11 @@ type Sesion = {
   session_timezone: string;
   capacity: number;
   cover_image_url: string | null;
+  booking_opens_at: string | null;
+  booking_closes_at: string | null;
 };
 
-const COLUMNAS_VITRINA = "id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url";
+const COLUMNAS_VITRINA = "id, slug, title_i18n, description_i18n, status, membership_tier_required, starts_at, ends_at, session_timezone, capacity, cover_image_url, booking_opens_at, booking_closes_at";
 const RANGO: Record<string, number> = { none: 0, corps_de_ballet: 1, solista: 2, principal: 3 };
 const TIPO_DOC: Record<string, string> = { pdf: "PDF", image: "Imagen", video: "Video", audio: "Audio", doc: "Word", other: "Archivo" };
 
@@ -128,6 +130,12 @@ export default async function DashboardLiveSesionPage({
   const pasada = sesion.status !== "scheduled" || new Date(sesion.ends_at).getTime() < Date.now();
   const ocupadas = ocupadasCount ?? 0;
   const libres = Math.max(0, sesion.capacity - ocupadas);
+  // ¿Se puede reservar AHORA? La invitacion saltea la ventana, igual que la base.
+  const ahoraVentana = Date.now();
+  const cerrada: string | null = invitacion ? null
+    : sesion.booking_opens_at && Date.parse(sesion.booking_opens_at) > ahoraVentana
+      ? `Las reservas abren el ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }).format(new Date(sesion.booking_opens_at))}.`
+      : sesion.booking_closes_at && Date.parse(sesion.booking_closes_at) < ahoraVentana ? "Las reservas para esta clase ya cerraron." : null;
   const pct = Math.min(100, Math.round((ocupadas / Math.max(1, sesion.capacity)) * 100));
 
   // Enlace: solo con reserva y antes de que termine.
@@ -320,17 +328,19 @@ export default async function DashboardLiveSesionPage({
               </>
             ) : (
               <>
-                <p className="sp-lugar-tit">{libres === 0 ? "La clase está llena" : "Reservá tu lugar"}</p>
+                <p className="sp-lugar-tit">{cerrada ? "Reservas" : libres === 0 ? "La clase está llena" : "Reservá tu lugar"}</p>
                 <p className="sp-lugar-txt">
-                  {libres === 0 ? "Podés anotarte igual: quedás en lista de espera y si alguien cancela, el lugar es tuyo." : "Al reservar aparecen acá el enlace para entrar y el material de la clase."}
+                  {cerrada ?? (libres === 0 ? "Podés anotarte igual: quedás en lista de espera y si alguien cancela, el lugar es tuyo." : "Al reservar aparecen acá el enlace para entrar y el material de la clase.")}
                 </p>
-                <form action={reserveLiveSessionAction}>
+                {/* Con la ventana cerrada no hay boton: antes se ofrecia y la
+                    base contestaba con un error en ingles (2026-11-12). */}
+                {!cerrada && <form action={reserveLiveSessionAction}>
                   <input name="sessionId" type="hidden" value={sesion.id} />
                   <input name="redirectTo" type="hidden" value={aqui} />
                   <BotonEnviar className="sp-btn sp-btn--lleno" pendingLabel="Reservando…">
                     <CalendarCheck size={17} strokeWidth={2.3} aria-hidden="true" /> {libres === 0 ? "Anotarme en espera" : "Reservar mi lugar"}
                   </BotonEnviar>
-                </form>
+                </form>}
               </>
             )}
           </aside>

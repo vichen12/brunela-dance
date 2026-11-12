@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -48,7 +49,7 @@ export async function guardarOfertaDePackAction(fd: FormData) {
   if (cents >= pack.price_cents) volver("error", `La oferta tiene que ser más barata que el precio normal (${(pack.price_cents / 100).toLocaleString("es-ES")} €).`);
 
   const { error } = await db.from("packs").update({ oferta_precio_cents: cents, oferta_hasta: hasta }).eq("id", id);
-  if (error) volver("error", esFaltaDeColumnaOferta(error) ? FALTA_MIGRACION : error.message);
+  if (error) volver("error", esFaltaDeColumnaOferta(error) ? FALTA_MIGRACION : legible(error));
   refrescar();
   volver("success", `Listo: «${pack.name_i18n?.es ?? "el pack"}» queda en oferta hasta la fecha que elegiste.`);
 }
@@ -58,7 +59,7 @@ export async function quitarOfertaDePackAction(fd: FormData) {
   const id = String(fd.get("packId") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) volver("error", "Pack inválido.");
   const { error } = await createSupabaseAdminClient().from("packs").update({ oferta_precio_cents: null, oferta_hasta: null }).eq("id", id);
-  if (error) volver("error", esFaltaDeColumnaOferta(error) ? FALTA_MIGRACION : error.message);
+  if (error) volver("error", esFaltaDeColumnaOferta(error) ? FALTA_MIGRACION : legible(error));
   refrescar();
   volver("success", "Listo, se quitó la oferta: el pack vuelve a su precio.");
 }

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: titulo,
     description: descripcion,
     alternates: { canonical: `/packs/${pack.slug}` },
-    openGraph: { title: titulo, description: descripcion, url: `/packs/${pack.slug}`, images: [pack.cover_image_url || "/brand/og.png"] },
+    openGraph: { title: titulo, description: descripcion, url: `/packs/${pack.slug}`, images: [pack.cover_image_url || "/brand/compartir.png"] },
   };
 }
 
@@ -48,7 +48,7 @@ export default async function PackPublicoPage({ params }: Props) {
     "@type": "Product",
     name: pack.name_i18n?.es ?? pack.slug,
     description: pack.description_i18n?.es || undefined,
-    image: pack.cover_image_url || "https://bruneladance.com/brand/og.png",
+    image: pack.cover_image_url || "https://bruneladance.com/brand/compartir.png",
     brand: { "@type": "Brand", name: "Brunela Dance Trainer" },
     offers: {
       "@type": "Offer",

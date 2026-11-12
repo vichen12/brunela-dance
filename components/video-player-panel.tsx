@@ -9,11 +9,15 @@ type Props = {
   audioTracks: PlayerAudioTrack[];
   durationSeconds: number;
   initialPositionSeconds?: number;
+  maxPrevioSeconds?: number;
   preferredLocale?: string;
   videoId: string;
   videoSlug?: string | null;
   programId?: string | null;
   programDayNumber?: number | null;
+  /** Idiomas extra y subtitulos (opcionales), con enlaces firmados. */
+  audiosExternos?: { locale: string; url: string }[];
+  subtitulosExternos?: { locale: string; url: string }[];
 };
 
 /**
@@ -42,11 +46,14 @@ export function VideoPlayerPanel({
   audioTracks,
   durationSeconds,
   initialPositionSeconds,
+  maxPrevioSeconds,
   preferredLocale,
   videoId,
   videoSlug,
   programId,
-  programDayNumber
+  programDayNumber,
+  audiosExternos,
+  subtitulosExternos
 }: Props) {
   const inFlight = useRef(false);
   // Se genera una vez por montaje: reproducir la misma clase manana es otra
@@ -109,9 +116,12 @@ export function VideoPlayerPanel({
       audioTracks={audioTracks}
       durationSeconds={durationSeconds}
       initialPositionSeconds={initialPositionSeconds}
+      maxPrevioSeconds={maxPrevioSeconds}
       preferredLocale={preferredLocale}
       onProgress={handleProgress}
       onActivity={handleActivity}
+      audiosExternos={audiosExternos}
+      subtitulosExternos={subtitulosExternos}
     />
   );
 }

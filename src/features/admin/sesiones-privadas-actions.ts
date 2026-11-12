@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -79,7 +80,7 @@ export async function guardarPlanesPrivadasAction(fd: FormData) {
     updated_by: user.id,
     updated_at: new Date().toISOString(),
   }, { onConflict: "setting_key" });
-  if (error) ir("/admin/sesiones-privadas#config", "error", error.message);
+  if (error) ir("/admin/sesiones-privadas#config", "error", legible(error));
   revalidatePath("/admin/sesiones-privadas");
   revalidatePath("/dashboard", "layout");
   ir("/admin/sesiones-privadas#config", "success", "Listo: guardé qué planes tienen sesiones privadas.");
@@ -105,7 +106,7 @@ export async function agendarSesionPrivadaAction(fd: FormData) {
     estado: "agendada",
     created_by: user.id,
   });
-  if (error) ir(destino, "error", esFaltaDeTabla(error) ? AVISO_FALTA_MIGRACION_PRIVADAS : error.message);
+  if (error) ir(destino, "error", esFaltaDeTabla(error) ? AVISO_FALTA_MIGRACION_PRIVADAS : legible(error));
 
   const fallo = await medir("agendar privada: aviso por chat", escribirleALaAlumna(db, user.id, alumnaId, mensajeAgendada(v.ok.startsAt, !!v.ok.enlace)));
   revalidar(alumnaId);
@@ -142,7 +143,7 @@ export async function editarSesionPrivadaAction(fd: FormData) {
     proveedor: v.ok.proveedor,
     nota: v.ok.nota,
   }).eq("id", id);
-  if (error) ir(destino, "error", error.message);
+  if (error) ir(destino, "error", legible(error));
 
   const enlaceNuevo = !!v.ok.enlace && v.ok.enlace !== actual.enlace;
   const futura = Date.parse(v.ok.startsAt) + v.ok.duracion * 60000 > Date.now();
@@ -168,7 +169,7 @@ export async function cancelarSesionPrivadaAction(fd: FormData) {
 
   // Se marca, no se borra: queda el rastro y el X/2 del mes deja de contarla.
   const { error } = await db.from("sesiones_privadas").update({ estado: "cancelada" }).eq("id", id);
-  if (error) ir(destino, "error", error.message);
+  if (error) ir(destino, "error", legible(error));
 
   // Solo se avisa si todavia no paso: cancelar una de la semana pasada es
   // ordenar la agenda, no una noticia para ella.

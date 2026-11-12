@@ -29,7 +29,7 @@ export const NOTA_DESCANSO_POR_DEFECTO =
   "Hoy también estás avanzando, aunque no entrenes. Dale a tu cuerpo el tiempo que necesita para recuperarse y volver con más energía. ¡Descansa, te lo mereces! 💗";
 
 export const AVISO_FALTA_MIGRACION_DESCANSO =
-  "Para poder cargar días de descanso falta correr la migración 20261025_dia_de_descanso.sql en Supabase.";
+  "Los días de descanso todavía no están activados. Avisale a quien te arma la web y se arregla sin perder nada.";
 
 /** El select falla con 42703 si la migracion no corrio: se reintenta sin las columnas nuevas. */
 export function esFaltaDeColumnaDescanso(error: { code?: string; message?: string } | null | undefined) {

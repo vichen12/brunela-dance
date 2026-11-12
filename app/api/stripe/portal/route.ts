@@ -36,7 +36,7 @@ export async function POST() {
   }
 
   const env = getStripeServerEnv();
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { timeout: 20_000, maxNetworkRetries: 1 });
   const appUrl = getAppUrl();
 
   const portal = await stripe.billingPortal.sessions.create({

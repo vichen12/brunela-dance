@@ -343,7 +343,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           {profiles.map((profile) => {
             const tier = TIER_STYLE[profile.membership_tier] ?? TIER_STYLE.none;
             const name = profile.full_name ?? profile.email.split("@")[0];
-            const joinDate = new Date(profile.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+            const joinDate = new Date(profile.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" });
 
             return (
               <li key={profile.id} className="au-fila">

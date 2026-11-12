@@ -1,5 +1,6 @@
 "use server";
 
+import { legible } from "@/src/features/admin/mensaje-legible";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/src/features/auth/guards";
@@ -40,7 +41,7 @@ async function guardar(valor: AjusteMateriales) {
       },
       { onConflict: "setting_key" }
     );
-  if (error) volver("error", error.message);
+  if (error) volver("error", legible(error));
   // Ver src/lib/settings.ts: toda escritura en site_settings invalida la cache.
   invalidarAjustes();
   revalidatePath("/admin/materiales");

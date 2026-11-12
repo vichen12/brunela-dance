@@ -9,6 +9,7 @@ import {
   tokenDeAcceso,
   esApiConPuerta,
 } from "@/src/lib/acceso-anticipado";
+import { esRutaPropia } from "@/src/lib/ruta-propia";
 
 export async function middleware(request: NextRequest) {
   const { pathname: ruta } = request.nextUrl;
@@ -138,7 +139,11 @@ export async function middleware(request: NextRequest) {
   if (isPrivate && !session) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
-    url.searchParams.set("callbackUrl", pathname);
+    // CON lo que traia despues del "?" (2026-11-12): quien llegaba a
+    // /dashboard/plan?pack=...&iniciar=1 sin sesion volvia, despues de entrar,
+    // a /dashboard/plan pelado y el pack que habia elegido se perdia.
+    url.search = "";
+    url.searchParams.set("callbackUrl", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 
@@ -155,7 +160,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/sign-in" && session && !request.nextUrl.searchParams.has("error")) {
     const pedido = request.nextUrl.searchParams.get("callbackUrl") ?? "";
     // Solo rutas propias: "//x" y "/\x" el navegador los toma como otro dominio.
-    const seguro = /^\/(?![/\\])/.test(pedido) && !pedido.startsWith("/sign-in");
+    const seguro = esRutaPropia(pedido) && !pedido.startsWith("/sign-in");
     return NextResponse.redirect(new URL(seguro ? pedido : "/dashboard", request.url));
   }
 
